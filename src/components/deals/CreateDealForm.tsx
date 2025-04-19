@@ -31,7 +31,7 @@ interface CreateDealFormProps {
 
 export function CreateDealForm({ onSuccess }: CreateDealFormProps) {
   const { createDeal } = useDeals();
-  const { accounts } = useAccounts();
+  const { data: accounts } = useAccounts();
   const { data: contacts } = useContacts();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
