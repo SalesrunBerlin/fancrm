@@ -3,10 +3,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Building, Users, Edit } from "lucide-react";
-import { AccountType } from "@/types";
+import { Account } from "@/lib/types/database";
 
 interface AccountCardProps {
-  account: AccountType;
+  account: Account;
   onClick: (id: string) => void;
 }
 
@@ -31,14 +31,6 @@ export function AccountCard({ account, onClick }: AccountCardProps) {
           <div className="flex items-center text-sm text-muted-foreground">
             <Users className="h-4 w-4 mr-2" />
             <span>{account.contactCount || 0} Contacts</span>
-          </div>
-          
-          <div className="flex flex-wrap gap-2 mt-3">
-            {account.tags?.map((tag, index) => (
-              <Badge key={index} variant="secondary" className="text-xs">
-                {tag}
-              </Badge>
-            ))}
           </div>
         </div>
       </CardContent>

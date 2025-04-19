@@ -3,10 +3,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Phone, Mail, Edit } from "lucide-react";
-import { ContactType } from "@/types";
+import { Contact } from "@/lib/types/database";
 
 interface ContactCardProps {
-  contact: ContactType;
+  contact: Contact;
   onClick: (id: string) => void;
 }
 
@@ -35,18 +35,13 @@ export function ContactCard({ contact, onClick }: ContactCardProps) {
             </div>
           )}
           
-          <div className="flex flex-wrap gap-2 mt-3">
-            {contact.accountName && (
+          {contact.accountName && (
+            <div className="flex flex-wrap gap-2 mt-3">
               <Badge variant="outline" className="bg-beauty-light text-beauty-dark border-beauty">
                 {contact.accountName}
               </Badge>
-            )}
-            {contact.tags?.map((tag, index) => (
-              <Badge key={index} variant="secondary" className="text-xs">
-                {tag}
-              </Badge>
-            ))}
-          </div>
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>

@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,19 +5,20 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus, Search, Users } from "lucide-react";
 import { ContactCard } from "@/components/contacts/ContactCard";
-import { mockContacts } from "@/data/mockData";
 import { useToast } from "@/components/ui/use-toast";
-import { ContactType } from "@/types";
+import { useContacts } from "@/hooks/useContacts";
+import { Contact } from "@/lib/types/database";
 
 export default function Contacts() {
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
+  const { data: contacts = [], isLoading } = useContacts();
   
-  const filteredContacts = mockContacts.filter(contact => {
+  const filteredContacts = contacts.filter(contact => {
     const fullName = `${contact.firstName} ${contact.lastName}`.toLowerCase();
     return fullName.includes(searchQuery.toLowerCase()) || 
-           contact.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+           contact.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
            (contact.phone && contact.phone.includes(searchQuery));
   });
   
@@ -36,6 +36,10 @@ export default function Contacts() {
     });
   };
   
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
+
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -156,7 +160,7 @@ export default function Contacts() {
 }
 
 interface ContactsTableProps {
-  contacts: ContactType[];
+  contacts: Contact[];
   onContactClick: (id: string) => void;
 }
 
