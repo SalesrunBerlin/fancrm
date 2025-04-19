@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -6,7 +5,8 @@ import { Contact } from "@/lib/types/database";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Trash2 } from "lucide-react";
+import { DeleteDialog } from "@/components/common/DeleteDialog";
 
 export default function ContactDetail() {
   const { id } = useParams<{ id: string }>();
@@ -14,6 +14,7 @@ export default function ContactDetail() {
   const { toast } = useToast();
   const [contact, setContact] = useState<Contact | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   useEffect(() => {
     const fetchContact = async () => {
@@ -66,6 +67,32 @@ export default function ContactDetail() {
     fetchContact();
   }, [id, toast]);
 
+  const handleDelete = async () => {
+    if (!id) return;
+
+    try {
+      const { error } = await supabase
+        .from("contacts")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Erfolg",
+        description: "Kontakt wurde gelöscht",
+      });
+      navigate("/contacts");
+    } catch (err) {
+      console.error("Error deleting contact:", err);
+      toast({
+        title: "Fehler",
+        description: "Kontakt konnte nicht gelöscht werden",
+        variant: "destructive",
+      });
+    }
+  };
+
   if (isLoading) {
     return <div>Loading...</div>;
   }
@@ -98,6 +125,13 @@ export default function ContactDetail() {
             </Button>
             <CardTitle>Contact Details</CardTitle>
           </div>
+          <Button 
+            variant="destructive" 
+            onClick={() => setShowDeleteDialog(true)}
+          >
+            <Trash2 className="mr-2 h-4 w-4" />
+            Delete
+          </Button>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
@@ -122,6 +156,14 @@ export default function ContactDetail() {
           </div>
         </CardContent>
       </Card>
+
+      <DeleteDialog
+        isOpen={showDeleteDialog}
+        onClose={() => setShowDeleteDialog(false)}
+        onConfirm={handleDelete}
+        title="Kontakt löschen"
+        description="Sind Sie sicher, dass Sie diesen Kontakt löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden."
+      />
     </div>
   );
 }

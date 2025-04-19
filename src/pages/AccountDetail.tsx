@@ -1,15 +1,15 @@
-
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useToast } from "@/hooks/use-toast";
 import { Account } from "@/lib/types/database";
 import { supabase } from "@/integrations/supabase/client";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, Trash2, ArrowLeft } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { AccountDetailInfo } from '@/components/accounts/AccountDetailInfo';
 import { AccountContacts } from '@/components/accounts/AccountContacts';
 import { useAccountDetails } from '@/hooks/useAccountDetails';
+import { DeleteDialog } from "@/components/common/DeleteDialog";
 
 export default function AccountDetail() {
   const { id } = useParams<{ id: string }>();
@@ -19,6 +19,7 @@ export default function AccountDetail() {
   const [isEditing, setIsEditing] = useState(false);
   const [editedAccount, setEditedAccount] = useState<Partial<Account>>({});
   const [showContactForm, setShowContactForm] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   const handleSave = async () => {
     if (!id) return;
@@ -64,6 +65,32 @@ export default function AccountDetail() {
     setEditedAccount(prev => ({ ...prev, [field]: value }));
   };
 
+  const handleDelete = async () => {
+    if (!id) return;
+
+    try {
+      const { error } = await supabase
+        .from('accounts')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Erfolg",
+        description: "Account wurde gelöscht",
+      });
+      navigate('/accounts');
+    } catch (err) {
+      console.error("Error deleting account:", err);
+      toast({
+        title: "Fehler",
+        description: "Account konnte nicht gelöscht werden",
+        variant: "destructive",
+      });
+    }
+  };
+
   if (isLoading) return (
     <div className="container mx-auto p-4 flex justify-center items-center h-64">
       <RefreshCw className="h-8 w-8 animate-spin text-primary" />
@@ -83,6 +110,20 @@ export default function AccountDetail() {
 
   return (
     <div className="container mx-auto p-4">
+      <div className="flex justify-between items-center mb-4">
+        <Button variant="ghost" onClick={() => navigate('/accounts')}>
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back to accounts
+        </Button>
+        <Button 
+          variant="destructive" 
+          onClick={() => setShowDeleteDialog(true)}
+        >
+          <Trash2 className="mr-2 h-4 w-4" />
+          Delete Account
+        </Button>
+      </div>
+
       <AccountDetailInfo
         account={account}
         isEditing={isEditing}
@@ -109,6 +150,14 @@ export default function AccountDetail() {
         onShowContactForm={() => setShowContactForm(true)}
         onHideContactForm={() => setShowContactForm(false)}
         onContactCreated={fetchAccountDetails}
+      />
+
+      <DeleteDialog
+        isOpen={showDeleteDialog}
+        onClose={() => setShowDeleteDialog(false)}
+        onConfirm={handleDelete}
+        title="Account löschen"
+        description="Sind Sie sicher, dass Sie diesen Account löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden. Alle verknüpften Kontakte werden ebenfalls gelöscht."
       />
     </div>
   );

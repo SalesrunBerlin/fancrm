@@ -1,19 +1,40 @@
-
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useDeals } from "@/hooks/useDeals";
 import { formatCurrency } from "@/lib/utils";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Trash2 } from "lucide-react";
 import { DealEditForm } from "@/components/deals/DealEditForm";
+import { DeleteDialog } from "@/components/common/DeleteDialog";
+import { useToast } from "@/hooks/use-toast";
 
 export default function DealDetail() {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const { id } = useParams();
-  const { deals } = useDeals();
+  const { deals, deleteDeal } = useDeals();
   const [isEditing, setIsEditing] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const deal = deals.find(d => d.id === id);
+
+  const handleDelete = async () => {
+    try {
+      await deleteDeal.mutateAsync(id!);
+      toast({
+        title: "Erfolg",
+        description: "Deal wurde gelöscht",
+      });
+      navigate("/deals");
+    } catch (error) {
+      console.error("Error deleting deal:", error);
+      toast({
+        title: "Fehler",
+        description: "Deal konnte nicht gelöscht werden",
+        variant: "destructive",
+      });
+    }
+  };
 
   if (!deal) {
     return <div className="p-4">Deal nicht gefunden</div>;
@@ -48,9 +69,18 @@ export default function DealDetail() {
           <ArrowLeft className="mr-2 h-4 w-4" />
           Zurück
         </Button>
-        <Button onClick={() => setIsEditing(true)}>
-          Bearbeiten
-        </Button>
+        <div className="space-x-2">
+          <Button onClick={() => setIsEditing(true)}>
+            Bearbeiten
+          </Button>
+          <Button 
+            variant="destructive" 
+            onClick={() => setShowDeleteDialog(true)}
+          >
+            <Trash2 className="mr-2 h-4 w-4" />
+            Löschen
+          </Button>
+        </div>
       </div>
 
       <Card className="p-6">
@@ -88,6 +118,14 @@ export default function DealDetail() {
           )}
         </div>
       </Card>
+
+      <DeleteDialog
+        isOpen={showDeleteDialog}
+        onClose={() => setShowDeleteDialog(false)}
+        onConfirm={handleDelete}
+        title="Deal löschen"
+        description="Sind Sie sicher, dass Sie diesen Deal löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden."
+      />
     </div>
   );
 }
