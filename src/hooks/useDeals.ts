@@ -9,6 +9,9 @@ export function useDeals() {
   const { data: deals = [], isLoading } = useQuery({
     queryKey: ["deals"],
     queryFn: async (): Promise<DealType[]> => {
+      const { data: user } = await supabase.auth.getUser();
+      if (!user.user) throw new Error("User must be logged in to fetch deals");
+
       const { data, error } = await supabase
         .from("deals")
         .select(`
