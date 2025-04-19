@@ -1,4 +1,3 @@
-
 export interface Contact {
   id: string;
   firstName: string;
@@ -24,4 +23,3 @@ export interface Account {
   contactCount?: number;
   tags?: string[];
 }
-
