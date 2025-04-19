@@ -12,10 +12,11 @@ export function useAccounts() {
     queryFn: async (): Promise<Account[]> => {
       if (!user) throw new Error("User must be logged in to fetch accounts");
 
-      // This query will automatically apply our RLS policy
+      // This query will explicitly filter by owner_id to ensure we only get the user's accounts
       const { data: accountsData, error: accountsError } = await supabase
         .from("accounts")
-        .select("*");
+        .select("*")
+        .eq("owner_id", user.id);
 
       if (accountsError) throw accountsError;
 
@@ -23,7 +24,8 @@ export function useAccounts() {
       // This is done differently since .group() isn't available
       const { data: contactsData, error: contactsError } = await supabase
         .from("contacts")
-        .select("account_id");
+        .select("account_id")
+        .eq("owner_id", user.id);
 
       if (contactsError) throw contactsError;
 
