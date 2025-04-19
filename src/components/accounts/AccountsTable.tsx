@@ -1,5 +1,13 @@
 
 import { Account } from "@/lib/types/database";
+import { 
+  Table, 
+  TableBody, 
+  TableCell, 
+  TableHead, 
+  TableHeader, 
+  TableRow 
+} from "@/components/ui/table";
 
 interface AccountsTableProps {
   accounts: Account[];
@@ -8,27 +16,27 @@ interface AccountsTableProps {
 
 export function AccountsTable({ accounts, onAccountClick }: AccountsTableProps) {
   return (
-    <div className="crm-table-wrapper">
-      <table className="crm-table">
-        <thead className="crm-table-header">
-          <tr className="crm-table-row">
-            <th className="crm-table-head">Name</th>
-            <th className="crm-table-head">Type</th>
-            <th className="crm-table-head">Contacts</th>
-            <th className="crm-table-head">Tags</th>
-          </tr>
-        </thead>
-        <tbody className="crm-table-body">
+    <div className="rounded-md border">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Name</TableHead>
+            <TableHead>Type</TableHead>
+            <TableHead>Contacts</TableHead>
+            <TableHead>Tags</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
           {accounts.map((account) => (
-            <tr 
+            <TableRow 
               key={account.id} 
-              className="crm-table-row cursor-pointer" 
+              className="cursor-pointer hover:bg-muted/50" 
               onClick={() => onAccountClick(account.id)}
             >
-              <td className="crm-table-cell font-medium">{account.name}</td>
-              <td className="crm-table-cell">{account.type || "Business"}</td>
-              <td className="crm-table-cell">{account.contactCount || 0}</td>
-              <td className="crm-table-cell">
+              <TableCell className="font-medium">{account.name}</TableCell>
+              <TableCell>{account.type || "Business"}</TableCell>
+              <TableCell>{account.contactCount || 0}</TableCell>
+              <TableCell>
                 <div className="flex flex-wrap gap-1">
                   {account.tags?.map((tag, index) => (
                     <span key={index} className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-secondary text-secondary-foreground">
@@ -36,11 +44,11 @@ export function AccountsTable({ accounts, onAccountClick }: AccountsTableProps) 
                     </span>
                   ))}
                 </div>
-              </td>
-            </tr>
+              </TableCell>
+            </TableRow>
           ))}
-        </tbody>
-      </table>
+        </TableBody>
+      </Table>
     </div>
   );
 }

@@ -11,7 +11,19 @@ export default function Accounts() {
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
-  const { data: accounts = [] } = useAccounts();
+  const { data: accounts = [], isLoading, error } = useAccounts();
+  
+  // Add console logging to debug account data
+  console.log("Accounts data:", accounts);
+  
+  if (isLoading) {
+    return <div className="flex items-center justify-center h-64">Lädt Accounts...</div>;
+  }
+  
+  if (error) {
+    console.error("Error loading accounts:", error);
+    return <div className="text-red-500">Fehler beim Laden der Accounts.</div>;
+  }
   
   const filteredAccounts = accounts.filter(account => {
     return account.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -38,11 +50,17 @@ export default function Accounts() {
       
       <Tabs defaultValue="all" className="space-y-4">
         <TabsContent value="all" className="space-y-4">
-          <AccountsContent 
-            accounts={filteredAccounts}
-            viewMode={viewMode}
-            onAccountClick={handleAccountClick}
-          />
+          {filteredAccounts.length === 0 ? (
+            <div className="text-center py-10 text-muted-foreground">
+              Keine Accounts gefunden. Erstellen Sie einen neuen Account mit dem Button oben.
+            </div>
+          ) : (
+            <AccountsContent 
+              accounts={filteredAccounts}
+              viewMode={viewMode}
+              onAccountClick={handleAccountClick}
+            />
+          )}
         </TabsContent>
         
         <TabsContent value="active" className="space-y-4">

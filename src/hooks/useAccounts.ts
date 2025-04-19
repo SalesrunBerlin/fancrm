@@ -16,9 +16,9 @@ export function useAccounts() {
       // Get contact counts for each account
       const { data: contactCounts, error: contactsError } = await supabase
         .from("contacts")
-        .select("account_id, count(*)")
+        .select("account_id, count")
         .not("account_id", "is", null)
-        .groupBy("account_id");
+        .group("account_id");
 
       if (contactsError) throw contactsError;
 
@@ -41,4 +41,3 @@ export function useAccounts() {
     },
   });
 }
-
