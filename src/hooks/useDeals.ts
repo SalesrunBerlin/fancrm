@@ -25,7 +25,7 @@ export function useDeals() {
         id: deal.id,
         name: deal.name,
         amount: Number(deal.amount),
-        status: deal.status,
+        status: deal.status as DealType['status'],
         accountName: deal.accounts?.name,
         closeDate: deal.close_date,
       }));
