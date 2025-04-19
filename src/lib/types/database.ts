@@ -22,4 +22,6 @@ export interface Account {
   updatedAt: string;
   ownerId: string;
   contactCount?: number;
+  tags?: string[];
 }
+

@@ -13,12 +13,11 @@ export function useAccounts() {
 
       if (accountsError) throw accountsError;
 
-      // Get contact counts for each account
+      // Get contact counts for each account using a count query
       const { data: contactCounts, error: contactsError } = await supabase
         .from("contacts")
-        .select("account_id, count")
-        .not("account_id", "is", null)
-        .group_by("account_id");
+        .select("account_id, count(*)")
+        .not("account_id", "is", null);
 
       if (contactsError) throw contactsError;
 
