@@ -40,7 +40,7 @@ export function CreateDealForm({ onSuccess }: CreateDealFormProps) {
   const form = useForm<Omit<DealType, 'id' | 'accountName' | 'contactName'>>({
     defaultValues: {
       name: "",
-      amount: 0,
+      amount: null,
       status: "Prospect",
     },
   });

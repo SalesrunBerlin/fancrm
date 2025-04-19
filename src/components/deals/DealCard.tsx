@@ -5,6 +5,7 @@ import { Edit, Calendar } from "lucide-react";
 import { DealType } from "@/types";
 import { Progress } from "@/components/ui/progress";
 import { formatCurrency } from "@/lib/utils";
+import { useNavigate } from "react-router-dom";
 
 interface DealCardProps {
   deal: DealType;
@@ -12,7 +13,13 @@ interface DealCardProps {
 }
 
 export function DealCard({ deal, onClick }: DealCardProps) {
-  // Calculate deal progress based on status
+  const navigate = useNavigate();
+
+  const handleClick = () => {
+    navigate(`/deals/${deal.id}`);
+    onClick(deal.id);
+  };
+
   const getProgressValue = () => {
     switch (deal.status) {
       case "Prospect": return 20;
@@ -25,7 +32,6 @@ export function DealCard({ deal, onClick }: DealCardProps) {
     }
   };
 
-  // Get color based on status
   const getStatusColor = () => {
     switch (deal.status) {
       case "Closed Won": return "bg-green-500";
@@ -35,7 +41,7 @@ export function DealCard({ deal, onClick }: DealCardProps) {
   };
 
   return (
-    <Card className="h-full transition-all hover:shadow-md cursor-pointer" onClick={() => onClick(deal.id)}>
+    <Card className="h-full transition-all hover:shadow-md cursor-pointer" onClick={handleClick}>
       <CardHeader className="pb-2">
         <div className="flex justify-between items-start">
           <CardTitle className="text-lg font-medium">{deal.name}</CardTitle>

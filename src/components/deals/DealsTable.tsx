@@ -1,6 +1,6 @@
-
 import { formatCurrency } from "@/lib/utils";
 import { DealType } from "@/types";
+import { useNavigate } from "react-router-dom";
 
 interface DealsTableProps {
   deals: DealType[];
@@ -8,6 +8,13 @@ interface DealsTableProps {
 }
 
 export function DealsTable({ deals, onDealClick }: DealsTableProps) {
+  const navigate = useNavigate();
+
+  const handleDealClick = (id: string) => {
+    navigate(`/deals/${id}`);
+    onDealClick(id);
+  };
+
   return (
     <div className="crm-table-wrapper">
       <table className="crm-table">
@@ -25,7 +32,7 @@ export function DealsTable({ deals, onDealClick }: DealsTableProps) {
             <tr 
               key={deal.id} 
               className="crm-table-row cursor-pointer" 
-              onClick={() => onDealClick(deal.id)}
+              onClick={() => handleDealClick(deal.id)}
             >
               <td className="crm-table-cell font-medium">
                 {deal.name}
