@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -66,8 +65,7 @@ export function DealCard({ deal, onClick }: DealCardProps) {
             </div>
             <Progress 
               value={getProgressValue()} 
-              className="h-2" 
-              indicatorClassName={getStatusColor()}
+              className={`h-2 ${getStatusColor()}`}
             />
           </div>
           
