@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 export function useAccountDetails(accountId: string | undefined) {
   const [account, setAccount] = useState<Account | null>(null);
   const [contacts, setContacts] = useState<Contact[]>([]);
+  const [ownerName, setOwnerName] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
@@ -19,7 +20,7 @@ export function useAccountDetails(accountId: string | undefined) {
       
       const { data: accountData, error: accountError } = await supabase
         .from('accounts')
-        .select('*')
+        .select('*, profiles(first_name, last_name)')
         .eq('id', accountId)
         .single();
 
@@ -45,6 +46,12 @@ export function useAccountDetails(accountId: string | undefined) {
           ownerId: accountData.owner_id,
         };
         setAccount(transformedAccount);
+
+        // Set owner name if profiles data exists
+        if (accountData.profiles) {
+          const { first_name, last_name } = accountData.profiles;
+          setOwnerName(`${first_name} ${last_name}`.trim());
+        }
       }
 
       const { data: contactsData, error: contactsError } = await supabase
@@ -78,7 +85,6 @@ export function useAccountDetails(accountId: string | undefined) {
     }
   };
 
-  // Automatically fetch account details when component mounts or accountId changes
   useEffect(() => {
     if (accountId) {
       fetchAccountDetails();
@@ -90,6 +96,7 @@ export function useAccountDetails(accountId: string | undefined) {
   return {
     account,
     contacts,
+    ownerName,
     isLoading,
     fetchAccountDetails,
     setAccount

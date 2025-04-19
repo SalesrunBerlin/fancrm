@@ -10,12 +10,13 @@ import { AccountDetailInfo } from '@/components/accounts/AccountDetailInfo';
 import { AccountContacts } from '@/components/accounts/AccountContacts';
 import { useAccountDetails } from '@/hooks/useAccountDetails';
 import { DeleteDialog } from "@/components/common/DeleteDialog";
+import { UserCircle } from 'lucide-react';
 
 export default function AccountDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { account, contacts, isLoading, fetchAccountDetails, setAccount } = useAccountDetails(id);
+  const { account, contacts, ownerName, isLoading, fetchAccountDetails, setAccount } = useAccountDetails(id);
   const [isEditing, setIsEditing] = useState(false);
   const [editedAccount, setEditedAccount] = useState<Partial<Account>>({});
   const [showContactForm, setShowContactForm] = useState(false);
@@ -141,7 +142,16 @@ export default function AccountDetail() {
         onSave={handleSave}
         onEditFieldChange={handleEditFieldChange}
       />
-      
+
+      {ownerName && (
+        <div className="mt-4 bg-muted p-3 rounded-md flex items-center">
+          <UserCircle className="mr-2 h-5 w-5 text-muted-foreground" />
+          <span className="text-sm text-muted-foreground">
+            Besitzer: {ownerName}
+          </span>
+        </div>
+      )}
+
       <AccountContacts
         contacts={contacts}
         accountId={account.id}
