@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -300,14 +301,14 @@ export default function ContactDetail() {
                 <div className="space-y-2">
                   <Label>Account</Label>
                   <Select 
-                    value={editedContact.accountId || ''} 
-                    onValueChange={(value) => handleFieldChange('accountId', value)}
+                    value={editedContact.accountId || 'none'} 
+                    onValueChange={(value) => handleFieldChange('accountId', value === 'none' ? '' : value)}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select an account" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">No Account</SelectItem>
+                      <SelectItem value="none">No Account</SelectItem>
                       {accounts.map((account) => (
                         <SelectItem key={account.id} value={account.id}>
                           {account.name}

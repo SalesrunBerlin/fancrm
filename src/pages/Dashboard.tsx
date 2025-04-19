@@ -6,8 +6,8 @@ import { useDeals } from "@/hooks/useDeals";
 import { useContacts } from "@/hooks/useContacts";
 
 export default function Dashboard() {
-  const { deals, isLoading: dealsLoading } = useDeals();
-  const { contacts, isLoading: contactsLoading } = useContacts();
+  const { data: deals, isLoading: dealsLoading } = useDeals();
+  const { data: contacts, isLoading: contactsLoading } = useContacts();
   
   // Calculate stats for DashboardStats
   const openDealsCount = deals?.filter(deal => 
