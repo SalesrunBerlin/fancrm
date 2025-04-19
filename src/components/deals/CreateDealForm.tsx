@@ -18,9 +18,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useDeals } from "@/hooks/useDeals";
 import { useToast } from "@/hooks/use-toast";
 import { DealType } from "@/types";
+import { useAccounts } from "@/hooks/useAccounts";
+import { useContacts } from "@/hooks/useContacts";
 
 interface CreateDealFormProps {
   onSuccess: () => void;
@@ -28,10 +31,13 @@ interface CreateDealFormProps {
 
 export function CreateDealForm({ onSuccess }: CreateDealFormProps) {
   const { createDeal } = useDeals();
+  const { accounts } = useAccounts();
+  const { data: contacts } = useContacts();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [associationType, setAssociationType] = useState<'account' | 'contact'>('account');
 
-  const form = useForm<Omit<DealType, 'id'>>({
+  const form = useForm<Omit<DealType, 'id' | 'accountName' | 'contactName'>>({
     defaultValues: {
       name: "",
       amount: 0,
@@ -39,20 +45,20 @@ export function CreateDealForm({ onSuccess }: CreateDealFormProps) {
     },
   });
 
-  const onSubmit = async (data: Omit<DealType, 'id'>) => {
+  const onSubmit = async (data: Omit<DealType, 'id' | 'accountName' | 'contactName'>) => {
     setIsLoading(true);
     try {
       await createDeal.mutateAsync(data);
       toast({
-        title: "Success",
-        description: "Deal created successfully",
+        title: "Erfolg",
+        description: "Deal erfolgreich erstellt",
       });
       onSuccess();
     } catch (error) {
       console.error("Error creating deal:", error);
       toast({
-        title: "Error",
-        description: "Failed to create deal",
+        title: "Fehler",
+        description: "Deal konnte nicht erstellt werden",
         variant: "destructive",
       });
     } finally {
@@ -70,7 +76,7 @@ export function CreateDealForm({ onSuccess }: CreateDealFormProps) {
             <FormItem>
               <FormLabel>Deal Name</FormLabel>
               <FormControl>
-                <Input {...field} placeholder="Enter deal name" />
+                <Input {...field} placeholder="Deal Name eingeben" />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -82,7 +88,7 @@ export function CreateDealForm({ onSuccess }: CreateDealFormProps) {
           name="amount"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Amount</FormLabel>
+              <FormLabel>Betrag</FormLabel>
               <FormControl>
                 <Input
                   type="number"
@@ -104,7 +110,7 @@ export function CreateDealForm({ onSuccess }: CreateDealFormProps) {
               <Select onValueChange={field.onChange} defaultValue={field.value}>
                 <FormControl>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select a status" />
+                    <SelectValue placeholder="Status auswählen" />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
@@ -121,6 +127,76 @@ export function CreateDealForm({ onSuccess }: CreateDealFormProps) {
           )}
         />
 
+        <div className="space-y-2">
+          <FormLabel>Mit Account oder Kontakt verknüpfen</FormLabel>
+          <RadioGroup
+            value={associationType}
+            onValueChange={(value: 'account' | 'contact') => setAssociationType(value)}
+            className="flex space-x-4"
+          >
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="account" id="account" />
+              <label htmlFor="account">Account</label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="contact" id="contact" />
+              <label htmlFor="contact">Kontakt</label>
+            </div>
+          </RadioGroup>
+        </div>
+
+        {associationType === 'account' ? (
+          <FormField
+            control={form.control}
+            name="accountId"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Account</FormLabel>
+                <Select onValueChange={field.onChange}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Account auswählen" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {accounts?.map((account) => (
+                      <SelectItem key={account.id} value={account.id}>
+                        {account.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        ) : (
+          <FormField
+            control={form.control}
+            name="contactId"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Kontakt</FormLabel>
+                <Select onValueChange={field.onChange}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Kontakt auswählen" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {contacts?.map((contact) => (
+                      <SelectItem key={contact.id} value={contact.id}>
+                        {`${contact.firstName} ${contact.lastName}`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
+
         <div className="flex justify-end space-x-2">
           <Button
             type="button"
@@ -128,10 +204,10 @@ export function CreateDealForm({ onSuccess }: CreateDealFormProps) {
             onClick={() => onSuccess()}
             disabled={isLoading}
           >
-            Cancel
+            Abbrechen
           </Button>
           <Button type="submit" disabled={isLoading}>
-            {isLoading ? "Creating..." : "Create Deal"}
+            {isLoading ? "Erstelle..." : "Deal erstellen"}
           </Button>
         </div>
       </form>

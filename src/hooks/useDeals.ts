@@ -15,6 +15,10 @@ export function useDeals() {
           *,
           accounts:account_id (
             name
+          ),
+          contacts:contact_id (
+            first_name,
+            last_name
           )
         `)
         .order('created_at', { ascending: false });
@@ -27,20 +31,24 @@ export function useDeals() {
         amount: Number(deal.amount),
         status: deal.status as DealType['status'],
         accountName: deal.accounts?.name,
+        contactName: deal.contacts ? `${deal.contacts.first_name} ${deal.contacts.last_name}` : undefined,
         closeDate: deal.close_date,
+        accountId: deal.account_id,
+        contactId: deal.contact_id,
       }));
     },
   });
 
   const createDeal = useMutation({
-    mutationFn: async (newDeal: Omit<DealType, 'id'>) => {
+    mutationFn: async (newDeal: Omit<DealType, 'id' | 'accountName' | 'contactName'>) => {
       const { data, error } = await supabase
         .from('deals')
         .insert([{
           name: newDeal.name,
           amount: newDeal.amount,
           status: newDeal.status,
-          account_id: null, // Will be updated when we add account selection
+          account_id: newDeal.accountId,
+          contact_id: newDeal.contactId,
           close_date: newDeal.closeDate,
           owner_id: (await supabase.auth.getUser()).data.user?.id
         }])

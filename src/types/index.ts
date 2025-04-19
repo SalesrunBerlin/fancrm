@@ -23,5 +23,8 @@ export interface DealType {
   amount: number;
   status: "Prospect" | "Qualification" | "Proposal" | "Negotiation" | "Closed Won" | "Closed Lost";
   accountName?: string;
+  contactName?: string;
   closeDate?: string;
+  accountId?: string;
+  contactId?: string;
 }

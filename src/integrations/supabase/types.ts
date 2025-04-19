@@ -106,6 +106,7 @@ export type Database = {
           account_id: string | null
           amount: number
           close_date: string | null
+          contact_id: string | null
           created_at: string
           id: string
           name: string
@@ -117,6 +118,7 @@ export type Database = {
           account_id?: string | null
           amount: number
           close_date?: string | null
+          contact_id?: string | null
           created_at?: string
           id?: string
           name: string
@@ -128,6 +130,7 @@ export type Database = {
           account_id?: string | null
           amount?: number
           close_date?: string | null
+          contact_id?: string | null
           created_at?: string
           id?: string
           name?: string
@@ -141,6 +144,13 @@ export type Database = {
             columns: ["account_id"]
             isOneToOne: false
             referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deals_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
             referencedColumns: ["id"]
           },
         ]
