@@ -6,23 +6,21 @@ import { AccountsTable } from "./AccountsTable";
 interface AccountsContentProps {
   accounts: Account[];
   viewMode: "grid" | "table";
-  onAccountClick: (id: string) => void;
 }
 
-export function AccountsContent({ accounts, viewMode, onAccountClick }: AccountsContentProps) {
+export function AccountsContent({ accounts, viewMode }: AccountsContentProps) {
   if (viewMode === "grid") {
     return (
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {accounts.map((account) => (
           <AccountCard 
             key={account.id} 
-            account={account} 
-            onClick={onAccountClick}
+            account={account}
           />
         ))}
       </div>
     );
   }
   
-  return <AccountsTable accounts={accounts} onAccountClick={onAccountClick} />;
+  return <AccountsTable accounts={accounts} />;
 }

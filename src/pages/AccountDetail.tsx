@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Edit, X } from "lucide-react";
+import { CreateContactForm } from '@/components/contacts/CreateContactForm';
 
 export default function AccountDetail() {
   const { id } = useParams<{ id: string }>();
@@ -19,58 +20,72 @@ export default function AccountDetail() {
   const [isEditing, setIsEditing] = useState(false);
   const [editedAccount, setEditedAccount] = useState<Partial<Account>>({});
 
-  useEffect(() => {
-    const fetchAccountDetails = async () => {
-      if (!id) return;
+  const fetchAccountDetails = async () => {
+    if (!id) return;
 
-      // Fetch account details
-      const { data: accountData, error: accountError } = await supabase
-        .from('accounts')
-        .select('*')
-        .eq('id', id)
-        .single();
+    const { data: accountData, error: accountError } = await supabase
+      .from('accounts')
+      .select('*')
+      .eq('id', id)
+      .single();
 
-      // Fetch contacts for this account
-      const { data: contactsData, error: contactsError } = await supabase
-        .from('contacts')
-        .select('*')
-        .eq('account_id', id);
+    if (accountData) {
+      const transformedAccount: Account = {
+        id: accountData.id,
+        name: accountData.name,
+        type: accountData.type,
+        website: accountData.website,
+        industry: accountData.industry,
+        createdAt: accountData.created_at,
+        updatedAt: accountData.updated_at,
+        ownerId: accountData.owner_id,
+      };
+      setAccount(transformedAccount);
+      setEditedAccount(transformedAccount);
+    }
 
-      if (accountError) {
-        toast({
-          title: "Fehler",
-          description: "Account konnte nicht geladen werden",
-          variant: "destructive"
-        });
-        return;
-      }
+    const { data: contactsData } = await supabase
+      .from('contacts')
+      .select('*')
+      .eq('account_id', id);
 
-      setAccount(accountData);
-      setContacts(contactsData || []);
-    };
-
-    fetchAccountDetails();
-  }, [id, toast]);
-
-  const handleEdit = () => {
-    if (account) {
-      setEditedAccount({ ...account });
-      setIsEditing(true);
+    if (contactsData) {
+      const transformedContacts: Contact[] = contactsData.map(contact => ({
+        id: contact.id,
+        firstName: contact.first_name,
+        lastName: contact.last_name,
+        email: contact.email,
+        phone: contact.phone,
+        accountId: contact.account_id,
+        createdAt: contact.created_at,
+        updatedAt: contact.updated_at,
+        ownerId: contact.owner_id
+      }));
+      setContacts(transformedContacts);
     }
   };
+
+  useEffect(() => {
+    fetchAccountDetails();
+  }, [id]);
 
   const handleSave = async () => {
     if (!id) return;
 
     const { error } = await supabase
       .from('accounts')
-      .update(editedAccount)
+      .update({
+        name: editedAccount.name,
+        type: editedAccount.type,
+        website: editedAccount.website,
+        industry: editedAccount.industry
+      })
       .eq('id', id);
 
     if (error) {
       toast({
-        title: "Fehler",
-        description: "Account konnte nicht aktualisiert werden",
+        title: "Error",
+        description: "Account could not be updated",
         variant: "destructive"
       });
       return;
@@ -79,12 +94,12 @@ export default function AccountDetail() {
     setAccount(prev => ({ ...prev, ...editedAccount } as Account));
     setIsEditing(false);
     toast({
-      title: "Erfolg",
-      description: "Account wurde aktualisiert"
+      title: "Success",
+      description: "Account updated successfully"
     });
   };
 
-  if (!account) return <div>Lädt...</div>;
+  if (!account) return <div>Loading...</div>;
 
   return (
     <div className="container mx-auto p-4">
@@ -93,7 +108,7 @@ export default function AccountDetail() {
           <CardTitle>Account Details</CardTitle>
           <div className="flex items-center gap-2">
             {!isEditing ? (
-              <Button variant="outline" size="icon" onClick={handleEdit}>
+              <Button variant="outline" size="icon" onClick={() => setIsEditing(true)}>
                 <Edit className="h-4 w-4" />
               </Button>
             ) : (
@@ -101,7 +116,7 @@ export default function AccountDetail() {
                 <Button variant="outline" size="icon" onClick={() => setIsEditing(false)}>
                   <X className="h-4 w-4" />
                 </Button>
-                <Button onClick={handleSave}>Speichern</Button>
+                <Button onClick={handleSave}>Save</Button>
               </>
             )}
           </div>
@@ -113,13 +128,13 @@ export default function AccountDetail() {
                 <strong>Name:</strong> {account.name}
               </div>
               <div>
-                <strong>Typ:</strong> {account.type || 'Nicht angegeben'}
+                <strong>Type:</strong> {account.type || 'Not specified'}
               </div>
               <div>
-                <strong>Website:</strong> {account.website || 'Keine Website'}
+                <strong>Website:</strong> {account.website || 'No website'}
               </div>
               <div>
-                <strong>Branche:</strong> {account.industry || 'Nicht angegeben'}
+                <strong>Industry:</strong> {account.industry || 'Not specified'}
               </div>
             </div>
           ) : (
@@ -132,7 +147,7 @@ export default function AccountDetail() {
                 />
               </div>
               <div>
-                <label>Typ</label>
+                <label>Type</label>
                 <Input 
                   value={editedAccount.type || ''} 
                   onChange={(e) => setEditedAccount(prev => ({ ...prev, type: e.target.value }))} 
@@ -146,7 +161,7 @@ export default function AccountDetail() {
                 />
               </div>
               <div>
-                <label>Branche</label>
+                <label>Industry</label>
                 <Input 
                   value={editedAccount.industry || ''} 
                   onChange={(e) => setEditedAccount(prev => ({ ...prev, industry: e.target.value }))} 
@@ -159,26 +174,32 @@ export default function AccountDetail() {
 
       <Card className="mt-4">
         <CardHeader>
-          <CardTitle>Kontakte</CardTitle>
+          <CardTitle>Contacts</CardTitle>
         </CardHeader>
         <CardContent>
-          {contacts.length > 0 ? (
-            <ul>
-              {contacts.map(contact => (
-                <li key={contact.id} className="border-b py-2">
-                  {contact.firstName} {contact.lastName} 
-                  <span className="text-muted-foreground ml-2">
-                    {contact.email}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p>Keine Kontakte für diesen Account</p>
-          )}
+          <div className="space-y-4">
+            <CreateContactForm 
+              accountId={account.id} 
+              onContactCreated={fetchAccountDetails}
+            />
+            
+            {contacts.length > 0 ? (
+              <ul>
+                {contacts.map(contact => (
+                  <li key={contact.id} className="border-b py-2">
+                    {contact.firstName} {contact.lastName} 
+                    <span className="text-muted-foreground ml-2">
+                      {contact.email}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p>No contacts for this account</p>
+            )}
+          </div>
         </CardContent>
       </Card>
     </div>
   );
 }
-

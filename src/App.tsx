@@ -28,10 +28,10 @@ const App = () => (
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/contacts" element={<Contacts />} />
               <Route path="/accounts" element={<Accounts />} />
+              <Route path="/accounts/:id" element={<AccountDetail />} />
               <Route path="/deals" element={<Deals />} />
             </Route>
             <Route path="*" element={<NotFound />} />
-            <Route path="/accounts/:id" element={<AccountDetail />} />
           </Routes>
         </BrowserRouter>
         <Toaster />
