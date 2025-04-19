@@ -2,14 +2,17 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Account } from "@/lib/types/database";
+import { useAuth } from "@/contexts/AuthContext";
 
 export function useAccounts() {
+  const { user } = useAuth();
+  
   return useQuery({
-    queryKey: ["accounts"],
+    queryKey: ["accounts", user?.id],
     queryFn: async (): Promise<Account[]> => {
-      const { data: user } = await supabase.auth.getUser();
-      if (!user.user) throw new Error("User must be logged in to fetch accounts");
+      if (!user) throw new Error("User must be logged in to fetch accounts");
 
+      // This query will automatically apply our RLS policy
       const { data: accountsData, error: accountsError } = await supabase
         .from("accounts")
         .select("*");
@@ -47,5 +50,6 @@ export function useAccounts() {
         tags: account.type ? [account.type] : [] // Use type as a tag for demonstration
       }));
     },
+    enabled: !!user, // Only run the query if the user is logged in
   });
 }

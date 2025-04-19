@@ -3,6 +3,8 @@ import { useState, useEffect } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { Account, Contact } from "@/lib/types/database";
 import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
 
 export function useAccountDetails(accountId: string | undefined) {
   const [account, setAccount] = useState<Account | null>(null);
@@ -10,6 +12,8 @@ export function useAccountDetails(accountId: string | undefined) {
   const [ownerName, setOwnerName] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
+  const navigate = useNavigate();
+  const { user } = useAuth();
 
   const fetchAccountDetails = async () => {
     if (!accountId) return;
@@ -18,19 +22,42 @@ export function useAccountDetails(accountId: string | undefined) {
     try {
       console.log("Fetching account with ID:", accountId);
       
+      // Check if the user is logged in
+      if (!user) {
+        toast({
+          title: "Fehler",
+          description: "Sie müssen angemeldet sein, um Accounts anzuzeigen",
+          variant: "destructive"
+        });
+        navigate('/accounts');
+        return;
+      }
+      
       const { data: accountData, error: accountError } = await supabase
         .from('accounts')
         .select('*, profiles(first_name, last_name)')
         .eq('id', accountId)
+        .eq('owner_id', user.id) // Only allow seeing own accounts
         .single();
 
       if (accountError) {
         console.error("Error fetching account:", accountError);
-        toast({
-          title: "Error",
-          description: "Could not load account details",
-          variant: "destructive"
-        });
+        
+        // If no rows returned, it means the user doesn't own this account
+        if (accountError.code === 'PGRST116') {
+          toast({
+            title: "Zugriff verweigert",
+            description: "Sie haben keinen Zugriff auf diesen Account",
+            variant: "destructive"
+          });
+          navigate('/accounts');
+        } else {
+          toast({
+            title: "Fehler",
+            description: "Account-Details konnten nicht geladen werden",
+            variant: "destructive"
+          });
+        }
         return;
       }
 
@@ -91,7 +118,7 @@ export function useAccountDetails(accountId: string | undefined) {
     } else {
       setIsLoading(false);
     }
-  }, [accountId]);
+  }, [accountId, user]);
 
   return {
     account,
