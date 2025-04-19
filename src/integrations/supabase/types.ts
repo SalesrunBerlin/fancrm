@@ -101,6 +101,50 @@ export type Database = {
           },
         ]
       }
+      deals: {
+        Row: {
+          account_id: string | null
+          amount: number
+          close_date: string | null
+          created_at: string
+          id: string
+          name: string
+          owner_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          account_id?: string | null
+          amount: number
+          close_date?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          owner_id: string
+          status: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string | null
+          amount?: number
+          close_date?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          owner_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deals_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null

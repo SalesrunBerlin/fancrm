@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,17 +5,21 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus, Search, Briefcase } from "lucide-react";
 import { DealCard } from "@/components/deals/DealCard";
-import { mockDeals } from "@/data/mockData";
-import { useToast } from "@/components/ui/use-toast";
-import { DealType } from "@/types";
+import { useDeals } from "@/hooks/useDeals";
+import { useToast } from "@/hooks/use-toast";
+import { Table } from "@/components/ui/table";
 import { formatCurrency } from "@/lib/utils";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { CreateDealForm } from "@/components/deals/CreateDealForm";
 
 export default function Deals() {
   const { toast } = useToast();
+  const { deals, isLoading } = useDeals();
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
+  const [showCreateForm, setShowCreateForm] = useState(false);
   
-  const filteredDeals = mockDeals.filter(deal => {
+  const filteredDeals = deals.filter(deal => {
     return deal.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
            (deal.accountName && deal.accountName.toLowerCase().includes(searchQuery.toLowerCase())) ||
            deal.status.toLowerCase().includes(searchQuery.toLowerCase());
@@ -29,13 +32,6 @@ export default function Deals() {
     });
   };
 
-  const handleAddNew = () => {
-    toast({
-      title: "Create New Deal",
-      description: "This would open a form to create a new deal.",
-    });
-  };
-  
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -43,7 +39,7 @@ export default function Deals() {
           <Briefcase className="mr-2 h-6 w-6 text-beauty" />
           <h1 className="text-3xl font-bold tracking-tight">Deals</h1>
         </div>
-        <Button onClick={handleAddNew} className="bg-beauty hover:bg-beauty-dark">
+        <Button onClick={() => setShowCreateForm(true)} className="bg-beauty hover:bg-beauty-dark">
           <Plus className="mr-2 h-4 w-4" />
           Add Deal
         </Button>
@@ -95,7 +91,11 @@ export default function Deals() {
       
       <Tabs defaultValue="all" className="space-y-4">
         <TabsContent value="all" className="space-y-4">
-          {viewMode === "grid" ? (
+          {isLoading ? (
+            <div className="flex justify-center items-center h-32">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-beauty" />
+            </div>
+          ) : viewMode === "grid" ? (
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {filteredDeals.map((deal) => (
                 <DealCard 
@@ -173,6 +173,15 @@ export default function Deals() {
           )}
         </TabsContent>
       </Tabs>
+
+      <Sheet open={showCreateForm} onOpenChange={setShowCreateForm}>
+        <SheetContent>
+          <SheetHeader>
+            <SheetTitle>Create New Deal</SheetTitle>
+          </SheetHeader>
+          <CreateDealForm onSuccess={() => setShowCreateForm(false)} />
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
