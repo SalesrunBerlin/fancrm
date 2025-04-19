@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/contexts/AuthContext";
 
 const accountFormSchema = z.object({
   name: z.string().min(1, "Name ist erforderlich"),
@@ -29,6 +30,7 @@ export function CreateAccountForm({ isOpen, onClose }: CreateAccountFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   
   const form = useForm<AccountFormValues>({
     resolver: zodResolver(accountFormSchema),
@@ -41,6 +43,15 @@ export function CreateAccountForm({ isOpen, onClose }: CreateAccountFormProps) {
   });
 
   const onSubmit = async (data: AccountFormValues) => {
+    if (!user) {
+      toast({
+        title: "Fehler",
+        description: "Sie müssen angemeldet sein, um einen Account zu erstellen.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsLoading(true);
     try {
       const { error } = await supabase.from("accounts").insert([{
@@ -48,6 +59,7 @@ export function CreateAccountForm({ isOpen, onClose }: CreateAccountFormProps) {
         type: data.type || null,
         website: data.website || null,
         industry: data.industry || null,
+        owner_id: user.id, // Set the owner_id to the current user's ID
       }]);
 
       if (error) throw error;

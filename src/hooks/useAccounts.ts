@@ -16,9 +16,9 @@ export function useAccounts() {
       // Get contact counts for each account
       const { data: contactCounts, error: contactsError } = await supabase
         .from("contacts")
-        .select("account_id, count(*)")
+        .select("account_id, count")
         .not("account_id", "is", null)
-        .groupBy("account_id");
+        .group("account_id");
 
       if (contactsError) throw contactsError;
 
@@ -26,8 +26,16 @@ export function useAccounts() {
         contactCounts.map((row) => [row.account_id, Number(row.count)])
       );
 
+      // Transform the database rows to match the Account type
       return accountsData.map(account => ({
-        ...account,
+        id: account.id,
+        name: account.name,
+        type: account.type,
+        website: account.website,
+        industry: account.industry,
+        createdAt: account.created_at,
+        updatedAt: account.updated_at,
+        ownerId: account.owner_id,
         contactCount: countMap.get(account.id) || 0,
       }));
     },
