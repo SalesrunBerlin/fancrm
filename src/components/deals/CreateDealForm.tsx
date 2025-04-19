@@ -1,6 +1,4 @@
 
-import { useState } from "react";
-import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -18,57 +16,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { useDeals } from "@/hooks/useDeals";
-import { useToast } from "@/hooks/use-toast";
-import { DealType } from "@/types";
 import { useAccounts } from "@/hooks/useAccounts";
 import { useContacts } from "@/hooks/useContacts";
+import { useCreateDealForm } from "@/hooks/useCreateDealForm";
+import { DealAssociationTypeSelect } from "./DealAssociationTypeSelect";
 
 interface CreateDealFormProps {
   onSuccess: () => void;
 }
 
 export function CreateDealForm({ onSuccess }: CreateDealFormProps) {
-  const { createDeal } = useDeals();
   const { data: accounts } = useAccounts();
   const { data: contacts } = useContacts();
-  const { toast } = useToast();
-  const [isLoading, setIsLoading] = useState(false);
-  const [associationType, setAssociationType] = useState<'account' | 'contact'>('account');
-
-  const form = useForm<Omit<DealType, 'id' | 'accountName' | 'contactName'>>({
-    defaultValues: {
-      name: "",
-      amount: null,
-      status: "Prospect",
-    },
-  });
-
-  const onSubmit = async (data: Omit<DealType, 'id' | 'accountName' | 'contactName'>) => {
-    setIsLoading(true);
-    try {
-      await createDeal.mutateAsync(data);
-      toast({
-        title: "Erfolg",
-        description: "Deal erfolgreich erstellt",
-      });
-      onSuccess();
-    } catch (error) {
-      console.error("Error creating deal:", error);
-      toast({
-        title: "Fehler",
-        description: "Deal konnte nicht erstellt werden",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const { form, isLoading, associationType, setAssociationType, onSubmit } = useCreateDealForm({ onSuccess });
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 mt-4">
+      <form onSubmit={onSubmit} className="space-y-4 mt-4">
         <FormField
           control={form.control}
           name="name"
@@ -93,7 +57,7 @@ export function CreateDealForm({ onSuccess }: CreateDealFormProps) {
                 <Input
                   type="number"
                   {...field}
-                  onChange={(e) => field.onChange(Number(e.target.value))}
+                  onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : null)}
                 />
               </FormControl>
               <FormMessage />
@@ -127,23 +91,10 @@ export function CreateDealForm({ onSuccess }: CreateDealFormProps) {
           )}
         />
 
-        <div className="space-y-2">
-          <FormLabel>Mit Account oder Kontakt verknüpfen</FormLabel>
-          <RadioGroup
-            value={associationType}
-            onValueChange={(value: 'account' | 'contact') => setAssociationType(value)}
-            className="flex space-x-4"
-          >
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="account" id="account" />
-              <label htmlFor="account">Account</label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="contact" id="contact" />
-              <label htmlFor="contact">Kontakt</label>
-            </div>
-          </RadioGroup>
-        </div>
+        <DealAssociationTypeSelect
+          value={associationType}
+          onChange={setAssociationType}
+        />
 
         {associationType === 'account' ? (
           <FormField
