@@ -18,13 +18,6 @@ export default function Accounts() {
   
   // Add console logging to debug account data
   console.log("Accounts data:", accounts);
-  
-  const handleAccountClick = (id: string) => {
-    toast({
-      title: "Account Selected",
-      description: `You clicked on account with ID: ${id}`,
-    });
-  };
 
   const filteredAccounts = accounts.filter(account => {
     return account.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -66,7 +59,6 @@ export default function Accounts() {
               <AccountsContent 
                 accounts={filteredAccounts}
                 viewMode={viewMode}
-                onAccountClick={handleAccountClick}
               />
             )}
           </TabsContent>
@@ -75,7 +67,6 @@ export default function Accounts() {
             <AccountsContent 
               accounts={filteredAccounts.filter(account => account.tags?.includes("Active"))}
               viewMode={viewMode}
-              onAccountClick={handleAccountClick}
             />
           </TabsContent>
           
@@ -83,7 +74,6 @@ export default function Accounts() {
             <AccountsContent 
               accounts={filteredAccounts.filter(account => account.tags?.includes("Prospect"))}
               viewMode={viewMode}
-              onAccountClick={handleAccountClick}
             />
           </TabsContent>
         </Tabs>
