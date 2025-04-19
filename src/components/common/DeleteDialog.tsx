@@ -10,7 +10,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Trash2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 
 interface DeleteDialogProps {
   isOpen: boolean;
@@ -39,7 +38,7 @@ export function DeleteDialog({
           <AlertDialogAction onClick={onConfirm} className="bg-destructive hover:bg-destructive/90">
             <Trash2 className="mr-2 h-4 w-4" />
             Löschen
-          </Button>
+          </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
