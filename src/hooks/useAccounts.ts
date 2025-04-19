@@ -1,4 +1,3 @@
-
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Account } from "@/lib/types/database";
@@ -7,6 +6,9 @@ export function useAccounts() {
   return useQuery({
     queryKey: ["accounts"],
     queryFn: async (): Promise<Account[]> => {
+      const { data: user } = await supabase.auth.getUser();
+      if (!user.user) throw new Error("User must be logged in to fetch accounts");
+
       const { data: accountsData, error: accountsError } = await supabase
         .from("accounts")
         .select("*");

@@ -7,6 +7,9 @@ export function useContacts() {
   return useQuery({
     queryKey: ["contacts"],
     queryFn: async (): Promise<Contact[]> => {
+      const { data: user } = await supabase.auth.getUser();
+      if (!user.user) throw new Error("User must be logged in to fetch contacts");
+
       const { data, error } = await supabase
         .from("contacts")
         .select(`

@@ -20,8 +20,7 @@ export function useDeals() {
             first_name,
             last_name
           )
-        `)
-        .order('created_at', { ascending: false });
+        `);
 
       if (error) throw error;
 
@@ -41,6 +40,9 @@ export function useDeals() {
 
   const createDeal = useMutation({
     mutationFn: async (newDeal: Omit<DealType, 'id' | 'accountName' | 'contactName'>) => {
+      const { data: user } = await supabase.auth.getUser();
+      if (!user.user) throw new Error("User must be logged in to create a deal");
+
       const { data, error } = await supabase
         .from('deals')
         .insert([{
@@ -50,7 +52,7 @@ export function useDeals() {
           account_id: newDeal.accountId,
           contact_id: newDeal.contactId,
           close_date: newDeal.closeDate,
-          owner_id: (await supabase.auth.getUser()).data.user?.id
+          owner_id: user.user.id
         }])
         .select()
         .single();
