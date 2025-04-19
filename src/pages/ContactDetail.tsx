@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -10,6 +9,7 @@ import { ArrowLeft, Edit, Trash2, X } from "lucide-react";
 import { DeleteDialog } from "@/components/common/DeleteDialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function ContactDetail() {
   const { id } = useParams<{ id: string }>();
@@ -21,6 +21,24 @@ export default function ContactDetail() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editedContact, setEditedContact] = useState<Partial<Contact>>({});
+  const [accounts, setAccounts] = useState<Array<{ id: string, name: string }>>([]);
+
+  useEffect(() => {
+    const fetchAccounts = async () => {
+      const { data, error } = await supabase
+        .from("accounts")
+        .select("id, name");
+      
+      if (error) {
+        console.error("Error fetching accounts:", error);
+        return;
+      }
+      
+      setAccounts(data || []);
+    };
+
+    fetchAccounts();
+  }, []);
 
   useEffect(() => {
     const fetchContact = async () => {
@@ -102,6 +120,7 @@ export default function ContactDetail() {
           last_name: editedContact.lastName,
           email: editedContact.email,
           phone: editedContact.phone,
+          account_id: editedContact.accountId,
         })
         .eq("id", id);
 
@@ -239,11 +258,9 @@ export default function ContactDetail() {
                 <div>
                   <strong>Phone:</strong> {contact.phone || '-'}
                 </div>
-                {contact.accountName && (
-                  <div>
-                    <strong>Account:</strong> {contact.accountName}
-                  </div>
-                )}
+                <div>
+                  <strong>Account:</strong> {contact.accountName || '-'}
+                </div>
                 {ownerName && (
                   <div>
                     <strong>Owner:</strong> {ownerName}
@@ -279,6 +296,25 @@ export default function ContactDetail() {
                     value={editedContact.phone || ''} 
                     onChange={(e) => handleFieldChange('phone', e.target.value)} 
                   />
+                </div>
+                <div className="space-y-2">
+                  <Label>Account</Label>
+                  <Select 
+                    value={editedContact.accountId || ''} 
+                    onValueChange={(value) => handleFieldChange('accountId', value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select an account" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">No Account</SelectItem>
+                      {accounts.map((account) => (
+                        <SelectItem key={account.id} value={account.id}>
+                          {account.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </>
             )}
