@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface CreateContactFormProps {
   accountId: string;
@@ -13,6 +14,7 @@ interface CreateContactFormProps {
 }
 
 export function CreateContactForm({ accountId, onContactCreated }: CreateContactFormProps) {
+  const { user } = useAuth();
   const { toast } = useToast();
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -26,9 +28,21 @@ export function CreateContactForm({ accountId, onContactCreated }: CreateContact
     setIsSubmitting(true);
     setErrorMessage(null);
 
+    if (!user) {
+      setErrorMessage("You must be logged in to create contacts");
+      setIsSubmitting(false);
+      return;
+    }
+
     try {
-      // Add logging to debug the issue
-      console.log("Creating contact with account_id:", accountId);
+      console.log("Creating contact with:", {
+        accountId,
+        ownerId: user.id,
+        firstName,
+        lastName,
+        email,
+        phone
+      });
       
       const { data, error } = await supabase
         .from("contacts")
@@ -37,7 +51,8 @@ export function CreateContactForm({ accountId, onContactCreated }: CreateContact
           last_name: lastName,
           email,
           phone,
-          account_id: accountId
+          account_id: accountId,
+          owner_id: user.id // Set the owner_id to the current user's ID
         })
         .select();
 
@@ -52,6 +67,7 @@ export function CreateContactForm({ accountId, onContactCreated }: CreateContact
         return;
       }
 
+      console.log("Contact created successfully:", data);
       toast({
         title: "Success",
         description: "Contact created successfully"
