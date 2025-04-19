@@ -87,7 +87,15 @@ export default function AccountDetail() {
         account={account}
         isEditing={isEditing}
         editedAccount={editedAccount}
-        onEdit={() => setIsEditing(true)}
+        onEdit={() => {
+          setEditedAccount({
+            name: account.name,
+            type: account.type,
+            website: account.website,
+            industry: account.industry
+          });
+          setIsEditing(true);
+        }}
         onCancelEdit={() => setIsEditing(false)}
         onSave={handleSave}
         onEditFieldChange={handleEditFieldChange}

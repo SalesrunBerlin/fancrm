@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { Account, Contact } from "@/lib/types/database";
 import { useToast } from "@/hooks/use-toast";
@@ -77,6 +77,15 @@ export function useAccountDetails(accountId: string | undefined) {
       setIsLoading(false);
     }
   };
+
+  // Automatically fetch account details when component mounts or accountId changes
+  useEffect(() => {
+    if (accountId) {
+      fetchAccountDetails();
+    } else {
+      setIsLoading(false);
+    }
+  }, [accountId]);
 
   return {
     account,
