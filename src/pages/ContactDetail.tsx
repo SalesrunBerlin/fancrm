@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -5,16 +6,21 @@ import { Contact } from "@/lib/types/database";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Trash2 } from "lucide-react";
+import { ArrowLeft, Edit, Trash2, X } from "lucide-react";
 import { DeleteDialog } from "@/components/common/DeleteDialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 export default function ContactDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [contact, setContact] = useState<Contact | null>(null);
+  const [ownerName, setOwnerName] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedContact, setEditedContact] = useState<Partial<Contact>>({});
 
   useEffect(() => {
     const fetchContact = async () => {
@@ -27,6 +33,10 @@ export default function ContactDetail() {
             *,
             accounts:account_id (
               name
+            ),
+            profiles:owner_id (
+              first_name,
+              last_name
             )
           `)
           .eq("id", id)
@@ -36,7 +46,7 @@ export default function ContactDetail() {
           console.error("Error fetching contact:", error);
           toast({
             title: "Error",
-            description: "Could not load contact details",
+            description: "Kontakt konnte nicht geladen werden",
             variant: "destructive"
           });
           return;
@@ -56,6 +66,11 @@ export default function ContactDetail() {
             ownerId: data.owner_id
           };
           setContact(transformedContact);
+          setEditedContact(transformedContact);
+          
+          if (data.profiles) {
+            setOwnerName(`${data.profiles.first_name} ${data.profiles.last_name}`.trim());
+          }
         }
       } catch (err) {
         console.error("Unexpected error:", err);
@@ -66,6 +81,51 @@ export default function ContactDetail() {
 
     fetchContact();
   }, [id, toast]);
+
+  const handleEdit = () => {
+    setIsEditing(true);
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+    setEditedContact(contact || {});
+  };
+
+  const handleSave = async () => {
+    if (!id || !editedContact) return;
+
+    try {
+      const { error } = await supabase
+        .from("contacts")
+        .update({
+          first_name: editedContact.firstName,
+          last_name: editedContact.lastName,
+          email: editedContact.email,
+          phone: editedContact.phone,
+        })
+        .eq("id", id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Erfolg",
+        description: "Kontakt wurde aktualisiert",
+      });
+      
+      setContact({
+        ...contact!,
+        ...editedContact,
+      });
+      setIsEditing(false);
+    } catch (err) {
+      console.error("Error updating contact:", err);
+      toast({
+        title: "Fehler",
+        description: "Kontakt konnte nicht aktualisiert werden",
+        variant: "destructive",
+      });
+    }
+  };
 
   const handleDelete = async () => {
     if (!id) return;
@@ -91,6 +151,13 @@ export default function ContactDetail() {
         variant: "destructive",
       });
     }
+  };
+
+  const handleFieldChange = (field: keyof Contact, value: string) => {
+    setEditedContact(prev => ({
+      ...prev,
+      [field]: value
+    }));
   };
 
   if (isLoading) {
@@ -125,33 +192,95 @@ export default function ContactDetail() {
             </Button>
             <CardTitle>Contact Details</CardTitle>
           </div>
-          <Button 
-            variant="destructive" 
-            onClick={() => setShowDeleteDialog(true)}
-          >
-            <Trash2 className="mr-2 h-4 w-4" />
-            Delete
-          </Button>
+          <div className="flex items-center gap-2">
+            {!isEditing ? (
+              <>
+                <Button 
+                  variant="outline" 
+                  onClick={handleEdit}
+                >
+                  <Edit className="mr-2 h-4 w-4" />
+                  Edit
+                </Button>
+                <Button 
+                  variant="destructive" 
+                  onClick={() => setShowDeleteDialog(true)}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button 
+                  variant="outline" 
+                  onClick={handleCancelEdit}
+                >
+                  <X className="mr-2 h-4 w-4" />
+                  Cancel
+                </Button>
+                <Button onClick={handleSave}>
+                  Save
+                </Button>
+              </>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <div>
-              <strong>Name:</strong> {contact.firstName} {contact.lastName}
-            </div>
-            {contact.email && (
-              <div>
-                <strong>Email:</strong> {contact.email}
-              </div>
-            )}
-            {contact.phone && (
-              <div>
-                <strong>Phone:</strong> {contact.phone}
-              </div>
-            )}
-            {contact.accountName && (
-              <div>
-                <strong>Account:</strong> {contact.accountName}
-              </div>
+            {!isEditing ? (
+              <>
+                <div>
+                  <strong>Name:</strong> {contact.firstName} {contact.lastName}
+                </div>
+                <div>
+                  <strong>Email:</strong> {contact.email || '-'}
+                </div>
+                <div>
+                  <strong>Phone:</strong> {contact.phone || '-'}
+                </div>
+                {contact.accountName && (
+                  <div>
+                    <strong>Account:</strong> {contact.accountName}
+                  </div>
+                )}
+                {ownerName && (
+                  <div>
+                    <strong>Owner:</strong> {ownerName}
+                  </div>
+                )}
+              </>
+            ) : (
+              <>
+                <div className="space-y-2">
+                  <Label>First Name</Label>
+                  <Input 
+                    value={editedContact.firstName || ''} 
+                    onChange={(e) => handleFieldChange('firstName', e.target.value)} 
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Last Name</Label>
+                  <Input 
+                    value={editedContact.lastName || ''} 
+                    onChange={(e) => handleFieldChange('lastName', e.target.value)} 
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Email</Label>
+                  <Input 
+                    value={editedContact.email || ''} 
+                    onChange={(e) => handleFieldChange('email', e.target.value)} 
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Phone</Label>
+                  <Input 
+                    value={editedContact.phone || ''} 
+                    onChange={(e) => handleFieldChange('phone', e.target.value)} 
+                  />
+                </div>
+              </>
             )}
           </div>
         </CardContent>
