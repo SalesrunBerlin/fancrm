@@ -13,18 +13,22 @@ export function useAccounts() {
 
       if (accountsError) throw accountsError;
 
-      // Get contact counts for each account
-      const { data: contactCounts, error: contactsError } = await supabase
+      // For contacts, we need to count by account_id
+      // This is done differently since .group() isn't available
+      const { data: contactsData, error: contactsError } = await supabase
         .from("contacts")
-        .select("account_id, count")
-        .not("account_id", "is", null)
-        .group("account_id");
+        .select("account_id");
 
       if (contactsError) throw contactsError;
 
-      const countMap = new Map(
-        contactCounts.map((row) => [row.account_id, Number(row.count)])
-      );
+      // Count contacts manually
+      const countMap = new Map<string, number>();
+      contactsData.forEach((contact) => {
+        if (contact.account_id) {
+          const currentCount = countMap.get(contact.account_id) || 0;
+          countMap.set(contact.account_id, currentCount + 1);
+        }
+      });
 
       // Transform the database rows to match the Account type
       return accountsData.map((account): Account => ({
@@ -37,6 +41,7 @@ export function useAccounts() {
         updatedAt: account.updated_at,
         ownerId: account.owner_id,
         contactCount: countMap.get(account.id) || 0,
+        tags: account.type ? [account.type] : [] // Use type as a tag for demonstration
       }));
     },
   });

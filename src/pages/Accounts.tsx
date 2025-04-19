@@ -6,6 +6,9 @@ import { AccountsFilter } from "@/components/accounts/AccountsFilter";
 import { AccountsContent } from "@/components/accounts/AccountsContent";
 import { useAccounts } from "@/hooks/useAccounts";
 import { TabsContent, Tabs } from "@/components/ui/tabs";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 
 export default function Accounts() {
   const { toast } = useToast();
@@ -16,26 +19,17 @@ export default function Accounts() {
   // Add console logging to debug account data
   console.log("Accounts data:", accounts);
   
-  if (isLoading) {
-    return <div className="flex items-center justify-center h-64">Lädt Accounts...</div>;
-  }
-  
-  if (error) {
-    console.error("Error loading accounts:", error);
-    return <div className="text-red-500">Fehler beim Laden der Accounts.</div>;
-  }
-  
-  const filteredAccounts = accounts.filter(account => {
-    return account.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-           (account.type && account.type.toLowerCase().includes(searchQuery.toLowerCase()));
-  });
-  
   const handleAccountClick = (id: string) => {
     toast({
       title: "Account Selected",
       description: `You clicked on account with ID: ${id}`,
     });
   };
+
+  const filteredAccounts = accounts.filter(account => {
+    return account.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+           (account.type && account.type.toLowerCase().includes(searchQuery.toLowerCase()));
+  });
   
   return (
     <div className="space-y-6 animate-fade-in">
@@ -48,37 +42,52 @@ export default function Accounts() {
         onViewModeChange={setViewMode}
       />
       
-      <Tabs defaultValue="all" className="space-y-4">
-        <TabsContent value="all" className="space-y-4">
-          {filteredAccounts.length === 0 ? (
-            <div className="text-center py-10 text-muted-foreground">
-              Keine Accounts gefunden. Erstellen Sie einen neuen Account mit dem Button oben.
-            </div>
-          ) : (
+      {isLoading ? (
+        <div className="space-y-4">
+          <Skeleton className="h-12 w-full" />
+          <Skeleton className="h-64 w-full" />
+        </div>
+      ) : error ? (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Fehler</AlertTitle>
+          <AlertDescription>
+            Fehler beim Laden der Accounts. Bitte versuchen Sie es später erneut.
+          </AlertDescription>
+        </Alert>
+      ) : (
+        <Tabs defaultValue="all" className="space-y-4">
+          <TabsContent value="all" className="space-y-4">
+            {filteredAccounts.length === 0 ? (
+              <div className="text-center py-10 text-muted-foreground">
+                Keine Accounts gefunden. Erstellen Sie einen neuen Account mit dem Button oben.
+              </div>
+            ) : (
+              <AccountsContent 
+                accounts={filteredAccounts}
+                viewMode={viewMode}
+                onAccountClick={handleAccountClick}
+              />
+            )}
+          </TabsContent>
+          
+          <TabsContent value="active" className="space-y-4">
             <AccountsContent 
-              accounts={filteredAccounts}
+              accounts={filteredAccounts.filter(account => account.tags?.includes("Active"))}
               viewMode={viewMode}
               onAccountClick={handleAccountClick}
             />
-          )}
-        </TabsContent>
-        
-        <TabsContent value="active" className="space-y-4">
-          <AccountsContent 
-            accounts={filteredAccounts.filter(account => account.tags?.includes("Active"))}
-            viewMode={viewMode}
-            onAccountClick={handleAccountClick}
-          />
-        </TabsContent>
-        
-        <TabsContent value="prospects" className="space-y-4">
-          <AccountsContent 
-            accounts={filteredAccounts.filter(account => account.tags?.includes("Prospect"))}
-            viewMode={viewMode}
-            onAccountClick={handleAccountClick}
-          />
-        </TabsContent>
-      </Tabs>
+          </TabsContent>
+          
+          <TabsContent value="prospects" className="space-y-4">
+            <AccountsContent 
+              accounts={filteredAccounts.filter(account => account.tags?.includes("Prospect"))}
+              viewMode={viewMode}
+              onAccountClick={handleAccountClick}
+            />
+          </TabsContent>
+        </Tabs>
+      )}
     </div>
   );
 }
