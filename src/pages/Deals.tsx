@@ -1,16 +1,15 @@
 
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useDeals } from "@/hooks/useDeals";
 import { useToast } from "@/hooks/use-toast";
-import { DealType } from "@/types";
 import { CreateDealForm } from "@/components/deals/CreateDealForm";
 import { DealsHeader } from "@/components/deals/DealsHeader";
 import { DealsFilter } from "@/components/deals/DealsFilter";
 import { DealsViewToggle } from "@/components/deals/DealsViewToggle";
-import { DealsContent } from "@/components/deals/DealsContent";
+import { DealsTabContent } from "@/components/deals/DealsTabContent";
 
 export default function Deals() {
   const { toast } = useToast();
@@ -62,43 +61,12 @@ export default function Deals() {
       </Card>
       
       <Tabs defaultValue="all" className="space-y-4">
-        <TabsContent value="all" className="space-y-4">
-          <DealsContent
-            isLoading={isLoading}
-            deals={filteredDeals}
-            viewMode={viewMode}
-            onDealClick={handleDealClick}
-          />
-        </TabsContent>
-        
-        <TabsContent value="open" className="space-y-4">
-          <DealsContent
-            isLoading={isLoading}
-            deals={filteredDeals.filter(deal => 
-              deal.status !== "Closed Won" && deal.status !== "Closed Lost"
-            )}
-            viewMode={viewMode}
-            onDealClick={handleDealClick}
-          />
-        </TabsContent>
-        
-        <TabsContent value="won" className="space-y-4">
-          <DealsContent
-            isLoading={isLoading}
-            deals={filteredDeals.filter(deal => deal.status === "Closed Won")}
-            viewMode={viewMode}
-            onDealClick={handleDealClick}
-          />
-        </TabsContent>
-
-        <TabsContent value="lost" className="space-y-4">
-          <DealsContent
-            isLoading={isLoading}
-            deals={filteredDeals.filter(deal => deal.status === "Closed Lost")}
-            viewMode={viewMode}
-            onDealClick={handleDealClick}
-          />
-        </TabsContent>
+        <DealsTabContent
+          deals={filteredDeals}
+          isLoading={isLoading}
+          viewMode={viewMode}
+          onDealClick={handleDealClick}
+        />
       </Tabs>
 
       <Sheet open={showCreateForm} onOpenChange={setShowCreateForm}>
