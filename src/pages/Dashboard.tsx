@@ -1,35 +1,26 @@
+
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ContactCard } from "@/components/contacts/ContactCard";
 import { DealCard } from "@/components/deals/DealCard";
-import { mockDeals } from "@/data/mockData";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { DashboardStats } from "@/components/dashboard/DashboardStats";
 import { RecentContacts } from "@/components/dashboard/RecentContacts";
 import { RecentDeals } from "@/components/dashboard/RecentDeals";
-import { Contact } from "@/lib/types/database";
+import { useContacts } from "@/hooks/useContacts";
+import { useDeals } from "@/hooks/useDeals";
+import { useAccounts } from "@/hooks/useAccounts";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Dashboard() {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("overview");
   
-  // Mock contacts with the correct type
-  const mockContacts: Contact[] = [
-    {
-      id: "1",
-      firstName: "John",
-      lastName: "Doe",
-      email: "john@example.com",
-      phone: null,
-      accountId: null,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      ownerId: "1"
-    },
-    // ... other mock contacts would go here
-  ];
+  const { contacts, isLoading: isLoadingContacts } = useContacts();
+  const { deals, isLoading: isLoadingDeals } = useDeals();
+  const { accounts, isLoading: isLoadingAccounts } = useAccounts();
   
-  const openDeals = mockDeals.filter(d => d.status !== "Closed Won" && d.status !== "Closed Lost");
+  const openDeals = deals?.filter(d => d.status !== "Closed Won" && d.status !== "Closed Lost") || [];
   
   const handleContactClick = (id: string) => {
     toast({
@@ -44,6 +35,14 @@ export default function Dashboard() {
       description: `You clicked on deal with ID: ${id}`,
     });
   };
+
+  if (isLoadingContacts || isLoadingDeals || isLoadingAccounts) {
+    return (
+      <div className="space-y-6">
+        <Skeleton className="h-[200px] w-full" />
+      </div>
+    );
+  }
   
   return (
     <div className="space-y-6 animate-fade-in">
@@ -53,10 +52,10 @@ export default function Dashboard() {
       </div>
       
       <DashboardStats 
-        contactCount={mockContacts.length}
-        accountCount={8}
+        contactCount={contacts?.length || 0}
+        accountCount={accounts?.length || 0}
         openDealsCount={openDeals.length}
-        upcomingActivities={3}
+        upcomingActivities={0}
       />
       
       <Tabs 
@@ -74,14 +73,14 @@ export default function Dashboard() {
         <TabsContent value="overview" className="space-y-4">
           <h2 className="text-xl font-semibold">Recent Activities</h2>
           <div className="grid gap-4 md:grid-cols-2">
-            <RecentContacts contacts={mockContacts} />
-            <RecentDeals deals={mockDeals} />
+            <RecentContacts contacts={contacts || []} />
+            <RecentDeals deals={deals || []} />
           </div>
         </TabsContent>
         
         <TabsContent value="recent-contacts">
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {mockContacts.slice(0, 6).map((contact) => (
+            {(contacts || []).slice(0, 6).map((contact) => (
               <ContactCard 
                 key={contact.id} 
                 contact={contact} 
@@ -93,7 +92,7 @@ export default function Dashboard() {
         
         <TabsContent value="deals-pipeline">
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {mockDeals.slice(0, 6).map((deal) => (
+            {(deals || []).slice(0, 6).map((deal) => (
               <DealCard 
                 key={deal.id} 
                 deal={deal} 
