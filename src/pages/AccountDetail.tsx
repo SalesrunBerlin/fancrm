@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from "@/integrations/supabase/client";
@@ -20,6 +19,7 @@ export default function AccountDetail() {
   const [isEditing, setIsEditing] = useState(false);
   const [editedAccount, setEditedAccount] = useState<Partial<Account>>({});
   const [isLoading, setIsLoading] = useState(true);
+  const [showContactForm, setShowContactForm] = useState(false);
 
   const fetchAccountDetails = async () => {
     if (!id) return;
@@ -137,6 +137,10 @@ export default function AccountDetail() {
     }
   };
 
+  const handleContactClick = (contactId: string) => {
+    navigate(`/contacts/${contactId}`);
+  };
+
   if (isLoading) return (
     <div className="container mx-auto p-4 flex justify-center items-center h-64">
       <RefreshCw className="h-8 w-8 animate-spin text-primary" />
@@ -227,21 +231,42 @@ export default function AccountDetail() {
 
       <Card className="mt-4">
         <CardHeader>
-          <CardTitle>Contacts</CardTitle>
+          <div className="flex justify-between items-center">
+            <CardTitle>Contacts</CardTitle>
+            <Button onClick={() => setShowContactForm(true)} className="bg-beauty hover:bg-beauty-dark">
+              Add Contact
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {account && (
-              <CreateContactForm 
-                accountId={account.id} 
-                onContactCreated={fetchAccountDetails}
-              />
+            {showContactForm && account && (
+              <>
+                <CreateContactForm 
+                  accountId={account.id} 
+                  onContactCreated={() => {
+                    fetchAccountDetails();
+                    setShowContactForm(false);
+                  }}
+                />
+                <Button 
+                  variant="outline" 
+                  onClick={() => setShowContactForm(false)} 
+                  className="mt-4"
+                >
+                  Cancel
+                </Button>
+              </>
             )}
             
             {contacts.length > 0 ? (
               <ul className="mt-6">
                 {contacts.map(contact => (
-                  <li key={contact.id} className="border-b py-2">
+                  <li 
+                    key={contact.id} 
+                    className="border-b py-2 hover:bg-accent cursor-pointer px-2 rounded"
+                    onClick={() => handleContactClick(contact.id)}
+                  >
                     {contact.firstName} {contact.lastName} 
                     <span className="text-muted-foreground ml-2">
                       {contact.email}
