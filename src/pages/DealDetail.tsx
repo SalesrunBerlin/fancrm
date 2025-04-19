@@ -1,22 +1,56 @@
 
-import { useParams } from "react-router-dom";
+import { useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { useDeals } from "@/hooks/useDeals";
 import { formatCurrency } from "@/lib/utils";
+import { ArrowLeft } from "lucide-react";
+import { DealEditForm } from "@/components/deals/DealEditForm";
 
 export default function DealDetail() {
+  const navigate = useNavigate();
   const { id } = useParams();
   const { deals } = useDeals();
+  const [isEditing, setIsEditing] = useState(false);
   const deal = deals.find(d => d.id === id);
 
   if (!deal) {
     return <div className="p-4">Deal nicht gefunden</div>;
   }
 
+  if (isEditing) {
+    return (
+      <div className="space-y-6 p-6 animate-fade-in">
+        <Button 
+          variant="ghost" 
+          className="mb-4"
+          onClick={() => setIsEditing(false)}
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Zurück
+        </Button>
+        <DealEditForm 
+          deal={deal} 
+          onSuccess={() => setIsEditing(false)}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 p-6 animate-fade-in">
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">{deal.name}</h1>
+        <Button 
+          variant="ghost" 
+          onClick={() => navigate(-1)}
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Zurück
+        </Button>
+        <Button onClick={() => setIsEditing(true)}>
+          Bearbeiten
+        </Button>
       </div>
 
       <Card className="p-6">
