@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Edit, X } from "lucide-react";
+import { Edit, X, RefreshCw } from "lucide-react";
 import { CreateContactForm } from '@/components/contacts/CreateContactForm';
 
 export default function AccountDetail() {
@@ -19,49 +19,77 @@ export default function AccountDetail() {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [isEditing, setIsEditing] = useState(false);
   const [editedAccount, setEditedAccount] = useState<Partial<Account>>({});
+  const [isLoading, setIsLoading] = useState(true);
 
   const fetchAccountDetails = async () => {
     if (!id) return;
+    
+    setIsLoading(true);
+    
+    try {
+      console.log("Fetching account with ID:", id);
+      
+      const { data: accountData, error: accountError } = await supabase
+        .from('accounts')
+        .select('*')
+        .eq('id', id)
+        .single();
 
-    const { data: accountData, error: accountError } = await supabase
-      .from('accounts')
-      .select('*')
-      .eq('id', id)
-      .single();
+      if (accountError) {
+        console.error("Error fetching account:", accountError);
+        toast({
+          title: "Error",
+          description: "Could not load account details",
+          variant: "destructive"
+        });
+        return;
+      }
 
-    if (accountData) {
-      const transformedAccount: Account = {
-        id: accountData.id,
-        name: accountData.name,
-        type: accountData.type,
-        website: accountData.website,
-        industry: accountData.industry,
-        createdAt: accountData.created_at,
-        updatedAt: accountData.updated_at,
-        ownerId: accountData.owner_id,
-      };
-      setAccount(transformedAccount);
-      setEditedAccount(transformedAccount);
-    }
+      if (accountData) {
+        console.log("Account data retrieved:", accountData);
+        const transformedAccount: Account = {
+          id: accountData.id,
+          name: accountData.name,
+          type: accountData.type,
+          website: accountData.website,
+          industry: accountData.industry,
+          createdAt: accountData.created_at,
+          updatedAt: accountData.updated_at,
+          ownerId: accountData.owner_id,
+        };
+        setAccount(transformedAccount);
+        setEditedAccount(transformedAccount);
+      }
 
-    const { data: contactsData } = await supabase
-      .from('contacts')
-      .select('*')
-      .eq('account_id', id);
+      console.log("Fetching contacts for account ID:", id);
+      const { data: contactsData, error: contactsError } = await supabase
+        .from('contacts')
+        .select('*')
+        .eq('account_id', id);
 
-    if (contactsData) {
-      const transformedContacts: Contact[] = contactsData.map(contact => ({
-        id: contact.id,
-        firstName: contact.first_name,
-        lastName: contact.last_name,
-        email: contact.email,
-        phone: contact.phone,
-        accountId: contact.account_id,
-        createdAt: contact.created_at,
-        updatedAt: contact.updated_at,
-        ownerId: contact.owner_id
-      }));
-      setContacts(transformedContacts);
+      if (contactsError) {
+        console.error("Error fetching contacts:", contactsError);
+      }
+
+      if (contactsData) {
+        console.log("Contacts retrieved:", contactsData);
+        const transformedContacts: Contact[] = contactsData.map(contact => ({
+          id: contact.id,
+          firstName: contact.first_name,
+          lastName: contact.last_name,
+          email: contact.email,
+          phone: contact.phone,
+          accountId: contact.account_id,
+          createdAt: contact.created_at,
+          updatedAt: contact.updated_at,
+          ownerId: contact.owner_id
+        }));
+        setContacts(transformedContacts);
+      }
+    } catch (err) {
+      console.error("Unexpected error:", err);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -72,34 +100,59 @@ export default function AccountDetail() {
   const handleSave = async () => {
     if (!id) return;
 
-    const { error } = await supabase
-      .from('accounts')
-      .update({
-        name: editedAccount.name,
-        type: editedAccount.type,
-        website: editedAccount.website,
-        industry: editedAccount.industry
-      })
-      .eq('id', id);
+    try {
+      const { error } = await supabase
+        .from('accounts')
+        .update({
+          name: editedAccount.name,
+          type: editedAccount.type,
+          website: editedAccount.website,
+          industry: editedAccount.industry
+        })
+        .eq('id', id);
 
-    if (error) {
+      if (error) {
+        console.error("Error updating account:", error);
+        toast({
+          title: "Error",
+          description: "Account could not be updated",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      setAccount(prev => ({ ...prev, ...editedAccount } as Account));
+      setIsEditing(false);
+      toast({
+        title: "Success",
+        description: "Account updated successfully"
+      });
+    } catch (err) {
+      console.error("Unexpected error during save:", err);
       toast({
         title: "Error",
-        description: "Account could not be updated",
+        description: "An unexpected error occurred",
         variant: "destructive"
       });
-      return;
     }
-
-    setAccount(prev => ({ ...prev, ...editedAccount } as Account));
-    setIsEditing(false);
-    toast({
-      title: "Success",
-      description: "Account updated successfully"
-    });
   };
 
-  if (!account) return <div>Loading...</div>;
+  if (isLoading) return (
+    <div className="container mx-auto p-4 flex justify-center items-center h-64">
+      <RefreshCw className="h-8 w-8 animate-spin text-primary" />
+    </div>
+  );
+
+  if (!account) return (
+    <div className="container mx-auto p-4">
+      <Card>
+        <CardContent className="pt-6">
+          <p>Account not found</p>
+          <Button onClick={() => navigate('/accounts')} className="mt-4">Back to accounts</Button>
+        </CardContent>
+      </Card>
+    </div>
+  );
 
   return (
     <div className="container mx-auto p-4">
@@ -178,13 +231,15 @@ export default function AccountDetail() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <CreateContactForm 
-              accountId={account.id} 
-              onContactCreated={fetchAccountDetails}
-            />
+            {account && (
+              <CreateContactForm 
+                accountId={account.id} 
+                onContactCreated={fetchAccountDetails}
+              />
+            )}
             
             {contacts.length > 0 ? (
-              <ul>
+              <ul className="mt-6">
                 {contacts.map(contact => (
                   <li key={contact.id} className="border-b py-2">
                     {contact.firstName} {contact.lastName} 
@@ -195,7 +250,7 @@ export default function AccountDetail() {
                 ))}
               </ul>
             ) : (
-              <p>No contacts for this account</p>
+              <p className="mt-4 text-muted-foreground">No contacts for this account</p>
             )}
           </div>
         </CardContent>
