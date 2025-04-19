@@ -27,7 +27,8 @@ export default function ContactDetail() {
   const handleEdit = () => setIsEditing(true);
   const handleCancelEdit = () => {
     setIsEditing(false);
-    setEditedContact(contact || {});
+    // Reset the edited contact to the current contact data
+    // We don't need to call setEditedContact directly as it's handled in the hook
   };
 
   if (isLoading) {

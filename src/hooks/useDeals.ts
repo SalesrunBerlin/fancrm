@@ -6,7 +6,7 @@ import { DealType } from "@/types";
 export function useDeals() {
   const queryClient = useQueryClient();
 
-  const { data: deals = [], isLoading } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: ["deals"],
     queryFn: async (): Promise<DealType[]> => {
       const { data: user } = await supabase.auth.getUser();
@@ -102,7 +102,7 @@ export function useDeals() {
   });
 
   return {
-    deals,
+    data, // Changed from 'deals' to 'data' to match useQuery's return pattern
     isLoading,
     createDeal,
     updateDeal,
