@@ -16,9 +16,9 @@ export default function Dashboard() {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("overview");
   
-  const { contacts, isLoading: isLoadingContacts } = useContacts();
-  const { deals, isLoading: isLoadingDeals } = useDeals();
-  const { accounts, isLoading: isLoadingAccounts } = useAccounts();
+  const { data: contacts, isLoading: isLoadingContacts } = useContacts();
+  const { data: deals, isLoading: isLoadingDeals } = useDeals();
+  const { data: accounts, isLoading: isLoadingAccounts } = useAccounts();
   
   const openDeals = deals?.filter(d => d.status !== "Closed Won" && d.status !== "Closed Lost") || [];
   
