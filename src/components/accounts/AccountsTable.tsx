@@ -1,5 +1,6 @@
 
 import { Account } from "@/lib/types/database";
+import { useNavigate } from "react-router-dom";
 import { 
   Table, 
   TableBody, 
@@ -11,10 +12,11 @@ import {
 
 interface AccountsTableProps {
   accounts: Account[];
-  onAccountClick: (id: string) => void;
 }
 
-export function AccountsTable({ accounts, onAccountClick }: AccountsTableProps) {
+export function AccountsTable({ accounts }: AccountsTableProps) {
+  const navigate = useNavigate();
+
   return (
     <div className="rounded-md border">
       <Table>
@@ -31,7 +33,7 @@ export function AccountsTable({ accounts, onAccountClick }: AccountsTableProps) 
             <TableRow 
               key={account.id} 
               className="cursor-pointer hover:bg-muted/50" 
-              onClick={() => onAccountClick(account.id)}
+              onClick={() => navigate(`/accounts/${account.id}`)}
             >
               <TableCell className="font-medium">{account.name}</TableCell>
               <TableCell>{account.type || "Business"}</TableCell>
@@ -52,3 +54,4 @@ export function AccountsTable({ accounts, onAccountClick }: AccountsTableProps) 
     </div>
   );
 }
+
