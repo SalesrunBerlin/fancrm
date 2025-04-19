@@ -1,17 +1,33 @@
-
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ContactCard } from "@/components/contacts/ContactCard";
 import { DealCard } from "@/components/deals/DealCard";
-import { mockContacts, mockDeals } from "@/data/mockData";
+import { mockDeals } from "@/data/mockData";
 import { useState } from "react";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { DashboardStats } from "@/components/dashboard/DashboardStats";
 import { RecentContacts } from "@/components/dashboard/RecentContacts";
 import { RecentDeals } from "@/components/dashboard/RecentDeals";
+import { Contact } from "@/lib/types/database";
 
 export default function Dashboard() {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("overview");
+  
+  // Mock contacts with the correct type
+  const mockContacts: Contact[] = [
+    {
+      id: "1",
+      firstName: "John",
+      lastName: "Doe",
+      email: "john@example.com",
+      phone: null,
+      accountId: null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      ownerId: "1"
+    },
+    // ... other mock contacts would go here
+  ];
   
   const openDeals = mockDeals.filter(d => d.status !== "Closed Won" && d.status !== "Closed Lost");
   
