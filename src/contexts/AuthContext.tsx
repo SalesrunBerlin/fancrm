@@ -44,10 +44,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       await supabase.auth.signOut();
       navigate('/auth');
-      toast.success('You have been logged out');
+      toast.success('Sie wurden abgemeldet');
     } catch (error) {
-      console.error('Error logging out:', error);
-      toast.error('Failed to log out');
+      console.error('Fehler beim Abmelden:', error);
+      toast.error('Fehler beim Abmelden');
     }
   };
 
@@ -61,7 +61,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider");
+    throw new Error("useAuth muss innerhalb eines AuthProviders verwendet werden");
   }
   return context;
 };
