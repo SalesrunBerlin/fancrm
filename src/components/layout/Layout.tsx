@@ -13,7 +13,7 @@ export function Layout() {
   
   return (
     <div className="flex h-screen overflow-hidden">
-      <Sidebar isOpen={sidebarOpen} onClose={toggleSidebar} />
+      <Sidebar />
       
       <div className="flex flex-col flex-1 overflow-hidden">
         <Header onMenuClick={toggleSidebar} />

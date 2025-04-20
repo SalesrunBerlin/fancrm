@@ -1,6 +1,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface DealStatus {
   id: string;
@@ -11,6 +12,7 @@ interface DealStatus {
 
 export function useDealStatuses() {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   const { data: dealStatuses, isLoading } = useQuery({
     queryKey: ["dealStatuses"],
@@ -27,9 +29,14 @@ export function useDealStatuses() {
 
   const createStatus = useMutation({
     mutationFn: async (newStatus: { name: string; order_position: number }) => {
+      if (!user) throw new Error("User not authenticated");
+      
       const { data, error } = await supabase
         .from('deal_statuses')
-        .insert([newStatus])
+        .insert([{
+          ...newStatus,
+          owner_id: user.id
+        }])
         .select()
         .single();
 

@@ -1,28 +1,19 @@
+
 import {
   Home,
   LayoutDashboard,
   Users,
   Building,
   Briefcase,
+  Settings,
 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
-
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/contexts/AuthContext";
-import { Settings } from "lucide-react";
 
 export function Sidebar() {
   const location = useLocation();
-  const { logout, user } = useAuth();
+  const { user } = useAuth();
 
   return (
     <aside className="hidden lg:flex h-screen fixed left-0 top-0 w-64 border-r bg-background p-6 flex-col gap-6">
