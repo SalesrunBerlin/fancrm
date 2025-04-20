@@ -101,6 +101,33 @@ export type Database = {
           },
         ]
       }
+      deal_statuses: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          order_position: number
+          owner_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          order_position: number
+          owner_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          order_position?: number
+          owner_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       deals: {
         Row: {
           account_id: string | null
@@ -112,6 +139,7 @@ export type Database = {
           name: string
           owner_id: string
           status: string
+          status_id: string | null
           updated_at: string
         }
         Insert: {
@@ -124,6 +152,7 @@ export type Database = {
           name: string
           owner_id: string
           status: string
+          status_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -136,6 +165,7 @@ export type Database = {
           name?: string
           owner_id?: string
           status?: string
+          status_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -151,6 +181,13 @@ export type Database = {
             columns: ["contact_id"]
             isOneToOne: false
             referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deals_status_id_fkey"
+            columns: ["status_id"]
+            isOneToOne: false
+            referencedRelation: "deal_statuses"
             referencedColumns: ["id"]
           },
         ]
@@ -193,7 +230,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      initialize_deal_statuses: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never
