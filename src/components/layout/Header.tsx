@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,7 +28,7 @@ export function Header({ onMenuClick, className }: HeaderProps) {
           variant="ghost"
           size="icon"
           onClick={toggleSidebar}
-          className="mr-2 lg:hidden"
+          className="mr-2"
           aria-label="Toggle menu"
         >
           {sidebarVisible ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
