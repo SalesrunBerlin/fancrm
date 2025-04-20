@@ -27,8 +27,8 @@ const App = () => (
         <TooltipProvider>
           <Routes>
             <Route path="/auth" element={<Auth />} />
-            <Route element={<PrivateRoute><Layout /></PrivateRoute>}>
-              <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/" element={<PrivateRoute><Layout /></PrivateRoute>}>
+              <Route index element={<Navigate to="/dashboard" replace />} />
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/contacts" element={<Contacts />} />
               <Route path="/contacts/:id" element={<ContactDetail />} />

@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { Search, Menu } from "lucide-react";
+import { Search, Menu, X } from "lucide-react";
 import { UserProfileMenu } from "./UserProfileMenu";
 
 interface HeaderProps extends React.HTMLAttributes<HTMLElement> {
@@ -12,6 +12,12 @@ interface HeaderProps extends React.HTMLAttributes<HTMLElement> {
 
 export function Header({ onMenuClick, className }: HeaderProps) {
   const [searchExpanded, setSearchExpanded] = useState(false);
+  const [sidebarVisible, setSidebarVisible] = useState(false);
+
+  const toggleSidebar = () => {
+    setSidebarVisible(!sidebarVisible);
+    onMenuClick();
+  };
 
   return (
     <header className={cn(
@@ -22,11 +28,11 @@ export function Header({ onMenuClick, className }: HeaderProps) {
         <Button
           variant="ghost"
           size="icon"
-          onClick={onMenuClick}
-          className="mr-2"
+          onClick={toggleSidebar}
+          className="mr-2 lg:hidden"
           aria-label="Toggle menu"
         >
-          <Menu className="h-5 w-5" />
+          {sidebarVisible ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
         </Button>
         <h1 className="font-semibold hidden md:block">CRMbeauty</h1>
       </div>

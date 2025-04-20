@@ -6,17 +6,29 @@ import {
   Building,
   Briefcase,
   Settings,
+  LogOut
 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
+import { cn } from "@/lib/utils";
 
-export function Sidebar() {
+interface SidebarProps {
+  isOpen?: boolean;
+}
+
+export function Sidebar({ isOpen = true }: SidebarProps) {
   const location = useLocation();
-  const { user, logout } = useAuth();
+  const { logout } = useAuth();
+  
+  const sidebarClass = cn(
+    "h-screen fixed left-0 top-0 w-64 border-r bg-background p-6 flex-col gap-6 z-40 transition-transform duration-300",
+    isOpen ? "translate-x-0" : "-translate-x-full",
+    "lg:translate-x-0 flex"
+  );
 
   return (
-    <aside className="hidden lg:flex h-screen fixed left-0 top-0 w-64 border-r bg-background p-6 flex-col gap-6">
+    <aside className={sidebarClass}>
       <div className="flex items-center gap-2 font-semibold text-lg">
         <Home className="h-5 w-5 text-beauty" />
         <span>CRMbeauty</span>
@@ -76,6 +88,7 @@ export function Sidebar() {
           className="w-full justify-start text-red-500 hover:text-red-600 hover:bg-red-50"
           onClick={logout}
         >
+          <LogOut className="mr-2 h-4 w-4" />
           Logout
         </Button>
       </div>
