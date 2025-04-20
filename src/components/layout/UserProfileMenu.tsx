@@ -10,18 +10,10 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/contexts/AuthContext";
 import { UserRound } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import { useNavigate } from "react-router-dom";
 
 export function UserProfileMenu() {
-  const { user } = useAuth();
-  const navigate = useNavigate();
+  const { user, logout } = useAuth();
   
-  const handleSignOut = async () => {
-    await supabase.auth.signOut();
-    navigate('/auth');
-  };
-
   return (
     <DropdownMenu>
       <DropdownMenuTrigger className="focus:outline-none">
@@ -38,7 +30,7 @@ export function UserProfileMenu() {
           <span className="font-medium">{user?.email}</span>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={handleSignOut} className="text-red-600">
+        <DropdownMenuItem onClick={logout} className="text-red-600">
           Abmelden
         </DropdownMenuItem>
       </DropdownMenuContent>

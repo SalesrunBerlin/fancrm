@@ -13,68 +13,70 @@ import { useAuth } from "@/contexts/AuthContext";
 
 export function Sidebar() {
   const location = useLocation();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
 
   return (
     <aside className="hidden lg:flex h-screen fixed left-0 top-0 w-64 border-r bg-background p-6 flex-col gap-6">
-      <Link to="/" className="flex items-center gap-2 font-bold">
-        <LayoutDashboard className="h-6 w-6" />
-        <span>CRM</span>
-      </Link>
+      <div className="flex items-center gap-2 font-semibold text-lg">
+        <Home className="h-5 w-5 text-beauty" />
+        <span>CRMbeauty</span>
+      </div>
 
-      <nav className="flex flex-col gap-1">
-        <Button
-          variant={location.pathname === "/dashboard" ? "secondary" : "ghost"}
-          className="w-full justify-start"
-          asChild
-        >
-          <Link to="/dashboard">
-            <Home className="mr-2 h-4 w-4" />
+      <div className="flex flex-col gap-1">
+        <Link to="/dashboard">
+          <Button
+            variant={location.pathname === "/dashboard" ? "default" : "ghost"}
+            className="w-full justify-start"
+          >
+            <LayoutDashboard className="mr-2 h-4 w-4" />
             Dashboard
-          </Link>
-        </Button>
-        <Button
-          variant={location.pathname === "/contacts" ? "secondary" : "ghost"}
-          className="w-full justify-start"
-          asChild
-        >
-          <Link to="/contacts">
+          </Button>
+        </Link>
+        <Link to="/contacts">
+          <Button
+            variant={location.pathname.includes("/contacts") ? "default" : "ghost"}
+            className="w-full justify-start"
+          >
             <Users className="mr-2 h-4 w-4" />
-            Kontakte
-          </Link>
-        </Button>
-        <Button
-          variant={location.pathname === "/accounts" ? "secondary" : "ghost"}
-          className="w-full justify-start"
-          asChild
-        >
-          <Link to="/accounts">
+            Contacts
+          </Button>
+        </Link>
+        <Link to="/accounts">
+          <Button
+            variant={location.pathname.includes("/accounts") ? "default" : "ghost"}
+            className="w-full justify-start"
+          >
             <Building className="mr-2 h-4 w-4" />
             Accounts
-          </Link>
-        </Button>
-        <Button
-          variant={location.pathname === "/deals" ? "secondary" : "ghost"}
-          className="w-full justify-start"
-          asChild
-        >
-          <Link to="/deals">
+          </Button>
+        </Link>
+        <Link to="/deals">
+          <Button
+            variant={location.pathname.includes("/deals") ? "default" : "ghost"}
+            className="w-full justify-start"
+          >
             <Briefcase className="mr-2 h-4 w-4" />
             Deals
-          </Link>
-        </Button>
-      </nav>
-
-      <div className="mt-auto">
-        <Button
-          variant={location.pathname === "/settings" ? "secondary" : "ghost"}
-          className="w-full justify-start"
-          asChild
-        >
-          <Link to="/settings">
+          </Button>
+        </Link>
+        <Link to="/settings">
+          <Button
+            variant={location.pathname === "/settings" ? "default" : "ghost"}
+            className="w-full justify-start"
+          >
             <Settings className="mr-2 h-4 w-4" />
-            Einstellungen
-          </Link>
+            Settings
+          </Button>
+        </Link>
+      </div>
+      
+      <div className="mt-auto">
+        <Button 
+          variant="ghost" 
+          className="w-full justify-start text-red-500 hover:text-red-600 hover:bg-red-50"
+          onClick={logout}
+        >
+          Logout
         </Button>
       </div>
     </aside>
