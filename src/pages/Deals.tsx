@@ -13,16 +13,16 @@ import { DealsTabContent } from "@/components/deals/DealsTabContent";
 
 export default function Deals() {
   const { toast } = useToast();
-  const { deals, isLoading } = useDeals();
+  const { data: deals, isLoading } = useDeals();
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
   const [showCreateForm, setShowCreateForm] = useState(false);
   
-  const filteredDeals = deals.filter(deal => {
+  const filteredDeals = deals ? deals.filter(deal => {
     return deal.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
            (deal.accountName && deal.accountName.toLowerCase().includes(searchQuery.toLowerCase())) ||
            deal.status.toLowerCase().includes(searchQuery.toLowerCase());
-  });
+  }) : [];
   
   const handleDealClick = (id: string) => {
     toast({

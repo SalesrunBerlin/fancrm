@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Card } from "@/components/ui/card";
@@ -13,10 +14,10 @@ export default function DealDetail() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { id } = useParams();
-  const { deals, deleteDeal } = useDeals();
+  const { data: deals, deleteDeal } = useDeals();
   const [isEditing, setIsEditing] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const deal = deals.find(d => d.id === id);
+  const deal = deals ? deals.find(d => d.id === id) : undefined;
 
   const handleDelete = async () => {
     try {
