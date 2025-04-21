@@ -1,4 +1,5 @@
-import { useState } from "react";
+
+import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -7,9 +8,10 @@ import { UserProfileMenu } from "./UserProfileMenu";
 
 interface HeaderProps extends React.HTMLAttributes<HTMLElement> {
   onMenuClick: () => void;
+  buttonRef?: React.RefObject<HTMLButtonElement>;
 }
 
-export function Header({ onMenuClick, className }: HeaderProps) {
+export function Header({ onMenuClick, buttonRef, className }: HeaderProps) {
   const [searchExpanded, setSearchExpanded] = useState(false);
   const [sidebarVisible, setSidebarVisible] = useState(false);
 
@@ -30,6 +32,7 @@ export function Header({ onMenuClick, className }: HeaderProps) {
           onClick={toggleSidebar}
           className="mr-2"
           aria-label="Toggle menu"
+          ref={buttonRef}
         >
           {sidebarVisible ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
         </Button>

@@ -6,6 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 interface DealStatus {
   id: string;
   name: string;
+  type?: string;
   order_position: number;
   created_at: string;
 }
@@ -28,7 +29,7 @@ export function useDealStatuses() {
   });
 
   const createStatus = useMutation({
-    mutationFn: async (newStatus: { name: string; order_position: number }) => {
+    mutationFn: async (newStatus: { name: string; type?: string; order_position: number }) => {
       if (!user) throw new Error("User not authenticated");
       
       const { data, error } = await supabase
@@ -49,7 +50,7 @@ export function useDealStatuses() {
   });
 
   const updateStatus = useMutation({
-    mutationFn: async ({ id, ...status }: { id: string; name: string; order_position: number }) => {
+    mutationFn: async ({ id, ...status }: { id: string; name: string; type?: string; order_position?: number }) => {
       const { error } = await supabase
         .from('deal_statuses')
         .update(status)
