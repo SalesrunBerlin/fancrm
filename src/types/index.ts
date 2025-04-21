@@ -1,4 +1,3 @@
-
 export interface ContactType {
   id: string;
   firstName: string;
@@ -28,3 +27,11 @@ export interface DealType {
   accountId?: string;
   contactId?: string;
 }
+
+export type SearchHistoryItem = {
+  id: string;
+  type: "contact" | "account" | "deal";
+  name: string;
+  path: string;
+  timestamp: number;
+};
