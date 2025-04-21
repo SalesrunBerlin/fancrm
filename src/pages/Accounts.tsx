@@ -1,9 +1,9 @@
-
 import { useState } from "react";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { AccountsHeader } from "@/components/accounts/AccountsHeader";
 import { AccountsFilter } from "@/components/accounts/AccountsFilter";
 import { AccountsContent } from "@/components/accounts/AccountsContent";
+import { CreateAccountForm } from "@/components/accounts/CreateAccountForm";
 import { useAccounts } from "@/hooks/useAccounts";
 import { TabsContent, Tabs } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -15,8 +15,8 @@ export default function Accounts() {
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
   const { data: accounts = [], isLoading, error } = useAccounts();
+  const [showCreateModal, setShowCreateModal] = useState(false);
   
-  // Add console logging to debug account data
   console.log("Accounts data:", accounts);
 
   const filteredAccounts = accounts.filter(account => {
@@ -26,7 +26,7 @@ export default function Accounts() {
   
   return (
     <div className="space-y-6 animate-fade-in">
-      <AccountsHeader />
+      <AccountsHeader onCreateClick={() => setShowCreateModal(true)} />
       
       <AccountsFilter
         searchQuery={searchQuery}
@@ -78,6 +78,11 @@ export default function Accounts() {
           </TabsContent>
         </Tabs>
       )}
+      
+      <CreateAccountForm 
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+      />
     </div>
   );
 }

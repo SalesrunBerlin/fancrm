@@ -17,12 +17,19 @@ import { cn } from "@/lib/utils";
 interface SidebarProps {
   isOpen?: boolean;
   ref?: React.RefObject<HTMLDivElement>;
+  onClose?: () => void;
 }
 
 export const Sidebar = React.forwardRef<HTMLDivElement, SidebarProps>(
-  ({ isOpen = false }, ref) => {
+  ({ isOpen = false, onClose }, ref) => {
     const location = useLocation();
     const { logout } = useAuth();
+    
+    const handleLinkClick = () => {
+      if (onClose) {
+        onClose();
+      }
+    };
     
     const sidebarClass = cn(
       "h-screen fixed left-0 top-0 w-64 border-r bg-background p-6 flex-col gap-6 z-40 transition-all duration-300 ease-in-out",
@@ -38,7 +45,7 @@ export const Sidebar = React.forwardRef<HTMLDivElement, SidebarProps>(
         </div>
 
         <div className="flex flex-col gap-1">
-          <Link to="/dashboard">
+          <Link to="/dashboard" onClick={handleLinkClick}>
             <Button
               variant={location.pathname === "/dashboard" ? "default" : "ghost"}
               className="w-full justify-start"
@@ -47,7 +54,7 @@ export const Sidebar = React.forwardRef<HTMLDivElement, SidebarProps>(
               Dashboard
             </Button>
           </Link>
-          <Link to="/contacts">
+          <Link to="/contacts" onClick={handleLinkClick}>
             <Button
               variant={location.pathname.includes("/contacts") ? "default" : "ghost"}
               className="w-full justify-start"
@@ -56,7 +63,7 @@ export const Sidebar = React.forwardRef<HTMLDivElement, SidebarProps>(
               Contacts
             </Button>
           </Link>
-          <Link to="/accounts">
+          <Link to="/accounts" onClick={handleLinkClick}>
             <Button
               variant={location.pathname.includes("/accounts") ? "default" : "ghost"}
               className="w-full justify-start"
@@ -65,7 +72,7 @@ export const Sidebar = React.forwardRef<HTMLDivElement, SidebarProps>(
               Accounts
             </Button>
           </Link>
-          <Link to="/deals">
+          <Link to="/deals" onClick={handleLinkClick}>
             <Button
               variant={location.pathname.includes("/deals") ? "default" : "ghost"}
               className="w-full justify-start"
@@ -74,7 +81,7 @@ export const Sidebar = React.forwardRef<HTMLDivElement, SidebarProps>(
               Deals
             </Button>
           </Link>
-          <Link to="/settings">
+          <Link to="/settings" onClick={handleLinkClick}>
             <Button
               variant={location.pathname === "/settings" ? "default" : "ghost"}
               className="w-full justify-start"
