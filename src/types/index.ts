@@ -1,5 +1,4 @@
 
-// Update the Product type to include 'hourly' in recurrence
 export interface Product {
   id: string;
   name: string;
@@ -11,24 +10,48 @@ export interface Product {
   productFamily?: ProductFamily;
 }
 
-// Update the Contact type to include tags
+export interface ProductFamily {
+  id: string;
+  name: string;
+  orderPosition: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Account {
+  id: string;
+  name: string;
+  type: string | null;
+  website: string | null;
+  industry: string | null;
+  createdAt: string;
+  updatedAt: string;
+  ownerId: string;
+  contactCount?: number;
+  tags?: string[];
+}
+
 export interface Contact {
   id: string;
   firstName: string;
   lastName: string;
-  email: string;
+  email: string | null;
   phone?: string;
   accountName?: string;
+  accountId?: string;
   tags?: string[];
 }
 
-// Update the ContactType to match the Contact interface
-export interface ContactType {
+export interface DealType {
   id: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  phone?: string;
+  name: string;
+  amount: number;
+  status: string;
+  closeDate?: string;
+  accountId?: string;
+  contactId?: string;
   accountName?: string;
-  tags?: string[];
+  contactName?: string;
 }
+
+export type AccountType = Account;

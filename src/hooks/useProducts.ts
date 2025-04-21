@@ -28,7 +28,7 @@ export function useProducts() {
       return data.map(product => ({
         id: product.id,
         name: product.name,
-        recurrence: product.recurrence,
+        recurrence: product.recurrence as Product['recurrence'],
         productFamilyId: product.product_family_id,
         price: Number(product.price),
         createdAt: product.created_at,
