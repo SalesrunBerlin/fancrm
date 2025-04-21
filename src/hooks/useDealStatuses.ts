@@ -40,14 +40,7 @@ export function useDealStatuses() {
       }
       
       console.log("Fetched deal statuses:", statuses);
-
-      // Type assertion for better compatibility; fallback if field missing
-      const processedStatuses = (statuses || []).map((status: any) => ({
-        ...status,
-        type: status.type ?? "open"
-      }));
-
-      return processedStatuses;
+      return statuses || [];
     },
     enabled: !!user, // Only fetch if user exists
   });
