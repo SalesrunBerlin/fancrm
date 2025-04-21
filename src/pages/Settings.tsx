@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,6 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export default function Settings() {
   const { toast } = useToast();
@@ -29,7 +30,24 @@ export default function Settings() {
   const [editingStatus, setEditingStatus] = useState<{ id: string; name: string; type: string } | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [statusToDelete, setStatusToDelete] = useState<string | null>(null);
-  const { dealStatuses, isLoading, createStatus, updateStatus, deleteStatus } = useDealStatuses();
+  const isMobile = useIsMobile();
+  
+  const { 
+    dealStatuses, 
+    isLoading, 
+    createStatus, 
+    updateStatus, 
+    deleteStatus,
+    initializeDefaultStatuses 
+  } = useDealStatuses();
+
+  // Initialize default statuses if needed
+  useEffect(() => {
+    if (dealStatuses && dealStatuses.length === 0 && !isLoading) {
+      console.log("No statuses found, initializing defaults");
+      initializeDefaultStatuses();
+    }
+  }, [dealStatuses, isLoading, initializeDefaultStatuses]);
 
   const handleCreateStatus = async () => {
     if (!newStatusName.trim()) {
@@ -53,6 +71,7 @@ export default function Settings() {
         description: "Status wurde erfolgreich erstellt",
       });
     } catch (error) {
+      console.error("Error creating status:", error);
       toast({
         title: "Fehler",
         description: "Status konnte nicht erstellt werden",
@@ -78,6 +97,7 @@ export default function Settings() {
       setDeleteDialogOpen(false);
       setStatusToDelete(null);
     } catch (error) {
+      console.error("Error deleting status:", error);
       toast({
         title: "Fehler",
         description: "Status konnte nicht gelöscht werden",
@@ -87,7 +107,7 @@ export default function Settings() {
   };
 
   const handleEditStatus = (id: string, name: string, type: string) => {
-    setEditingStatus({ id, name, type });
+    setEditingStatus({ id, name, type: type || "open" });
   };
 
   const handleSaveEdit = async () => {
@@ -105,6 +125,7 @@ export default function Settings() {
       });
       setEditingStatus(null);
     } catch (error) {
+      console.error("Error updating status:", error);
       toast({
         title: "Fehler",
         description: "Status konnte nicht aktualisiert werden",
@@ -145,14 +166,14 @@ export default function Settings() {
               <TableRow>
                 <TableCell colSpan={3} className="text-center">Lädt...</TableCell>
               </TableRow>
-            ) : dealStatuses?.length === 0 ? (
+            ) : !dealStatuses || dealStatuses.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={3} className="text-center">Keine Status gefunden</TableCell>
               </TableRow>
             ) : (
-              dealStatuses?.map((status) => {
+              dealStatuses.map((status) => {
                 // Der Typ kann fehlen, also Standardwert "open"
-                const type = (status as any).type || "open";
+                const type = status.type || "open";
                 return (
                   <TableRow key={status.id}>
                     <TableCell>
@@ -171,7 +192,7 @@ export default function Settings() {
                     <TableCell>
                       {editingStatus?.id === status.id ? (
                         <Select
-                          value={editingStatus.type || "open"}
+                          value={editingStatus.type}
                           onValueChange={(value) => setEditingStatus({
                             ...editingStatus,
                             type: value
@@ -234,4 +255,3 @@ export default function Settings() {
     </div>
   );
 }
-
