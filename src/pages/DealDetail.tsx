@@ -9,6 +9,7 @@ import { ArrowLeft, Pencil, Trash2 } from "lucide-react";
 import { DealEditForm } from "@/components/deals/DealEditForm";
 import { DeleteDialog } from "@/components/common/DeleteDialog";
 import { useToast } from "@/hooks/use-toast";
+import { DealProducts } from "@/components/deals/DealProducts";
 
 export default function DealDetail() {
   const navigate = useNavigate();
@@ -123,6 +124,8 @@ export default function DealDetail() {
           )}
         </div>
       </Card>
+
+      <DealProducts dealId={id!} />
 
       <DeleteDialog
         isOpen={showDeleteDialog}

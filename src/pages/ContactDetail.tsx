@@ -1,124 +1,86 @@
-
-import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState, useEffect } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Edit, Trash2, X } from "lucide-react";
-import { DeleteDialog } from "@/components/common/DeleteDialog";
-import { useContactDetails } from "@/hooks/useContactDetails";
+import { ArrowLeft, Pencil, Trash2 } from "lucide-react";
 import { ContactInfo } from "@/components/contacts/ContactInfo";
-import { ContactEditForm } from "@/components/contacts/ContactEditForm";
+import { useContacts } from "@/hooks/useContacts";
+import { useAccounts } from "@/hooks/useAccounts";
+import { DeleteDialog } from "@/components/common/DeleteDialog";
+import { useToast } from "@/hooks/use-toast";
+import { DealsList } from "@/components/common/DealsList";
+import { useDeals } from "@/hooks/useDeals";
 
 export default function ContactDetail() {
-  const {
-    contact,
-    editedContact,
-    ownerName,
-    accounts,
-    isLoading,
-    handleDelete,
-    handleSave,
-    handleFieldChange,
-    navigate
-  } = useContactDetails();
-  
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const { id } = useParams();
+  const { data: deals } = useDeals();
+  const { data: contacts, isLoading: isLoadingContacts } = useContacts();
+  const { data: accounts, isLoading: isLoadingAccounts } = useAccounts();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
 
-  const handleEdit = () => setIsEditing(true);
-  const handleCancelEdit = () => {
-    setIsEditing(false);
-    // Reset the edited contact to the current contact data
-    // We don't need to call setEditedContact directly as it's handled in the hook
+  const contact = contacts?.find(c => c.id === id);
+  const account = accounts?.find(a => a.id === contact?.accountId);
+
+  useEffect(() => {
+    if (!contact && !isLoadingContacts) {
+      toast({
+        title: "Error",
+        description: "Contact not found.",
+        variant: "destructive",
+      });
+      navigate("/contacts");
+    }
+  }, [contact, isLoadingContacts, navigate, toast]);
+
+  const handleDelete = () => {
+    // TODO: Implement delete contact functionality
+    console.log("Delete contact", id);
+    setShowDeleteDialog(false);
   };
 
-  if (isLoading) {
+  if (!contact || isLoadingContacts || isLoadingAccounts) {
     return <div>Loading...</div>;
   }
 
-  if (!contact) {
-    return (
-      <div className="container mx-auto p-4">
-        <Card>
-          <CardContent className="pt-6">
-            <p>Contact not found</p>
-            <Button onClick={() => navigate(-1)} className="mt-4">Go back</Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+  const contactDeals = deals?.filter(deal => deal.contactId === id) || [];
 
   return (
-    <div className="container mx-auto p-4">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div className="space-y-2">
-            <Button 
-              variant="ghost" 
-              className="mb-2" 
-              onClick={() => navigate(-1)}
-            >
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back
-            </Button>
-            <CardTitle>Contact Details</CardTitle>
-          </div>
-          <div className="flex items-center gap-2">
-            {!isEditing ? (
-              <>
-                <Button 
-                  variant="outline" 
-                  onClick={handleEdit}
-                >
-                  <Edit className="mr-2 h-4 w-4" />
-                  Edit
-                </Button>
-                <Button 
-                  variant="destructive" 
-                  onClick={() => setShowDeleteDialog(true)}
-                >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Delete
-                </Button>
-              </>
-            ) : (
-              <>
-                <Button 
-                  variant="outline" 
-                  onClick={handleCancelEdit}
-                >
-                  <X className="mr-2 h-4 w-4" />
-                  Cancel
-                </Button>
-                <Button onClick={() => {
-                  handleSave();
-                  setIsEditing(false);
-                }}>
-                  Save
-                </Button>
-              </>
-            )}
-          </div>
-        </CardHeader>
-        <CardContent>
-          {!isEditing ? (
-            <ContactInfo contact={contact} ownerName={ownerName} />
-          ) : (
-            <ContactEditForm 
-              editedContact={editedContact}
-              accounts={accounts}
-              onFieldChange={handleFieldChange}
-            />
-          )}
-        </CardContent>
+    <div className="space-y-6 p-6">
+      <div className="flex justify-between items-center">
+        <Button variant="ghost" onClick={() => navigate(-1)}>
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back
+        </Button>
+        <div className="space-x-2">
+          <Button variant="secondary" size="icon" onClick={() => console.log("Edit contact", id)}>
+            <Pencil className="h-4 w-4" />
+          </Button>
+          <Button variant="destructive" size="icon" onClick={() => setShowDeleteDialog(true)}>
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+
+      <Card className="p-6">
+        <ContactInfo
+          contact={contact}
+          ownerName={account?.name || null}
+        />
       </Card>
+
+      <DealsList 
+        deals={contactDeals}
+        title="Kontakt Deals"
+      />
 
       <DeleteDialog
         isOpen={showDeleteDialog}
         onClose={() => setShowDeleteDialog(false)}
         onConfirm={handleDelete}
-        title="Kontakt löschen"
-        description="Sind Sie sicher, dass Sie diesen Kontakt löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden."
+        title="Delete Contact"
+        description="Are you sure you want to delete this contact? This action cannot be undone."
       />
     </div>
   );
