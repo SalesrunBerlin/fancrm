@@ -21,7 +21,7 @@ export interface DealType {
   id: string;
   name: string;
   amount: number;
-  status: "Prospect" | "Qualification" | "Proposal" | "Negotiation" | "Closed Won" | "Closed Lost";
+  status: string; // Changed from enum to string to allow custom statuses
   accountName?: string;
   contactName?: string;
   closeDate?: string;

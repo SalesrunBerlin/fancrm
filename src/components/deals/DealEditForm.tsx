@@ -109,12 +109,12 @@ export function DealEditForm({ deal, onSuccess }: DealEditFormProps) {
                 <SelectContent>
                   {dealStatuses && dealStatuses.length > 0 ? (
                     dealStatuses.map((status: any) => (
-                      <SelectItem key={status.id} value={status.name}>
+                      <SelectItem key={status.id} value={status.name || "default-status"}>
                         {status.name}
                       </SelectItem>
                     ))
                   ) : (
-                    <SelectItem value="" disabled>
+                    <SelectItem value="loading" disabled>
                       Keine Status vorhanden
                     </SelectItem>
                   )}
