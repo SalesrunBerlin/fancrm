@@ -7,6 +7,12 @@ import { useContacts } from "@/hooks/useContacts";
 import { ContactsFilter } from "@/components/contacts/ContactsFilter";
 import { ContactsList } from "@/components/contacts/ContactsList";
 import { CreateContactForm } from "@/components/contacts/CreateContactForm";
+import { 
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  DialogHeader,
+} from "@/components/ui/dialog";
 
 export default function Contacts() {
   const { toast } = useToast();
@@ -16,10 +22,12 @@ export default function Contacts() {
   const { data: contacts = [], isLoading } = useContacts();
   
   const filteredContacts = contacts.filter(contact => {
+    const searchLower = searchQuery.toLowerCase();
     const fullName = `${contact.firstName} ${contact.lastName}`.toLowerCase();
-    return fullName.includes(searchQuery.toLowerCase()) || 
-           contact.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-           (contact.phone && contact.phone.includes(searchQuery));
+    return fullName.includes(searchLower) || 
+           contact.email?.toLowerCase().includes(searchLower) ||
+           contact.phone?.toLowerCase().includes(searchLower) ||
+           (contact.tags && contact.tags.some(tag => tag.toLowerCase().includes(searchLower)));
   });
   
   const handleContactClick = (id: string) => {
@@ -28,10 +36,6 @@ export default function Contacts() {
       description: `You clicked on contact with ID: ${id}`,
     });
   };
-  
-  if (isLoading) {
-    return <div>Loading...</div>;
-  }
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -59,12 +63,17 @@ export default function Contacts() {
         onContactClick={handleContactClick}
       />
 
-      {showCreateModal && (
-        <CreateContactForm 
-          accountId="" 
-          onContactCreated={() => setShowCreateModal(false)} 
-        />
-      )}
+      <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create New Contact</DialogTitle>
+          </DialogHeader>
+          <CreateContactForm 
+            accountId="" 
+            onContactCreated={() => setShowCreateModal(false)} 
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

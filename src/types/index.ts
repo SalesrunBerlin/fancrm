@@ -35,3 +35,20 @@ export type SearchHistoryItem = {
   path: string;
   timestamp: number;
 };
+
+export interface Account {
+  id: string;
+  name: string;
+  type?: string;
+  contactCount?: number;
+  tags?: string[];
+}
+
+export interface Contact {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone?: string;
+  tags?: string[];
+}

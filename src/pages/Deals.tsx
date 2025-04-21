@@ -10,6 +10,12 @@ import { DealsFilter } from "@/components/deals/DealsFilter";
 import { DealsViewToggle } from "@/components/deals/DealsViewToggle";
 import { DealsTabContent } from "@/components/deals/DealsTabContent";
 import { CreateDealForm } from "@/components/deals/CreateDealForm";
+import { 
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  DialogHeader,
+} from "@/components/ui/dialog";
 
 export default function Deals() {
   const { toast } = useToast();
@@ -19,9 +25,11 @@ export default function Deals() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   
   const filteredDeals = deals ? deals.filter(deal => {
-    return deal.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-           (deal.accountName && deal.accountName.toLowerCase().includes(searchQuery.toLowerCase())) ||
-           deal.status.toLowerCase().includes(searchQuery.toLowerCase());
+    const searchLower = searchQuery.toLowerCase();
+    return deal.name.toLowerCase().includes(searchLower) || 
+           (deal.accountName && deal.accountName.toLowerCase().includes(searchLower)) ||
+           deal.status.toLowerCase().includes(searchLower) ||
+           (deal.tags && deal.tags.some(tag => tag.toLowerCase().includes(searchLower)));
   }) : [];
 
   const handleDealClick = (id: string) => {
@@ -78,9 +86,14 @@ export default function Deals() {
         />
       </Tabs>
 
-      {showCreateModal && (
-        <CreateDealForm onSuccess={() => setShowCreateModal(false)} />
-      )}
+      <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create New Deal</DialogTitle>
+          </DialogHeader>
+          <CreateDealForm onSuccess={() => setShowCreateModal(false)} />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
