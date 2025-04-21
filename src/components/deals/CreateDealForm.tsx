@@ -20,6 +20,7 @@ import { useAccounts } from "@/hooks/useAccounts";
 import { useContacts } from "@/hooks/useContacts";
 import { useCreateDealForm } from "@/hooks/useCreateDealForm";
 import { DealAssociationTypeSelect } from "./DealAssociationTypeSelect";
+import { useDealStatuses } from "@/hooks/useDealStatuses";
 
 interface CreateDealFormProps {
   onSuccess: () => void;
@@ -29,6 +30,7 @@ export function CreateDealForm({ onSuccess }: CreateDealFormProps) {
   const { data: accounts } = useAccounts();
   const { data: contacts } = useContacts();
   const { form, isLoading, associationType, setAssociationType, onSubmit } = useCreateDealForm({ onSuccess });
+  const { dealStatuses, isLoading: statusLoading } = useDealStatuses();
 
   return (
     <Form {...form}>
@@ -71,19 +73,24 @@ export function CreateDealForm({ onSuccess }: CreateDealFormProps) {
           render={({ field }) => (
             <FormItem>
               <FormLabel>Status</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
+              <Select onValueChange={field.onChange} value={field.value}>
                 <FormControl>
                   <SelectTrigger>
-                    <SelectValue placeholder="Status auswählen" />
+                    <SelectValue placeholder={statusLoading ? "Lädt..." : "Status auswählen"} />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value="Prospect">Prospect</SelectItem>
-                  <SelectItem value="Qualification">Qualification</SelectItem>
-                  <SelectItem value="Proposal">Proposal</SelectItem>
-                  <SelectItem value="Negotiation">Negotiation</SelectItem>
-                  <SelectItem value="Closed Won">Closed Won</SelectItem>
-                  <SelectItem value="Closed Lost">Closed Lost</SelectItem>
+                  {dealStatuses && dealStatuses.length > 0 ? (
+                    dealStatuses.map((status: any) => (
+                      <SelectItem key={status.id} value={status.name}>
+                        {status.name}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <SelectItem value="" disabled>
+                      Keine Status vorhanden
+                    </SelectItem>
+                  )}
                 </SelectContent>
               </Select>
               <FormMessage />
@@ -95,7 +102,6 @@ export function CreateDealForm({ onSuccess }: CreateDealFormProps) {
           value={associationType}
           onChange={setAssociationType}
         />
-
         {associationType === 'account' ? (
           <FormField
             control={form.control}

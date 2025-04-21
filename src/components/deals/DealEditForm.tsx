@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { DealType } from "@/types";
 import { useDeals } from "@/hooks/useDeals";
 import { useToast } from "@/hooks/use-toast";
+import { useDealStatuses } from "@/hooks/useDealStatuses";
 
 interface DealEditFormProps {
   deal: DealType;
@@ -16,6 +17,7 @@ interface DealEditFormProps {
 export function DealEditForm({ deal, onSuccess }: DealEditFormProps) {
   const { updateDeal } = useDeals();
   const { toast } = useToast();
+  const { dealStatuses, isLoading: statusLoading } = useDealStatuses();
 
   const form = useForm({
     defaultValues: {
@@ -89,19 +91,24 @@ export function DealEditForm({ deal, onSuccess }: DealEditFormProps) {
           render={({ field }) => (
             <FormItem>
               <FormLabel>Status</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
+              <Select onValueChange={field.onChange} value={field.value}>
                 <FormControl>
                   <SelectTrigger>
-                    <SelectValue placeholder="Wähle einen Status" />
+                    <SelectValue placeholder={statusLoading ? "Lädt..." : "Wähle einen Status"} />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value="Prospect">Prospect</SelectItem>
-                  <SelectItem value="Qualification">Qualification</SelectItem>
-                  <SelectItem value="Proposal">Proposal</SelectItem>
-                  <SelectItem value="Negotiation">Negotiation</SelectItem>
-                  <SelectItem value="Closed Won">Closed Won</SelectItem>
-                  <SelectItem value="Closed Lost">Closed Lost</SelectItem>
+                  {dealStatuses && dealStatuses.length > 0 ? (
+                    dealStatuses.map((status: any) => (
+                      <SelectItem key={status.id} value={status.name}>
+                        {status.name}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <SelectItem value="" disabled>
+                      Keine Status vorhanden
+                    </SelectItem>
+                  )}
                 </SelectContent>
               </Select>
               <FormMessage />
