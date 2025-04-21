@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useDeals } from "@/hooks/useDeals";
 import { formatCurrency } from "@/lib/utils";
-import { ArrowLeft, Trash2 } from "lucide-react";
+import { ArrowLeft, Pencil, Trash2 } from "lucide-react";
 import { DealEditForm } from "@/components/deals/DealEditForm";
 import { DeleteDialog } from "@/components/common/DeleteDialog";
 import { useToast } from "@/hooks/use-toast";
@@ -68,18 +68,22 @@ export default function DealDetail() {
           onClick={() => navigate(-1)}
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
-          Zurück
+          Back
         </Button>
         <div className="space-x-2">
-          <Button onClick={() => setIsEditing(true)}>
-            Bearbeiten
+          <Button 
+            variant="secondary"
+            size="icon"
+            onClick={() => setIsEditing(true)}
+          >
+            <Pencil className="h-4 w-4" />
           </Button>
           <Button 
-            variant="destructive" 
+            variant="destructive"
+            size="icon"
             onClick={() => setShowDeleteDialog(true)}
           >
-            <Trash2 className="mr-2 h-4 w-4" />
-            Löschen
+            <Trash2 className="h-4 w-4" />
           </Button>
         </div>
       </div>

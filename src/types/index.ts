@@ -1,3 +1,4 @@
+
 export interface ContactType {
   id: string;
   firstName: string;
@@ -20,12 +21,13 @@ export interface DealType {
   id: string;
   name: string;
   amount: number;
-  status: string; // Changed from enum to string to allow custom statuses
+  status: string;
   accountName?: string;
   contactName?: string;
   closeDate?: string;
   accountId?: string;
   contactId?: string;
+  tags?: string[];
 }
 
 export type SearchHistoryItem = {
@@ -50,5 +52,6 @@ export interface Contact {
   lastName: string;
   email: string;
   phone?: string;
+  accountName?: string;
   tags?: string[];
 }
