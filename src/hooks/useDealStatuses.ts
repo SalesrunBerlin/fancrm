@@ -7,7 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 interface DealStatus {
   id: string;
   name: string;
-  type?: string;
+  type: string;
   order_position: number;
   created_at: string;
 }
@@ -40,13 +40,20 @@ export function useDealStatuses() {
       }
       
       console.log("Fetched deal statuses:", statuses);
-      return statuses || [];
+      
+      // Make sure all statuses have a type property
+      const processedStatuses = statuses?.map(status => ({
+        ...status,
+        type: status.type || "open" // Ensure type has a default value
+      })) || [];
+      
+      return processedStatuses;
     },
     enabled: !!user, // Only fetch if user exists
   });
 
   const createStatus = useMutation({
-    mutationFn: async (newStatus: { name: string; type?: string; order_position: number }) => {
+    mutationFn: async (newStatus: { name: string; type: string; order_position: number }) => {
       if (!user) throw new Error("User not authenticated");
       
       console.log("Creating new status:", newStatus);
@@ -69,7 +76,7 @@ export function useDealStatuses() {
   });
 
   const updateStatus = useMutation({
-    mutationFn: async ({ id, ...status }: { id: string; name: string; type?: string; order_position?: number }) => {
+    mutationFn: async ({ id, ...status }: { id: string; name: string; type: string; order_position?: number }) => {
       console.log("Updating status:", id, status);
       
       const { error } = await supabase

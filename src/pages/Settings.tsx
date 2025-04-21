@@ -107,7 +107,7 @@ export default function Settings() {
   };
 
   const handleEditStatus = (id: string, name: string, type: string) => {
-    setEditingStatus({ id, name, type: type || "open" });
+    setEditingStatus({ id, name, type });
   };
 
   const handleSaveEdit = async () => {
@@ -171,75 +171,71 @@ export default function Settings() {
                 <TableCell colSpan={3} className="text-center">Keine Status gefunden</TableCell>
               </TableRow>
             ) : (
-              dealStatuses.map((status) => {
-                // Der Typ kann fehlen, also Standardwert "open"
-                const type = status.type || "open";
-                return (
-                  <TableRow key={status.id}>
-                    <TableCell>
-                      {editingStatus?.id === status.id ? (
-                        <Input
-                          value={editingStatus.name}
-                          onChange={(e) => setEditingStatus({
-                            ...editingStatus,
-                            name: e.target.value
-                          })}
-                        />
-                      ) : (
-                        status.name
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {editingStatus?.id === status.id ? (
-                        <Select
-                          value={editingStatus.type}
-                          onValueChange={(value) => setEditingStatus({
-                            ...editingStatus,
-                            type: value
-                          })}
+              dealStatuses.map((status) => (
+                <TableRow key={status.id}>
+                  <TableCell>
+                    {editingStatus?.id === status.id ? (
+                      <Input
+                        value={editingStatus.name}
+                        onChange={(e) => setEditingStatus({
+                          ...editingStatus,
+                          name: e.target.value
+                        })}
+                      />
+                    ) : (
+                      status.name
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {editingStatus?.id === status.id ? (
+                      <Select
+                        value={editingStatus.type}
+                        onValueChange={(value) => setEditingStatus({
+                          ...editingStatus,
+                          type: value
+                        })}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Typ auswählen" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="open">Offen</SelectItem>
+                          <SelectItem value="won">Gewonnen</SelectItem>
+                          <SelectItem value="lost">Verloren</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      status.type === "won" ? "Gewonnen" : 
+                      status.type === "lost" ? "Verloren" : "Offen"
+                    )}
+                  </TableCell>
+                  <TableCell className="text-right space-x-2">
+                    {editingStatus?.id === status.id ? (
+                      <Button variant="outline" onClick={handleSaveEdit}>
+                        Speichern
+                      </Button>
+                    ) : (
+                      <>
+                        <Button 
+                          variant="ghost" 
+                          size="icon"
+                          onClick={() => handleEditStatus(status.id, status.name, status.type)}
                         >
-                          <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Typ auswählen" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="open">Offen</SelectItem>
-                            <SelectItem value="won">Gewonnen</SelectItem>
-                            <SelectItem value="lost">Verloren</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      ) : (
-                        type === "won" ? "Gewonnen" : 
-                        type === "lost" ? "Verloren" : "Offen"
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right space-x-2">
-                      {editingStatus?.id === status.id ? (
-                        <Button variant="outline" onClick={handleSaveEdit}>
-                          Speichern
+                          <Pencil className="h-4 w-4" />
                         </Button>
-                      ) : (
-                        <>
-                          <Button 
-                            variant="ghost" 
-                            size="icon"
-                            onClick={() => handleEditStatus(status.id, status.name, type)}
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="text-destructive hover:text-destructive"
-                            onClick={() => handleDeleteStatus(status.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                );
-              })
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="text-destructive hover:text-destructive"
+                          onClick={() => handleDeleteStatus(status.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))
             )}
           </TableBody>
         </Table>
