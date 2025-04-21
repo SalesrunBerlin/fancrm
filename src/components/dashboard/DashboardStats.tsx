@@ -1,7 +1,7 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, Building, Briefcase, Calendar } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Link } from "react-router-dom";
 
 interface DashboardStatsProps { 
   contactCount: number;
@@ -20,68 +20,74 @@ export function DashboardStats({
 }: DashboardStatsProps) {
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">
-            Kontakte
-          </CardTitle>
-          <Users className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <Skeleton className="h-7 w-16" />
-          ) : (
-            <>
-              <div className="text-2xl font-bold">{contactCount}</div>
-              <p className="text-xs text-muted-foreground">
-                Gesamtanzahl Kontakte
-              </p>
-            </>
-          )}
-        </CardContent>
-      </Card>
+      <Link to="/contacts" className="block">
+        <Card className="transition-all hover:shadow-md">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Kontakte
+            </CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <Skeleton className="h-7 w-16" />
+            ) : (
+              <>
+                <div className="text-2xl font-bold">{contactCount}</div>
+                <p className="text-xs text-muted-foreground">
+                  Gesamtanzahl Kontakte
+                </p>
+              </>
+            )}
+          </CardContent>
+        </Card>
+      </Link>
       
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">
-            Accounts
-          </CardTitle>
-          <Building className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <Skeleton className="h-7 w-16" />
-          ) : (
-            <>
-              <div className="text-2xl font-bold">{accountCount}</div>
-              <p className="text-xs text-muted-foreground">
-                Gesamtanzahl Accounts
-              </p>
-            </>
-          )}
-        </CardContent>
-      </Card>
+      <Link to="/accounts" className="block">
+        <Card className="transition-all hover:shadow-md">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Accounts
+            </CardTitle>
+            <Building className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <Skeleton className="h-7 w-16" />
+            ) : (
+              <>
+                <div className="text-2xl font-bold">{accountCount}</div>
+                <p className="text-xs text-muted-foreground">
+                  Gesamtanzahl Accounts
+                </p>
+              </>
+            )}
+          </CardContent>
+        </Card>
+      </Link>
       
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">
-            Offene Deals
-          </CardTitle>
-          <Briefcase className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <Skeleton className="h-7 w-16" />
-          ) : (
-            <>
-              <div className="text-2xl font-bold">{openDealsCount}</div>
-              <p className="text-xs text-muted-foreground">
-                Aktive Verkaufschancen
-              </p>
-            </>
-          )}
-        </CardContent>
-      </Card>
+      <Link to="/deals" className="block">
+        <Card className="transition-all hover:shadow-md">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Offene Deals
+            </CardTitle>
+            <Briefcase className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <Skeleton className="h-7 w-16" />
+            ) : (
+              <>
+                <div className="text-2xl font-bold">{openDealsCount}</div>
+                <p className="text-xs text-muted-foreground">
+                  Aktive Verkaufschancen
+                </p>
+              </>
+            )}
+          </CardContent>
+        </Card>
+      </Link>
       
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
