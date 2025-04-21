@@ -3,6 +3,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { formatCurrency } from "@/lib/utils";
 import { Product } from "@/types";
 import { Badge } from "@/components/ui/badge";
+import { useNavigate } from "react-router-dom";
 
 interface ProductsTableProps {
   products: Product[];
@@ -10,6 +11,22 @@ interface ProductsTableProps {
 }
 
 export function ProductsTable({ products, isLoading }: ProductsTableProps) {
+  const navigate = useNavigate();
+
+  const getRecurrenceLabel = (recurrence: Product['recurrence']) => {
+    switch (recurrence) {
+      case 'once': return 'Einmalig';
+      case 'monthly': return 'Monatlich';
+      case 'yearly': return 'Jährlich';
+      case 'hourly': return 'Stündlich';
+      default: return recurrence;
+    }
+  };
+
+  const handleProductClick = (productId: string) => {
+    navigate(`/products/${productId}`);
+  };
+
   if (isLoading) {
     return (
       <div className="flex justify-center items-center h-32">
@@ -30,14 +47,17 @@ export function ProductsTable({ products, isLoading }: ProductsTableProps) {
       </TableHeader>
       <TableBody>
         {products.map((product) => (
-          <TableRow key={product.id}>
+          <TableRow 
+            key={product.id} 
+            onClick={() => handleProductClick(product.id)}
+            className="cursor-pointer hover:bg-muted/50"
+          >
             <TableCell className="font-medium">{product.name}</TableCell>
             <TableCell>{product.productFamily?.name || "-"}</TableCell>
             <TableCell>{formatCurrency(product.price)}</TableCell>
             <TableCell>
               <Badge variant="secondary">
-                {product.recurrence === "once" ? "Einmalig" :
-                 product.recurrence === "monthly" ? "Monatlich" : "Jährlich"}
+                {getRecurrenceLabel(product.recurrence)}
               </Badge>
             </TableCell>
           </TableRow>

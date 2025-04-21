@@ -1,7 +1,14 @@
 
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { 
+  Form, 
+  FormControl, 
+  FormField, 
+  FormItem, 
+  FormLabel, 
+  FormMessage 
+} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useProducts } from "@/hooks/useProducts";
@@ -18,57 +25,50 @@ export function CreateProductForm({ onSuccess }: CreateProductFormProps) {
   const { productFamilies } = useProductFamilies();
   const { toast } = useToast();
 
-  const form = useForm({
+  const form = useForm<Omit<Product, 'id' | 'createdAt' | 'updatedAt' | 'productFamily'>>({
     defaultValues: {
-      name: "",
-      price: "",
-      recurrence: "once" as Product["recurrence"],
-      productFamilyId: undefined as string | undefined,
-    },
+      name: '',
+      recurrence: 'once',
+      price: 0,
+      productFamilyId: undefined
+    }
   });
 
-  const onSubmit = async (data: any) => {
+  const onSubmit = async (data: Omit<Product, 'id' | 'createdAt' | 'updatedAt' | 'productFamily'>) => {
     try {
-      await createProduct.mutateAsync({
-        name: data.name,
-        price: parseFloat(data.price),
-        recurrence: data.recurrence,
-        productFamilyId: data.productFamilyId,
-      });
-      
+      await createProduct.mutateAsync(data);
       toast({
         title: "Erfolg",
-        description: "Produkt wurde erfolgreich erstellt",
+        description: "Produkt erfolgreich erstellt"
       });
-      
       onSuccess();
     } catch (error) {
       console.error("Error creating product:", error);
       toast({
         title: "Fehler",
         description: "Produkt konnte nicht erstellt werden",
-        variant: "destructive",
+        variant: "destructive"
       });
     }
   };
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
         <FormField
           control={form.control}
           name="name"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Name</FormLabel>
+              <FormLabel>Produktname</FormLabel>
               <FormControl>
-                <Input {...field} />
+                <Input placeholder="Name des Produkts" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
-
+        
         <FormField
           control={form.control}
           name="price"
@@ -76,7 +76,12 @@ export function CreateProductForm({ onSuccess }: CreateProductFormProps) {
             <FormItem>
               <FormLabel>Preis</FormLabel>
               <FormControl>
-                <Input {...field} type="number" step="0.01" />
+                <Input 
+                  type="number" 
+                  placeholder="Preis" 
+                  {...field} 
+                  onChange={(e) => field.onChange(Number(e.target.value))}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -89,13 +94,14 @@ export function CreateProductForm({ onSuccess }: CreateProductFormProps) {
           render={({ field }) => (
             <FormItem>
               <FormLabel>Turnus</FormLabel>
-              <Select onValueChange={field.onChange} value={field.value}>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
                 <FormControl>
                   <SelectTrigger>
-                    <SelectValue placeholder="Wähle einen Turnus" />
+                    <SelectValue placeholder="Turnus wählen" />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
+                  <SelectItem value="hourly">Stündlich</SelectItem>
                   <SelectItem value="once">Einmalig</SelectItem>
                   <SelectItem value="monthly">Monatlich</SelectItem>
                   <SelectItem value="yearly">Jährlich</SelectItem>
@@ -115,7 +121,7 @@ export function CreateProductForm({ onSuccess }: CreateProductFormProps) {
               <Select onValueChange={field.onChange} value={field.value}>
                 <FormControl>
                   <SelectTrigger>
-                    <SelectValue placeholder="Wähle eine Produktfamilie" />
+                    <SelectValue placeholder="Produktfamilie wählen" />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
@@ -131,9 +137,9 @@ export function CreateProductForm({ onSuccess }: CreateProductFormProps) {
           )}
         />
 
-        <div className="flex justify-end gap-4">
-          <Button type="submit">Erstellen</Button>
-        </div>
+        <Button type="submit" className="w-full">
+          Produkt erstellen
+        </Button>
       </form>
     </Form>
   );
