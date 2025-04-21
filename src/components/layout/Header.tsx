@@ -1,10 +1,14 @@
 
 import { useState, useRef } from "react";
+import { useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { Search, Menu } from "lucide-react";
+import { Search, Menu, Plus } from "lucide-react";
 import { UserProfileMenu } from "./UserProfileMenu";
+import { CreateContactForm } from "@/components/contacts/CreateContactForm";
+import { CreateAccountForm } from "@/components/accounts/CreateAccountForm";
+import { CreateDealForm } from "@/components/deals/CreateDealForm";
 
 interface HeaderProps extends React.HTMLAttributes<HTMLElement> {
   onMenuClick: () => void;
@@ -13,6 +17,33 @@ interface HeaderProps extends React.HTMLAttributes<HTMLElement> {
 
 export function Header({ onMenuClick, buttonRef, className }: HeaderProps) {
   const [searchExpanded, setSearchExpanded] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const location = useLocation();
+
+  const getCurrentPath = () => {
+    if (location.pathname.includes("/contacts")) return "contacts";
+    if (location.pathname.includes("/accounts")) return "accounts";
+    if (location.pathname.includes("/deals")) return "deals";
+    return null;
+  };
+
+  const renderCreateModal = () => {
+    const currentPath = getCurrentPath();
+    if (!showCreateModal) return null;
+
+    switch (currentPath) {
+      case "contacts":
+        return <CreateContactForm isOpen={showCreateModal} onClose={() => setShowCreateModal(false)} />;
+      case "accounts":
+        return <CreateAccountForm isOpen={showCreateModal} onClose={() => setShowCreateModal(false)} />;
+      case "deals":
+        return <CreateDealForm isOpen={showCreateModal} onClose={() => setShowCreateModal(false)} />;
+      default:
+        return null;
+    }
+  };
+
+  const currentPath = getCurrentPath();
 
   return (
     <header className={cn(
@@ -61,12 +92,22 @@ export function Header({ onMenuClick, buttonRef, className }: HeaderProps) {
         </div>
         
         <div className="ml-2 flex items-center space-x-2">
-          <Button variant="outline" size="sm" className="hidden md:flex">
-            Upgrade
-          </Button>
+          {currentPath && (
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="hidden md:flex"
+              onClick={() => setShowCreateModal(true)}
+            >
+              <Plus className="h-4 w-4 mr-1" />
+              New
+            </Button>
+          )}
           <UserProfileMenu />
         </div>
       </div>
+
+      {renderCreateModal()}
     </header>
   );
 }

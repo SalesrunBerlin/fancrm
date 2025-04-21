@@ -33,8 +33,7 @@ export const Sidebar = React.forwardRef<HTMLDivElement, SidebarProps>(
     
     const sidebarClass = cn(
       "h-screen fixed left-0 top-0 w-64 border-r bg-background p-6 flex-col gap-6 z-40 transition-all duration-300 ease-in-out",
-      isOpen ? "translate-x-0" : "-translate-x-full",
-      "lg:translate-x-[-256px] lg:hover:translate-x-0"
+      isOpen ? "translate-x-0" : "-translate-x-full"
     );
 
     return (
