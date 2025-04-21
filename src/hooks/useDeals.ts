@@ -70,6 +70,16 @@ export function useDeals() {
 
   const updateDeal = useMutation({
     mutationFn: async (deal: DealType) => {
+      // Get the current owner_id from database to ensure we're not changing it
+      const { data: existingDeal, error: fetchError } = await supabase
+        .from('deals')
+        .select('owner_id')
+        .eq('id', deal.id)
+        .single();
+        
+      if (fetchError) throw fetchError;
+      
+      // Now update with the correct fields
       const { error } = await supabase
         .from('deals')
         .update({
@@ -77,10 +87,14 @@ export function useDeals() {
           amount: deal.amount,
           status: deal.status,
           close_date: deal.closeDate,
+          owner_id: existingDeal.owner_id, // Make sure we keep the original owner
         })
         .eq('id', deal.id);
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error updating deal in Supabase:", error);
+        throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["deals"] });
@@ -102,7 +116,7 @@ export function useDeals() {
   });
 
   return {
-    data, // Changed from 'deals' to 'data' to match useQuery's return pattern
+    data,
     isLoading,
     createDeal,
     updateDeal,

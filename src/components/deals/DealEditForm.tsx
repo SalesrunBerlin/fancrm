@@ -30,11 +30,20 @@ export function DealEditForm({ deal, onSuccess }: DealEditFormProps) {
 
   const onSubmit = async (values: any) => {
     try {
+      // Find the selected status from dealStatuses to ensure we're using valid status values
+      const selectedStatus = dealStatuses?.find(
+        (status) => status.name === values.status
+      );
+
+      if (!selectedStatus) {
+        throw new Error("Invalid status selected");
+      }
+
       await updateDeal.mutateAsync({
         ...deal,
         name: values.name,
         amount: parseFloat(values.amount),
-        status: values.status,
+        status: selectedStatus.name, // Use the exact status name from the database
         closeDate: values.closeDate || null,
       });
       
