@@ -1,4 +1,3 @@
-
 import React from "react";
 import {
   Home,
@@ -7,6 +6,7 @@ import {
   Building,
   Briefcase,
   Settings,
+  Package,
   LogOut
 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
@@ -87,6 +87,15 @@ export const Sidebar = React.forwardRef<HTMLDivElement, SidebarProps>(
             >
               <Settings className="mr-2 h-4 w-4" />
               Settings
+            </Button>
+          </Link>
+          <Link to="/products" onClick={handleLinkClick}>
+            <Button
+              variant={location.pathname === "/products" ? "default" : "ghost"}
+              className="w-full justify-start"
+            >
+              <Package className="mr-2 h-4 w-4" />
+              Produkte
             </Button>
           </Link>
         </div>

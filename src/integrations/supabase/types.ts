@@ -101,6 +101,45 @@ export type Database = {
           },
         ]
       }
+      deal_products: {
+        Row: {
+          created_at: string
+          deal_id: string | null
+          id: string
+          product_id: string | null
+          quantity: number
+        }
+        Insert: {
+          created_at?: string
+          deal_id?: string | null
+          id?: string
+          product_id?: string | null
+          quantity?: number
+        }
+        Update: {
+          created_at?: string
+          deal_id?: string | null
+          id?: string
+          product_id?: string | null
+          quantity?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deal_products_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deal_products_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       deal_statuses: {
         Row: {
           created_at: string
@@ -195,6 +234,74 @@ export type Database = {
           },
         ]
       }
+      product_families: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          order_position: number
+          owner_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          order_position: number
+          owner_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          order_position?: number
+          owner_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      products: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          owner_id: string
+          price: number
+          product_family_id: string | null
+          recurrence: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          owner_id: string
+          price?: number
+          product_family_id?: string | null
+          recurrence: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          owner_id?: string
+          price?: number
+          product_family_id?: string | null
+          recurrence?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "products_product_family_id_fkey"
+            columns: ["product_family_id"]
+            isOneToOne: false
+            referencedRelation: "product_families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -234,6 +341,10 @@ export type Database = {
     }
     Functions: {
       initialize_deal_statuses: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      initialize_product_families: {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }

@@ -1,4 +1,3 @@
-
 export interface ContactType {
   id: string;
   firstName: string;
@@ -28,6 +27,25 @@ export interface DealType {
   accountId?: string;
   contactId?: string;
   tags?: string[];
+}
+
+export interface ProductFamily {
+  id: string;
+  name: string;
+  orderPosition: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Product {
+  id: string;
+  name: string;
+  recurrence: 'once' | 'monthly' | 'yearly';
+  productFamilyId?: string;
+  price: number;
+  createdAt: string;
+  updatedAt: string;
+  productFamily?: ProductFamily;
 }
 
 export type SearchHistoryItem = {
