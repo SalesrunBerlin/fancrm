@@ -1,146 +1,145 @@
 
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
-import { 
-  Form, 
-  FormControl, 
-  FormField, 
-  FormItem, 
-  FormLabel, 
-  FormMessage 
-} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useProducts } from "@/hooks/useProducts";
-import { useProductFamilies } from "@/hooks/useProductFamilies";
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { useProducts } from "@/hooks/useProducts";
 import { Product } from "@/types";
+import { Label } from "@/components/ui/label";
+import { useProductFamilies } from "@/hooks/useProductFamilies";
 
 interface CreateProductFormProps {
+  initialData?: Product;
   onSuccess: () => void;
 }
 
-export function CreateProductForm({ onSuccess }: CreateProductFormProps) {
-  const { createProduct } = useProducts();
-  const { productFamilies } = useProductFamilies();
+export function CreateProductForm({ initialData, onSuccess }: CreateProductFormProps) {
   const { toast } = useToast();
+  const { createProduct, updateProduct } = useProducts();
+  const { productFamilies } = useProductFamilies();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const form = useForm<Omit<Product, 'id' | 'createdAt' | 'updatedAt' | 'productFamily'>>({
-    defaultValues: {
-      name: '',
-      recurrence: 'once',
-      price: 0,
-      productFamilyId: undefined
+  const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<Omit<Product, 'id' | 'createdAt' | 'updatedAt'>>({
+    defaultValues: initialData ? {
+      name: initialData.name,
+      recurrence: initialData.recurrence,
+      price: initialData.price,
+      productFamilyId: initialData.productFamilyId
+    } : {
+      recurrence: 'monthly',
+      price: 0
     }
   });
 
-  const onSubmit = async (data: Omit<Product, 'id' | 'createdAt' | 'updatedAt' | 'productFamily'>) => {
+  const onSubmit = async (data: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>) => {
+    setIsSubmitting(true);
     try {
-      await createProduct.mutateAsync(data);
-      toast({
-        title: "Erfolg",
-        description: "Produkt erfolgreich erstellt"
-      });
+      if (initialData) {
+        // Update existing product
+        await updateProduct.mutateAsync({
+          ...initialData,
+          ...data
+        });
+        toast({
+          title: "Erfolg",
+          description: "Produkt wurde aktualisiert",
+        });
+      } else {
+        // Create new product
+        await createProduct.mutateAsync(data);
+        toast({
+          title: "Erfolg",
+          description: "Produkt wurde erstellt",
+        });
+      }
       onSuccess();
     } catch (error) {
-      console.error("Error creating product:", error);
+      console.error("Error saving product:", error);
       toast({
         title: "Fehler",
-        description: "Produkt konnte nicht erstellt werden",
-        variant: "destructive"
+        description: initialData 
+          ? "Produkt konnte nicht aktualisiert werden" 
+          : "Produkt konnte nicht erstellt werden",
+        variant: "destructive",
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-        <FormField
-          control={form.control}
-          name="name"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Produktname</FormLabel>
-              <FormControl>
-                <Input placeholder="Name des Produkts" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      <div className="space-y-2">
+        <Label htmlFor="name">Produktname</Label>
+        <Input 
+          {...register("name", { required: "Produktname ist erforderlich" })}
+          placeholder="Geben Sie einen Produktnamen ein"
         />
-        
-        <FormField
-          control={form.control}
-          name="price"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Preis</FormLabel>
-              <FormControl>
-                <Input 
-                  type="number" 
-                  placeholder="Preis" 
-                  {...field} 
-                  onChange={(e) => field.onChange(Number(e.target.value))}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        {errors.name && <p className="text-destructive text-sm">{errors.name.message}</p>}
+      </div>
 
-        <FormField
-          control={form.control}
-          name="recurrence"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Turnus</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Turnus wählen" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  <SelectItem value="hourly">Stündlich</SelectItem>
-                  <SelectItem value="once">Einmalig</SelectItem>
-                  <SelectItem value="monthly">Monatlich</SelectItem>
-                  <SelectItem value="yearly">Jährlich</SelectItem>
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
+      <div className="space-y-2">
+        <Label htmlFor="price">Preis</Label>
+        <Input 
+          type="number" 
+          step="0.01"
+          {...register("price", { 
+            required: "Preis ist erforderlich",
+            min: { value: 0, message: "Preis muss positiv sein" }
+          })}
+          placeholder="Geben Sie den Preis ein"
         />
+        {errors.price && <p className="text-destructive text-sm">{errors.price.message}</p>}
+      </div>
 
-        <FormField
-          control={form.control}
-          name="productFamilyId"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Produktfamilie</FormLabel>
-              <Select onValueChange={field.onChange} value={field.value}>
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Produktfamilie wählen" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {productFamilies?.map((family) => (
-                    <SelectItem key={family.id} value={family.id}>
-                      {family.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+      <div className="space-y-2">
+        <Label htmlFor="recurrence">Turnus</Label>
+        <Select 
+          value={watch("recurrence")} 
+          onValueChange={(value) => setValue("recurrence", value as Product['recurrence'])}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Turnus auswählen" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="once">Einmalig</SelectItem>
+            <SelectItem value="monthly">Monatlich</SelectItem>
+            <SelectItem value="yearly">Jährlich</SelectItem>
+            <SelectItem value="hourly">Stündlich</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
 
-        <Button type="submit" className="w-full">
-          Produkt erstellen
-        </Button>
-      </form>
-    </Form>
+      <div className="space-y-2">
+        <Label htmlFor="productFamilyId">Produktfamilie</Label>
+        <Select 
+          value={watch("productFamilyId") || ""} 
+          onValueChange={(value) => setValue("productFamilyId", value || undefined)}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Produktfamilie auswählen" />
+          </SelectTrigger>
+          <SelectContent>
+            {productFamilies?.map((family) => (
+              <SelectItem key={family.id} value={family.id}>
+                {family.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <Button type="submit" className="w-full" disabled={isSubmitting}>
+        {initialData ? "Produkt aktualisieren" : "Produkt erstellen"}
+      </Button>
+    </form>
   );
 }

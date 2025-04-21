@@ -1,15 +1,23 @@
 
+import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useProducts } from "@/hooks/useProducts";
 import { formatCurrency } from "@/lib/utils";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Pencil, Trash2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { CreateProductForm } from "@/components/products/CreateProductForm";
+import { DeleteDialog } from "@/components/common/DeleteDialog";
 
 export default function ProductDetail() {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const { id } = useParams();
-  const { products } = useProducts();
+  const { products, deleteProduct } = useProducts();
+  const [isEditing, setIsEditing] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+
   const product = products?.find(p => p.id === id);
 
   if (!product) {
@@ -26,6 +34,43 @@ export default function ProductDetail() {
     }
   };
 
+  const handleDelete = async () => {
+    try {
+      await deleteProduct.mutateAsync(id!);
+      toast({
+        title: "Erfolg",
+        description: "Produkt wurde gelöscht",
+      });
+      navigate("/products");
+    } catch (error) {
+      console.error("Error deleting product:", error);
+      toast({
+        title: "Fehler",
+        description: "Produkt konnte nicht gelöscht werden",
+        variant: "destructive",
+      });
+    }
+  };
+
+  if (isEditing) {
+    return (
+      <div className="space-y-6 p-6 animate-fade-in">
+        <Button 
+          variant="ghost" 
+          className="mb-4"
+          onClick={() => setIsEditing(false)}
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Zurück
+        </Button>
+        <CreateProductForm 
+          initialData={product} 
+          onSuccess={() => setIsEditing(false)} 
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 p-6 animate-fade-in">
       <div className="flex justify-between items-center">
@@ -36,6 +81,22 @@ export default function ProductDetail() {
           <ArrowLeft className="mr-2 h-4 w-4" />
           Zurück
         </Button>
+        <div className="space-x-2">
+          <Button 
+            variant="secondary"
+            size="icon"
+            onClick={() => setIsEditing(true)}
+          >
+            <Pencil className="h-4 w-4" />
+          </Button>
+          <Button 
+            variant="destructive"
+            size="icon"
+            onClick={() => setShowDeleteDialog(true)}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
 
       <Card className="p-6">
@@ -63,6 +124,14 @@ export default function ProductDetail() {
           )}
         </div>
       </Card>
+
+      <DeleteDialog
+        isOpen={showDeleteDialog}
+        onClose={() => setShowDeleteDialog(false)}
+        onConfirm={handleDelete}
+        title="Produkt löschen"
+        description="Sind Sie sicher, dass Sie dieses Produkt löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden."
+      />
     </div>
   );
 }

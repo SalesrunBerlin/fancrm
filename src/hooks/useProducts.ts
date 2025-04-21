@@ -69,9 +69,52 @@ export function useProducts() {
     },
   });
 
+  const updateProduct = useMutation({
+    mutationFn: async (updatedProduct: Product) => {
+      const { data: user } = await supabase.auth.getUser();
+      if (!user.user) throw new Error("User must be logged in to update a product");
+
+      const { error } = await supabase
+        .from('products')
+        .update({
+          name: updatedProduct.name,
+          recurrence: updatedProduct.recurrence,
+          product_family_id: updatedProduct.productFamilyId,
+          price: updatedProduct.price
+        })
+        .eq('id', updatedProduct.id)
+        .eq('owner_id', user.user.id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+    },
+  });
+
+  const deleteProduct = useMutation({
+    mutationFn: async (productId: string) => {
+      const { data: user } = await supabase.auth.getUser();
+      if (!user.user) throw new Error("User must be logged in to delete a product");
+
+      const { error } = await supabase
+        .from('products')
+        .delete()
+        .eq('id', productId)
+        .eq('owner_id', user.user.id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+    },
+  });
+
   return {
     products,
     isLoading,
     createProduct,
+    updateProduct,
+    deleteProduct,
   };
 }
