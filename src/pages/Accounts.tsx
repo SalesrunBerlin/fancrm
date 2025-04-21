@@ -1,24 +1,21 @@
+
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { AccountsHeader } from "@/components/accounts/AccountsHeader";
 import { AccountsFilter } from "@/components/accounts/AccountsFilter";
 import { AccountsContent } from "@/components/accounts/AccountsContent";
-import { CreateAccountForm } from "@/components/accounts/CreateAccountForm";
-import { useAccounts } from "@/hooks/useAccounts";
-import { TabsContent, Tabs } from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
+import { useAccounts } from "@/hooks/useAccounts";
 
 export default function Accounts() {
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
   const { data: accounts = [], isLoading, error } = useAccounts();
-  const [showCreateModal, setShowCreateModal] = useState(false);
   
-  console.log("Accounts data:", accounts);
-
   const filteredAccounts = accounts.filter(account => {
     return account.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
            (account.type && account.type.toLowerCase().includes(searchQuery.toLowerCase()));
@@ -26,7 +23,12 @@ export default function Accounts() {
   
   return (
     <div className="space-y-6 animate-fade-in">
-      <AccountsHeader onCreateClick={() => setShowCreateModal(true)} />
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div className="flex items-center">
+          <AlertCircle className="mr-2 h-6 w-6 text-beauty" />
+          <h1 className="text-3xl font-bold tracking-tight">Accounts</h1>
+        </div>
+      </div>
       
       <AccountsFilter
         searchQuery={searchQuery}
@@ -43,9 +45,9 @@ export default function Accounts() {
       ) : error ? (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Fehler</AlertTitle>
+          <AlertTitle>Error</AlertTitle>
           <AlertDescription>
-            Fehler beim Laden der Accounts. Bitte versuchen Sie es später erneut.
+            Error loading accounts. Please try again later.
           </AlertDescription>
         </Alert>
       ) : (
@@ -53,7 +55,7 @@ export default function Accounts() {
           <TabsContent value="all" className="space-y-4">
             {filteredAccounts.length === 0 ? (
               <div className="text-center py-10 text-muted-foreground">
-                Keine Accounts gefunden. Erstellen Sie einen neuen Account mit dem Button oben.
+                No accounts found.
               </div>
             ) : (
               <AccountsContent 
@@ -62,27 +64,8 @@ export default function Accounts() {
               />
             )}
           </TabsContent>
-          
-          <TabsContent value="active" className="space-y-4">
-            <AccountsContent 
-              accounts={filteredAccounts.filter(account => account.tags?.includes("Active"))}
-              viewMode={viewMode}
-            />
-          </TabsContent>
-          
-          <TabsContent value="prospects" className="space-y-4">
-            <AccountsContent 
-              accounts={filteredAccounts.filter(account => account.tags?.includes("Prospect"))}
-              viewMode={viewMode}
-            />
-          </TabsContent>
         </Tabs>
       )}
-      
-      <CreateAccountForm 
-        isOpen={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
-      />
     </div>
   );
 }

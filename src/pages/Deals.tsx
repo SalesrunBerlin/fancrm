@@ -2,28 +2,25 @@
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useDeals } from "@/hooks/useDeals";
 import { useToast } from "@/hooks/use-toast";
-import { CreateDealForm } from "@/components/deals/CreateDealForm";
-import { DealsHeader } from "@/components/deals/DealsHeader";
 import { DealsFilter } from "@/components/deals/DealsFilter";
 import { DealsViewToggle } from "@/components/deals/DealsViewToggle";
 import { DealsTabContent } from "@/components/deals/DealsTabContent";
+import { Briefcase } from "lucide-react";
 
 export default function Deals() {
   const { toast } = useToast();
   const { data: deals, isLoading } = useDeals();
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
-  const [showCreateForm, setShowCreateForm] = useState(false);
   
   const filteredDeals = deals ? deals.filter(deal => {
     return deal.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
            (deal.accountName && deal.accountName.toLowerCase().includes(searchQuery.toLowerCase())) ||
            deal.status.toLowerCase().includes(searchQuery.toLowerCase());
   }) : [];
-  
+
   const handleDealClick = (id: string) => {
     toast({
       title: "Deal Selected",
@@ -33,7 +30,12 @@ export default function Deals() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <DealsHeader onCreateClick={() => setShowCreateForm(true)} />
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div className="flex items-center">
+          <Briefcase className="mr-2 h-6 w-6 text-beauty" />
+          <h1 className="text-3xl font-bold tracking-tight">Deals</h1>
+        </div>
+      </div>
       
       <Card>
         <CardContent className="p-4">
@@ -68,15 +70,6 @@ export default function Deals() {
           onDealClick={handleDealClick}
         />
       </Tabs>
-
-      <Sheet open={showCreateForm} onOpenChange={setShowCreateForm}>
-        <SheetContent>
-          <SheetHeader>
-            <SheetTitle>Create New Deal</SheetTitle>
-          </SheetHeader>
-          <CreateDealForm onSuccess={() => setShowCreateForm(false)} />
-        </SheetContent>
-      </Sheet>
     </div>
   );
 }

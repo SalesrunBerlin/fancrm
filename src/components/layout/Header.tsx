@@ -64,9 +64,6 @@ export function Header({ onMenuClick, buttonRef, className }: HeaderProps) {
           <Button variant="outline" size="sm" className="hidden md:flex">
             Upgrade
           </Button>
-          <Button size="sm" className="bg-beauty hover:bg-beauty-dark">
-            New
-          </Button>
           <UserProfileMenu />
         </div>
       </div>
