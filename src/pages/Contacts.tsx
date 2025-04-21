@@ -6,11 +6,13 @@ import { useToast } from "@/hooks/use-toast";
 import { useContacts } from "@/hooks/useContacts";
 import { ContactsFilter } from "@/components/contacts/ContactsFilter";
 import { ContactsList } from "@/components/contacts/ContactsList";
+import { CreateContactForm } from "@/components/contacts/CreateContactForm";
 
 export default function Contacts() {
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
+  const [showCreateModal, setShowCreateModal] = useState(false);
   const { data: contacts = [], isLoading } = useContacts();
   
   const filteredContacts = contacts.filter(contact => {
@@ -38,6 +40,10 @@ export default function Contacts() {
           <Users className="mr-2 h-6 w-6 text-beauty" />
           <h1 className="text-3xl font-bold tracking-tight">Contacts</h1>
         </div>
+        <Button onClick={() => setShowCreateModal(true)}>
+          <Plus className="mr-2 h-4 w-4" />
+          New Contact
+        </Button>
       </div>
       
       <ContactsFilter
@@ -52,6 +58,13 @@ export default function Contacts() {
         viewMode={viewMode}
         onContactClick={handleContactClick}
       />
+
+      {showCreateModal && (
+        <CreateContactForm 
+          accountId="" 
+          onContactCreated={() => setShowCreateModal(false)} 
+        />
+      )}
     </div>
   );
 }

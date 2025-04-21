@@ -2,18 +2,21 @@
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { Plus, Briefcase } from "lucide-react";
 import { useDeals } from "@/hooks/useDeals";
 import { useToast } from "@/hooks/use-toast";
 import { DealsFilter } from "@/components/deals/DealsFilter";
 import { DealsViewToggle } from "@/components/deals/DealsViewToggle";
 import { DealsTabContent } from "@/components/deals/DealsTabContent";
-import { Briefcase } from "lucide-react";
+import { CreateDealForm } from "@/components/deals/CreateDealForm";
 
 export default function Deals() {
   const { toast } = useToast();
   const { data: deals, isLoading } = useDeals();
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
+  const [showCreateModal, setShowCreateModal] = useState(false);
   
   const filteredDeals = deals ? deals.filter(deal => {
     return deal.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -35,6 +38,10 @@ export default function Deals() {
           <Briefcase className="mr-2 h-6 w-6 text-beauty" />
           <h1 className="text-3xl font-bold tracking-tight">Deals</h1>
         </div>
+        <Button onClick={() => setShowCreateModal(true)}>
+          <Plus className="mr-2 h-4 w-4" />
+          New Deal
+        </Button>
       </div>
       
       <Card>
@@ -70,6 +77,10 @@ export default function Deals() {
           onDealClick={handleDealClick}
         />
       </Tabs>
+
+      {showCreateModal && (
+        <CreateDealForm onSuccess={() => setShowCreateModal(false)} />
+      )}
     </div>
   );
 }

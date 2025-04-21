@@ -1,19 +1,22 @@
 
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
+import { Plus, AlertCircle } from "lucide-react";
 import { AccountsHeader } from "@/components/accounts/AccountsHeader";
 import { AccountsFilter } from "@/components/accounts/AccountsFilter";
 import { AccountsContent } from "@/components/accounts/AccountsContent";
+import { CreateAccountForm } from "@/components/accounts/CreateAccountForm";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle } from "lucide-react";
 import { useAccounts } from "@/hooks/useAccounts";
 
 export default function Accounts() {
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
+  const [showCreateModal, setShowCreateModal] = useState(false);
   const { data: accounts = [], isLoading, error } = useAccounts();
   
   const filteredAccounts = accounts.filter(account => {
@@ -28,6 +31,10 @@ export default function Accounts() {
           <AlertCircle className="mr-2 h-6 w-6 text-beauty" />
           <h1 className="text-3xl font-bold tracking-tight">Accounts</h1>
         </div>
+        <Button onClick={() => setShowCreateModal(true)}>
+          <Plus className="mr-2 h-4 w-4" />
+          New Account
+        </Button>
       </div>
       
       <AccountsFilter
@@ -65,6 +72,13 @@ export default function Accounts() {
             )}
           </TabsContent>
         </Tabs>
+      )}
+
+      {showCreateModal && (
+        <CreateAccountForm 
+          isOpen={showCreateModal} 
+          onClose={() => setShowCreateModal(false)} 
+        />
       )}
     </div>
   );
