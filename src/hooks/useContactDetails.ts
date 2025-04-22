@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -87,6 +86,12 @@ export function useContactDetails() {
           if (data.profiles) {
             setOwnerName(`${data.profiles.first_name} ${data.profiles.last_name}`.trim());
           }
+
+          if (transformedContact.street && transformedContact.city && 
+              transformedContact.postal_code && transformedContact.country && 
+              (!transformedContact.latitude || !transformedContact.longitude)) {
+            await updateContactGeocode(transformedContact);
+          }
         }
       } catch (err) {
         console.error("Unexpected error:", err);
@@ -157,7 +162,6 @@ export function useContactDetails() {
     if (!id || !editedContact) return;
 
     try {
-      // Prepare data for update
       const updateData = {
         first_name: editedContact.firstName,
         last_name: editedContact.lastName,
@@ -177,7 +181,6 @@ export function useContactDetails() {
 
       if (error) throw error;
 
-      // Update the local state with edited contact
       const updatedContact = {
         ...contact!,
         ...editedContact,
@@ -185,7 +188,6 @@ export function useContactDetails() {
       
       setContact(updatedContact);
       
-      // Update geocode if address changed
       await updateContactGeocode(updatedContact as Contact);
 
       toast({
