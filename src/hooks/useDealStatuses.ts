@@ -20,7 +20,6 @@ export function useDealStatuses() {
   const { data: dealStatuses, isLoading } = useQuery({
     queryKey: ["dealStatuses", user?.id],
     queryFn: async () => {
-      // Log important information for debugging
       console.log("Fetching deal statuses for user:", user?.id);
       
       if (!user) {
@@ -42,7 +41,7 @@ export function useDealStatuses() {
       console.log("Fetched deal statuses:", statuses);
       return statuses || [];
     },
-    enabled: !!user, // Only fetch if user exists
+    enabled: !!user,
   });
 
   const createStatus = useMutation({
@@ -104,7 +103,6 @@ export function useDealStatuses() {
   const initializeDefaultStatuses = async () => {
     if (!user) return;
     
-    // Only initialize if there are no statuses yet
     if (dealStatuses && dealStatuses.length === 0) {
       console.log("Initializing default statuses");
       
@@ -118,7 +116,6 @@ export function useDealStatuses() {
           { name: "Closed Lost", type: "lost", order_position: 6 }
         ];
         
-        // Create default statuses
         for (const status of defaultStatuses) {
           await createStatus.mutateAsync(status);
         }
