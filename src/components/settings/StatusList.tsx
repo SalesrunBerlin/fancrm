@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Pencil, Trash2, GripVertical } from "lucide-react";
+import { Pencil, Trash2, GripVertical, Replace } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
   Select,
@@ -22,6 +22,16 @@ import {
 import { DeleteDialog } from "@/components/common/DeleteDialog";
 import { useDealStatuses } from "@/hooks/useDealStatuses";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Form, FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
+import { useForm } from "react-hook-form";
 
 interface StatusListProps {
   dealStatuses: any[];
@@ -40,6 +50,14 @@ export function StatusList({
   const [editingStatus, setEditingStatus] = useState<{ id: string; name: string; type: string } | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [statusToDelete, setStatusToDelete] = useState<string | null>(null);
+  const [replaceDialogOpen, setReplaceDialogOpen] = useState(false);
+  const [statusToReplace, setStatusToReplace] = useState<{ id: string; name: string } | null>(null);
+
+  const form = useForm({
+    defaultValues: {
+      replacementStatusId: "",
+    },
+  });
 
   const handleDeleteStatus = (id: string) => {
     setStatusToDelete(id);
@@ -88,6 +106,47 @@ export function StatusList({
       toast({
         title: "Fehler",
         description: "Status konnte nicht aktualisiert werden",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleReplaceStatus = (id: string, name: string) => {
+    setStatusToReplace({ id, name });
+    setReplaceDialogOpen(true);
+  };
+
+  const confirmReplace = async (data: { replacementStatusId: string }) => {
+    if (!statusToReplace || !data.replacementStatusId) return;
+    
+    try {
+      const replacementStatus = dealStatuses.find(status => status.id === data.replacementStatusId);
+      if (!replacementStatus) {
+        throw new Error("Ersatzstatus nicht gefunden");
+      }
+
+      // Call the replaceStatus function from useDealStatuses
+      await updateStatus.mutateAsync({
+        id: statusToReplace.id,
+        name: statusToReplace.name,
+        type: statusToReplace.type,
+        replacementStatusId: data.replacementStatusId
+      }, {
+        onSuccess: () => {
+          toast({
+            title: "Erfolg",
+            description: `Status '${statusToReplace.name}' wurde erfolgreich durch '${replacementStatus.name}' ersetzt`,
+          });
+          setReplaceDialogOpen(false);
+          setStatusToReplace(null);
+          form.reset();
+        }
+      });
+    } catch (error) {
+      console.error("Error replacing status:", error);
+      toast({
+        title: "Fehler",
+        description: "Status konnte nicht ersetzt werden",
         variant: "destructive",
       });
     }
@@ -229,6 +288,14 @@ export function StatusList({
                                     >
                                       <Trash2 className="h-4 w-4" />
                                     </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="text-blue-500 hover:text-blue-700"
+                                      onClick={() => handleReplaceStatus(status.id, status.name)}
+                                    >
+                                      <Replace className="h-4 w-4" />
+                                    </Button>
                                   </>
                                 )}
                               </TableCell>
@@ -244,6 +311,8 @@ export function StatusList({
           )}
         </Droppable>
       </DragDropContext>
+
+      {/* Delete confirmation dialog */}
       <DeleteDialog
         isOpen={deleteDialogOpen}
         onClose={() => setDeleteDialogOpen(false)}
@@ -251,6 +320,62 @@ export function StatusList({
         title="Status löschen"
         description="Sind Sie sicher, dass Sie diesen Status löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden."
       />
+
+      {/* Replace status dialog */}
+      <Dialog open={replaceDialogOpen} onOpenChange={setReplaceDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Status ersetzen</DialogTitle>
+            <DialogDescription>
+              Wählen Sie einen Ersatzstatus für "{statusToReplace?.name}". 
+              Alle Deals mit diesem Status werden aktualisiert.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(confirmReplace)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="replacementStatusId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Neuer Status</FormLabel>
+                    <FormControl>
+                      <Select
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Status auswählen" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {dealStatuses
+                            .filter(status => status.id !== statusToReplace?.id)
+                            .map(status => (
+                              <SelectItem key={status.id} value={status.id}>
+                                {status.name}
+                              </SelectItem>
+                            ))
+                          }
+                        </SelectContent>
+                      </Select>
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+              
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setReplaceDialogOpen(false)}>
+                  Abbrechen
+                </Button>
+                <Button type="submit">
+                  Ersetzen
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

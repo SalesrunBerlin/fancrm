@@ -68,9 +68,32 @@ export function useDealStatuses() {
   });
 
   const updateStatus = useMutation({
-    mutationFn: async ({ id, ...status }: { id: string; name: string; type: string; order_position?: number }) => {
+    mutationFn: async ({ id, replacementStatusId, ...status }: { 
+      id: string; 
+      name: string; 
+      type: string; 
+      order_position?: number;
+      replacementStatusId?: string;
+    }) => {
       console.log("Updating status:", id, status);
       
+      // If a replacement status ID is provided, replace all occurrences in deals
+      if (replacementStatusId) {
+        console.log(`Replacing status ${id} with ${replacementStatusId} in all deals`);
+        
+        // First update all deals that use this status
+        const { error: dealsError } = await supabase
+          .from('deals')
+          .update({ status_id: replacementStatusId })
+          .eq('status_id', id);
+        
+        if (dealsError) {
+          console.error("Error updating deals with replacement status:", dealsError);
+          throw dealsError;
+        }
+      }
+      
+      // Then update the status itself
       const { error } = await supabase
         .from('deal_statuses')
         .update(status)
@@ -80,6 +103,7 @@ export function useDealStatuses() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["dealStatuses"] });
+      queryClient.invalidateQueries({ queryKey: ["deals"] });
     },
   });
 
