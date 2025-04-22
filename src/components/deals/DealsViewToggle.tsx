@@ -1,30 +1,24 @@
 
-import { Button } from "@/components/ui/button";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { LayoutGrid, LayoutList, Kanban } from "lucide-react";
 
 interface DealsViewToggleProps {
-  viewMode: "grid" | "table";
-  onViewChange: (mode: "grid" | "table") => void;
+  viewMode: "grid" | "table" | "kanban";
+  onViewChange: (value: "grid" | "table" | "kanban") => void;
 }
 
 export function DealsViewToggle({ viewMode, onViewChange }: DealsViewToggleProps) {
   return (
-    <div className="flex items-center space-x-2">
-      <Button
-        variant={viewMode === "grid" ? "default" : "outline"}
-        size="sm"
-        onClick={() => onViewChange("grid")}
-        className={viewMode === "grid" ? "bg-beauty hover:bg-beauty-dark" : ""}
-      >
-        Grid
-      </Button>
-      <Button
-        variant={viewMode === "table" ? "default" : "outline"}
-        size="sm"
-        onClick={() => onViewChange("table")}
-        className={viewMode === "table" ? "bg-beauty hover:bg-beauty-dark" : ""}
-      >
-        Table
-      </Button>
-    </div>
+    <ToggleGroup type="single" value={viewMode} onValueChange={onViewChange}>
+      <ToggleGroupItem value="kanban">
+        <Kanban className="h-4 w-4" />
+      </ToggleGroupItem>
+      <ToggleGroupItem value="grid">
+        <LayoutGrid className="h-4 w-4" />
+      </ToggleGroupItem>
+      <ToggleGroupItem value="table">
+        <LayoutList className="h-4 w-4" />
+      </ToggleGroupItem>
+    </ToggleGroup>
   );
 }

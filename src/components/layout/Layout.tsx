@@ -2,16 +2,22 @@
 import { useState, useEffect, useRef } from "react";
 import { Header } from "./Header";
 import { Sidebar } from "./Sidebar";
-import { Outlet } from "react-router-dom";
+import { Outlet, useLocation } from "react-router-dom";
 
 export function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
+  const location = useLocation();
   
   const toggleSidebar = () => {
     setSidebarOpen(!sidebarOpen);
   };
+  
+  // Close sidebar when route changes
+  useEffect(() => {
+    setSidebarOpen(false);
+  }, [location]);
   
   // Close sidebar when clicking outside
   useEffect(() => {
@@ -35,7 +41,7 @@ export function Layout() {
   
   return (
     <div className="flex h-screen overflow-hidden relative">
-      <Sidebar isOpen={sidebarOpen} ref={sidebarRef} />
+      <Sidebar isOpen={sidebarOpen} ref={sidebarRef} onClose={() => setSidebarOpen(false)} />
       
       <div className="flex flex-col flex-1 overflow-hidden">
         <Header onMenuClick={toggleSidebar} buttonRef={buttonRef} />

@@ -10,6 +10,8 @@ import { DealsFilter } from "@/components/deals/DealsFilter";
 import { DealsViewToggle } from "@/components/deals/DealsViewToggle";
 import { DealsTabContent } from "@/components/deals/DealsTabContent";
 import { CreateDealForm } from "@/components/deals/CreateDealForm";
+import { DealsKanban } from "@/components/deals/DealsKanban";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
   Dialog,
   DialogContent,
@@ -21,8 +23,9 @@ export default function Deals() {
   const { toast } = useToast();
   const { data: deals, isLoading } = useDeals();
   const [searchQuery, setSearchQuery] = useState("");
-  const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
+  const [viewMode, setViewMode] = useState<"grid" | "table" | "kanban">("kanban");
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [groupByField, setGroupByField] = useState<"status">("status");
   
   const filteredDeals = deals ? deals.filter(deal => {
     const searchLower = searchQuery.toLowerCase();
@@ -60,31 +63,54 @@ export default function Deals() {
               onSearchChange={setSearchQuery}
             />
             
-            <Tabs defaultValue="all" className="w-full sm:w-auto">
-              <TabsList>
-                <TabsTrigger value="all">All</TabsTrigger>
-                <TabsTrigger value="open">Open</TabsTrigger>
-                <TabsTrigger value="won">Won</TabsTrigger>
-                <TabsTrigger value="lost">Lost</TabsTrigger>
-              </TabsList>
-            </Tabs>
-            
-            <DealsViewToggle 
-              viewMode={viewMode}
-              onViewChange={setViewMode}
-            />
+            <div className="flex items-center gap-4">
+              {viewMode === "kanban" && (
+                <Select
+                  value={groupByField}
+                  onValueChange={(value: "status") => setGroupByField(value)}
+                >
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Group by" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="status">Status</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
+              
+              <DealsViewToggle 
+                viewMode={viewMode}
+                onViewChange={setViewMode}
+              />
+            </div>
           </div>
         </CardContent>
       </Card>
       
-      <Tabs defaultValue="all" className="space-y-4">
-        <DealsTabContent
+      {viewMode === "kanban" ? (
+        <DealsKanban 
           deals={filteredDeals}
           isLoading={isLoading}
-          viewMode={viewMode}
+          groupByField={groupByField}
           onDealClick={handleDealClick}
         />
-      </Tabs>
+      ) : (
+        <Tabs defaultValue="all" className="space-y-4">
+          <TabsList>
+            <TabsTrigger value="all">All</TabsTrigger>
+            <TabsTrigger value="open">Open</TabsTrigger>
+            <TabsTrigger value="won">Won</TabsTrigger>
+            <TabsTrigger value="lost">Lost</TabsTrigger>
+          </TabsList>
+          
+          <DealsTabContent
+            deals={filteredDeals}
+            isLoading={isLoading}
+            viewMode={viewMode}
+            onDealClick={handleDealClick}
+          />
+        </Tabs>
+      )}
 
       <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
         <DialogContent>
