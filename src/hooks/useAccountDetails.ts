@@ -15,6 +15,13 @@ export function useAccountDetails(accountId: string | undefined) {
   const navigate = useNavigate();
   const { user } = useAuth();
 
+  // Hilfsfunktion, um zu prüfen, ob eine Adresse geokodiert werden sollte
+  const shouldGeocodeAddress = (account: Account): boolean => {
+    const hasCompleteAddress = account.street && account.city && account.postal_code && account.country;
+    const hasMissingCoordinates = !account.latitude || !account.longitude;
+    return !!hasCompleteAddress && hasMissingCoordinates;
+  };
+
   const fetchAccountDetails = async () => {
     if (!accountId) return;
     setIsLoading(true);
@@ -98,6 +105,11 @@ export function useAccountDetails(accountId: string | undefined) {
           const { first_name, last_name } = accountData.profiles;
           setOwnerName(`${first_name} ${last_name}`.trim());
         }
+        
+        // Geocode address if we have complete address but missing coordinates
+        if (shouldGeocodeAddress(transformedAccount)) {
+          await updateAccountGeocode(transformedAccount);
+        }
       }
 
     } catch (err) {
@@ -108,27 +120,41 @@ export function useAccountDetails(accountId: string | undefined) {
   };
 
   const updateAccountGeocode = async (account: Account) => {
-    if (!account.street || !account.city || !account.postal_code || !account.country) return;
+    if (!shouldGeocodeAddress(account)) return;
 
     const address = `${account.street}, ${account.postal_code} ${account.city}, ${account.country}`;
-    const response = await fetch(
-      `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(address)}.json?access_token=pk.eyJ1IjoibG92YWJsZSIsImEiOiJjbG4xbWV2azQwMjd4MnFsdG41Z2l0djZhIn0.YF-MD7OxJhXCAX4rLKygtg`
-    );
+    console.log("Geocoding account address:", address);
+    
+    try {
+      const response = await fetch(
+        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(address)}.json?access_token=pk.eyJ1IjoibG92YWJsZSIsImEiOiJjbG4xbWV2azQwMjd4MnFsdG41Z2l0djZhIn0.YF-MD7OxJhXCAX4rLKygtg`
+      );
 
-    const data = await response.json();
-    if (data.features && data.features.length > 0) {
-      const [longitude, latitude] = data.features[0].center;
-      
-      const { error } = await supabase
-        .from('accounts')
-        .update({ latitude, longitude })
-        .eq('id', account.id);
-
-      if (error) {
-        console.error('Error updating coordinates:', error);
-      } else {
-        setAccount(prev => prev ? { ...prev, latitude, longitude } : null);
+      if (!response.ok) {
+        throw new Error(`Geocoding API error: ${response.status}`);
       }
+
+      const data = await response.json();
+      if (data.features && data.features.length > 0) {
+        const [longitude, latitude] = data.features[0].center;
+        console.log("Geocoding successful:", { latitude, longitude });
+        
+        const { error } = await supabase
+          .from('accounts')
+          .update({ latitude, longitude })
+          .eq('id', account.id);
+
+        if (error) {
+          console.error('Error updating coordinates:', error);
+        } else {
+          console.log("Account coordinates saved to database");
+          setAccount(prev => prev ? { ...prev, latitude, longitude } : null);
+        }
+      } else {
+        console.warn("No geocoding results found for address:", address);
+      }
+    } catch (err) {
+      console.error('Error geocoding account address:', err);
     }
   };
 
@@ -156,8 +182,10 @@ export function useAccountDetails(accountId: string | undefined) {
       // Update the local state
       setAccount({...updatedAccount});
       
-      // Update geocode if address changed
-      await updateAccountGeocode(updatedAccount);
+      // Update geocode if address changed and coordinates needed
+      if (shouldGeocodeAddress(updatedAccount)) {
+        await updateAccountGeocode(updatedAccount);
+      }
       
       toast({
         title: "Success",

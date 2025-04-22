@@ -25,6 +25,13 @@ export function AccountDetailInfo({
   onSave,
   onEditFieldChange,
 }: AccountDetailInfoProps) {
+  // Adresstext für direkte Geokodierung, falls Koordinaten fehlen
+  const fullAddress = account.street && account.city && account.postal_code
+    ? `${account.street}, ${account.postal_code} ${account.city}, ${account.country || 'Germany'}`
+    : null;
+
+  const hasAddressData = !!(account.street || account.city || account.postal_code || account.country);
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
@@ -76,12 +83,13 @@ export function AccountDetailInfo({
                     <strong>Country:</strong> {account.country || 'Germany'}
                   </div>
                 </div>
-                {(account.latitude && account.longitude) && (
+                {hasAddressData && (
                   <div>
                     <h3 className="text-lg font-semibold mb-2">Location</h3>
                     <AddressMap 
                       latitude={account.latitude} 
                       longitude={account.longitude}
+                      address={fullAddress || undefined}
                       className="h-[200px] w-full"
                     />
                   </div>

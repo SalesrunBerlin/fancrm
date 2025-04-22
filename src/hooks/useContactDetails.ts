@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -87,10 +88,9 @@ export function useContactDetails() {
             setOwnerName(`${data.profiles.first_name} ${data.profiles.last_name}`.trim());
           }
 
-          if (transformedContact.street && transformedContact.city && 
-              transformedContact.postal_code && transformedContact.country && 
-              (!transformedContact.latitude || !transformedContact.longitude)) {
-            await updateContactGeocode(transformedContact);
+          // Geocode address if we have complete address but missing coordinates
+          if (shouldGeocodeAddress(transformedContact)) {
+            await geocodeAndUpdateContact(transformedContact);
           }
         }
       } catch (err) {
@@ -103,18 +103,34 @@ export function useContactDetails() {
     fetchContact();
   }, [id, toast]);
 
-  const updateContactGeocode = async (contact: Contact) => {
-    if (!contact.street || !contact.city || !contact.postal_code || !contact.country) return;
+  // Helper function to check if an address should be geocoded
+  const shouldGeocodeAddress = (contact: Contact): boolean => {
+    const hasCompleteAddress = contact.street && contact.city && contact.postal_code && contact.country;
+    const hasMissingCoordinates = !contact.latitude || !contact.longitude;
+    return !!hasCompleteAddress && hasMissingCoordinates;
+  };
+
+  // Combined function to geocode and update the contact
+  const geocodeAndUpdateContact = async (contact: Contact) => {
+    if (!shouldGeocodeAddress(contact)) return;
 
     const address = `${contact.street}, ${contact.postal_code} ${contact.city}, ${contact.country}`;
+    console.log("Geocoding address:", address);
+    
     try {
       const response = await fetch(
         `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(address)}.json?access_token=pk.eyJ1IjoibG92YWJsZSIsImEiOiJjbG4xbWV2azQwMjd4MnFsdG41Z2l0djZhIn0.YF-MD7OxJhXCAX4rLKygtg`
       );
 
+      if (!response.ok) {
+        throw new Error(`Geocoding API error: ${response.status}`);
+      }
+
       const data = await response.json();
+      
       if (data.features && data.features.length > 0) {
         const [longitude, latitude] = data.features[0].center;
+        console.log("Geocoding successful:", { latitude, longitude });
         
         const { error } = await supabase
           .from('contacts')
@@ -124,8 +140,12 @@ export function useContactDetails() {
         if (error) {
           console.error('Error updating coordinates:', error);
         } else {
+          console.log("Contact coordinates saved to database");
           setContact(prev => prev ? { ...prev, latitude, longitude } : null);
+          setEditedContact(prev => ({ ...prev, latitude, longitude }));
         }
+      } else {
+        console.warn("No geocoding results found for address:", address);
       }
     } catch (err) {
       console.error('Error geocoding address:', err);
@@ -188,7 +208,10 @@ export function useContactDetails() {
       
       setContact(updatedContact);
       
-      await updateContactGeocode(updatedContact as Contact);
+      // Update geocode if address has been changed
+      if (shouldGeocodeAddress(updatedContact as Contact)) {
+        await geocodeAndUpdateContact(updatedContact as Contact);
+      }
 
       toast({
         title: "Erfolg",
