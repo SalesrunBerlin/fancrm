@@ -70,18 +70,8 @@ export function useDeals() {
 
   const updateDeal = useMutation({
     mutationFn: async (deal: DealType) => {
-      // First, fetch the valid statuses to ensure we're using a valid one
-      const { data: validStatuses, error: statusError } = await supabase
-        .from('deal_statuses')
-        .select('name');
-      
-      if (statusError) throw statusError;
-      
-      // Check if the status we're trying to update to is valid
-      const isValidStatus = validStatuses.some(status => status.name === deal.status);
-      if (!isValidStatus) {
-        throw new Error(`Invalid status: ${deal.status}. Must be one of ${validStatuses.map(s => s.name).join(', ')}`);
-      }
+      // Log the status we're trying to update to for debugging
+      console.log("Attempting to update deal status to:", deal.status);
       
       // Get the current owner_id from database to ensure we're not changing it
       const { data: existingDeal, error: fetchError } = await supabase
@@ -91,8 +81,6 @@ export function useDeals() {
         .single();
         
       if (fetchError) throw fetchError;
-      
-      console.log("Updating deal with valid status:", deal.status);
       
       // Now update with the correct fields
       const { error } = await supabase
