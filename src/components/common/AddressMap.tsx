@@ -2,31 +2,33 @@
 import { useEffect, useRef } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
-import { Account } from '@/lib/types/database';
+import { MapPin } from 'lucide-react';
 
-interface AccountMapProps {
-  account: Account;
+interface AddressMapProps {
+  latitude?: number | null;
+  longitude?: number | null;
+  className?: string;
 }
 
-export function AccountMap({ account }: AccountMapProps) {
+export function AddressMap({ latitude, longitude, className = "h-[200px]" }: AddressMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
 
   useEffect(() => {
-    if (!mapContainer.current || !account.latitude || !account.longitude) return;
+    if (!mapContainer.current || !latitude || !longitude) return;
 
     mapboxgl.accessToken = "pk.eyJ1IjoibG92YWJsZSIsImEiOiJjbG4xbWV2azQwMjd4MnFsdG41Z2l0djZhIn0.YF-MD7OxJhXCAX4rLKygtg";
 
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
       style: 'mapbox://styles/mapbox/streets-v12',
-      center: [account.longitude, account.latitude],
+      center: [longitude, latitude],
       zoom: 15
     });
 
-    // Add marker at the account location
+    // Add marker
     new mapboxgl.Marker()
-      .setLngLat([account.longitude, account.latitude])
+      .setLngLat([longitude, latitude])
       .addTo(map.current);
 
     // Add navigation controls
@@ -35,14 +37,14 @@ export function AccountMap({ account }: AccountMapProps) {
     return () => {
       map.current?.remove();
     };
-  }, [account.latitude, account.longitude]);
+  }, [latitude, longitude]);
 
-  if (!account.latitude || !account.longitude) {
+  if (!latitude || !longitude) {
     return null;
   }
 
   return (
-    <div className="h-[300px] rounded-lg overflow-hidden">
+    <div className={`rounded-lg overflow-hidden ${className}`}>
       <div ref={mapContainer} className="w-full h-full" />
     </div>
   );

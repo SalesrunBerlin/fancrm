@@ -1,10 +1,9 @@
-
 import { Account } from "@/lib/types/database";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Edit, X } from "lucide-react";
-import { AccountMap } from "./AccountMap";
+import { AddressMap } from "@/components/common/AddressMap";
 
 interface AccountDetailInfoProps {
   account: Account;
@@ -60,28 +59,34 @@ export function AccountDetailInfo({
               <strong>Industry:</strong> {account.industry || 'Not specified'}
             </div>
             <div className="pt-4 border-t">
-              <h3 className="text-lg font-semibold mb-2">Address</h3>
-              <div className="space-y-2">
-                <div>
-                  <strong>Street:</strong> {account.street || 'Not specified'}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <h3 className="text-lg font-semibold mb-2">Address</h3>
+                  <div>
+                    <strong>Street:</strong> {account.street || 'Not specified'}
+                  </div>
+                  <div>
+                    <strong>City:</strong> {account.city || 'Not specified'}
+                  </div>
+                  <div>
+                    <strong>Postal Code:</strong> {account.postal_code || 'Not specified'}
+                  </div>
+                  <div>
+                    <strong>Country:</strong> {account.country || 'Germany'}
+                  </div>
                 </div>
-                <div>
-                  <strong>City:</strong> {account.city || 'Not specified'}
-                </div>
-                <div>
-                  <strong>Postal Code:</strong> {account.postal_code || 'Not specified'}
-                </div>
-                <div>
-                  <strong>Country:</strong> {account.country || 'Germany'}
-                </div>
+                {(account.latitude && account.longitude) && (
+                  <div>
+                    <h3 className="text-lg font-semibold mb-2">Location</h3>
+                    <AddressMap 
+                      latitude={account.latitude} 
+                      longitude={account.longitude}
+                      className="h-[200px] w-full"
+                    />
+                  </div>
+                )}
               </div>
             </div>
-            {(account.latitude && account.longitude) && (
-              <div className="pt-4">
-                <h3 className="text-lg font-semibold mb-2">Location</h3>
-                <AccountMap account={account} />
-              </div>
-            )}
           </div>
         ) : (
           <div className="space-y-4">
