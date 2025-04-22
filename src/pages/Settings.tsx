@@ -13,7 +13,6 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { ChevronRight } from "lucide-react";
-import { ColorSettings } from "@/components/settings/ColorSettings";
 
 export default function Settings() {
   const {
@@ -26,7 +25,6 @@ export default function Settings() {
   } = useDealStatuses();
 
   const [isStatusOpen, setIsStatusOpen] = useState(false);
-  const [isColorOpen, setIsColorOpen] = useState(false);
 
   useEffect(() => {
     if (dealStatuses && dealStatuses.length === 0 && !isLoading) {
@@ -40,30 +38,12 @@ export default function Settings() {
   return (
     <div className="container mx-auto p-4 space-y-6">
       <h1 className="text-3xl font-bold">Einstellungen</h1>
-      <Card className="p-6 space-y-6">
+      <Card className="p-6 space-y-4">
         <div className="flex items-center mb-6">
           <span className="font-semibold text-lg mr-4">Dark Mode</span>
           <Switch checked={theme === "dark"} onCheckedChange={toggleTheme} />
         </div>
-
-        {/* Color Settings Section */}
-        <Collapsible open={isColorOpen} onOpenChange={setIsColorOpen}>
-          <div className="flex items-center space-x-2">
-            <CollapsibleTrigger asChild>
-              <Button variant="ghost" size="sm" className="p-0 hover:bg-transparent">
-                <ChevronRight className={`h-4 w-4 transition-transform ${isColorOpen ? 'rotate-90' : ''}`} />
-              </Button>
-            </CollapsibleTrigger>
-            <h2 className="text-xl font-semibold">Farben</h2>
-          </div>
-          <CollapsibleContent className="mt-4">
-            <ColorSettings />
-          </CollapsibleContent>
-        </Collapsible>
         
-        <div className="border-t my-4" />
-
-        {/* Deal Status Management Section */}
         <Collapsible open={isStatusOpen} onOpenChange={setIsStatusOpen}>
           <div className="flex items-center space-x-2">
             <CollapsibleTrigger asChild>
@@ -73,6 +53,7 @@ export default function Settings() {
             </CollapsibleTrigger>
             <h2 className="text-xl font-semibold">Deal Status Verwaltung</h2>
           </div>
+          
           <CollapsibleContent className="mt-4">
             <StatusForm 
               dealStatuses={dealStatuses || []} 
