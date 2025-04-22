@@ -66,6 +66,17 @@ export function DealsKanban({ deals, isLoading, groupByField, onDealClick }: Dea
       return;
     }
 
+    // Verify the destination status is valid
+    const isValidStatus = dealStatuses.some(status => status.name === destination.droppableId);
+    if (!isValidStatus) {
+      toast({
+        title: "Fehler",
+        description: `'${destination.droppableId}' ist kein gültiger Status`,
+        variant: "destructive"
+      });
+      return;
+    }
+
     try {
       // Log what we're trying to update
       console.log("Updating deal:", {

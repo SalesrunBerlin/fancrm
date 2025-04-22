@@ -1,3 +1,4 @@
+
 export interface Product {
   id: string;
   name: string;
@@ -56,3 +57,4 @@ export interface DealType {
 }
 
 export type AccountType = Account;
+export type ContactType = Contact;
