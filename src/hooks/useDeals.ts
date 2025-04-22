@@ -76,11 +76,23 @@ export function useDeals() {
       // Get the current owner_id from database to ensure we're not changing it
       const { data: existingDeal, error: fetchError } = await supabase
         .from('deals')
-        .select('owner_id')
+        .select('owner_id, status_id')
         .eq('id', deal.id)
         .single();
         
       if (fetchError) throw fetchError;
+      
+      // Get the status_id from the deal_statuses table based on the status name
+      const { data: statusData, error: statusError } = await supabase
+        .from('deal_statuses')
+        .select('id')
+        .eq('name', deal.status)
+        .single();
+        
+      if (statusError) {
+        console.error("Error finding status_id for status:", deal.status, statusError);
+        throw new Error(`Status "${deal.status}" not found in deal_statuses table`);
+      }
       
       // Now update with the correct fields
       const { error } = await supabase
@@ -89,6 +101,7 @@ export function useDeals() {
           name: deal.name,
           amount: deal.amount,
           status: deal.status,
+          status_id: statusData.id, // Set the status_id to link to the deal_statuses table
           close_date: deal.closeDate,
           owner_id: existingDeal.owner_id, // Make sure we keep the original owner
         })

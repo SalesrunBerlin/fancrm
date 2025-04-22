@@ -36,7 +36,7 @@ export function DealEditForm({ deal, onSuccess }: DealEditFormProps) {
       );
 
       if (!selectedStatus) {
-        throw new Error("Invalid status selected");
+        throw new Error(`Status "${values.status}" not found in deal_statuses`);
       }
 
       await updateDeal.mutateAsync({
