@@ -2,6 +2,9 @@
 import { DealType } from "@/types";
 import { DealCard } from "./DealCard";
 import { Card } from "@/components/ui/card";
+import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
+import { useDeals } from "@/hooks/useDeals";
+import { useToast } from "@/hooks/use-toast";
 
 interface DealsKanbanProps {
   deals: DealType[];
@@ -11,6 +14,9 @@ interface DealsKanbanProps {
 }
 
 export function DealsKanban({ deals, isLoading, groupByField, onDealClick }: DealsKanbanProps) {
+  const { updateDeal } = useDeals();
+  const { toast } = useToast();
+
   if (isLoading) {
     return (
       <div className="flex justify-center items-center h-32">
@@ -28,27 +34,89 @@ export function DealsKanban({ deals, isLoading, groupByField, onDealClick }: Dea
     return acc;
   }, {} as Record<string, DealType[]>);
 
+  const handleDragEnd = async (result: any) => {
+    const { destination, source, draggableId } = result;
+
+    // Drop outside a valid area
+    if (!destination) return;
+
+    // Drop in the same position
+    if (
+      destination.droppableId === source.droppableId &&
+      destination.index === source.index
+    ) {
+      return;
+    }
+
+    const deal = deals.find(d => d.id === draggableId);
+    if (!deal) return;
+
+    try {
+      await updateDeal.mutateAsync({
+        ...deal,
+        status: destination.droppableId
+      });
+
+      toast({
+        title: "Status aktualisiert",
+        description: `Deal wurde nach ${destination.droppableId} verschoben`,
+      });
+    } catch (error) {
+      console.error('Error updating deal status:', error);
+      toast({
+        title: "Fehler",
+        description: "Status konnte nicht aktualisiert werden",
+        variant: "destructive"
+      });
+    }
+  };
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-      {Object.entries(groupedDeals).map(([status, statusDeals]) => (
-        <Card key={status} className="p-4">
-          <div className="font-semibold mb-4 flex justify-between items-center">
-            <span>{status}</span>
-            <span className="text-sm text-muted-foreground">
-              {statusDeals.length} {statusDeals.length === 1 ? 'deal' : 'deals'}
-            </span>
-          </div>
-          <div className="space-y-4">
-            {statusDeals.map((deal) => (
-              <DealCard 
-                key={deal.id} 
-                deal={deal} 
-                onClick={onDealClick}
-              />
-            ))}
-          </div>
-        </Card>
-      ))}
-    </div>
+    <DragDropContext onDragEnd={handleDragEnd}>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        {Object.entries(groupedDeals).map(([status, statusDeals]) => (
+          <Droppable key={status} droppableId={status}>
+            {(provided) => (
+              <Card 
+                className="p-4"
+                {...provided.droppableProps} 
+                ref={provided.innerRef}
+              >
+                <div className="font-semibold mb-4 flex justify-between items-center">
+                  <span>{status}</span>
+                  <span className="text-sm text-muted-foreground">
+                    {statusDeals.length} {statusDeals.length === 1 ? 'deal' : 'deals'}
+                  </span>
+                </div>
+                <div className="space-y-4">
+                  {statusDeals.map((deal, index) => (
+                    <Draggable 
+                      key={deal.id} 
+                      draggableId={deal.id} 
+                      index={index}
+                    >
+                      {(provided, snapshot) => (
+                        <div
+                          ref={provided.innerRef}
+                          {...provided.draggableProps}
+                          {...provided.dragHandleProps}
+                          className={snapshot.isDragging ? "opacity-50" : ""}
+                        >
+                          <DealCard 
+                            deal={deal} 
+                            onClick={onDealClick}
+                          />
+                        </div>
+                      )}
+                    </Draggable>
+                  ))}
+                  {provided.placeholder}
+                </div>
+              </Card>
+            )}
+          </Droppable>
+        ))}
+      </div>
+    </DragDropContext>
   );
 }
