@@ -59,12 +59,23 @@ export function DealsKanban({ deals, isLoading, groupByField, onDealClick }: Dea
       return;
     }
 
-    const deal = deals.find(d => d.id === draggableId);
-    if (!deal) return;
+    // Find the deal we're moving
+    const dealToUpdate = deals.find(d => d.id === draggableId);
+    if (!dealToUpdate) {
+      console.error("Deal not found:", draggableId);
+      return;
+    }
 
     try {
+      // Log what we're trying to update
+      console.log("Updating deal:", {
+        ...dealToUpdate,
+        status: destination.droppableId
+      });
+      
+      // Update the deal with the new status
       await updateDeal.mutateAsync({
-        ...deal,
+        ...dealToUpdate,
         status: destination.droppableId
       });
 
@@ -84,24 +95,24 @@ export function DealsKanban({ deals, isLoading, groupByField, onDealClick }: Dea
 
   return (
     <DragDropContext onDragEnd={handleDragEnd}>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-2">
         {dealStatuses && dealStatuses
           .sort((a, b) => a.order_position - b.order_position)
           .map((statusObj) => (
             <Droppable key={statusObj.name} droppableId={statusObj.name}>
               {(provided) => (
                 <Card 
-                  className="p-4"
+                  className="p-3"
                   {...provided.droppableProps} 
                   ref={provided.innerRef}
                 >
-                  <div className="font-semibold mb-4 flex justify-between items-center">
+                  <div className="font-semibold mb-2 flex justify-between items-center text-sm">
                     <span>{statusObj.name}</span>
-                    <span className="text-sm text-muted-foreground">
-                      {(groupedDeals[statusObj.name] || []).length} {(groupedDeals[statusObj.name] || []).length === 1 ? 'deal' : 'deals'}
+                    <span className="text-xs text-muted-foreground">
+                      {(groupedDeals[statusObj.name] || []).length}
                     </span>
                   </div>
-                  <div className="space-y-4">
+                  <div className="space-y-2">
                     {(groupedDeals[statusObj.name] || []).map((deal, index) => (
                       <Draggable 
                         key={deal.id} 
@@ -133,4 +144,3 @@ export function DealsKanban({ deals, isLoading, groupByField, onDealClick }: Dea
     </DragDropContext>
   );
 }
-
