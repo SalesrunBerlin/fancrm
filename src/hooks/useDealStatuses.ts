@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -64,6 +63,11 @@ export function useDealStatuses() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["dealStatuses"] });
+      toast({
+        title: "Erfolg",
+        description: "Status wurde erfolgreich erstellt",
+        duration: 3000,
+      });
     },
   });
 
@@ -77,11 +81,9 @@ export function useDealStatuses() {
     }) => {
       console.log("Updating status:", id, status);
       
-      // If a replacement status ID is provided, replace all occurrences in deals
       if (replacementStatusId) {
         console.log(`Replacing status ${id} with ${replacementStatusId} in all deals`);
         
-        // First, find the name of the status to be replaced
         const { data: originalStatus, error: originalError } = await supabase
           .from('deal_statuses')
           .select('name')
@@ -93,7 +95,6 @@ export function useDealStatuses() {
           throw originalError;
         }
 
-        // Find the name of the replacement status
         const { data: replacementStatus, error: replacementError } = await supabase
           .from('deal_statuses')
           .select('name')
@@ -107,7 +108,6 @@ export function useDealStatuses() {
         
         console.log(`Replacing status name '${originalStatus.name}' with '${replacementStatus.name}' in all deals`);
         
-        // Update all deals that use this status by name
         const { error: dealsError } = await supabase
           .from('deals')
           .update({ status: replacementStatus.name })
@@ -118,7 +118,6 @@ export function useDealStatuses() {
           throw dealsError;
         }
         
-        // Now delete the original status
         const { error: deleteError } = await supabase
           .from('deal_statuses')
           .delete()
@@ -132,7 +131,6 @@ export function useDealStatuses() {
         return;
       }
       
-      // If no replacement, just update the status itself
       const { error } = await supabase
         .from('deal_statuses')
         .update(status)
@@ -143,6 +141,11 @@ export function useDealStatuses() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["dealStatuses"] });
       queryClient.invalidateQueries({ queryKey: ["deals"] });
+      toast({
+        title: "Erfolg",
+        description: "Status wurde erfolgreich aktualisiert",
+        duration: 3000,
+      });
     },
   });
 
@@ -159,10 +162,14 @@ export function useDealStatuses() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["dealStatuses"] });
+      toast({
+        title: "Erfolg",
+        description: "Status wurde erfolgreich gelöscht",
+        duration: 3000,
+      });
     },
   });
 
-  // Initialize default statuses if there are none
   const initializeDefaultStatuses = async () => {
     if (!user) return;
     

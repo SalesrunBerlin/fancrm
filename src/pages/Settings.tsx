@@ -7,6 +7,12 @@ import { StatusForm } from "@/components/settings/StatusForm";
 import { StatusList } from "@/components/settings/StatusList";
 import { useTheme } from "@/hooks/useTheme";
 import { Switch } from "@/components/ui/switch";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { ChevronRight } from "lucide-react";
 
 export default function Settings() {
   const {
@@ -17,6 +23,8 @@ export default function Settings() {
     deleteStatus,
     initializeDefaultStatuses
   } = useDealStatuses();
+
+  const [isStatusOpen, setIsStatusOpen] = useState(false);
 
   useEffect(() => {
     if (dealStatuses && dealStatuses.length === 0 && !isLoading) {
@@ -35,18 +43,31 @@ export default function Settings() {
           <span className="font-semibold text-lg mr-4">Dark Mode</span>
           <Switch checked={theme === "dark"} onCheckedChange={toggleTheme} />
         </div>
-        <h2 className="text-xl font-semibold mb-4">Deal Status Verwaltung</h2>
-        <StatusForm 
-          dealStatuses={dealStatuses || []} 
-          createStatus={createStatus} 
-          isPending={createStatus.isPending}
-        />
-        <StatusList 
-          dealStatuses={dealStatuses || []}
-          isLoading={isLoading}
-          updateStatus={updateStatus}
-          deleteStatus={deleteStatus}
-        />
+        
+        <Collapsible open={isStatusOpen} onOpenChange={setIsStatusOpen}>
+          <div className="flex items-center space-x-2">
+            <CollapsibleTrigger asChild>
+              <Button variant="ghost" size="sm" className="p-0 hover:bg-transparent">
+                <ChevronRight className={`h-4 w-4 transition-transform ${isStatusOpen ? 'rotate-90' : ''}`} />
+              </Button>
+            </CollapsibleTrigger>
+            <h2 className="text-xl font-semibold">Deal Status Verwaltung</h2>
+          </div>
+          
+          <CollapsibleContent className="mt-4">
+            <StatusForm 
+              dealStatuses={dealStatuses || []} 
+              createStatus={createStatus} 
+              isPending={createStatus.isPending}
+            />
+            <StatusList 
+              dealStatuses={dealStatuses || []}
+              isLoading={isLoading}
+              updateStatus={updateStatus}
+              deleteStatus={deleteStatus}
+            />
+          </CollapsibleContent>
+        </Collapsible>
       </Card>
     </div>
   );
