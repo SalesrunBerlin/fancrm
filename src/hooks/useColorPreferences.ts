@@ -13,15 +13,21 @@ interface ColorSetting {
 }
 
 export const defaultLightColors: ColorSetting[] = [
+  { id: "primary", label: "Primärfarbe", value: "#6B8AFE", cssVariable: "--primary" },
+  { id: "secondary", label: "Sekundärfarbe", value: "#E5EDFF", cssVariable: "--secondary" },
   { id: "background", label: "Hintergrund", value: "#FFFFFF", cssVariable: "--background" },
   { id: "foreground", label: "Text", value: "#000000", cssVariable: "--foreground" },
-  { id: "primary", label: "Button", value: "#6B8AFE", cssVariable: "--primary" },
+  { id: "muted", label: "Abgeschwächt", value: "#F0F4FF", cssVariable: "--muted" },
+  { id: "accent", label: "Akzent", value: "#E5EDFF", cssVariable: "--accent" },
 ];
 
 export const defaultDarkColors: ColorSetting[] = [
+  { id: "primary", label: "Primärfarbe", value: "#6B8AFE", cssVariable: "--primary" },
+  { id: "secondary", label: "Sekundärfarbe", value: "#1E293B", cssVariable: "--secondary" },
   { id: "background", label: "Hintergrund", value: "#0F172A", cssVariable: "--background" },
   { id: "foreground", label: "Text", value: "#FFFFFF", cssVariable: "--foreground" },
-  { id: "primary", label: "Button", value: "#6B8AFE", cssVariable: "--primary" },
+  { id: "muted", label: "Abgeschwächt", value: "#1E293B", cssVariable: "--muted" },
+  { id: "accent", label: "Akzent", value: "#1E293B", cssVariable: "--accent" },
 ];
 
 export const useColorPreferences = () => {
@@ -32,6 +38,7 @@ export const useColorPreferences = () => {
   );
   const [isSaving, setIsSaving] = useState(false);
 
+  // Load saved preferences
   useEffect(() => {
     const loadPreferences = async () => {
       if (!user) return;
@@ -45,22 +52,13 @@ export const useColorPreferences = () => {
           .single();
 
         if (error) throw error;
-        
         if (data?.colors) {
-          // Type assertion to handle the JSON conversion
           const savedColors = data.colors as ColorSetting[];
           setColors(savedColors);
           // Apply saved colors
           savedColors.forEach(color => {
             document.documentElement.style.setProperty(color.cssVariable, color.value);
           });
-        } else {
-          // If no saved preferences, apply default colors for current theme
-          const defaultColors = theme === 'dark' ? defaultDarkColors : defaultLightColors;
-          defaultColors.forEach(color => {
-            document.documentElement.style.setProperty(color.cssVariable, color.value);
-          });
-          setColors(defaultColors);
         }
       } catch (error) {
         console.error('Error loading color preferences:', error);
@@ -80,18 +78,12 @@ export const useColorPreferences = () => {
         .upsert({
           user_id: user.id,
           theme,
-          colors: colors as unknown as Json // Type assertion to handle the JSON conversion
+          colors
         }, {
           onConflict: 'user_id,theme'
         });
 
       if (error) throw error;
-      
-      // Apply colors immediately after saving
-      colors.forEach(color => {
-        document.documentElement.style.setProperty(color.cssVariable, color.value);
-      });
-      
       toast.success('Farbeinstellungen gespeichert');
     } catch (error) {
       console.error('Error saving color preferences:', error);
