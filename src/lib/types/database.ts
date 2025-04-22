@@ -37,4 +37,6 @@ export interface Account {
   // Add coordinates for map
   latitude?: number | null;
   longitude?: number | null;
+  // Add contacts relation
+  contacts?: Contact[];
 }

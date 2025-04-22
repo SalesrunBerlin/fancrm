@@ -1,29 +1,35 @@
+
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useAccounts } from "@/hooks/useAccounts";
-import { useContacts } from "@/hooks/useContacts";
+import { useAccountDetails } from "@/hooks/useAccountDetails";
 import { ArrowLeft, Pencil, Trash2 } from "lucide-react";
 import { AccountContacts } from "@/components/accounts/AccountContacts";
 import { DeleteDialog } from "@/components/common/DeleteDialog";
 import { useToast } from "@/hooks/use-toast";
 import { DealsList } from "@/components/common/DealsList";
 import { useDeals } from "@/hooks/useDeals";
+import { AccountDetailInfo } from "@/components/accounts/AccountDetailInfo";
+import { Account } from "@/lib/types/database";
 
 export default function AccountDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { data: accounts, isLoading } = useAccounts();
-  const { data: contacts } = useContacts();
+  const { account, isLoading, updateAccount } = useAccountDetails(id);
   const { data: deals } = useDeals();
   const [showContactForm, setShowContactForm] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedAccount, setEditedAccount] = useState<Partial<Account>>({});
 
-  const account = accounts?.find(a => a.id === id);
-  const accountContacts = contacts?.filter(c => c.accountId === id) || [];
-  const accountDeals = deals?.filter(deal => deal.accountId === id) || [];
+  // Initialize the edit form when account data is loaded
+  useEffect(() => {
+    if (account) {
+      setEditedAccount({ ...account });
+    }
+  }, [account]);
 
   if (isLoading) {
     return <div className="p-4">Loading...</div>;
@@ -32,6 +38,28 @@ export default function AccountDetail() {
   if (!account) {
     return <div className="p-4">Account not found</div>;
   }
+
+  const handleFieldChange = (field: keyof Account, value: string) => {
+    setEditedAccount(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleSave = async () => {
+    try {
+      await updateAccount(editedAccount as Account);
+      setIsEditing(false);
+      toast({
+        title: "Success",
+        description: "Account updated successfully",
+      });
+    } catch (error) {
+      console.error("Error updating account:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update account",
+        variant: "destructive",
+      });
+    }
+  };
 
   const handleDelete = async () => {
     try {
@@ -51,6 +79,8 @@ export default function AccountDetail() {
     }
   };
 
+  const accountDeals = deals?.filter(deal => deal.accountId === id) || [];
+
   return (
     <div className="space-y-6 p-6">
       <div className="flex justify-between items-center">
@@ -63,13 +93,6 @@ export default function AccountDetail() {
         </Button>
         <div className="space-x-2">
           <Button 
-            variant="secondary"
-            size="icon"
-            onClick={() => {/* Edit account logic */}}
-          >
-            <Pencil className="h-4 w-4" />
-          </Button>
-          <Button 
             variant="destructive"
             size="icon"
             onClick={() => setShowDeleteDialog(true)}
@@ -79,36 +102,21 @@ export default function AccountDetail() {
         </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>{account.name}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4">
-            {account.industry && (
-              <div>
-                <h3 className="text-sm font-medium text-muted-foreground">Industry</h3>
-                <p>{account.industry}</p>
-              </div>
-            )}
-            {account.website && (
-              <div>
-                <h3 className="text-sm font-medium text-muted-foreground">Website</h3>
-                <p>{account.website}</p>
-              </div>
-            )}
-            {account.type && (
-              <div>
-                <h3 className="text-sm font-medium text-muted-foreground">Type</h3>
-                <p>{account.type}</p>
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+      <AccountDetailInfo 
+        account={account}
+        isEditing={isEditing}
+        editedAccount={editedAccount}
+        onEdit={() => setIsEditing(true)}
+        onCancelEdit={() => {
+          setIsEditing(false);
+          setEditedAccount({...account});
+        }}
+        onSave={handleSave}
+        onEditFieldChange={handleFieldChange}
+      />
 
       <AccountContacts
-        contacts={accountContacts}
+        contacts={account.contacts || []}
         accountId={id!}
         showContactForm={showContactForm}
         onContactClick={(contactId) => navigate(`/contacts/${contactId}`)}

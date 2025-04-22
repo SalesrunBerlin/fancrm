@@ -35,7 +35,7 @@ export function useAccountDetails(accountId: string | undefined) {
       
       const { data: accountData, error: accountError } = await supabase
         .from('accounts')
-        .select('*, profiles(first_name, last_name)')
+        .select('*, contacts(*), profiles(first_name, last_name)')
         .eq('id', accountId)
         .eq('owner_id', user.id) // Only allow seeing own accounts
         .single();
@@ -71,6 +71,25 @@ export function useAccountDetails(accountId: string | undefined) {
           createdAt: accountData.created_at,
           updatedAt: accountData.updated_at,
           ownerId: accountData.owner_id,
+          // Add address fields
+          street: accountData.street,
+          city: accountData.city,
+          postal_code: accountData.postal_code,
+          country: accountData.country,
+          latitude: accountData.latitude,
+          longitude: accountData.longitude,
+          // Add contacts
+          contacts: accountData.contacts?.map((contact: any) => ({
+            id: contact.id,
+            firstName: contact.first_name,
+            lastName: contact.last_name,
+            email: contact.email,
+            phone: contact.phone,
+            accountId: contact.account_id,
+            createdAt: contact.created_at,
+            updatedAt: contact.updated_at,
+            ownerId: contact.owner_id
+          }))
         };
         setAccount(transformedAccount);
 
@@ -81,30 +100,6 @@ export function useAccountDetails(accountId: string | undefined) {
         }
       }
 
-      const { data: contactsData, error: contactsError } = await supabase
-        .from('contacts')
-        .select('*')
-        .eq('account_id', accountId);
-
-      if (contactsError) {
-        console.error("Error fetching contacts:", contactsError);
-        return;
-      }
-
-      if (contactsData) {
-        const transformedContacts: Contact[] = contactsData.map(contact => ({
-          id: contact.id,
-          firstName: contact.first_name,
-          lastName: contact.last_name,
-          email: contact.email,
-          phone: contact.phone,
-          accountId: contact.account_id,
-          createdAt: contact.created_at,
-          updatedAt: contact.updated_at,
-          ownerId: contact.owner_id
-        }));
-        setContacts(transformedContacts);
-      }
     } catch (err) {
       console.error("Unexpected error:", err);
     } finally {
@@ -139,14 +134,29 @@ export function useAccountDetails(accountId: string | undefined) {
 
   const updateAccount = async (updatedAccount: Account) => {
     try {
+      // Convert the account data to match the database schema
+      const dbAccount = {
+        name: updatedAccount.name,
+        type: updatedAccount.type,
+        website: updatedAccount.website,
+        industry: updatedAccount.industry,
+        street: updatedAccount.street,
+        city: updatedAccount.city,
+        postal_code: updatedAccount.postal_code,
+        country: updatedAccount.country
+      };
+
       const { error } = await supabase
         .from('accounts')
-        .update(updatedAccount)
+        .update(dbAccount)
         .eq('id', updatedAccount.id);
 
       if (error) throw error;
 
-      setAccount(updatedAccount);
+      // Update the local state
+      setAccount({...updatedAccount});
+      
+      // Update geocode if address changed
       await updateAccountGeocode(updatedAccount);
       
       toast({
@@ -160,6 +170,7 @@ export function useAccountDetails(accountId: string | undefined) {
         description: "Failed to update account",
         variant: "destructive",
       });
+      throw error;
     }
   };
 
