@@ -27,7 +27,7 @@ export interface Account {
   updatedAt: string;
   ownerId: string;
   contactCount?: number;
-  tags: string[];
+  tags?: string[];
 }
 
 export interface Contact {
@@ -38,8 +38,8 @@ export interface Contact {
   phone?: string;
   accountName?: string;
   accountId?: string;
-  tags: string[];
-  name?: string; // Added for CommandSearch compatibility
+  tags?: string[];
+  name?: string;
 }
 
 export interface DealType {
@@ -52,7 +52,7 @@ export interface DealType {
   contactId?: string;
   accountName?: string;
   contactName?: string;
-  tags: string[];
+  tags?: string[];
 }
 
 export type AccountType = Account;

@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import { useDeals } from "@/hooks/useDeals";
 import { useToast } from "@/hooks/use-toast";
+import { useDealStatuses } from "@/hooks/useDealStatuses";
 
 interface DealsKanbanProps {
   deals: DealType[];
@@ -16,8 +17,9 @@ interface DealsKanbanProps {
 export function DealsKanban({ deals, isLoading, groupByField, onDealClick }: DealsKanbanProps) {
   const { updateDeal } = useDeals();
   const { toast } = useToast();
+  const { dealStatuses, isLoading: isLoadingStatuses } = useDealStatuses();
 
-  if (isLoading) {
+  if (isLoading || isLoadingStatuses) {
     return (
       <div className="flex justify-center items-center h-32">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-beauty" />
@@ -25,6 +27,15 @@ export function DealsKanban({ deals, isLoading, groupByField, onDealClick }: Dea
     );
   }
 
+  // Create an object with all possible statuses initialized with empty arrays
+  const emptyGroupedDeals = (dealStatuses || [])
+    .sort((a, b) => a.order_position - b.order_position)
+    .reduce((acc, status) => {
+      acc[status.name] = [];
+      return acc;
+    }, {} as Record<string, DealType[]>);
+
+  // Fill in the deals where they exist
   const groupedDeals = deals.reduce((acc, deal) => {
     const key = deal[groupByField];
     if (!acc[key]) {
@@ -32,7 +43,7 @@ export function DealsKanban({ deals, isLoading, groupByField, onDealClick }: Dea
     }
     acc[key].push(deal);
     return acc;
-  }, {} as Record<string, DealType[]>);
+  }, { ...emptyGroupedDeals });
 
   const handleDragEnd = async (result: any) => {
     const { destination, source, draggableId } = result;
@@ -74,49 +85,52 @@ export function DealsKanban({ deals, isLoading, groupByField, onDealClick }: Dea
   return (
     <DragDropContext onDragEnd={handleDragEnd}>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        {Object.entries(groupedDeals).map(([status, statusDeals]) => (
-          <Droppable key={status} droppableId={status}>
-            {(provided) => (
-              <Card 
-                className="p-4"
-                {...provided.droppableProps} 
-                ref={provided.innerRef}
-              >
-                <div className="font-semibold mb-4 flex justify-between items-center">
-                  <span>{status}</span>
-                  <span className="text-sm text-muted-foreground">
-                    {statusDeals.length} {statusDeals.length === 1 ? 'deal' : 'deals'}
-                  </span>
-                </div>
-                <div className="space-y-4">
-                  {statusDeals.map((deal, index) => (
-                    <Draggable 
-                      key={deal.id} 
-                      draggableId={deal.id} 
-                      index={index}
-                    >
-                      {(provided, snapshot) => (
-                        <div
-                          ref={provided.innerRef}
-                          {...provided.draggableProps}
-                          {...provided.dragHandleProps}
-                          className={snapshot.isDragging ? "opacity-50" : ""}
-                        >
-                          <DealCard 
-                            deal={deal} 
-                            onClick={onDealClick}
-                          />
-                        </div>
-                      )}
-                    </Draggable>
-                  ))}
-                  {provided.placeholder}
-                </div>
-              </Card>
-            )}
-          </Droppable>
-        ))}
+        {dealStatuses && dealStatuses
+          .sort((a, b) => a.order_position - b.order_position)
+          .map((statusObj) => (
+            <Droppable key={statusObj.name} droppableId={statusObj.name}>
+              {(provided) => (
+                <Card 
+                  className="p-4"
+                  {...provided.droppableProps} 
+                  ref={provided.innerRef}
+                >
+                  <div className="font-semibold mb-4 flex justify-between items-center">
+                    <span>{statusObj.name}</span>
+                    <span className="text-sm text-muted-foreground">
+                      {(groupedDeals[statusObj.name] || []).length} {(groupedDeals[statusObj.name] || []).length === 1 ? 'deal' : 'deals'}
+                    </span>
+                  </div>
+                  <div className="space-y-4">
+                    {(groupedDeals[statusObj.name] || []).map((deal, index) => (
+                      <Draggable 
+                        key={deal.id} 
+                        draggableId={deal.id} 
+                        index={index}
+                      >
+                        {(provided, snapshot) => (
+                          <div
+                            ref={provided.innerRef}
+                            {...provided.draggableProps}
+                            {...provided.dragHandleProps}
+                            className={snapshot.isDragging ? "opacity-50" : ""}
+                          >
+                            <DealCard 
+                              deal={deal} 
+                              onClick={onDealClick}
+                            />
+                          </div>
+                        )}
+                      </Draggable>
+                    ))}
+                    {provided.placeholder}
+                  </div>
+                </Card>
+              )}
+            </Droppable>
+          ))}
       </div>
     </DragDropContext>
   );
 }
+
