@@ -335,6 +335,33 @@ export type Database = {
         }
         Relationships: []
       }
+      user_color_preferences: {
+        Row: {
+          colors: Json
+          created_at: string
+          id: string
+          theme: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          colors: Json
+          created_at?: string
+          id?: string
+          theme: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          colors?: Json
+          created_at?: string
+          id?: string
+          theme?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
