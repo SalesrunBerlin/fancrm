@@ -1,3 +1,4 @@
+
 export interface Contact {
   id: string;
   firstName: string;
@@ -9,6 +10,7 @@ export interface Contact {
   createdAt: string;
   updatedAt: string;
   ownerId: string;
+  tags?: string[];
 }
 
 export interface Account {

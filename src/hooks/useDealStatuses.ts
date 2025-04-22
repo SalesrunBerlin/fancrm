@@ -81,19 +81,58 @@ export function useDealStatuses() {
       if (replacementStatusId) {
         console.log(`Replacing status ${id} with ${replacementStatusId} in all deals`);
         
-        // First update all deals that use this status
+        // First, find the name of the status to be replaced
+        const { data: originalStatus, error: originalError } = await supabase
+          .from('deal_statuses')
+          .select('name')
+          .eq('id', id)
+          .single();
+        
+        if (originalError) {
+          console.error("Error fetching original status:", originalError);
+          throw originalError;
+        }
+
+        // Find the name of the replacement status
+        const { data: replacementStatus, error: replacementError } = await supabase
+          .from('deal_statuses')
+          .select('name')
+          .eq('id', replacementStatusId)
+          .single();
+        
+        if (replacementError) {
+          console.error("Error fetching replacement status:", replacementError);
+          throw replacementError;
+        }
+        
+        console.log(`Replacing status name '${originalStatus.name}' with '${replacementStatus.name}' in all deals`);
+        
+        // Update all deals that use this status by name
         const { error: dealsError } = await supabase
           .from('deals')
-          .update({ status_id: replacementStatusId })
-          .eq('status_id', id);
+          .update({ status: replacementStatus.name })
+          .eq('status', originalStatus.name);
         
         if (dealsError) {
           console.error("Error updating deals with replacement status:", dealsError);
           throw dealsError;
         }
+        
+        // Now delete the original status
+        const { error: deleteError } = await supabase
+          .from('deal_statuses')
+          .delete()
+          .eq('id', id);
+        
+        if (deleteError) {
+          console.error("Error deleting original status:", deleteError);
+          throw deleteError;
+        }
+        
+        return;
       }
       
-      // Then update the status itself
+      // If no replacement, just update the status itself
       const { error } = await supabase
         .from('deal_statuses')
         .update(status)

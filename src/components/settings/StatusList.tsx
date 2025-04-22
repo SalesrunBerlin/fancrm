@@ -51,7 +51,7 @@ export function StatusList({
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [statusToDelete, setStatusToDelete] = useState<string | null>(null);
   const [replaceDialogOpen, setReplaceDialogOpen] = useState(false);
-  const [statusToReplace, setStatusToReplace] = useState<{ id: string; name: string } | null>(null);
+  const [statusToReplace, setStatusToReplace] = useState<{ id: string; name: string; type: string } | null>(null);
 
   const form = useForm({
     defaultValues: {
@@ -111,8 +111,8 @@ export function StatusList({
     }
   };
 
-  const handleReplaceStatus = (id: string, name: string) => {
-    setStatusToReplace({ id, name });
+  const handleReplaceStatus = (id: string, name: string, type: string) => {
+    setStatusToReplace({ id, name, type });
     setReplaceDialogOpen(true);
   };
 
@@ -292,7 +292,7 @@ export function StatusList({
                                       variant="ghost"
                                       size="icon"
                                       className="text-blue-500 hover:text-blue-700"
-                                      onClick={() => handleReplaceStatus(status.id, status.name)}
+                                      onClick={() => handleReplaceStatus(status.id, status.name, status.type)}
                                     >
                                       <Replace className="h-4 w-4" />
                                     </Button>
