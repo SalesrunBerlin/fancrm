@@ -30,20 +30,13 @@ export function DealEditForm({ deal, onSuccess }: DealEditFormProps) {
 
   const onSubmit = async (values: any) => {
     try {
-      // Find the selected status from dealStatuses to ensure we're using valid status values
-      const selectedStatus = dealStatuses?.find(
-        (status) => status.name === values.status
-      );
-
-      if (!selectedStatus) {
-        throw new Error(`Status "${values.status}" not found in deal_statuses`);
-      }
-
+      // No need to validate the status against predefined values
+      // Just use the selected status directly
       await updateDeal.mutateAsync({
         ...deal,
         name: values.name,
         amount: parseFloat(values.amount),
-        status: selectedStatus.name, // Use the exact status name from the database
+        status: values.status,
         closeDate: values.closeDate || null,
       });
       
