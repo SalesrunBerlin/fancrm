@@ -11,6 +11,11 @@ export interface Contact {
   updatedAt: string;
   ownerId: string;
   tags?: string[];
+  // Add address fields for contacts
+  street?: string | null;
+  city?: string | null;
+  postal_code?: string | null;
+  country?: string | null;
 }
 
 export interface Account {
@@ -24,4 +29,12 @@ export interface Account {
   ownerId: string;
   contactCount?: number;
   tags?: string[];
+  // Add address fields
+  street?: string | null;
+  city?: string | null;
+  postal_code?: string | null;
+  country?: string | null;
+  // Add coordinates for map
+  latitude?: number | null;
+  longitude?: number | null;
 }

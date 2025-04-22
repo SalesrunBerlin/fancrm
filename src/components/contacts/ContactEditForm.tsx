@@ -60,6 +60,39 @@ export function ContactEditForm({ editedContact, accounts, onFieldChange }: Cont
           </SelectContent>
         </Select>
       </div>
+      
+      {/* Address Fields */}
+      <div className="pt-4 border-t">
+        <h3 className="text-lg font-semibold mb-2">Address</h3>
+        <div className="space-y-2">
+          <Label>Street</Label>
+          <Input 
+            value={editedContact.street || ''} 
+            onChange={(e) => onFieldChange('street', e.target.value)} 
+          />
+        </div>
+        <div className="space-y-2">
+          <Label>City</Label>
+          <Input 
+            value={editedContact.city || ''} 
+            onChange={(e) => onFieldChange('city', e.target.value)} 
+          />
+        </div>
+        <div className="space-y-2">
+          <Label>Postal Code</Label>
+          <Input 
+            value={editedContact.postal_code || ''} 
+            onChange={(e) => onFieldChange('postal_code', e.target.value)} 
+          />
+        </div>
+        <div className="space-y-2">
+          <Label>Country</Label>
+          <Input 
+            value={editedContact.country || 'Germany'} 
+            onChange={(e) => onFieldChange('country', e.target.value)} 
+          />
+        </div>
+      </div>
     </div>
   );
 }
