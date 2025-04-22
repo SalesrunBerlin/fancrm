@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Edit, X } from "lucide-react";
+import { AccountMap } from "./AccountMap";
 
 interface AccountDetailInfoProps {
   account: Account;
@@ -58,6 +59,29 @@ export function AccountDetailInfo({
             <div>
               <strong>Industry:</strong> {account.industry || 'Not specified'}
             </div>
+            <div className="pt-4 border-t">
+              <h3 className="text-lg font-semibold mb-2">Address</h3>
+              <div className="space-y-2">
+                <div>
+                  <strong>Street:</strong> {account.street || 'Not specified'}
+                </div>
+                <div>
+                  <strong>City:</strong> {account.city || 'Not specified'}
+                </div>
+                <div>
+                  <strong>Postal Code:</strong> {account.postal_code || 'Not specified'}
+                </div>
+                <div>
+                  <strong>Country:</strong> {account.country || 'Germany'}
+                </div>
+              </div>
+            </div>
+            {(account.latitude && account.longitude) && (
+              <div className="pt-4">
+                <h3 className="text-lg font-semibold mb-2">Location</h3>
+                <AccountMap account={account} />
+              </div>
+            )}
           </div>
         ) : (
           <div className="space-y-4">
@@ -88,6 +112,39 @@ export function AccountDetailInfo({
                 value={editedAccount.industry || ''} 
                 onChange={(e) => onEditFieldChange('industry', e.target.value)} 
               />
+            </div>
+            <div className="pt-4 border-t">
+              <h3 className="text-lg font-semibold mb-2">Address</h3>
+              <div className="space-y-4">
+                <div>
+                  <label>Street</label>
+                  <Input 
+                    value={editedAccount.street || ''} 
+                    onChange={(e) => onEditFieldChange('street', e.target.value)} 
+                  />
+                </div>
+                <div>
+                  <label>City</label>
+                  <Input 
+                    value={editedAccount.city || ''} 
+                    onChange={(e) => onEditFieldChange('city', e.target.value)} 
+                  />
+                </div>
+                <div>
+                  <label>Postal Code</label>
+                  <Input 
+                    value={editedAccount.postal_code || ''} 
+                    onChange={(e) => onEditFieldChange('postal_code', e.target.value)} 
+                  />
+                </div>
+                <div>
+                  <label>Country</label>
+                  <Input 
+                    value={editedAccount.country || 'Germany'} 
+                    onChange={(e) => onEditFieldChange('country', e.target.value)} 
+                  />
+                </div>
+              </div>
             </div>
           </div>
         )}

@@ -11,31 +11,49 @@ export type Database = {
     Tables: {
       accounts: {
         Row: {
+          city: string | null
+          country: string | null
           created_at: string
           id: string
           industry: string | null
+          latitude: number | null
+          longitude: number | null
           name: string
           owner_id: string | null
+          postal_code: string | null
+          street: string | null
           type: string | null
           updated_at: string
           website: string | null
         }
         Insert: {
+          city?: string | null
+          country?: string | null
           created_at?: string
           id?: string
           industry?: string | null
+          latitude?: number | null
+          longitude?: number | null
           name: string
           owner_id?: string | null
+          postal_code?: string | null
+          street?: string | null
           type?: string | null
           updated_at?: string
           website?: string | null
         }
         Update: {
+          city?: string | null
+          country?: string | null
           created_at?: string
           id?: string
           industry?: string | null
+          latitude?: number | null
+          longitude?: number | null
           name?: string
           owner_id?: string | null
+          postal_code?: string | null
+          street?: string | null
           type?: string | null
           updated_at?: string
           website?: string | null
@@ -332,6 +350,33 @@ export type Database = {
           last_name?: string | null
           role?: string | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      user_color_preferences: {
+        Row: {
+          colors: Json
+          created_at: string
+          id: string
+          theme: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          colors: Json
+          created_at?: string
+          id?: string
+          theme: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          colors?: Json
+          created_at?: string
+          id?: string
+          theme?: string
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }

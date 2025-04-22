@@ -112,6 +112,57 @@ export function useAccountDetails(accountId: string | undefined) {
     }
   };
 
+  const updateAccountGeocode = async (account: Account) => {
+    if (!account.street || !account.city || !account.postal_code || !account.country) return;
+
+    const address = `${account.street}, ${account.postal_code} ${account.city}, ${account.country}`;
+    const response = await fetch(
+      `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(address)}.json?access_token=pk.eyJ1IjoibG92YWJsZSIsImEiOiJjbG4xbWV2azQwMjd4MnFsdG41Z2l0djZhIn0.YF-MD7OxJhXCAX4rLKygtg`
+    );
+
+    const data = await response.json();
+    if (data.features && data.features.length > 0) {
+      const [longitude, latitude] = data.features[0].center;
+      
+      const { error } = await supabase
+        .from('accounts')
+        .update({ latitude, longitude })
+        .eq('id', account.id);
+
+      if (error) {
+        console.error('Error updating coordinates:', error);
+      } else {
+        setAccount(prev => prev ? { ...prev, latitude, longitude } : null);
+      }
+    }
+  };
+
+  const updateAccount = async (updatedAccount: Account) => {
+    try {
+      const { error } = await supabase
+        .from('accounts')
+        .update(updatedAccount)
+        .eq('id', updatedAccount.id);
+
+      if (error) throw error;
+
+      setAccount(updatedAccount);
+      await updateAccountGeocode(updatedAccount);
+      
+      toast({
+        title: "Success",
+        description: "Account updated successfully",
+      });
+    } catch (error) {
+      console.error('Error updating account:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update account",
+        variant: "destructive",
+      });
+    }
+  };
+
   useEffect(() => {
     if (accountId) {
       fetchAccountDetails();
@@ -126,6 +177,7 @@ export function useAccountDetails(accountId: string | undefined) {
     ownerName,
     isLoading,
     fetchAccountDetails,
-    setAccount
+    setAccount,
+    updateAccount
   };
 }
