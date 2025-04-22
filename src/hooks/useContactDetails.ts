@@ -73,7 +73,13 @@ export function useContactDetails() {
             accountName: data.accounts?.name,
             createdAt: data.created_at,
             updatedAt: data.updated_at,
-            ownerId: data.owner_id
+            ownerId: data.owner_id,
+            street: data.street,
+            city: data.city,
+            postal_code: data.postal_code,
+            country: data.country,
+            latitude: data.latitude,
+            longitude: data.longitude
           };
           setContact(transformedContact);
           setEditedContact(transformedContact);
@@ -91,6 +97,35 @@ export function useContactDetails() {
 
     fetchContact();
   }, [id, toast]);
+
+  const updateContactGeocode = async (contact: Contact) => {
+    if (!contact.street || !contact.city || !contact.postal_code || !contact.country) return;
+
+    const address = `${contact.street}, ${contact.postal_code} ${contact.city}, ${contact.country}`;
+    try {
+      const response = await fetch(
+        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(address)}.json?access_token=pk.eyJ1IjoibG92YWJsZSIsImEiOiJjbG4xbWV2azQwMjd4MnFsdG41Z2l0djZhIn0.YF-MD7OxJhXCAX4rLKygtg`
+      );
+
+      const data = await response.json();
+      if (data.features && data.features.length > 0) {
+        const [longitude, latitude] = data.features[0].center;
+        
+        const { error } = await supabase
+          .from('contacts')
+          .update({ latitude, longitude })
+          .eq('id', contact.id);
+
+        if (error) {
+          console.error('Error updating coordinates:', error);
+        } else {
+          setContact(prev => prev ? { ...prev, latitude, longitude } : null);
+        }
+      }
+    } catch (err) {
+      console.error('Error geocoding address:', err);
+    }
+  };
 
   const handleDelete = async () => {
     if (!id) return;
@@ -122,27 +157,40 @@ export function useContactDetails() {
     if (!id || !editedContact) return;
 
     try {
+      // Prepare data for update
+      const updateData = {
+        first_name: editedContact.firstName,
+        last_name: editedContact.lastName,
+        email: editedContact.email,
+        phone: editedContact.phone,
+        account_id: editedContact.accountId,
+        street: editedContact.street,
+        city: editedContact.city,
+        postal_code: editedContact.postal_code,
+        country: editedContact.country
+      };
+
       const { error } = await supabase
         .from("contacts")
-        .update({
-          first_name: editedContact.firstName,
-          last_name: editedContact.lastName,
-          email: editedContact.email,
-          phone: editedContact.phone,
-          account_id: editedContact.accountId,
-        })
+        .update(updateData)
         .eq("id", id);
 
       if (error) throw error;
 
+      // Update the local state with edited contact
+      const updatedContact = {
+        ...contact!,
+        ...editedContact,
+      };
+      
+      setContact(updatedContact);
+      
+      // Update geocode if address changed
+      await updateContactGeocode(updatedContact as Contact);
+
       toast({
         title: "Erfolg",
         description: "Kontakt wurde aktualisiert",
-      });
-      
-      setContact({
-        ...contact!,
-        ...editedContact,
       });
     } catch (err) {
       console.error("Error updating contact:", err);

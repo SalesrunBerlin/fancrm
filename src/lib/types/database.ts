@@ -11,11 +11,14 @@ export interface Contact {
   updatedAt: string;
   ownerId: string;
   tags?: string[];
-  // Add address fields for contacts
+  // Address fields for contacts
   street?: string | null;
   city?: string | null;
   postal_code?: string | null;
   country?: string | null;
+  // Coordinates for map
+  latitude?: number | null;
+  longitude?: number | null;
 }
 
 export interface Account {
