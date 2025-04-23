@@ -1,9 +1,9 @@
-
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Badge } from "@/components/ui/badge";
 import { Clock, Phone, Mail, CalendarDays, MessageCircle } from "lucide-react";
+import { Link } from "react-router-dom";
 
 type Activity = {
   id: string;
@@ -59,9 +59,10 @@ export function ActivitiesList() {
   return (
     <div className="space-y-3">
       {activities.map((a) => (
-        <div
-          key={a.id}
-          className="p-4 border rounded-md flex flex-col gap-2 bg-card"
+        <Link 
+          to={`/activities/${a.id}`} 
+          key={a.id} 
+          className="block p-4 border rounded-md flex flex-col gap-2 bg-card hover:bg-muted transition-colors"
         >
           <div className="flex items-center gap-2">
             {iconMap[a.type] || (
@@ -90,7 +91,7 @@ export function ActivitiesList() {
               Ergebnis: {a.outcome}
             </div>
           )}
-        </div>
+        </Link>
       ))}
     </div>
   );

@@ -75,6 +75,7 @@ export type Database = {
           created_at: string
           deal_id: string | null
           description: string | null
+          end_time: string | null
           id: string
           outcome: string | null
           owner_id: string
@@ -90,6 +91,7 @@ export type Database = {
           created_at?: string
           deal_id?: string | null
           description?: string | null
+          end_time?: string | null
           id?: string
           outcome?: string | null
           owner_id: string
@@ -105,6 +107,7 @@ export type Database = {
           created_at?: string
           deal_id?: string | null
           description?: string | null
+          end_time?: string | null
           id?: string
           outcome?: string | null
           owner_id?: string
