@@ -60,7 +60,7 @@ export function useActivity(id: string | undefined) {
   };
 
   const saveActivity = async () => {
-    if (!user || !id || !activity) return;
+    if (!user || !id || !activity) return false;
 
     setSaving(true);
     try {

@@ -36,6 +36,7 @@ export default function ActivityDetail() {
         isEditing={isEditing}
         onBack={() => navigate(-1)}
         onEdit={() => setIsEditing(true)}
+        onCancel={() => setIsEditing(false)}
       />
 
       {isEditing ? (
