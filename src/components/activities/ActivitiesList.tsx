@@ -36,20 +36,49 @@ export function ActivitiesList() {
     if (!user) return;
     setLoading(true);
 
-    supabase
-      .from("activities")
-      .select("*")
-      .eq("owner_id", user.id)
-      .order("created_at", { ascending: false })
-      .then(({ data, error }) => {
-        if (active) {
+    const fetchActivities = async () => {
+      try {
+        console.log("Fetching activities for user:", user.id);
+        const { data, error } = await supabase
+          .from("activities")
+          .select("*")
+          .eq("owner_id", user.id)
+          .order("created_at", { ascending: false });
+
+        if (error) {
+          console.error("Error fetching activities:", error);
+        } else if (active) {
+          console.log("Activities fetched:", data?.length);
           setActivities(data || []);
+        }
+      } catch (error) {
+        console.error("Exception fetching activities:", error);
+      } finally {
+        if (active) {
           setLoading(false);
         }
-      });
+      }
+    };
+
+    fetchActivities();
+
+    // Set up real-time subscription for activities
+    const channel = supabase
+      .channel('public:activities')
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'activities',
+        filter: `owner_id=eq.${user.id}` 
+      }, (payload) => {
+        console.log('Real-time activities update:', payload);
+        fetchActivities();
+      })
+      .subscribe();
 
     return () => {
       active = false;
+      supabase.removeChannel(channel);
     };
   }, [user]);
 

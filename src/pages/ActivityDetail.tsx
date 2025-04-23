@@ -1,7 +1,6 @@
 
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useActivity } from "@/hooks/useActivity";
@@ -16,49 +15,15 @@ export default function ActivityDetail() {
   const { user } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   
-  const { activity, loading, handleFieldChange, handleStatusChange } = useActivity(id);
+  const { activity, loading, saving, handleFieldChange, handleStatusChange, saveActivity } = useActivity(id);
 
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !id) return;
 
-    try {
-      const { error } = await supabase
-        .from("activities")
-        .update({
-          type: activity.type,
-          subject: activity.subject,
-          description: activity.description,
-          scheduled_at: activity.scheduled_at,
-          end_time: activity.end_time,
-          outcome: activity.outcome,
-          status: activity.status,
-          account_id: activity.account_id,
-          contact_id: activity.contact_id,
-          deal_id: activity.deal_id,
-        })
-        .eq("id", id)
-        .eq("owner_id", user.id);
-
-      if (error) {
-        toast({
-          title: "Fehler",
-          description: error.message,
-          variant: "destructive"
-        });
-      } else {
-        toast({ 
-          title: "Erfolgreich", 
-          description: "Aktivität aktualisiert" 
-        });
-        setIsEditing(false);
-      }
-    } catch (error: any) {
-      toast({
-        title: "Fehler",
-        description: error.message,
-        variant: "destructive"
-      });
+    const success = await saveActivity();
+    if (success) {
+      setIsEditing(false);
     }
   };
 
@@ -79,6 +44,7 @@ export default function ActivityDetail() {
           onFieldChange={handleFieldChange}
           onStatusChange={handleStatusChange}
           onSubmit={handleUpdate}
+          saving={saving}
         />
       ) : (
         <ActivityDetailView 
