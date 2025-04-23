@@ -2,10 +2,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Contact } from "@/lib/types/database";
+import { useAuth } from "@/contexts/AuthContext";
 
 export function useContacts() {
+  const { user } = useAuth();
+  
   return useQuery({
-    queryKey: ["contacts"],
+    queryKey: ["contacts", user?.id],
     queryFn: async (): Promise<Contact[]> => {
       const { data: user } = await supabase.auth.getUser();
       if (!user.user) throw new Error("User must be logged in to fetch contacts");
@@ -32,7 +35,14 @@ export function useContacts() {
         createdAt: contact.created_at,
         updatedAt: contact.updated_at,
         ownerId: contact.owner_id,
+        street: contact.street,
+        city: contact.city,
+        postal_code: contact.postal_code,
+        country: contact.country,
+        latitude: contact.latitude,
+        longitude: contact.longitude,
       }));
     },
+    enabled: !!user, // Nur ausführen, wenn der Benutzer eingeloggt ist
   });
 }

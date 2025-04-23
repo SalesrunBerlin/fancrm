@@ -33,10 +33,10 @@ export function useContactDetails() {
       
       // Check if latitude or longitude are objects with _type and value properties
       // This handles the case where they are returned as {_type: "undefined", value: "undefined"}
-      if (processedContact.latitude && typeof processedContact.latitude === 'object' && '_type' in processedContact.latitude) {
+      if (processedContact.latitude && typeof processedContact.latitude === 'object' && '_type' in (processedContact.latitude as any)) {
         processedContact.latitude = undefined;
       }
-      if (processedContact.longitude && typeof processedContact.longitude === 'object' && '_type' in processedContact.longitude) {
+      if (processedContact.longitude && typeof processedContact.longitude === 'object' && '_type' in (processedContact.longitude as any)) {
         processedContact.longitude = undefined;
       }
       
