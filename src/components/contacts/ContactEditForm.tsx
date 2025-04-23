@@ -3,6 +3,7 @@ import { Contact } from "@/lib/types/database";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Loader2 } from "lucide-react";
 
 interface ContactEditFormProps {
   editedContact: Partial<Contact>;
@@ -13,6 +14,12 @@ interface ContactEditFormProps {
 }
 
 export function ContactEditForm({ editedContact, accounts, onFieldChange, onAddressBlur, isAddressLoading }: ContactEditFormProps) {
+  const hasCompleteAddress = Boolean(
+    editedContact.street && 
+    editedContact.city && 
+    editedContact.postal_code
+  );
+  
   return (
     <div className="space-y-4">
       <div className="space-y-2">
@@ -71,7 +78,7 @@ export function ContactEditForm({ editedContact, accounts, onFieldChange, onAddr
           <Input 
             value={editedContact.street || ''} 
             onChange={(e) => onFieldChange('street', e.target.value)} 
-            onBlur={onAddressBlur}
+            onBlur={hasCompleteAddress ? onAddressBlur : undefined}
           />
         </div>
         <div className="space-y-2">
@@ -79,7 +86,7 @@ export function ContactEditForm({ editedContact, accounts, onFieldChange, onAddr
           <Input 
             value={editedContact.city || ''} 
             onChange={(e) => onFieldChange('city', e.target.value)} 
-            onBlur={onAddressBlur}
+            onBlur={hasCompleteAddress ? onAddressBlur : undefined}
           />
         </div>
         <div className="space-y-2">
@@ -87,7 +94,7 @@ export function ContactEditForm({ editedContact, accounts, onFieldChange, onAddr
           <Input 
             value={editedContact.postal_code || ''} 
             onChange={(e) => onFieldChange('postal_code', e.target.value)} 
-            onBlur={onAddressBlur}
+            onBlur={hasCompleteAddress ? onAddressBlur : undefined}
           />
         </div>
         <div className="space-y-2">
@@ -95,15 +102,26 @@ export function ContactEditForm({ editedContact, accounts, onFieldChange, onAddr
           <Input 
             value={editedContact.country || 'Germany'} 
             onChange={(e) => onFieldChange('country', e.target.value)} 
-            onBlur={onAddressBlur}
+            onBlur={hasCompleteAddress ? onAddressBlur : undefined}
           />
         </div>
+        
         {isAddressLoading && (
-          <p className="text-xs text-muted-foreground mt-2">Verifying address...</p>
+          <div className="flex items-center text-xs text-muted-foreground mt-2">
+            <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+            Verifying address...
+          </div>
         )}
+        
         {editedContact.latitude && editedContact.longitude && (
           <p className="text-xs text-green-600 mt-2">
             Coordinates found: {Number(editedContact.latitude).toFixed(6)}, {Number(editedContact.longitude).toFixed(6)}
+          </p>
+        )}
+        
+        {hasCompleteAddress && !editedContact.latitude && !editedContact.longitude && !isAddressLoading && (
+          <p className="text-xs text-amber-600 mt-2">
+            Click save to geocode this address
           </p>
         )}
       </div>

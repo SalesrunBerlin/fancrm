@@ -33,7 +33,7 @@ export function useContactDetails() {
 
   // Check if address is complete
   function hasCompleteAddress(data: Partial<Contact>) {
-    return !!data.street && !!data.city && !!data.postal_code;
+    return Boolean(data.street && data.city && data.postal_code);
   }
 
   // Automatically geocode address on changes
@@ -60,7 +60,7 @@ export function useContactDetails() {
         longitude: coords.longitude,
       }));
     }
-  }, [editedContact.street, editedContact.postal_code, editedContact.city, editedContact.country, geocodeAddress]);
+  }, [editedContact, geocodeAddress]);
 
   const handleDelete = async () => {
     if (!id) return;
@@ -83,12 +83,12 @@ export function useContactDetails() {
     try {
       console.log("Saving contact with data:", editedContact);
       
+      // Make sure we have coordinates if there's a complete address
       let coordinatesToSave = {
         latitude: editedContact.latitude,
         longitude: editedContact.longitude
       };
       
-      // Make sure we have coordinates if there's a complete address
       if (hasCompleteAddress(editedContact) && (!editedContact.latitude || !editedContact.longitude)) {
         console.log("Getting coordinates before saving");
         const coords = await geocodeAddress(
@@ -103,6 +103,7 @@ export function useContactDetails() {
             latitude: coords.latitude,
             longitude: coords.longitude
           };
+          console.log("Got coordinates before saving:", coordinatesToSave);
         }
       }
       
@@ -128,6 +129,7 @@ export function useContactDetails() {
 
       if (error) throw error;
       
+      // Update local state with saved data including coordinates
       const updatedContact: Contact = {
         ...contact!,
         ...editedContact,
@@ -136,6 +138,8 @@ export function useContactDetails() {
       };
       
       setContact(updatedContact);
+      setEditedContact(updatedContact);
+      
       toast({ title: "Success", description: "Contact has been updated" });
     } catch (error) {
       console.error("Error saving contact:", error);
