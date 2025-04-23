@@ -68,6 +68,45 @@ export type Database = {
           },
         ]
       }
+      activities: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          outcome: string | null
+          owner_id: string
+          scheduled_at: string | null
+          status: string
+          subject: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          outcome?: string | null
+          owner_id: string
+          scheduled_at?: string | null
+          status?: string
+          subject: string
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          outcome?: string | null
+          owner_id?: string
+          scheduled_at?: string | null
+          status?: string
+          subject?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       contacts: {
         Row: {
           account_id: string | null

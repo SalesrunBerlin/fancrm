@@ -18,6 +18,7 @@ import DealDetail from "./pages/DealDetail";
 import Settings from "./pages/Settings";
 import Products from "./pages/Products";
 import ProductDetail from "./pages/ProductDetail";
+import Activities from "./pages/Activities";
 
 const queryClient = new QueryClient();
 
@@ -40,6 +41,7 @@ const App = () => (
               <Route path="/settings" element={<Settings />} />
               <Route path="/products" element={<Products />} />
               <Route path="/products/:id" element={<ProductDetail />} />
+              <Route path="/activities" element={<Activities />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>

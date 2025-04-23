@@ -7,7 +7,8 @@ import {
   Briefcase,
   Settings,
   Package,
-  LogOut
+  LogOut,
+  Phone
 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -96,6 +97,15 @@ export const Sidebar = React.forwardRef<HTMLDivElement, SidebarProps>(
             >
               <Package className="mr-2 h-4 w-4" />
               Produkte
+            </Button>
+          </Link>
+          <Link to="/activities" onClick={handleLinkClick}>
+            <Button
+              variant={location.pathname.includes("/activities") ? "default" : "ghost"}
+              className="w-full justify-start"
+            >
+              <Phone className="mr-2 h-4 w-4" />
+              Aktivitäten
             </Button>
           </Link>
         </div>
