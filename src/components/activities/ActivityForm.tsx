@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -47,7 +46,7 @@ export function ActivityForm({ onSuccess }: ActivityFormProps) {
       account_id: accountId,
       contact_id: contactId,
       deal_id: dealId,
-    } as any); // TS: allow extra properties
+    });
 
     setLoading(false);
     if (error) {
@@ -58,6 +57,7 @@ export function ActivityForm({ onSuccess }: ActivityFormProps) {
       });
       return;
     }
+    
     toast({ title: "Gespeichert", description: "Aktivität gespeichert." });
     setSubject("");
     setDescription("");
