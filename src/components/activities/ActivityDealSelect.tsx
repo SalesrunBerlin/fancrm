@@ -22,7 +22,7 @@ export function ActivityDealSelect({ value, onChange, disabled }: {
         <SelectValue placeholder="Deal verbinden" />
       </SelectTrigger>
       <SelectContent>
-        <SelectItem value="">Kein Deal</SelectItem>
+        <SelectItem value="none">Kein Deal</SelectItem>
         {deals.map(d => (
           <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
         ))}

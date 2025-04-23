@@ -22,7 +22,7 @@ export function ActivityAccountSelect({ value, onChange, disabled }: {
         <SelectValue placeholder="Account verbinden" />
       </SelectTrigger>
       <SelectContent>
-        <SelectItem value="">Kein Account</SelectItem>
+        <SelectItem value="none">Kein Account</SelectItem>
         {accounts.map(a => (
           <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
         ))}

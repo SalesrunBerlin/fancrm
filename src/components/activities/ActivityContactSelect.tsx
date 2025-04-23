@@ -22,7 +22,7 @@ export function ActivityContactSelect({ value, onChange, disabled }: {
         <SelectValue placeholder="Kontakt verbinden" />
       </SelectTrigger>
       <SelectContent>
-        <SelectItem value="">Kein Kontakt</SelectItem>
+        <SelectItem value="none">Kein Kontakt</SelectItem>
         {contacts.map(c => (
           <SelectItem key={c.id} value={c.id}>{c.first_name} {c.last_name}</SelectItem>
         ))}
