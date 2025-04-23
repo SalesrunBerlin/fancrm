@@ -13,13 +13,18 @@ import {
   DialogTitle,
   DialogHeader,
 } from "@/components/ui/dialog";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function Contacts() {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
   const [showCreateModal, setShowCreateModal] = useState(false);
   const { data: contacts = [], isLoading } = useContacts();
+  
+  console.log("Current user:", user?.id);
+  console.log("Contacts loaded:", contacts.length);
   
   const filteredContacts = contacts.filter(contact => {
     const searchLower = searchQuery.toLowerCase();

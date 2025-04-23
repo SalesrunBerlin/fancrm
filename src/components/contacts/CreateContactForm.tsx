@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useAuth } from "@/contexts/AuthContext";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface CreateContactFormProps {
   accountId: string;
@@ -16,6 +17,7 @@ interface CreateContactFormProps {
 export function CreateContactForm({ accountId, onContactCreated }: CreateContactFormProps) {
   const { user } = useAuth();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
@@ -52,7 +54,7 @@ export function CreateContactForm({ accountId, onContactCreated }: CreateContact
           email,
           phone,
           account_id: accountId,
-          owner_id: user.id // Set the owner_id to the current user's ID
+          owner_id: user.id // Explicitly setting the owner_id to the current user's ID
         })
         .select();
 
@@ -68,6 +70,10 @@ export function CreateContactForm({ accountId, onContactCreated }: CreateContact
       }
 
       console.log("Contact created successfully:", data);
+      
+      // Invalidate contacts cache to force a refresh
+      queryClient.invalidateQueries({ queryKey: ["contacts"] });
+      
       toast({
         title: "Success",
         description: "Contact created successfully"

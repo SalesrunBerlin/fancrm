@@ -12,7 +12,9 @@ export function useContacts() {
     queryFn: async (): Promise<Contact[]> => {
       if (!user || !session) throw new Error("User must be logged in to fetch contacts");
       
-      // Wir verwenden direkt das Supabase-Client, das automatisch das Auth-Token enthält
+      console.log("Fetching contacts for user:", user.id);
+      
+      // We're using the Supabase client which automatically includes the auth token
       const { data, error } = await supabase
         .from("contacts")
         .select(`
@@ -22,8 +24,13 @@ export function useContacts() {
           )
         `);
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching contacts:", error);
+        throw error;
+      }
 
+      console.log("Contacts fetched from database:", data.length);
+      
       return data.map(contact => ({
         id: contact.id,
         firstName: contact.first_name,
@@ -43,6 +50,6 @@ export function useContacts() {
         longitude: contact.longitude,
       }));
     },
-    enabled: !!user && !!session, // Nur ausführen, wenn der Benutzer eingeloggt ist und eine gültige Session hat
+    enabled: !!user && !!session, // Only execute when the user is logged in and has a valid session
   });
 }
