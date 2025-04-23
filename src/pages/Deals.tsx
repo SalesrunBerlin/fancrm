@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -50,8 +49,7 @@ export default function Deals() {
           <h1 className="text-3xl font-bold tracking-tight">Deals</h1>
         </div>
         <Button onClick={() => setShowCreateModal(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          New Deal
+          <Plus className="h-4 w-4" />
         </Button>
       </div>
       

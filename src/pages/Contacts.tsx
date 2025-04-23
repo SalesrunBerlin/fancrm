@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Plus, Users } from "lucide-react";
@@ -50,8 +49,7 @@ export default function Contacts() {
           <h1 className="text-3xl font-bold tracking-tight">Contacts</h1>
         </div>
         <Button onClick={() => setShowCreateModal(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          New Contact
+          <Plus className="h-4 w-4" />
         </Button>
       </div>
       

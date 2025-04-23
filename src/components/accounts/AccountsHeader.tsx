@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Building, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -14,8 +13,7 @@ export function AccountsHeader() {
         <h1 className="text-3xl font-bold tracking-tight">Accounts</h1>
       </div>
       <Button onClick={() => setShowCreateModal(true)} className="bg-beauty hover:bg-beauty-dark">
-        <Plus className="mr-2 h-4 w-4" />
-        Account erstellen
+        <Plus className="h-4 w-4" />
       </Button>
       
       <CreateAccountForm 

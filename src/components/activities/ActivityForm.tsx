@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,9 +13,14 @@ import { ActivityTypeSelect } from "./ActivityTypeSelect";
 
 interface ActivityFormProps {
   onSuccess: () => void;
+  initialValues?: {
+    accountId?: string;
+    contactId?: string;
+    dealId?: string;
+  };
 }
 
-export function ActivityForm({ onSuccess }: ActivityFormProps) {
+export function ActivityForm({ onSuccess, initialValues = {} }: ActivityFormProps) {
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -24,9 +30,9 @@ export function ActivityForm({ onSuccess }: ActivityFormProps) {
   const [outcome, setOutcome] = useState("");
   const [status, setStatus] = useState<"open" | "done">("open");
   const [type, setType] = useState<string>("call");
-  const [accountId, setAccountId] = useState<string | null>(null);
-  const [contactId, setContactId] = useState<string | null>(null);
-  const [dealId, setDealId] = useState<string | null>(null);
+  const [accountId, setAccountId] = useState<string | null>(initialValues.accountId || null);
+  const [contactId, setContactId] = useState<string | null>(initialValues.contactId || null);
+  const [dealId, setDealId] = useState<string | null>(initialValues.dealId || null);
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
