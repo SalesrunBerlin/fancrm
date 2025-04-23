@@ -34,7 +34,7 @@ export async function geocodeAndUpdateContact(contact: Contact, setContact?: (c:
         .eq("id", contact.id);
 
       if (setContact) setContact({ ...contact, latitude, longitude });
-      if (setEditedContact) setEditedContact((prev) => ({ ...prev, latitude, longitude }));
+      if (setEditedContact) setEditedContact({ ...setEditedContact, latitude, longitude });
     }
   } catch (err) {
     // Fehler können in der aufrufenden Komponente geloggt werden

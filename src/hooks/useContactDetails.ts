@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { Contact } from "@/lib/types/database";
@@ -25,7 +25,7 @@ export function useContactDetails() {
   const [editedContact, setEditedContact] = useState<Partial<Contact>>({});
 
   // Synchronisiere editedContact, wenn Kontakt geladen
-  React.useEffect(() => {
+  useEffect(() => {
     if (contact) {
       setEditedContact(contact);
       // Geocoding bei fehlenden Koordinaten auslösen
