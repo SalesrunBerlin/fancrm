@@ -6,6 +6,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { ActivityAccountSelect } from "./ActivityAccountSelect";
+import { ActivityContactSelect } from "./ActivityContactSelect";
+import { ActivityDealSelect } from "./ActivityDealSelect";
+import { ActivityTypeSelect } from "./ActivityTypeSelect";
 
 interface ActivityFormProps {
   onSuccess: () => void;
@@ -20,6 +24,10 @@ export function ActivityForm({ onSuccess }: ActivityFormProps) {
   const [scheduledAt, setScheduledAt] = useState("");
   const [outcome, setOutcome] = useState("");
   const [status, setStatus] = useState<"open" | "done">("open");
+  const [type, setType] = useState<string>("call");
+  const [accountId, setAccountId] = useState<string | null>(null);
+  const [contactId, setContactId] = useState<string | null>(null);
+  const [dealId, setDealId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -30,13 +38,16 @@ export function ActivityForm({ onSuccess }: ActivityFormProps) {
 
     const { error } = await supabase.from("activities").insert({
       owner_id: user.id,
-      type: "call",
+      type,
       subject,
       description,
-      scheduled_at: scheduledAt ? new Date(scheduledAt) : null,
+      scheduled_at: scheduledAt ? scheduledAt : null,
       outcome,
       status,
-    });
+      account_id: accountId,
+      contact_id: contactId,
+      deal_id: dealId,
+    } as any); // TS: allow extra properties
 
     setLoading(false);
     if (error) {
@@ -47,18 +58,23 @@ export function ActivityForm({ onSuccess }: ActivityFormProps) {
       });
       return;
     }
-    toast({ title: "Gespeichert", description: "Anruf gespeichert." });
+    toast({ title: "Gespeichert", description: "Aktivität gespeichert." });
     setSubject("");
     setDescription("");
     setScheduledAt("");
     setOutcome("");
     setStatus("open");
+    setType("call");
+    setAccountId(null);
+    setContactId(null);
+    setDealId(null);
     onSuccess();
   };
 
   return (
     <form className="space-y-4" onSubmit={handleSubmit}>
-      <div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <ActivityTypeSelect value={type} onChange={setType} disabled={loading} />
         <Input
           placeholder="Betreff*"
           value={subject}
@@ -75,24 +91,25 @@ export function ActivityForm({ onSuccess }: ActivityFormProps) {
           disabled={loading}
         />
       </div>
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <Input
-            type="datetime-local"
-            placeholder="Termin"
-            value={scheduledAt}
-            onChange={(e) => setScheduledAt(e.target.value)}
-            disabled={loading}
-          />
-        </div>
-        <div>
-          <Input
-            placeholder="Ergebnis (z.B. erreicht, nicht erreicht)"
-            value={outcome}
-            onChange={(e) => setOutcome(e.target.value)}
-            disabled={loading}
-          />
-        </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Input
+          type="datetime-local"
+          placeholder="Termin"
+          value={scheduledAt}
+          onChange={(e) => setScheduledAt(e.target.value)}
+          disabled={loading}
+        />
+        <Input
+          placeholder="Ergebnis (z.B. erreicht, nicht erreicht)"
+          value={outcome}
+          onChange={(e) => setOutcome(e.target.value)}
+          disabled={loading}
+        />
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <ActivityAccountSelect value={accountId} onChange={setAccountId} disabled={loading} />
+        <ActivityContactSelect value={contactId} onChange={setContactId} disabled={loading} />
+        <ActivityDealSelect value={dealId} onChange={setDealId} disabled={loading} />
       </div>
       <div className="flex gap-4 items-center">
         <label>
