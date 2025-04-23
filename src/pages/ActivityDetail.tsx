@@ -54,40 +54,54 @@ export default function ActivityDetail() {
     e.preventDefault();
     if (!user) return;
 
-    const { error } = await supabase
-      .from("activities")
-      .update({
-        type: activity.type,
-        subject: activity.subject,
-        description: activity.description,
-        scheduled_at: activity.scheduled_at,
-        end_time: activity.end_time,
-        outcome: activity.outcome,
-        status: activity.status,
-        account_id: activity.account_id,
-        contact_id: activity.contact_id,
-        deal_id: activity.deal_id,
-      })
-      .eq("id", id)
-      .eq("owner_id", user.id);
+    try {
+      const { error } = await supabase
+        .from("activities")
+        .update({
+          type: activity.type,
+          subject: activity.subject,
+          description: activity.description,
+          scheduled_at: activity.scheduled_at,
+          end_time: activity.end_time,
+          outcome: activity.outcome,
+          status: activity.status,
+          account_id: activity.account_id,
+          contact_id: activity.contact_id,
+          deal_id: activity.deal_id,
+        })
+        .eq("id", id)
+        .eq("owner_id", user.id);
 
-    if (error) {
+      if (error) {
+        toast({
+          title: "Fehler",
+          description: error.message,
+          variant: "destructive"
+        });
+      } else {
+        toast({ 
+          title: "Erfolgreich", 
+          description: "Aktivität aktualisiert" 
+        });
+        setIsEditing(false);
+      }
+    } catch (error: any) {
       toast({
         title: "Fehler",
         description: error.message,
         variant: "destructive"
       });
-    } else {
-      toast({ 
-        title: "Erfolgreich", 
-        description: "Aktivität aktualisiert" 
-      });
-      setIsEditing(false);
     }
   };
 
   const handleFieldChange = (field: string, value: any) => {
     setActivity(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleStatusChange = () => {
+    if (!activity) return;
+    const newStatus = activity.status === "done" ? "open" : "done";
+    handleFieldChange("status", newStatus);
   };
 
   if (loading) return <div>Laden...</div>;
@@ -163,6 +177,15 @@ export default function ActivityDetail() {
             value={activity.outcome || ''}
             onChange={(e) => handleFieldChange('outcome', e.target.value)}
           />
+          <div>
+            <Button
+              type="button"
+              variant={activity.status === "done" ? "outline" : "default"}
+              onClick={handleStatusChange}
+            >
+              {activity.status === "done" ? "Als offen markieren" : "Als erledigt markieren"}
+            </Button>
+          </div>
         </form>
       ) : (
         <div className="space-y-4">
@@ -173,13 +196,29 @@ export default function ActivityDetail() {
             <strong>Beschreibung:</strong> {activity.description}
           </div>
           <div>
-            <strong>Startzeit:</strong> {new Date(activity.scheduled_at).toLocaleString()}
+            <strong>Startzeit:</strong> {activity.scheduled_at ? new Date(activity.scheduled_at).toLocaleString() : 'Nicht festgelegt'}
           </div>
           {activity.end_time && (
             <div>
               <strong>Endzeit:</strong> {new Date(activity.end_time).toLocaleString()}
             </div>
           )}
+          <div>
+            <strong>Status:</strong> {activity.status === "done" ? "Erledigt" : "Offen"}
+          </div>
+          {activity.outcome && (
+            <div>
+              <strong>Ergebnis:</strong> {activity.outcome}
+            </div>
+          )}
+          <div className="pt-4">
+            <Button 
+              onClick={handleStatusChange}
+              variant={activity.status === "done" ? "outline" : "default"}
+            >
+              {activity.status === "done" ? "Als offen markieren" : "Als erledigt markieren"}
+            </Button>
+          </div>
         </div>
       )}
     </div>

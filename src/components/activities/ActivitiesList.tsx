@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -11,6 +12,7 @@ type Activity = {
   subject: string;
   description?: string | null;
   scheduled_at?: string | null;
+  end_time?: string | null;
   outcome?: string | null;
   status: string;
   created_at: string;
@@ -84,6 +86,11 @@ export function ActivitiesList() {
           {a.description && (
             <div className="pl-6 text-sm text-muted-foreground">
               {a.description}
+            </div>
+          )}
+          {a.end_time && (
+            <div className="pl-6 text-xs text-muted-foreground">
+              Endzeit: {new Date(a.end_time).toLocaleString()}
             </div>
           )}
           {a.outcome && (
