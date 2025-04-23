@@ -5,14 +5,14 @@ import { Contact } from "@/lib/types/database";
 import { useAuth } from "@/contexts/AuthContext";
 
 export function useContacts() {
-  const { user } = useAuth();
+  const { user, session } = useAuth();
   
   return useQuery({
     queryKey: ["contacts", user?.id],
     queryFn: async (): Promise<Contact[]> => {
-      const { data: user } = await supabase.auth.getUser();
-      if (!user.user) throw new Error("User must be logged in to fetch contacts");
-
+      if (!user || !session) throw new Error("User must be logged in to fetch contacts");
+      
+      // Wir verwenden direkt das Supabase-Client, das automatisch das Auth-Token enthält
       const { data, error } = await supabase
         .from("contacts")
         .select(`
@@ -43,6 +43,6 @@ export function useContacts() {
         longitude: contact.longitude,
       }));
     },
-    enabled: !!user, // Nur ausführen, wenn der Benutzer eingeloggt ist
+    enabled: !!user && !!session, // Nur ausführen, wenn der Benutzer eingeloggt ist und eine gültige Session hat
   });
 }
