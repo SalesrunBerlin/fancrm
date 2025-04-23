@@ -19,6 +19,11 @@ type Activity = {
   updated_at: string;
 };
 
+interface FilterBy {
+  type: 'account' | 'contact' | 'deal';
+  id: string;
+}
+
 const iconMap: Record<string, JSX.Element> = {
   call: <Phone className="w-4 h-4 text-beauty" />,
   meeting: <CalendarDays className="w-4 h-4 text-beauty" />,
@@ -26,7 +31,11 @@ const iconMap: Record<string, JSX.Element> = {
   task: <MessageCircle className="w-4 h-4 text-beauty" />,
 };
 
-export function ActivitiesList() {
+interface ActivitiesListProps {
+  filterBy?: FilterBy;
+}
+
+export function ActivitiesList({ filterBy }: ActivitiesListProps) {
   const { user } = useAuth();
   const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
@@ -39,11 +48,20 @@ export function ActivitiesList() {
     const fetchActivities = async () => {
       try {
         console.log("Fetching activities for user:", user.id);
-        const { data, error } = await supabase
+        let query = supabase
           .from("activities")
           .select("*")
-          .eq("owner_id", user.id)
-          .order("created_at", { ascending: false });
+          .eq("owner_id", user.id);
+
+        // Apply filters if provided
+        if (filterBy) {
+          const filterColumn = `${filterBy.type}_id`;
+          query = query.eq(filterColumn, filterBy.id);
+        }
+
+        query = query.order("created_at", { ascending: false });
+
+        const { data, error } = await query;
 
         if (error) {
           console.error("Error fetching activities:", error);
@@ -80,7 +98,7 @@ export function ActivitiesList() {
       active = false;
       supabase.removeChannel(channel);
     };
-  }, [user]);
+  }, [user, filterBy]);
 
   if (!user) return null;
   if (loading) return <div>Lade Aktivitäten...</div>;

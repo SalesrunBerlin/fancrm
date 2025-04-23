@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,6 +11,7 @@ import { DealsList } from "@/components/common/DealsList";
 import { useDeals } from "@/hooks/useDeals";
 import { AccountDetailInfo } from "@/components/accounts/AccountDetailInfo";
 import { Account } from "@/lib/types/database";
+import { RelatedActivities } from "@/components/activities/RelatedActivities";
 
 export default function AccountDetail() {
   const { id } = useParams();
@@ -24,7 +24,6 @@ export default function AccountDetail() {
   const [isEditing, setIsEditing] = useState(false);
   const [editedAccount, setEditedAccount] = useState<Partial<Account>>({});
 
-  // Initialize the edit form when account data is loaded
   useEffect(() => {
     if (account) {
       setEditedAccount({ ...account });
@@ -63,7 +62,6 @@ export default function AccountDetail() {
 
   const handleDelete = async () => {
     try {
-      // Delete account logic would go here
       toast({
         title: "Success",
         description: "Account deleted successfully",
@@ -129,6 +127,8 @@ export default function AccountDetail() {
           });
         }}
       />
+
+      <RelatedActivities entityId={id!} entityType="account" />
 
       <DealsList 
         deals={accountDeals}

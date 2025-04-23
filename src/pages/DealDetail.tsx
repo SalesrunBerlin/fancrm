@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Card } from "@/components/ui/card";
@@ -10,6 +9,7 @@ import { DealEditForm } from "@/components/deals/DealEditForm";
 import { DeleteDialog } from "@/components/common/DeleteDialog";
 import { useToast } from "@/hooks/use-toast";
 import { DealProducts } from "@/components/deals/DealProducts";
+import { RelatedActivities } from "@/components/activities/RelatedActivities";
 
 export default function DealDetail() {
   const navigate = useNavigate();
@@ -124,6 +124,8 @@ export default function DealDetail() {
           )}
         </div>
       </Card>
+
+      <RelatedActivities entityId={id!} entityType="deal" />
 
       <DealProducts dealId={id!} />
 

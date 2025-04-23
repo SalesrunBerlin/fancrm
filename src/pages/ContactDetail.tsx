@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,6 +9,7 @@ import { DeleteDialog } from "@/components/common/DeleteDialog";
 import { DealsList } from "@/components/common/DealsList";
 import { useDeals } from "@/hooks/useDeals";
 import { useContactDetails } from "@/hooks/useContactDetails";
+import { RelatedActivities } from "@/components/activities/RelatedActivities";
 
 export default function ContactDetail() {
   const navigate = useNavigate();
@@ -100,6 +100,8 @@ export default function ContactDetail() {
           />
         )}
       </Card>
+
+      <RelatedActivities entityId={contact.id} entityType="contact" />
 
       <DealsList 
         deals={contactDeals}
