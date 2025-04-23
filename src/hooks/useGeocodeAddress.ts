@@ -24,7 +24,7 @@ export function useGeocodeAddress() {
       if (data.features && data.features.length > 0) {
         const [longitude, latitude] = data.features[0].center;
         console.log("Geocoding successful:", { latitude, longitude });
-        return { longitude, latitude };
+        return { longitude: Number(longitude), latitude: Number(latitude) };
       } else {
         console.log("No geocoding results found");
         throw new Error("No location data found");
@@ -36,7 +36,7 @@ export function useGeocodeAddress() {
         description: error.message ?? "Could not convert address to coordinates",
         variant: "destructive"
       });
-      return undefined;
+      return null;
     } finally {
       setIsLoading(false);
     }

@@ -83,6 +83,11 @@ export function useContactDetails() {
     try {
       console.log("Saving contact with data:", editedContact);
       
+      let coordinatesToSave = {
+        latitude: editedContact.latitude,
+        longitude: editedContact.longitude
+      };
+      
       // Make sure we have coordinates if there's a complete address
       if (hasCompleteAddress(editedContact) && (!editedContact.latitude || !editedContact.longitude)) {
         console.log("Getting coordinates before saving");
@@ -94,8 +99,10 @@ export function useContactDetails() {
         );
         
         if (coords) {
-          editedContact.latitude = coords.latitude;
-          editedContact.longitude = coords.longitude;
+          coordinatesToSave = {
+            latitude: coords.latitude,
+            longitude: coords.longitude
+          };
         }
       }
       
@@ -109,8 +116,8 @@ export function useContactDetails() {
         city: editedContact.city,
         postal_code: editedContact.postal_code,
         country: editedContact.country,
-        latitude: editedContact.latitude,
-        longitude: editedContact.longitude,
+        latitude: coordinatesToSave.latitude,
+        longitude: coordinatesToSave.longitude,
       };
       
       console.log("Updating contact with:", updateData);
@@ -120,9 +127,15 @@ export function useContactDetails() {
         .eq("id", id);
 
       if (error) throw error;
-      const updatedContact = { ...contact!, ...editedContact };
-      setContact(updatedContact as Contact);
-
+      
+      const updatedContact: Contact = {
+        ...contact!,
+        ...editedContact,
+        latitude: coordinatesToSave.latitude,
+        longitude: coordinatesToSave.longitude
+      };
+      
+      setContact(updatedContact);
       toast({ title: "Success", description: "Contact has been updated" });
     } catch (error) {
       console.error("Error saving contact:", error);
