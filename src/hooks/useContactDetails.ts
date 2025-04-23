@@ -1,11 +1,11 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { Contact } from "@/lib/types/database";
-import { shouldGeocodeAddress, geocodeAndUpdateContact } from "./useContactGeocode";
 import { useFetchContactRelations } from "./useFetchContactRelations";
 import { supabase } from "@/integrations/supabase/client";
+import { useGeocodeAddress } from "./useGeocodeAddress";
 
 /**
  * Haupt-Hook zur Verwaltung von Kontakt-Details inkl. Änderung, Löschen und Speicher-Logik.
@@ -21,19 +21,42 @@ export function useContactDetails() {
     accounts,
     isLoading,
   } = useFetchContactRelations(id);
-
   const [editedContact, setEditedContact] = useState<Partial<Contact>>({});
+  const { geocodeAddress, isLoading: isGeocodeLoading } = useGeocodeAddress();
 
   // Synchronisiere editedContact, wenn Kontakt geladen
   useEffect(() => {
     if (contact) {
       setEditedContact(contact);
-      // Geocoding bei fehlenden Koordinaten auslösen
-      if (shouldGeocodeAddress(contact)) {
-        geocodeAndUpdateContact(contact, setContact, setEditedContact);
-      }
     }
-  }, [contact, setContact]);
+  }, [contact]);
+
+  // Prüft, ob Adresse vollständig ist
+  function hasCompleteAddress(data: Partial<Contact>) {
+    return !!data.street && !!data.city && !!data.postal_code && !!data.country;
+  }
+
+  // Automatisch bei Adressänderungen Geocoding ausführen
+  const handleAddressBlur = useCallback(async () => {
+    if (!editedContact || !hasCompleteAddress(editedContact)) return;
+    // bereits Koordinaten vorhanden?
+    if (editedContact.latitude && editedContact.longitude) return;
+    // Geocode holen und Koordinaten setzen
+    const coords = await geocodeAddress(
+      editedContact.street!,
+      editedContact.postal_code!,
+      editedContact.city!,
+      editedContact.country || "Germany"
+    );
+    if (coords) {
+      setEditedContact((prev) => ({
+        ...prev,
+        latitude: coords.latitude,
+        longitude: coords.longitude,
+      }));
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editedContact.street, editedContact.postal_code, editedContact.city, editedContact.country]);
 
   const handleDelete = async () => {
     if (!id) return;
@@ -64,6 +87,8 @@ export function useContactDetails() {
         city: editedContact.city,
         postal_code: editedContact.postal_code,
         country: editedContact.country,
+        latitude: editedContact.latitude,
+        longitude: editedContact.longitude,
       };
       const { error } = await supabase
         .from("contacts")
@@ -73,11 +98,6 @@ export function useContactDetails() {
       if (error) throw error;
       const updatedContact = { ...contact!, ...editedContact };
       setContact(updatedContact as Contact);
-
-      // Geocode falls Adresse verändert wurde
-      if (shouldGeocodeAddress(updatedContact as Contact)) {
-        await geocodeAndUpdateContact(updatedContact as Contact, setContact, setEditedContact);
-      }
 
       toast({ title: "Erfolg", description: "Kontakt wurde aktualisiert" });
     } catch {
@@ -93,6 +113,11 @@ export function useContactDetails() {
     setEditedContact((prev) => ({
       ...prev,
       [field]: value,
+      // Wenn Adressfeld geändert wird, lösche bestehende Koordinaten
+      ...(field === "street" || field === "city" || field === "postal_code" || field === "country"
+        ? { latitude: undefined, longitude: undefined }
+        : {}
+      ),
     }));
   };
 
@@ -105,6 +130,8 @@ export function useContactDetails() {
     handleDelete,
     handleSave,
     handleFieldChange,
+    handleAddressBlur,
+    isAddressLoading: isGeocodeLoading,
     navigate,
   };
 }

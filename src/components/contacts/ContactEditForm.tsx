@@ -8,9 +8,11 @@ interface ContactEditFormProps {
   editedContact: Partial<Contact>;
   accounts: Array<{ id: string; name: string }>;
   onFieldChange: (field: keyof Contact, value: string) => void;
+  onAddressBlur?: () => void;
+  isAddressLoading?: boolean;
 }
 
-export function ContactEditForm({ editedContact, accounts, onFieldChange }: ContactEditFormProps) {
+export function ContactEditForm({ editedContact, accounts, onFieldChange, onAddressBlur, isAddressLoading }: ContactEditFormProps) {
   return (
     <div className="space-y-4">
       <div className="space-y-2">
@@ -61,7 +63,7 @@ export function ContactEditForm({ editedContact, accounts, onFieldChange }: Cont
         </Select>
       </div>
       
-      {/* Address Fields */}
+      {/* Adresseingabe */}
       <div className="pt-4 border-t">
         <h3 className="text-lg font-semibold mb-2">Address</h3>
         <div className="space-y-2">
@@ -69,6 +71,7 @@ export function ContactEditForm({ editedContact, accounts, onFieldChange }: Cont
           <Input 
             value={editedContact.street || ''} 
             onChange={(e) => onFieldChange('street', e.target.value)} 
+            onBlur={onAddressBlur}
           />
         </div>
         <div className="space-y-2">
@@ -76,6 +79,7 @@ export function ContactEditForm({ editedContact, accounts, onFieldChange }: Cont
           <Input 
             value={editedContact.city || ''} 
             onChange={(e) => onFieldChange('city', e.target.value)} 
+            onBlur={onAddressBlur}
           />
         </div>
         <div className="space-y-2">
@@ -83,6 +87,7 @@ export function ContactEditForm({ editedContact, accounts, onFieldChange }: Cont
           <Input 
             value={editedContact.postal_code || ''} 
             onChange={(e) => onFieldChange('postal_code', e.target.value)} 
+            onBlur={onAddressBlur}
           />
         </div>
         <div className="space-y-2">
@@ -90,8 +95,12 @@ export function ContactEditForm({ editedContact, accounts, onFieldChange }: Cont
           <Input 
             value={editedContact.country || 'Germany'} 
             onChange={(e) => onFieldChange('country', e.target.value)} 
+            onBlur={onAddressBlur}
           />
         </div>
+        {isAddressLoading && (
+          <p className="text-xs text-muted-foreground">Adresse wird geprüft...</p>
+        )}
       </div>
     </div>
   );

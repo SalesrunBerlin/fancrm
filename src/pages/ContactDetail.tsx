@@ -21,7 +21,9 @@ export default function ContactDetail() {
     isLoading, 
     handleDelete, 
     handleSave, 
-    handleFieldChange
+    handleFieldChange,
+    handleAddressBlur,
+    isAddressLoading
   } = useContactDetails();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -79,6 +81,8 @@ export default function ContactDetail() {
               editedContact={editedContact}
               accounts={accounts}
               onFieldChange={handleFieldChange}
+              onAddressBlur={handleAddressBlur}
+              isAddressLoading={isAddressLoading}
             />
           </CardContent>
         ) : (
