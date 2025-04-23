@@ -22,12 +22,25 @@ export function useContactDetails() {
     isLoading,
   } = useFetchContactRelations(id);
   const [editedContact, setEditedContact] = useState<Partial<Contact>>({});
+  const [geocodingError, setGeocodingError] = useState<string | null>(null);
   const { geocodeAddress, isLoading: isGeocodeLoading } = useGeocodeAddress();
 
   // Synchronize editedContact when contact is loaded
   useEffect(() => {
     if (contact) {
-      setEditedContact(contact);
+      // Convert any potential object-wrapped values to simple values
+      const processedContact = { ...contact };
+      
+      // Check if latitude or longitude are objects with _type and value properties
+      // This handles the case where they are returned as {_type: "undefined", value: "undefined"}
+      if (processedContact.latitude && typeof processedContact.latitude === 'object' && '_type' in processedContact.latitude) {
+        processedContact.latitude = undefined;
+      }
+      if (processedContact.longitude && typeof processedContact.longitude === 'object' && '_type' in processedContact.longitude) {
+        processedContact.longitude = undefined;
+      }
+      
+      setEditedContact(processedContact);
     }
   }, [contact]);
 
@@ -43,6 +56,7 @@ export function useContactDetails() {
       return;
     }
     
+    setGeocodingError(null);
     console.log("Address complete, getting coordinates");
     // Get geocode and update coordinates
     const coords = await geocodeAddress(
@@ -59,6 +73,8 @@ export function useContactDetails() {
         latitude: coords.latitude,
         longitude: coords.longitude,
       }));
+    } else {
+      setGeocodingError("Could not geocode address");
     }
   }, [editedContact, geocodeAddress]);
 
@@ -84,27 +100,41 @@ export function useContactDetails() {
       console.log("Saving contact with data:", editedContact);
       
       // Make sure we have coordinates if there's a complete address
-      let coordinatesToSave = {
-        latitude: editedContact.latitude,
-        longitude: editedContact.longitude
-      };
+      let coordinatesToSave: { latitude?: number, longitude?: number } = {};
+      let geocodingFailed = false;
       
-      if (hasCompleteAddress(editedContact) && (!editedContact.latitude || !editedContact.longitude)) {
-        console.log("Getting coordinates before saving");
-        const coords = await geocodeAddress(
-          editedContact.street!,
-          editedContact.postal_code!,
-          editedContact.city!,
-          editedContact.country || "Germany"
-        );
-        
-        if (coords) {
+      if (hasCompleteAddress(editedContact)) {
+        if (editedContact.latitude && editedContact.longitude) {
+          // Use existing coordinates
           coordinatesToSave = {
-            latitude: coords.latitude,
-            longitude: coords.longitude
+            latitude: Number(editedContact.latitude),
+            longitude: Number(editedContact.longitude)
           };
-          console.log("Got coordinates before saving:", coordinatesToSave);
+          console.log("Using existing coordinates:", coordinatesToSave);
+        } else {
+          console.log("Getting coordinates before saving");
+          // Try to geocode one last time before saving
+          const coords = await geocodeAddress(
+            editedContact.street!,
+            editedContact.postal_code!,
+            editedContact.city!,
+            editedContact.country || "Germany"
+          );
+          
+          if (coords) {
+            coordinatesToSave = {
+              latitude: coords.latitude,
+              longitude: coords.longitude
+            };
+            console.log("Got coordinates before saving:", coordinatesToSave);
+          } else {
+            geocodingFailed = true;
+            console.log("Failed to get coordinates before saving");
+          }
         }
+      } else {
+        // No complete address, clear coordinates
+        coordinatesToSave = { latitude: undefined, longitude: undefined };
       }
       
       const updateData = {
@@ -140,7 +170,18 @@ export function useContactDetails() {
       setContact(updatedContact);
       setEditedContact(updatedContact);
       
-      toast({ title: "Success", description: "Contact has been updated" });
+      if (geocodingFailed && hasCompleteAddress(editedContact)) {
+        toast({ 
+          title: "Contact saved", 
+          description: "Contact updated, but geocoding failed. Map display may not work correctly.",
+          variant: "default"
+        });
+      } else {
+        toast({ 
+          title: "Success", 
+          description: "Contact has been updated" 
+        });
+      }
     } catch (error) {
       console.error("Error saving contact:", error);
       toast({
@@ -175,5 +216,6 @@ export function useContactDetails() {
     handleAddressBlur,
     isAddressLoading: isGeocodeLoading,
     navigate,
+    geocodingError,
   };
 }

@@ -20,17 +20,30 @@ export function AddressMap({ latitude, longitude, address, className = "h-[200px
     latitude && longitude ? [longitude, latitude] : null
   );
 
-  // Geokodieren einer Adresse, wenn keine Koordinaten übergeben wurden
+  // Get Mapbox token - using the same method as in useGeocodeAddress for consistency
+  const getMapboxToken = () => {
+    return "pk.eyJ1IjoibG92YWJsZSIsImEiOiJjbG4xbWV2azQwMjd4MnFsdG41Z2l0djZhIn0.YF-MD7OxJhXCAX4rLKygtg";
+  };
+
+  // Geocode address if no coordinates are provided
   useEffect(() => {
     const geocodeAddress = async () => {
       if (!address || (latitude && longitude)) return;
       
       try {
+        const mapboxToken = getMapboxToken();
+        if (!mapboxToken) {
+          console.error("No Mapbox token provided for map");
+          return;
+        }
+
+        console.log("Geocoding address for map display:", address);
         const response = await fetch(
-          `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(address)}.json?access_token=pk.eyJ1IjoibG92YWJsZSIsImEiOiJjbG4xbWV2azQwMjd4MnFsdG41Z2l0djZhIn0.YF-MD7OxJhXCAX4rLKygtg`
+          `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(address)}.json?access_token=${mapboxToken}`
         );
 
         if (!response.ok) {
+          console.error(`Geocoding API error: ${response.status}`);
           throw new Error(`Geocoding API error: ${response.status}`);
         }
 
@@ -38,6 +51,9 @@ export function AddressMap({ latitude, longitude, address, className = "h-[200px
         if (data.features && data.features.length > 0) {
           const [longitude, latitude] = data.features[0].center;
           setMapCoordinates([longitude, latitude]);
+          console.log("Map geocoding successful:", { latitude, longitude });
+        } else {
+          console.log("No map geocoding results found");
         }
       } catch (err) {
         console.error('Error geocoding address:', err);
@@ -47,46 +63,73 @@ export function AddressMap({ latitude, longitude, address, className = "h-[200px
     geocodeAddress();
   }, [address, latitude, longitude]);
 
-  // Erstellen und Aktualisieren der Karte
+  // Update map coordinates when latitude/longitude props change
+  useEffect(() => {
+    if (latitude && longitude) {
+      setMapCoordinates([Number(longitude), Number(latitude)]);
+    }
+  }, [latitude, longitude]);
+
+  // Create and update map
   useEffect(() => {
     if (!mapContainer.current || !mapCoordinates) return;
 
-    mapboxgl.accessToken = "pk.eyJ1IjoibG92YWJsZSIsImEiOiJjbG4xbWV2azQwMjd4MnFsdG41Z2l0djZhIn0.YF-MD7OxJhXCAX4rLKygtg";
-
-    if (!map.current) {
-      map.current = new mapboxgl.Map({
-        container: mapContainer.current,
-        style: 'mapbox://styles/mapbox/streets-v12',
-        center: mapCoordinates,
-        zoom: 15
-      });
-
-      // Hinzufügen von Steuerungselementen
-      map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
-      setMapInitialized(true);
-    } else {
-      // Aktualisieren des Kartenzentrums, wenn sich die Koordinaten ändern
-      map.current.flyTo({
-        center: mapCoordinates,
-        zoom: 15,
-        essential: true
-      });
+    const token = getMapboxToken();
+    if (!token) {
+      console.error("No Mapbox token available for map");
+      return;
     }
 
-    // Marker auf der Karte hinzufügen/aktualisieren
-    if (mapInitialized) {
-      // Bestehende Marker entfernen
-      const existingMarkers = document.querySelectorAll('.mapboxgl-marker');
-      existingMarkers.forEach(marker => marker.remove());
-      
-      // Neuen Marker hinzufügen
-      new mapboxgl.Marker()
-        .setLngLat(mapCoordinates)
-        .addTo(map.current);
+    mapboxgl.accessToken = token;
+
+    if (!map.current) {
+      console.log("Creating new map with coordinates:", mapCoordinates);
+      try {
+        map.current = new mapboxgl.Map({
+          container: mapContainer.current,
+          style: 'mapbox://styles/mapbox/streets-v12',
+          center: mapCoordinates,
+          zoom: 15
+        });
+
+        // Add controls
+        map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
+        setMapInitialized(true);
+      } catch (err) {
+        console.error("Error creating map:", err);
+      }
+    } else {
+      // Update map center when coordinates change
+      console.log("Updating map center to:", mapCoordinates);
+      try {
+        map.current.flyTo({
+          center: mapCoordinates,
+          zoom: 15,
+          essential: true
+        });
+      } catch (err) {
+        console.error("Error updating map center:", err);
+      }
+    }
+
+    // Add/update marker
+    if (mapInitialized && map.current) {
+      try {
+        // Remove existing markers
+        const existingMarkers = document.querySelectorAll('.mapboxgl-marker');
+        existingMarkers.forEach(marker => marker.remove());
+        
+        // Add new marker
+        new mapboxgl.Marker()
+          .setLngLat(mapCoordinates)
+          .addTo(map.current);
+      } catch (err) {
+        console.error("Error adding marker to map:", err);
+      }
     }
 
     return () => {
-      // Cleanup nur durchführen, wenn die Komponente unmontiert wird
+      // Cleanup only when component unmounts
       if (map.current && mapContainer.current === null) {
         map.current.remove();
         map.current = null;
@@ -97,7 +140,7 @@ export function AddressMap({ latitude, longitude, address, className = "h-[200px
   if (!latitude && !longitude && !address) {
     return (
       <div className={`flex items-center justify-center bg-gray-100 rounded-lg ${className}`}>
-        <p className="text-gray-500 text-sm">Keine Adressdaten verfügbar</p>
+        <p className="text-gray-500 text-sm">No address data available</p>
       </div>
     );
   }
@@ -105,7 +148,7 @@ export function AddressMap({ latitude, longitude, address, className = "h-[200px
   if (!mapCoordinates) {
     return (
       <div className={`flex items-center justify-center bg-gray-100 rounded-lg ${className}`}>
-        <p className="text-gray-500 text-sm">Karte wird geladen...</p>
+        <p className="text-gray-500 text-sm">Loading map...</p>
       </div>
     );
   }

@@ -28,6 +28,16 @@ export function useGeocodeAddress() {
     
     try {
       const mapboxToken = getMapboxToken();
+      if (!mapboxToken) {
+        console.error("No Mapbox token provided");
+        toast({
+          title: "Geocoding Error",
+          description: "Missing API key for map service",
+          variant: "destructive"
+        });
+        return null;
+      }
+      
       console.log("Using Mapbox token:", mapboxToken ? "Token provided" : "No token");
       
       const response = await fetch(
@@ -55,7 +65,7 @@ export function useGeocodeAddress() {
         toast({
           title: "Address not found",
           description: "Could not locate this address on the map",
-          variant: "warning"
+          variant: "destructive"  // Changed from "warning" to "destructive" to fix the TS error
         });
         return null;
       }

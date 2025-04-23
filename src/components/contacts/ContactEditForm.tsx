@@ -3,7 +3,9 @@ import { Contact } from "@/lib/types/database";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2 } from "lucide-react";
+import { Loader2, CheckCircle2, AlertTriangle } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useEffect, useState } from "react";
 
 interface ContactEditFormProps {
   editedContact: Partial<Contact>;
@@ -14,11 +16,51 @@ interface ContactEditFormProps {
 }
 
 export function ContactEditForm({ editedContact, accounts, onFieldChange, onAddressBlur, isAddressLoading }: ContactEditFormProps) {
+  const [addressChanged, setAddressChanged] = useState(false);
+  const [showNoCoordinatesWarning, setShowNoCoordinatesWarning] = useState(false);
+  
   const hasCompleteAddress = Boolean(
     editedContact.street && 
     editedContact.city && 
     editedContact.postal_code
   );
+
+  // Reset address changed status when coordinates are successfully found
+  useEffect(() => {
+    if (editedContact.latitude && editedContact.longitude) {
+      setAddressChanged(false);
+      setShowNoCoordinatesWarning(false);
+    }
+  }, [editedContact.latitude, editedContact.longitude]);
+
+  // Show warning after a delay if coordinates still missing
+  useEffect(() => {
+    if (addressChanged && hasCompleteAddress && !isAddressLoading) {
+      const timer = setTimeout(() => {
+        if (!editedContact.latitude && !editedContact.longitude) {
+          setShowNoCoordinatesWarning(true);
+        }
+      }, 3000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [addressChanged, hasCompleteAddress, isAddressLoading, editedContact.latitude, editedContact.longitude]);
+  
+  const handleAddressChange = (field: keyof Contact, value: string) => {
+    // When address fields change, mark address as changed and clear coordinates
+    if (field === 'street' || field === 'city' || field === 'postal_code' || field === 'country') {
+      setAddressChanged(true);
+      setShowNoCoordinatesWarning(false);
+    }
+    onFieldChange(field, value);
+  };
+
+  const handleAddressFieldBlur = () => {
+    if (hasCompleteAddress && onAddressBlur) {
+      console.log("Address field blurred with complete address, triggering geocode");
+      onAddressBlur();
+    }
+  };
   
   return (
     <div className="space-y-4">
@@ -77,32 +119,32 @@ export function ContactEditForm({ editedContact, accounts, onFieldChange, onAddr
           <Label>Street</Label>
           <Input 
             value={editedContact.street || ''} 
-            onChange={(e) => onFieldChange('street', e.target.value)} 
-            onBlur={hasCompleteAddress ? onAddressBlur : undefined}
+            onChange={(e) => handleAddressChange('street', e.target.value)} 
+            onBlur={handleAddressFieldBlur}
           />
         </div>
         <div className="space-y-2">
           <Label>City</Label>
           <Input 
             value={editedContact.city || ''} 
-            onChange={(e) => onFieldChange('city', e.target.value)} 
-            onBlur={hasCompleteAddress ? onAddressBlur : undefined}
+            onChange={(e) => handleAddressChange('city', e.target.value)} 
+            onBlur={handleAddressFieldBlur}
           />
         </div>
         <div className="space-y-2">
           <Label>Postal Code</Label>
           <Input 
             value={editedContact.postal_code || ''} 
-            onChange={(e) => onFieldChange('postal_code', e.target.value)} 
-            onBlur={hasCompleteAddress ? onAddressBlur : undefined}
+            onChange={(e) => handleAddressChange('postal_code', e.target.value)} 
+            onBlur={handleAddressFieldBlur}
           />
         </div>
         <div className="space-y-2">
           <Label>Country</Label>
           <Input 
             value={editedContact.country || 'Germany'} 
-            onChange={(e) => onFieldChange('country', e.target.value)} 
-            onBlur={hasCompleteAddress ? onAddressBlur : undefined}
+            onChange={(e) => handleAddressChange('country', e.target.value)} 
+            onBlur={handleAddressFieldBlur}
           />
         </div>
         
@@ -114,15 +156,19 @@ export function ContactEditForm({ editedContact, accounts, onFieldChange, onAddr
         )}
         
         {editedContact.latitude && editedContact.longitude && (
-          <p className="text-xs text-green-600 mt-2">
+          <div className="flex items-center text-xs text-green-600 mt-2">
+            <CheckCircle2 className="h-3 w-3 mr-1" />
             Coordinates found: {Number(editedContact.latitude).toFixed(6)}, {Number(editedContact.longitude).toFixed(6)}
-          </p>
+          </div>
         )}
         
-        {hasCompleteAddress && !editedContact.latitude && !editedContact.longitude && !isAddressLoading && (
-          <p className="text-xs text-amber-600 mt-2">
-            Click save to geocode this address
-          </p>
+        {showNoCoordinatesWarning && (
+          <Alert variant="destructive" className="mt-2 py-2">
+            <AlertTriangle className="h-4 w-4 mr-2" />
+            <AlertDescription className="text-xs">
+              Could not get coordinates for this address. There may be an API key issue or the address cannot be found.
+            </AlertDescription>
+          </Alert>
         )}
       </div>
     </div>
