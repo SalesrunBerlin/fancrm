@@ -30,11 +30,11 @@ export default function ContactDetail() {
   const { data: deals } = useDeals();
 
   if (isLoading) {
-    return <div className="p-6 text-center">Kontakt wird geladen...</div>;
+    return <div className="p-6 text-center">Loading contact...</div>;
   }
 
   if (!contact) {
-    return <div className="p-6 text-center">Kontakt nicht gefunden</div>;
+    return <div className="p-6 text-center">Contact not found</div>;
   }
 
   const contactDeals = deals?.filter(deal => deal.contactId === contact.id) || [];
@@ -43,12 +43,20 @@ export default function ContactDetail() {
     setIsEditing(false);
   };
 
+  const handleSaveAndClose = () => {
+    handleSave();
+    setIsEditing(false);
+  };
+
+  console.log("Contact in detail view:", contact);
+  console.log("Edited contact in detail view:", editedContact);
+
   return (
     <div className="space-y-6 p-6">
       <div className="flex justify-between items-center">
         <Button variant="ghost" onClick={() => navigate(-1)}>
           <ArrowLeft className="mr-2 h-4 w-4" />
-          Zurück
+          Back
         </Button>
         <div className="space-x-2">
           {isEditing ? (
@@ -56,9 +64,9 @@ export default function ContactDetail() {
               <Button variant="outline" size="icon" onClick={handleCancelEdit}>
                 <X className="h-4 w-4" />
               </Button>
-              <Button onClick={() => { handleSave(); setIsEditing(false); }}>
+              <Button onClick={handleSaveAndClose}>
                 <Save className="h-4 w-4 mr-2" />
-                Speichern
+                Save
               </Button>
             </>
           ) : (
@@ -95,15 +103,15 @@ export default function ContactDetail() {
 
       <DealsList 
         deals={contactDeals}
-        title="Kontakt Deals"
+        title="Contact Deals"
       />
 
       <DeleteDialog
         isOpen={showDeleteDialog}
         onClose={() => setShowDeleteDialog(false)}
         onConfirm={handleDelete}
-        title="Kontakt löschen"
-        description="Sind Sie sicher, dass Sie diesen Kontakt löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden."
+        title="Delete Contact"
+        description="Are you sure you want to delete this contact? This action cannot be undone."
       />
     </div>
   );

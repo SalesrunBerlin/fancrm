@@ -8,7 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useGeocodeAddress } from "./useGeocodeAddress";
 
 /**
- * Haupt-Hook zur Verwaltung von Kontakt-Details inkl. Änderung, Löschen und Speicher-Logik.
+ * Main hook for managing contact details including editing, deleting, and saving logic
  */
 export function useContactDetails() {
   const { id } = useParams<{ id: string }>();
@@ -24,39 +24,43 @@ export function useContactDetails() {
   const [editedContact, setEditedContact] = useState<Partial<Contact>>({});
   const { geocodeAddress, isLoading: isGeocodeLoading } = useGeocodeAddress();
 
-  // Synchronisiere editedContact, wenn Kontakt geladen
+  // Synchronize editedContact when contact is loaded
   useEffect(() => {
     if (contact) {
       setEditedContact(contact);
     }
   }, [contact]);
 
-  // Prüft, ob Adresse vollständig ist
+  // Check if address is complete
   function hasCompleteAddress(data: Partial<Contact>) {
-    return !!data.street && !!data.city && !!data.postal_code && !!data.country;
+    return !!data.street && !!data.city && !!data.postal_code;
   }
 
-  // Automatisch bei Adressänderungen Geocoding ausführen
+  // Automatically geocode address on changes
   const handleAddressBlur = useCallback(async () => {
-    if (!editedContact || !hasCompleteAddress(editedContact)) return;
-    // bereits Koordinaten vorhanden?
-    if (editedContact.latitude && editedContact.longitude) return;
-    // Geocode holen und Koordinaten setzen
+    if (!editedContact || !hasCompleteAddress(editedContact)) {
+      console.log("Address incomplete, skipping geocoding");
+      return;
+    }
+    
+    console.log("Address complete, getting coordinates");
+    // Get geocode and update coordinates
     const coords = await geocodeAddress(
       editedContact.street!,
       editedContact.postal_code!,
       editedContact.city!,
       editedContact.country || "Germany"
     );
+    
     if (coords) {
+      console.log("Updating coordinates:", coords);
       setEditedContact((prev) => ({
         ...prev,
         latitude: coords.latitude,
         longitude: coords.longitude,
       }));
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editedContact.street, editedContact.postal_code, editedContact.city, editedContact.country]);
+  }, [editedContact.street, editedContact.postal_code, editedContact.city, editedContact.country, geocodeAddress]);
 
   const handleDelete = async () => {
     if (!id) return;
@@ -77,6 +81,24 @@ export function useContactDetails() {
   const handleSave = async () => {
     if (!id || !editedContact) return;
     try {
+      console.log("Saving contact with data:", editedContact);
+      
+      // Make sure we have coordinates if there's a complete address
+      if (hasCompleteAddress(editedContact) && (!editedContact.latitude || !editedContact.longitude)) {
+        console.log("Getting coordinates before saving");
+        const coords = await geocodeAddress(
+          editedContact.street!,
+          editedContact.postal_code!,
+          editedContact.city!,
+          editedContact.country || "Germany"
+        );
+        
+        if (coords) {
+          editedContact.latitude = coords.latitude;
+          editedContact.longitude = coords.longitude;
+        }
+      }
+      
       const updateData = {
         first_name: editedContact.firstName,
         last_name: editedContact.lastName,
@@ -90,6 +112,8 @@ export function useContactDetails() {
         latitude: editedContact.latitude,
         longitude: editedContact.longitude,
       };
+      
+      console.log("Updating contact with:", updateData);
       const { error } = await supabase
         .from("contacts")
         .update(updateData)
@@ -99,11 +123,12 @@ export function useContactDetails() {
       const updatedContact = { ...contact!, ...editedContact };
       setContact(updatedContact as Contact);
 
-      toast({ title: "Erfolg", description: "Kontakt wurde aktualisiert" });
-    } catch {
+      toast({ title: "Success", description: "Contact has been updated" });
+    } catch (error) {
+      console.error("Error saving contact:", error);
       toast({
-        title: "Fehler",
-        description: "Kontakt konnte nicht aktualisiert werden",
+        title: "Error",
+        description: "Contact could not be updated",
         variant: "destructive",
       });
     }
@@ -113,7 +138,7 @@ export function useContactDetails() {
     setEditedContact((prev) => ({
       ...prev,
       [field]: value,
-      // Wenn Adressfeld geändert wird, lösche bestehende Koordinaten
+      // Clear existing coordinates when address fields change
       ...(field === "street" || field === "city" || field === "postal_code" || field === "country"
         ? { latitude: undefined, longitude: undefined }
         : {}

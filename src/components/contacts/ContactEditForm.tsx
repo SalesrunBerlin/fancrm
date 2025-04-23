@@ -13,6 +13,12 @@ interface ContactEditFormProps {
 }
 
 export function ContactEditForm({ editedContact, accounts, onFieldChange, onAddressBlur, isAddressLoading }: ContactEditFormProps) {
+  // Function to handle address field changes and trigger blur
+  const handleAddressChange = (field: keyof Contact, value: string) => {
+    onFieldChange(field, value);
+    // Don't trigger geocoding on every keystroke to avoid API rate limits
+  };
+
   return (
     <div className="space-y-4">
       <div className="space-y-2">
@@ -63,14 +69,14 @@ export function ContactEditForm({ editedContact, accounts, onFieldChange, onAddr
         </Select>
       </div>
       
-      {/* Adresseingabe */}
+      {/* Address input */}
       <div className="pt-4 border-t">
         <h3 className="text-lg font-semibold mb-2">Address</h3>
         <div className="space-y-2">
           <Label>Street</Label>
           <Input 
             value={editedContact.street || ''} 
-            onChange={(e) => onFieldChange('street', e.target.value)} 
+            onChange={(e) => handleAddressChange('street', e.target.value)} 
             onBlur={onAddressBlur}
           />
         </div>
@@ -78,7 +84,7 @@ export function ContactEditForm({ editedContact, accounts, onFieldChange, onAddr
           <Label>City</Label>
           <Input 
             value={editedContact.city || ''} 
-            onChange={(e) => onFieldChange('city', e.target.value)} 
+            onChange={(e) => handleAddressChange('city', e.target.value)} 
             onBlur={onAddressBlur}
           />
         </div>
@@ -86,7 +92,7 @@ export function ContactEditForm({ editedContact, accounts, onFieldChange, onAddr
           <Label>Postal Code</Label>
           <Input 
             value={editedContact.postal_code || ''} 
-            onChange={(e) => onFieldChange('postal_code', e.target.value)} 
+            onChange={(e) => handleAddressChange('postal_code', e.target.value)} 
             onBlur={onAddressBlur}
           />
         </div>
@@ -94,12 +100,17 @@ export function ContactEditForm({ editedContact, accounts, onFieldChange, onAddr
           <Label>Country</Label>
           <Input 
             value={editedContact.country || 'Germany'} 
-            onChange={(e) => onFieldChange('country', e.target.value)} 
+            onChange={(e) => handleAddressChange('country', e.target.value)} 
             onBlur={onAddressBlur}
           />
         </div>
         {isAddressLoading && (
-          <p className="text-xs text-muted-foreground">Adresse wird geprüft...</p>
+          <p className="text-xs text-muted-foreground mt-2">Verifying address...</p>
+        )}
+        {editedContact.latitude && editedContact.longitude && (
+          <p className="text-xs text-green-600 mt-2">
+            Coordinates found: {editedContact.latitude.toFixed(6)}, {editedContact.longitude.toFixed(6)}
+          </p>
         )}
       </div>
     </div>
