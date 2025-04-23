@@ -15,6 +15,7 @@ export function useContacts() {
       console.log("Fetching contacts for user:", user.id);
       
       // We're using the Supabase client which automatically includes the auth token
+      // Add a filter to only get contacts where owner_id matches the current user's ID
       const { data, error } = await supabase
         .from("contacts")
         .select(`
@@ -22,7 +23,8 @@ export function useContacts() {
           accounts:account_id (
             name
           )
-        `);
+        `)
+        .eq('owner_id', user.id); // This is the critical change - filter by owner_id
 
       if (error) {
         console.error("Error fetching contacts:", error);
