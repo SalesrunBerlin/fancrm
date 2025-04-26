@@ -1,13 +1,11 @@
-
 import { useState } from "react";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
 /** 
  * Hook that geocodes an address to coordinates using Mapbox
  */
 export function useGeocodeAddress() {
   const [isLoading, setIsLoading] = useState(false);
-  const { toast } = useToast();
   
   const getMapboxToken = () => {
     return "pk.eyJ1IjoibG92YWJsZSIsImEiOiJjbG4xbWV2azQwMjd4MnFsdG41Z2l0djZhIn0.YF-MD7OxJhXCAX4rLKygtg";
@@ -52,10 +50,8 @@ export function useGeocodeAddress() {
       };
     } catch (error: any) {
       console.error("Geocoding error:", error);
-      toast({
-        title: "Geocoding Error",
+      toast.error("Geocoding Error", {
         description: error.message ?? "Could not convert address to coordinates",
-        variant: "destructive"
       });
       return null;
     } finally {
