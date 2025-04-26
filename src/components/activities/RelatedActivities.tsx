@@ -14,6 +14,12 @@ interface RelatedActivitiesProps {
 
 export function RelatedActivities({ entityId, entityType }: RelatedActivitiesProps) {
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  const handleActivityCreated = () => {
+    setShowCreateModal(false);
+    setRefreshKey(prev => prev + 1);
+  };
 
   return (
     <Card>
@@ -28,7 +34,11 @@ export function RelatedActivities({ entityId, entityType }: RelatedActivitiesPro
         </Button>
       </CardHeader>
       <CardContent>
-        <ActivitiesList filterBy={{ type: entityType, id: entityId }} />
+        <ActivitiesList 
+          filterBy={{ type: entityType, id: entityId }}
+          key={refreshKey}
+          showAddButton={false}
+        />
       </CardContent>
 
       <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
@@ -41,7 +51,7 @@ export function RelatedActivities({ entityId, entityType }: RelatedActivitiesPro
               [entityType === 'account' ? 'accountId' : 
                 entityType === 'contact' ? 'contactId' : 'dealId']: entityId
             }}
-            onSuccess={() => setShowCreateModal(false)}
+            onSuccess={handleActivityCreated}
           />
         </DialogContent>
       </Dialog>

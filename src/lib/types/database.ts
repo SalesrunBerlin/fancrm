@@ -43,3 +43,21 @@ export interface Account {
   // Add contacts relation
   contacts?: Contact[];
 }
+
+export interface Activity {
+  id: string;
+  type: string;
+  subject: string;
+  description?: string;
+  scheduled_at?: string | null;
+  outcome?: string | null;
+  status: "open" | "done" | "planned";
+  accountId?: string | null;
+  contactId?: string | null;
+  dealId?: string | null;
+  owner_id: string;
+  createdAt: string;
+  updatedAt: string;
+  account?: Account | null;
+  contact?: Contact | null;
+}

@@ -1,12 +1,20 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ActivityForm } from "@/components/activities/ActivityForm";
 import { ActivitiesList } from "@/components/activities/ActivitiesList";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useActivities } from "@/hooks/useActivities";
 
 export default function Activities() {
   const [showForm, setShowForm] = useState(false);
+  const { activities, loading } = useActivities();
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  const handleActivityCreated = () => {
+    setShowForm(false);
+    setRefreshKey(prev => prev + 1);
+  };
 
   return (
     <div className="space-y-6 animate-fade-in max-w-2xl mx-auto">
@@ -19,10 +27,18 @@ export default function Activities() {
       </div>
       {showForm && (
         <div className="mb-2">
-          <ActivityForm onSuccess={() => setShowForm(false)} />
+          <ActivityForm onSuccess={handleActivityCreated} />
         </div>
       )}
-      <ActivitiesList />
+      {loading ? (
+        <div className="text-center">Loading activities...</div>
+      ) : (
+        <ActivitiesList 
+          activities={activities} 
+          key={refreshKey}
+          showAddButton={false}
+        />
+      )}
     </div>
   );
 }
