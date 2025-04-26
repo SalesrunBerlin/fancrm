@@ -13,148 +13,80 @@ interface AddressMapProps {
 export function AddressMap({ latitude, longitude, address, className = "h-[200px]" }: AddressMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
-  const [mapInitialized, setMapInitialized] = useState(false);
-  const [mapCoordinates, setMapCoordinates] = useState<[number, number] | null>(
-    latitude && longitude ? [longitude, latitude] : null
-  );
-  const [marker, setMarker] = useState<mapboxgl.Marker | null>(null);
-  const [mapError, setMapError] = useState<string | null>(null);
+  const marker = useRef<mapboxgl.Marker | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  // Update map coordinates when props change
   useEffect(() => {
-    if (latitude && longitude) {
-      setMapCoordinates([longitude, latitude]);
-      console.log("Map coordinates updated:", { latitude, longitude });
+    if (!mapContainer.current || !latitude || !longitude) {
+      console.log("Map initialization skipped:", { container: !!mapContainer.current, lat: latitude, lng: longitude });
+      return;
+    }
+
+    try {
+      console.log("Initializing map with coordinates:", { latitude, longitude });
+      
+      mapboxgl.accessToken = 'pk.eyJ1IjoibG92YWJsZSIsImEiOiJjbG4xbWV2azQwMjd4MnFsdG41Z2l0djZhIn0.YF-MD7OxJhXCAX4rLKygtg';
+      
+      const newMap = new mapboxgl.Map({
+        container: mapContainer.current,
+        style: 'mapbox://styles/mapbox/streets-v11',
+        center: [longitude, latitude],
+        zoom: 15,
+      });
+
+      newMap.on('load', () => {
+        console.log("Map loaded successfully");
+      });
+
+      newMap.on('error', (e) => {
+        console.error("Map error:", e);
+        setError("Error loading map");
+      });
+
+      // Add navigation control
+      newMap.addControl(new mapboxgl.NavigationControl(), 'top-right');
+
+      // Add marker
+      const newMarker = new mapboxgl.Marker({ color: '#FF0000' })
+        .setLngLat([longitude, latitude])
+        .addTo(newMap);
+
+      map.current = newMap;
+      marker.current = newMarker;
+
+      return () => {
+        if (marker.current) {
+          marker.current.remove();
+        }
+        if (map.current) {
+          map.current.remove();
+        }
+      };
+    } catch (err) {
+      console.error("Map initialization error:", err);
+      setError("Could not initialize map");
     }
   }, [latitude, longitude]);
 
-  // Initialize map only once
-  useEffect(() => {
-    if (!mapContainer.current || !mapCoordinates || map.current) return;
-
-    console.log("Creating new map with coordinates:", mapCoordinates);
-    
-    try {
-      // Configuration for OpenStreetMap as tile layer
-      mapboxgl.accessToken = 'pk.eyJ1IjoibG92YWJsZSIsImEiOiJjbG4xbWV2azQwMjd4MnFsdG41Z2l0djZhIn0.YF-MD7OxJhXCAX4rLKygtg';
-      
-      const mapInstance = new mapboxgl.Map({
-        container: mapContainer.current,
-        style: {
-          version: 8,
-          sources: {
-            'osm-tiles': {
-              type: 'raster',
-              tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
-              tileSize: 256,
-              attribution: '© OpenStreetMap contributors'
-            }
-          },
-          layers: [
-            {
-              id: 'osm-tiles',
-              type: 'raster',
-              source: 'osm-tiles',
-              minzoom: 0,
-              maxzoom: 19
-            }
-          ]
-        },
-        center: mapCoordinates,
-        zoom: 15
-      });
-
-      mapInstance.addControl(new mapboxgl.NavigationControl(), 'top-right');
-      
-      // Set the map reference
-      map.current = mapInstance;
-      
-      // Create marker when map is loaded
-      mapInstance.on('load', () => {
-        console.log("Map loaded successfully");
-        setMapInitialized(true);
-        
-        // Add marker after map is loaded
-        if (mapCoordinates) {
-          const newMarker = new mapboxgl.Marker({
-            color: "#FF0000",
-            draggable: false
-          })
-          .setLngLat(mapCoordinates)
-          .addTo(mapInstance);
-          setMarker(newMarker);
-        }
-      });
-
-      mapInstance.on('error', (e) => {
-        console.error("Map error:", e);
-        setMapError("Error loading map");
-      });
-    } catch (error) {
-      console.error("Map initialization error:", error);
-      setMapError("Could not initialize map");
-    }
-
-    // Cleanup function
-    return () => {
-      console.log("Cleaning up map");
-      if (marker) {
-        marker.remove();
-      }
-      if (map.current) {
-        map.current.remove();
-        map.current = null;
-      }
-    };
-  }, [mapCoordinates]); // Only initialize map when coordinates change or on first render
-
-  // Update marker and map center when coordinates change (but map already exists)
-  useEffect(() => {
-    if (!mapCoordinates || !map.current || !mapInitialized) return;
-
-    console.log("Updating map center to:", mapCoordinates);
-    
-    // Update map center with animation
-    map.current.flyTo({
-      center: mapCoordinates,
-      zoom: 15,
-      essential: true
-    });
-
-    // Update marker position
-    if (marker) {
-      marker.setLngLat(mapCoordinates);
-    } else if (map.current) {
-      // Create new marker if it doesn't exist
-      const newMarker = new mapboxgl.Marker({
-        color: "#FF0000",
-        draggable: false
-      })
-      .setLngLat(mapCoordinates)
-      .addTo(map.current);
-      setMarker(newMarker);
-    }
-  }, [mapCoordinates, mapInitialized, marker]);
-
-  if (!latitude && !longitude && !address) {
+  if (!latitude || !longitude) {
     return (
       <div className={`flex items-center justify-center bg-gray-100 rounded-lg ${className}`}>
-        <p className="text-gray-500 text-sm">No address data available</p>
+        <p className="text-gray-500 text-sm">No coordinates available</p>
       </div>
     );
   }
 
-  if (mapError) {
+  if (error) {
     return (
       <div className={`flex items-center justify-center bg-gray-100 rounded-lg ${className}`}>
-        <p className="text-gray-500 text-sm">{mapError}</p>
+        <p className="text-red-500 text-sm">{error}</p>
       </div>
     );
   }
 
   return (
     <div className="map-wrapper">
-      <div ref={mapContainer} className="map-container" style={{ height: '100%', width: '100%' }} />
+      <div ref={mapContainer} className="map-container" />
     </div>
   );
 }

@@ -1,4 +1,3 @@
-
 import { Contact } from "@/lib/types/database";
 import { AddressMap } from "@/components/common/AddressMap";
 
@@ -8,7 +7,6 @@ interface ContactInfoProps {
 }
 
 export function ContactInfo({ contact, ownerName }: ContactInfoProps) {
-  // Adresstext für direkte Geokodierung, falls Koordinaten fehlen
   const fullAddress = contact.street && contact.city && contact.postal_code
     ? `${contact.street}, ${contact.postal_code} ${contact.city}, ${contact.country || 'Germany'}`
     : null;
@@ -56,14 +54,16 @@ export function ContactInfo({ contact, ownerName }: ContactInfoProps) {
         )}
       </div>
       {hasAddressData && (
-        <div className="map-container-wrapper" style={{ height: "250px" }}>
+        <div className="relative h-[250px]">
           <h3 className="text-lg font-semibold mb-2">Location</h3>
-          <AddressMap 
-            latitude={contact.latitude} 
-            longitude={contact.longitude}
-            address={fullAddress || undefined}
-            className="h-full w-full"
-          />
+          <div className="absolute inset-0 top-10">
+            <AddressMap 
+              latitude={contact.latitude} 
+              longitude={contact.longitude}
+              address={fullAddress || undefined}
+              className="h-full w-full"
+            />
+          </div>
         </div>
       )}
     </div>

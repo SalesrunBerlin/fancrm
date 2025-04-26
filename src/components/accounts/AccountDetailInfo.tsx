@@ -1,4 +1,3 @@
-
 import { Account } from "@/lib/types/database";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,7 +24,6 @@ export function AccountDetailInfo({
   onSave,
   onEditFieldChange,
 }: AccountDetailInfoProps) {
-  // Adresstext für direkte Geokodierung, falls Koordinaten fehlen
   const fullAddress = account.street && account.city && account.postal_code
     ? `${account.street}, ${account.postal_code} ${account.city}, ${account.country || 'Germany'}`
     : null;
@@ -84,14 +82,16 @@ export function AccountDetailInfo({
                   </div>
                 </div>
                 {hasAddressData && (
-                  <div className="map-container-wrapper" style={{ height: "250px" }}>
+                  <div className="relative h-[250px]">
                     <h3 className="text-lg font-semibold mb-2">Location</h3>
-                    <AddressMap 
-                      latitude={account.latitude} 
-                      longitude={account.longitude}
-                      address={fullAddress || undefined}
-                      className="h-full w-full"
-                    />
+                    <div className="absolute inset-0 top-10">
+                      <AddressMap 
+                        latitude={account.latitude} 
+                        longitude={account.longitude}
+                        address={fullAddress || undefined}
+                        className="h-full w-full"
+                      />
+                    </div>
                   </div>
                 )}
               </div>

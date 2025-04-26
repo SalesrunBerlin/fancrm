@@ -1,4 +1,3 @@
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -124,35 +123,42 @@
   border-radius: 0.5rem;
   overflow: hidden;
   isolation: isolate;
+  z-index: 0;
 }
 
 .map-container {
-  position: absolute;
+  position: absolute !important;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  z-index: 100;
   border-radius: 0.5rem;
   overflow: hidden;
 }
 
-.map-placeholder {
-  @apply flex items-center justify-center bg-gray-100 rounded-lg;
+.mapboxgl-canvas-container,
+.mapboxgl-canvas {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.mapboxgl-map {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 100%;
   height: 100%;
 }
 
-/* Force map elements to appear above all other content */
-.mapboxgl-canvas-container,
-.mapboxgl-canvas,
+/* Ensure map controls appear above other content */
 .mapboxgl-control-container {
-  z-index: 101 !important;
-}
-
-.mapboxgl-marker {
-  z-index: 102 !important;
+  z-index: 2;
 }
 
 .mapboxgl-popup {
-  z-index: 103 !important;
+  z-index: 3;
+}
+
+.mapboxgl-marker {
+  z-index: 3;
 }
