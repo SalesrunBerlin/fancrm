@@ -103,7 +103,7 @@ export function AddressMap({ latitude, longitude, address, className = "h-[200px
   }
 
   return (
-    <div className={`rounded-lg overflow-hidden ${className}`}>
+    <div className={`rounded-lg overflow-hidden ${className} relative z-10`}>
       <div ref={mapContainer} className="w-full h-full" />
     </div>
   );
