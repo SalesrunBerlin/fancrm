@@ -2,7 +2,6 @@
 import { Activity } from "@/lib/types/database";
 import { format } from "date-fns";
 import { Phone, Calendar, CheckCircle, Circle } from "lucide-react";
-import { useNavigate } from "react-router-dom";
 
 const activityTypeIcons: Record<string, React.ReactNode> = {
   call: <Phone className="h-4 w-4" />,
@@ -15,20 +14,10 @@ interface ActivityItemProps {
 }
 
 export function ActivityItem({ activity, onClick }: ActivityItemProps) {
-  const navigate = useNavigate();
-  
-  const handleClick = () => {
-    if (onClick) {
-      onClick();
-    } else {
-      navigate(`/activities/${activity.id}`);
-    }
-  };
-
   return (
     <div
       className="border rounded-md p-4 hover:bg-muted/50 cursor-pointer transition-colors"
-      onClick={handleClick}
+      onClick={onClick}
     >
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">

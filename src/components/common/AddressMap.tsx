@@ -18,10 +18,6 @@ export function AddressMap({ latitude, longitude, address, className = "h-[200px
     latitude && longitude ? [longitude, latitude] : null
   );
 
-  const getMapboxToken = () => {
-    return "pk.eyJ1IjoibG92YWJsZWFwcCIsImEiOiJjbHY5cjI3cDUwMnVzMnRvZHp6dng4bjQxIn0.a-KUJUuggl3Dy3DZBR_xPQ";
-  };
-
   // Update map coordinates when props change
   useEffect(() => {
     if (latitude && longitude) {
@@ -34,19 +30,16 @@ export function AddressMap({ latitude, longitude, address, className = "h-[200px
   useEffect(() => {
     if (!mapContainer.current || !mapCoordinates) return;
 
-    const token = getMapboxToken();
-    if (!token) {
-      console.error("No Mapbox token available");
-      return;
-    }
-
-    mapboxgl.accessToken = token;
-
+    // Setze Mapbox als kostenlose Basiskarte ein, aber mit OpenStreetMap-Tiles
     if (!map.current) {
       console.log("Creating new map with coordinates:", mapCoordinates);
+      
+      // Free Mapbox public token that only allows using the map, not geocoding
+      mapboxgl.accessToken = 'pk.eyJ1IjoibG92YWJsZSIsImEiOiJjbG4xbWV2azQwMjd4MnFsdG41Z2l0djZhIn0.YF-MD7OxJhXCAX4rLKygtg';
+      
       map.current = new mapboxgl.Map({
         container: mapContainer.current,
-        style: 'mapbox://styles/mapbox/streets-v12',
+        style: 'mapbox://styles/mapbox/streets-v12', // Kostenloser Style
         center: mapCoordinates,
         zoom: 15
       });

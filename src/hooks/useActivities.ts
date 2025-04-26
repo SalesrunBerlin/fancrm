@@ -2,7 +2,6 @@
 import { useState } from "react";
 import { Activity } from "@/lib/types/database";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -37,7 +36,28 @@ export function useActivities() {
       throw error;
     }
     
-    return (data || []) as Activity[];
+    // Konvertiere von snake_case zu camelCase
+    return (data || []).map(item => ({
+      id: item.id,
+      type: item.type,
+      subject: item.subject,
+      description: item.description,
+      scheduled_at: item.scheduled_at,
+      outcome: item.outcome,
+      status: item.status as "open" | "done" | "planned",
+      accountId: item.account_id,
+      contactId: item.contact_id,
+      dealId: item.deal_id,
+      owner_id: item.owner_id,
+      createdAt: item.created_at,
+      updatedAt: item.updated_at,
+      // Behalte snake_case Felder für API-Operationen
+      account_id: item.account_id,
+      contact_id: item.contact_id,
+      deal_id: item.deal_id,
+      created_at: item.created_at,
+      updated_at: item.updated_at
+    })) as Activity[];
   };
 
   const createActivity = async (activityData: Partial<Activity>) => {
@@ -46,22 +66,56 @@ export function useActivities() {
     setLoading(true);
     
     try {
+      // Konvertiere zu snake_case für die Datenbank
+      const dbActivity = {
+        type: activityData.type,
+        subject: activityData.subject || "",  // Standard-Wert, da required
+        description: activityData.description,
+        scheduled_at: activityData.scheduled_at,
+        outcome: activityData.outcome,
+        status: activityData.status || "open",
+        account_id: activityData.accountId,
+        contact_id: activityData.contactId,
+        deal_id: activityData.dealId,
+        owner_id: user.id,
+      };
+      
       const { data, error } = await supabase
         .from("activities")
-        .insert({
-          ...activityData,
-          owner_id: user.id,
-        })
+        .insert(dbActivity)
         .select()
         .single();
         
       if (error) throw error;
       
+      // Konvertiere zurück zu camelCase
+      const newActivity: Activity = {
+        id: data.id,
+        type: data.type,
+        subject: data.subject,
+        description: data.description,
+        scheduled_at: data.scheduled_at,
+        outcome: data.outcome,
+        status: data.status as "open" | "done" | "planned",
+        accountId: data.account_id,
+        contactId: data.contact_id,
+        dealId: data.deal_id,
+        owner_id: data.owner_id,
+        createdAt: data.created_at,
+        updatedAt: data.updated_at,
+        // Behalte snake_case Felder
+        account_id: data.account_id,
+        contact_id: data.contact_id,
+        deal_id: data.deal_id,
+        created_at: data.created_at,
+        updated_at: data.updated_at
+      };
+      
       // Invalidate queries to refetch data
       queryClient.invalidateQueries({ queryKey: ['activities'] });
       
       toast.success("Activity created successfully");
-      return data as Activity;
+      return newActivity;
     } catch (error: any) {
       console.error("Error creating activity:", error);
       toast.error("Error creating activity", {

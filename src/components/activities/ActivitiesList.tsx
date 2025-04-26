@@ -1,6 +1,5 @@
 
-import { useState, useEffect } from "react";
-import { Activity } from "@/lib/types/database";
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
@@ -8,9 +7,10 @@ import { ActivityItem } from "@/components/activities/ActivityItem";
 import { ActivityForm } from "@/components/activities/ActivityForm";
 import { useActivities } from "@/hooks/useActivities";
 import { useNavigate } from "react-router-dom";
+import { Activity } from "@/lib/types/database";
 
 interface ActivitiesListProps {
-  activities?: Activity[];
+  activities: Activity[];
   title?: string;
   showAddButton?: boolean;
   entityId?: string;
@@ -19,29 +19,18 @@ interface ActivitiesListProps {
   filterBy?: { type: 'contact' | 'account' | 'deal'; id: string };
 }
 
-export function ActivitiesList({
-  activities: propActivities,
-  title = "Activities",
+export function ActivitiesList({ 
+  activities, 
+  title = "Activities", 
   showAddButton = true,
   entityId,
   entityType,
   onActivityCreated,
-  filterBy,
+  filterBy
 }: ActivitiesListProps) {
   const [showActivityForm, setShowActivityForm] = useState(false);
-  const { createActivity, fetchActivities } = useActivities();
+  const { createActivity } = useActivities();
   const navigate = useNavigate();
-  const [activities, setActivities] = useState<Activity[]>([]);
-
-  useEffect(() => {
-    if (propActivities) {
-      setActivities(propActivities);
-    } else if (filterBy) {
-      fetchActivities(filterBy).then(data => {
-        setActivities(data);
-      });
-    }
-  }, [propActivities, filterBy, fetchActivities]);
 
   const handleCreateActivity = async (activityData: Partial<Activity>) => {
     try {
@@ -58,14 +47,9 @@ export function ActivitiesList({
 
       await createActivity(activityData);
       setShowActivityForm(false);
+      
       if (onActivityCreated) {
         onActivityCreated();
-      }
-      
-      // Refresh activities if we're using filterBy
-      if (filterBy) {
-        const updatedActivities = await fetchActivities(filterBy);
-        setActivities(updatedActivities);
       }
     } catch (error) {
       console.error("Error creating activity:", error);
@@ -77,7 +61,10 @@ export function ActivitiesList({
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>{title}</CardTitle>
         {showAddButton && (
-          <Button size="sm" onClick={() => setShowActivityForm(true)}>
+          <Button
+            size="sm"
+            onClick={() => setShowActivityForm(true)}
+          >
             <Plus className="mr-2 h-4 w-4" />
             Add Activity
           </Button>
@@ -87,21 +74,20 @@ export function ActivitiesList({
         {showActivityForm && (
           <div className="mb-6">
             <ActivityForm
-              onSuccess={(data) => {
-                handleCreateActivity(data);
-              }}
-              initialValues={{
+              onSubmit={handleCreateActivity}
+              onCancel={() => setShowActivityForm(false)}
+              defaultValues={{
                 type: 'call',
                 status: 'planned',
                 ...(entityId && entityType === 'contact' ? { contactId: entityId } : {}),
                 ...(entityId && entityType === 'account' ? { accountId: entityId } : {}),
-                ...(entityId && entityType === 'deal' ? { dealId: entityId } : {})
+                ...(entityId && entityType === 'deal' ? { dealId: entityId } : {}),
               }}
             />
           </div>
         )}
 
-        {!activities || activities.length === 0 ? (
+        {activities.length === 0 ? (
           <div className="text-center py-4 text-muted-foreground">
             No activities found
           </div>

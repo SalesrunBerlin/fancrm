@@ -3,16 +3,11 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 /** 
- * Hook that geocodes an address to coordinates using Mapbox
+ * Hook that geocodes an address to coordinates using OpenStreetMap Nominatim
  */
 export function useGeocodeAddress() {
   const [isLoading, setIsLoading] = useState(false);
   
-  const getMapboxToken = () => {
-    // This is a valid public Mapbox token with access to geocoding API
-    return "pk.eyJ1IjoibG92YWJsZWFwcCIsImEiOiJjbHY5cjI3cDUwMnVzMnRvZHp6dng4bjQxIn0.a-KUJUuggl3Dy3DZBR_xPQ";
-  };
-
   const geocodeAddress = async (street: string, postal_code: string, city: string, country: string = "Germany") => {
     if (!street || !postal_code || !city) {
       console.log("Incomplete address, returning null coordinates");
@@ -24,13 +19,15 @@ export function useGeocodeAddress() {
     console.log("Geocoding address:", address);
     
     try {
-      const mapboxToken = getMapboxToken();
-      if (!mapboxToken) {
-        throw new Error("Missing API key for map service");
-      }
-      
+      // Nominatim API von OpenStreetMap nutzen (kostenlos, kein API-Key erforderlich)
       const response = await fetch(
-        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(address)}.json?access_token=${mapboxToken}`
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=1`,
+        {
+          headers: {
+            // User-Agent wird von Nominatim empfohlen
+            'User-Agent': 'LovableCRM/1.0'
+          }
+        }
       );
       
       if (!response.ok) {
@@ -40,16 +37,19 @@ export function useGeocodeAddress() {
       
       const data = await response.json();
       
-      if (!data.features?.length) {
-        throw new Error("No coordinates found for this address");
+      if (!data?.length) {
+        toast.warning("Adresse nicht gefunden", {
+          description: "Die eingegebene Adresse konnte nicht gefunden werden."
+        });
+        return null;
       }
 
-      const [longitude, latitude] = data.features[0].center;
-      console.log("Geocoding successful:", { latitude, longitude });
+      const { lat, lon } = data[0];
+      console.log("Geocoding successful:", { latitude: lat, longitude: lon });
       
       return { 
-        longitude: Number(longitude), 
-        latitude: Number(latitude) 
+        longitude: Number(lon), 
+        latitude: Number(lat)
       };
     } catch (error: any) {
       console.error("Geocoding error:", error);

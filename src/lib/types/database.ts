@@ -60,4 +60,10 @@ export interface Activity {
   updatedAt: string;
   account?: Account | null;
   contact?: Contact | null;
+  // Datenbankfeldnamen für die Datenabfrage
+  account_id?: string | null;
+  contact_id?: string | null;
+  deal_id?: string | null;
+  created_at?: string;
+  updated_at?: string;
 }
