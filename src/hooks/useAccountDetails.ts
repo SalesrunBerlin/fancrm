@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { Account, Contact } from "@/lib/types/database";
@@ -5,13 +6,14 @@ import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useGeocodeAddress } from '@/hooks/useGeocodeAddress';
+import { toast } from 'sonner';
 
 export function useAccountDetails(accountId: string | undefined) {
   const [account, setAccount] = useState<Account | null>(null);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [ownerName, setOwnerName] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const { toast } = useToast();
+  const { toast: uiToast } = useToast();
   const navigate = useNavigate();
   const { user } = useAuth();
 
@@ -36,10 +38,8 @@ export function useAccountDetails(accountId: string | undefined) {
       
       // Check if the user is logged in
       if (!user) {
-        toast({
-          title: "Fehler",
-          description: "Sie müssen angemeldet sein, um Accounts anzuzeigen",
-          variant: "destructive"
+        toast.error("Error", {
+          description: "Sie müssen angemeldet sein, um Accounts anzuzeigen"
         });
         navigate('/accounts');
         return;
@@ -57,17 +57,13 @@ export function useAccountDetails(accountId: string | undefined) {
         
         // If no rows returned, it means the user doesn't own this account
         if (accountError.code === 'PGRST116') {
-          toast({
-            title: "Zugriff verweigert",
-            description: "Sie haben keinen Zugriff auf diesen Account",
-            variant: "destructive"
+          toast.error("Zugriff verweigert", {
+            description: "Sie haben keinen Zugriff auf diesen Account"
           });
           navigate('/accounts');
         } else {
-          toast({
-            title: "Fehler",
-            description: "Account-Details konnten nicht geladen werden",
-            variant: "destructive"
+          toast.error("Fehler", {
+            description: "Account-Details konnten nicht geladen werden"
           });
         }
         return;
@@ -110,11 +106,6 @@ export function useAccountDetails(accountId: string | undefined) {
           const { first_name, last_name } = accountData.profiles;
           setOwnerName(`${first_name} ${last_name}`.trim());
         }
-        
-        // Geocode address if we have complete address but missing coordinates
-        // if (shouldGeocodeAddress(transformedAccount)) {
-        //   await updateAccountGeocode(transformedAccount);
-        // }
       }
 
     } catch (err) {
@@ -123,45 +114,6 @@ export function useAccountDetails(accountId: string | undefined) {
       setIsLoading(false);
     }
   };
-
-  // const updateAccountGeocode = async (account: Account) => {
-  //   if (!shouldGeocodeAddress(account)) return;
-
-  //   const address = `${account.street}, ${account.postal_code} ${account.city}, ${account.country}`;
-  //   console.log("Geocoding account address:", address);
-    
-  //   try {
-  //     const response = await fetch(
-  //       `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(address)}.json?access_token=pk.eyJ1IjoibG92YWJsZSIsImEiOiJjbG4xbWV2azQwMjd4MnFsdG41Z2l0djZhIn0.YF-MD7OxJhXCAX4rLKygtg`
-  //     );
-
-  //     if (!response.ok) {
-  //       throw new Error(`Geocoding API error: ${response.status}`);
-  //     }
-
-  //     const data = await response.json();
-  //     if (data.features && data.features.length > 0) {
-  //       const [longitude, latitude] = data.features[0].center;
-  //       console.log("Geocoding successful:", { latitude, longitude });
-        
-  //       const { error } = await supabase
-  //         .from('accounts')
-  //         .update({ latitude, longitude })
-  //         .eq('id', account.id);
-
-  //       if (error) {
-  //         console.error('Error updating coordinates:', error);
-  //       } else {
-  //         console.log("Account coordinates saved to database");
-  //         setAccount(prev => prev ? { ...prev, latitude, longitude } : null);
-  //       }
-  //     } else {
-  //       console.warn("No geocoding results found for address:", address);
-  //     }
-  //   } catch (err) {
-  //     console.error('Error geocoding account address:', err);
-  //   }
-  // };
 
   const updateAccount = async (updatedAccount: Account) => {
     try {
@@ -210,65 +162,26 @@ export function useAccountDetails(accountId: string | undefined) {
         longitude: dbAccount.longitude
       });
       
-      toast({
-        title: "Success",
-        description: coordinates 
-          ? "Account updated with coordinates" 
-          : "Account updated without coordinates",
-      });
+      if (coordinates) {
+        toast.success("Account updated", {
+          description: "Address coordinates were successfully saved"
+        });
+      } else if (hasCompleteAddress(updatedAccount)) {
+        toast.warning("Account updated", {
+          description: "Address was saved but coordinates could not be determined"
+        });
+      } else {
+        toast.success("Account updated", {
+          description: "Account information was saved successfully"
+        });
+      }
     } catch (error: any) {
       console.error('Error updating account:', error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to update account",
-        variant: "destructive",
+      toast.error("Error", {
+        description: error.message || "Failed to update account"
       });
     }
   };
-
-  // const updateAccount = async (updatedAccount: Account) => {
-  //   try {
-  //     // Convert the account data to match the database schema
-  //     const dbAccount = {
-  //       name: updatedAccount.name,
-  //       type: updatedAccount.type,
-  //       website: updatedAccount.website,
-  //       industry: updatedAccount.industry,
-  //       street: updatedAccount.street,
-  //       city: updatedAccount.city,
-  //       postal_code: updatedAccount.postal_code,
-  //       country: updatedAccount.country
-  //     };
-
-  //     const { error } = await supabase
-  //       .from('accounts')
-  //       .update(dbAccount)
-  //       .eq('id', updatedAccount.id);
-
-  //     if (error) throw error;
-
-  //     // Update the local state
-  //     setAccount({...updatedAccount});
-      
-  //     // Update geocode if address changed and coordinates needed
-  //     if (shouldGeocodeAddress(updatedAccount)) {
-  //       await updateAccountGeocode(updatedAccount);
-  //     }
-      
-  //     toast({
-  //       title: "Success",
-  //       description: "Account updated successfully",
-  //     });
-  //   } catch (error) {
-  //     console.error('Error updating account:', error);
-  //     toast({
-  //       title: "Error",
-  //       description: "Failed to update account",
-  //       variant: "destructive",
-  //     });
-  //     throw error;
-  //   }
-  // };
 
   useEffect(() => {
     if (accountId) {

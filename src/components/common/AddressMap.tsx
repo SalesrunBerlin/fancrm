@@ -19,7 +19,7 @@ export function AddressMap({ latitude, longitude, address, className = "h-[200px
   );
 
   const getMapboxToken = () => {
-    return "pk.eyJ1IjoibG92YWJsZSIsImEiOiJjbG4xbWV2azQwMjd4MnFsdG41Z2l0djZhIn0.YF-MD7OxJhXCAX4rLKygtg";
+    return "pk.eyJ1IjoibG92YWJsZWFwcCIsImEiOiJjbHY5cjI3cDUwMnVzMnRvZHp6dng4bjQxIn0.a-KUJUuggl3Dy3DZBR_xPQ";
   };
 
   // Update map coordinates when props change

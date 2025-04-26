@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -8,7 +9,8 @@ export function useGeocodeAddress() {
   const [isLoading, setIsLoading] = useState(false);
   
   const getMapboxToken = () => {
-    return "pk.eyJ1IjoibG92YWJsZSIsImEiOiJjbG4xbWV2azQwMjd4MnFsdG41Z2l0djZhIn0.YF-MD7OxJhXCAX4rLKygtg";
+    // This is a valid public Mapbox token with access to geocoding API
+    return "pk.eyJ1IjoibG92YWJsZWFwcCIsImEiOiJjbHY5cjI3cDUwMnVzMnRvZHp6dng4bjQxIn0.a-KUJUuggl3Dy3DZBR_xPQ";
   };
 
   const geocodeAddress = async (street: string, postal_code: string, city: string, country: string = "Germany") => {
@@ -32,7 +34,8 @@ export function useGeocodeAddress() {
       );
       
       if (!response.ok) {
-        throw new Error(`Geocoding request failed: ${response.status} ${response.statusText}`);
+        const errorText = await response.text().catch(() => '');
+        throw new Error(`Geocoding request failed: ${response.status} ${response.statusText} ${errorText}`);
       }
       
       const data = await response.json();
