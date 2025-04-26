@@ -6,6 +6,7 @@ import { Plus } from "lucide-react";
 import { useState } from "react";
 import { ActivityForm } from "./ActivityForm";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useActivities } from "@/hooks/useActivities";
 
 interface RelatedActivitiesProps {
   entityId: string;
@@ -15,6 +16,8 @@ interface RelatedActivitiesProps {
 export function RelatedActivities({ entityId, entityType }: RelatedActivitiesProps) {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const { activities: allActivities, fetchActivities } = useActivities();
+  const [entityActivities, setEntityActivities] = useState<any[]>([]);
 
   const handleActivityCreated = () => {
     setShowCreateModal(false);
@@ -47,11 +50,11 @@ export function RelatedActivities({ entityId, entityType }: RelatedActivitiesPro
             <DialogTitle>Neue Aktivität</DialogTitle>
           </DialogHeader>
           <ActivityForm 
+            onSuccess={handleActivityCreated}
             initialValues={{
               [entityType === 'account' ? 'accountId' : 
                 entityType === 'contact' ? 'contactId' : 'dealId']: entityId
             }}
-            onSuccess={handleActivityCreated}
           />
         </DialogContent>
       </Dialog>

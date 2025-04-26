@@ -10,7 +10,7 @@ import { useNavigate } from "react-router-dom";
 import { Activity } from "@/lib/types/database";
 
 interface ActivitiesListProps {
-  activities: Activity[];
+  activities?: Activity[];
   title?: string;
   showAddButton?: boolean;
   entityId?: string;
@@ -20,7 +20,7 @@ interface ActivitiesListProps {
 }
 
 export function ActivitiesList({ 
-  activities, 
+  activities = [], 
   title = "Activities", 
   showAddButton = true,
   entityId,
@@ -29,8 +29,32 @@ export function ActivitiesList({
   filterBy
 }: ActivitiesListProps) {
   const [showActivityForm, setShowActivityForm] = useState(false);
-  const { createActivity } = useActivities();
+  const { createActivity, fetchActivities } = useActivities();
   const navigate = useNavigate();
+  const [loadedActivities, setLoadedActivities] = useState<Activity[]>([]);
+  const [loading, setLoading] = useState(filterBy !== undefined);
+
+  // If filterBy is provided, fetch filtered activities
+  useState(() => {
+    const loadData = async () => {
+      if (filterBy) {
+        setLoading(true);
+        try {
+          const data = await fetchActivities(filterBy);
+          setLoadedActivities(data || []);
+        } catch (error) {
+          console.error("Error fetching activities:", error);
+        } finally {
+          setLoading(false);
+        }
+      }
+    };
+    
+    loadData();
+  });
+
+  // Determine which activities to display
+  const displayActivities = filterBy ? loadedActivities : activities;
 
   const handleCreateActivity = async (activityData: Partial<Activity>) => {
     try {
@@ -50,6 +74,12 @@ export function ActivitiesList({
       
       if (onActivityCreated) {
         onActivityCreated();
+      }
+
+      // If we're displaying filtered activities, refresh the list
+      if (filterBy) {
+        const data = await fetchActivities(filterBy);
+        setLoadedActivities(data || []);
       }
     } catch (error) {
       console.error("Error creating activity:", error);
@@ -74,8 +104,10 @@ export function ActivitiesList({
         {showActivityForm && (
           <div className="mb-6">
             <ActivityForm
-              onSubmit={handleCreateActivity}
-              onCancel={() => setShowActivityForm(false)}
+              onSuccess={() => {
+                setShowActivityForm(false);
+                if (onActivityCreated) onActivityCreated();
+              }}
               defaultValues={{
                 type: 'call',
                 status: 'planned',
@@ -87,13 +119,17 @@ export function ActivitiesList({
           </div>
         )}
 
-        {activities.length === 0 ? (
+        {loading ? (
+          <div className="text-center py-4 text-muted-foreground">
+            Loading activities...
+          </div>
+        ) : displayActivities.length === 0 ? (
           <div className="text-center py-4 text-muted-foreground">
             No activities found
           </div>
         ) : (
           <div className="space-y-4">
-            {activities.map((activity) => (
+            {displayActivities.map((activity) => (
               <ActivityItem
                 key={activity.id}
                 activity={activity}

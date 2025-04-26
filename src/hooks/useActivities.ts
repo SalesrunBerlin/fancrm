@@ -29,35 +29,40 @@ export function useActivities() {
       }
     }
     
-    const { data, error } = await query.order('scheduled_at', { ascending: false });
-    
-    if (error) {
+    try {
+      const { data, error } = await query.order('scheduled_at', { ascending: false });
+      
+      if (error) {
+        console.error("Error fetching activities:", error);
+        throw error;
+      }
+      
+      // Konvertiere von snake_case zu camelCase
+      return (data || []).map(item => ({
+        id: item.id,
+        type: item.type,
+        subject: item.subject,
+        description: item.description,
+        scheduled_at: item.scheduled_at,
+        outcome: item.outcome,
+        status: item.status as "open" | "done" | "planned",
+        accountId: item.account_id,
+        contactId: item.contact_id,
+        dealId: item.deal_id,
+        owner_id: item.owner_id,
+        createdAt: item.created_at,
+        updatedAt: item.updated_at,
+        // Behalte snake_case Felder für API-Operationen
+        account_id: item.account_id,
+        contact_id: item.contact_id,
+        deal_id: item.deal_id,
+        created_at: item.created_at,
+        updated_at: item.updated_at
+      })) as Activity[];
+    } catch (error) {
       console.error("Error fetching activities:", error);
-      throw error;
+      return [];
     }
-    
-    // Konvertiere von snake_case zu camelCase
-    return (data || []).map(item => ({
-      id: item.id,
-      type: item.type,
-      subject: item.subject,
-      description: item.description,
-      scheduled_at: item.scheduled_at,
-      outcome: item.outcome,
-      status: item.status as "open" | "done" | "planned",
-      accountId: item.account_id,
-      contactId: item.contact_id,
-      dealId: item.deal_id,
-      owner_id: item.owner_id,
-      createdAt: item.created_at,
-      updatedAt: item.updated_at,
-      // Behalte snake_case Felder für API-Operationen
-      account_id: item.account_id,
-      contact_id: item.contact_id,
-      deal_id: item.deal_id,
-      created_at: item.created_at,
-      updated_at: item.updated_at
-    })) as Activity[];
   };
 
   const createActivity = async (activityData: Partial<Activity>) => {

@@ -10,17 +10,33 @@ import { ActivityAccountSelect } from "./ActivityAccountSelect";
 import { ActivityContactSelect } from "./ActivityContactSelect";
 import { ActivityDealSelect } from "./ActivityDealSelect";
 import { ActivityTypeSelect } from "./ActivityTypeSelect";
+import { Activity } from "@/lib/types/database";
 
-interface ActivityFormProps {
+export interface ActivityFormProps {
   onSuccess: () => void;
   initialValues?: {
     accountId?: string;
     contactId?: string;
     dealId?: string;
   };
+  onSubmit?: (activityData: Partial<Activity>) => Promise<void>;
+  onCancel?: () => void;
+  defaultValues?: {
+    type?: string;
+    status?: string;
+    contactId?: string;
+    accountId?: string;
+    dealId?: string;
+  };
 }
 
-export function ActivityForm({ onSuccess, initialValues = {} }: ActivityFormProps) {
+export function ActivityForm({ 
+  onSuccess, 
+  initialValues = {}, 
+  onSubmit: externalSubmit,
+  onCancel: externalCancel,
+  defaultValues = {}
+}: ActivityFormProps) {
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -28,16 +44,41 @@ export function ActivityForm({ onSuccess, initialValues = {} }: ActivityFormProp
   const [description, setDescription] = useState("");
   const [scheduledAt, setScheduledAt] = useState("");
   const [outcome, setOutcome] = useState("");
-  const [status, setStatus] = useState<"open" | "done">("open");
-  const [type, setType] = useState<string>("call");
-  const [accountId, setAccountId] = useState<string | null>(initialValues.accountId || null);
-  const [contactId, setContactId] = useState<string | null>(initialValues.contactId || null);
-  const [dealId, setDealId] = useState<string | null>(initialValues.dealId || null);
+  const [status, setStatus] = useState<"open" | "done" | "planned">(
+    (defaultValues.status as "open" | "done" | "planned") || "open"
+  );
+  const [type, setType] = useState<string>(defaultValues.type || "call");
+  const [accountId, setAccountId] = useState<string | null>(
+    initialValues.accountId || defaultValues.accountId || null
+  );
+  const [contactId, setContactId] = useState<string | null>(
+    initialValues.contactId || defaultValues.contactId || null
+  );
+  const [dealId, setDealId] = useState<string | null>(
+    initialValues.dealId || defaultValues.dealId || null
+  );
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
+
+    const activityData = {
+      type,
+      subject,
+      description,
+      scheduled_at: scheduledAt ? scheduledAt : null,
+      outcome,
+      status,
+      accountId,
+      contactId,
+      dealId,
+    };
+
+    if (externalSubmit) {
+      await externalSubmit(activityData);
+      return;
+    }
 
     setLoading(true);
 
@@ -75,6 +116,12 @@ export function ActivityForm({ onSuccess, initialValues = {} }: ActivityFormProp
     setContactId(null);
     setDealId(null);
     onSuccess();
+  };
+
+  const handleCancel = () => {
+    if (externalCancel) {
+      externalCancel();
+    }
   };
 
   return (
@@ -140,10 +187,28 @@ export function ActivityForm({ onSuccess, initialValues = {} }: ActivityFormProp
           />{" "}
           Erledigt
         </label>
+        <label>
+          <input
+            type="radio"
+            name="status"
+            value="planned"
+            checked={status === "planned"}
+            onChange={() => setStatus("planned")}
+            disabled={loading}
+          />{" "}
+          Geplant
+        </label>
       </div>
-      <Button type="submit" disabled={loading}>
-        {loading ? "Speichern..." : "Speichern"}
-      </Button>
+      <div className="flex gap-2">
+        <Button type="submit" disabled={loading}>
+          {loading ? "Speichern..." : "Speichern"}
+        </Button>
+        {externalCancel && (
+          <Button type="button" variant="outline" onClick={handleCancel} disabled={loading}>
+            Abbrechen
+          </Button>
+        )}
+      </div>
     </form>
   );
 }

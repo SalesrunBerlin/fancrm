@@ -1,7 +1,7 @@
 
 import { Activity } from "@/lib/types/database";
 import { format } from "date-fns";
-import { Phone, Calendar, CheckCircle, Circle } from "lucide-react";
+import { Phone, Calendar, CheckCircle, Circle, Clock } from "lucide-react";
 
 const activityTypeIcons: Record<string, React.ReactNode> = {
   call: <Phone className="h-4 w-4" />,
@@ -14,6 +14,18 @@ interface ActivityItemProps {
 }
 
 export function ActivityItem({ activity, onClick }: ActivityItemProps) {
+  // Handle status icon and color
+  const getStatusIcon = () => {
+    switch (activity.status) {
+      case "done":
+        return <CheckCircle className="h-4 w-4 text-green-500" />;
+      case "planned":
+        return <Clock className="h-4 w-4 text-yellow-500" />;
+      default:
+        return <Circle className="h-4 w-4 text-yellow-500" />;
+    }
+  };
+
   return (
     <div
       className="border rounded-md p-4 hover:bg-muted/50 cursor-pointer transition-colors"
@@ -27,11 +39,7 @@ export function ActivityItem({ activity, onClick }: ActivityItemProps) {
           <span className="font-medium">{activity.subject}</span>
         </div>
         <div className="flex items-center gap-2">
-          {activity.status === "done" ? (
-            <CheckCircle className="h-4 w-4 text-green-500" />
-          ) : (
-            <Circle className="h-4 w-4 text-yellow-500" />
-          )}
+          {getStatusIcon()}
           <span className="text-xs text-muted-foreground">
             {activity.status.toUpperCase()}
           </span>
