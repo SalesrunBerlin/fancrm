@@ -30,16 +30,35 @@ export function AddressMap({ latitude, longitude, address, className = "h-[200px
   useEffect(() => {
     if (!mapContainer.current || !mapCoordinates) return;
 
-    // Setze Mapbox als kostenlose Basiskarte ein, aber mit OpenStreetMap-Tiles
+    // Initialize map if not already created
     if (!map.current) {
       console.log("Creating new map with coordinates:", mapCoordinates);
       
-      // Free Mapbox public token that only allows using the map, not geocoding
+      // Alternativer Ansatz mit OpenStreetMap als Tile-Layer
       mapboxgl.accessToken = 'pk.eyJ1IjoibG92YWJsZSIsImEiOiJjbG4xbWV2azQwMjd4MnFsdG41Z2l0djZhIn0.YF-MD7OxJhXCAX4rLKygtg';
       
       map.current = new mapboxgl.Map({
         container: mapContainer.current,
-        style: 'mapbox://styles/mapbox/streets-v12', // Kostenloser Style
+        style: {
+          version: 8,
+          sources: {
+            'osm-tiles': {
+              type: 'raster',
+              tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+              tileSize: 256,
+              attribution: '© OpenStreetMap contributors'
+            }
+          },
+          layers: [
+            {
+              id: 'osm-tiles',
+              type: 'raster',
+              source: 'osm-tiles',
+              minzoom: 0,
+              maxzoom: 19
+            }
+          ]
+        },
         center: mapCoordinates,
         zoom: 15
       });
