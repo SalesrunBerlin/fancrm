@@ -17,6 +17,7 @@ export function AddressMap({ latitude, longitude, address, className = "h-[200px
   const [mapCoordinates, setMapCoordinates] = useState<[number, number] | null>(
     latitude && longitude ? [longitude, latitude] : null
   );
+  const [marker, setMarker] = useState<mapboxgl.Marker | null>(null);
 
   // Update map coordinates when props change
   useEffect(() => {
@@ -26,73 +27,97 @@ export function AddressMap({ latitude, longitude, address, className = "h-[200px
     }
   }, [latitude, longitude]);
 
-  // Initialize and update map
+  // Initialize map only once
   useEffect(() => {
-    if (!mapContainer.current || !mapCoordinates) return;
+    if (!mapContainer.current || !mapCoordinates || map.current) return;
 
-    // Initialize map if not already created
-    if (!map.current) {
-      console.log("Creating new map with coordinates:", mapCoordinates);
-      
-      // Alternativer Ansatz mit OpenStreetMap als Tile-Layer
-      mapboxgl.accessToken = 'pk.eyJ1IjoibG92YWJsZSIsImEiOiJjbG4xbWV2azQwMjd4MnFsdG41Z2l0djZhIn0.YF-MD7OxJhXCAX4rLKygtg';
-      
-      map.current = new mapboxgl.Map({
-        container: mapContainer.current,
-        style: {
-          version: 8,
-          sources: {
-            'osm-tiles': {
-              type: 'raster',
-              tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
-              tileSize: 256,
-              attribution: '© OpenStreetMap contributors'
-            }
-          },
-          layers: [
-            {
-              id: 'osm-tiles',
-              type: 'raster',
-              source: 'osm-tiles',
-              minzoom: 0,
-              maxzoom: 19
-            }
-          ]
+    console.log("Creating new map with coordinates:", mapCoordinates);
+    
+    // Konfiguration für OpenStreetMap als Tile-Layer
+    mapboxgl.accessToken = 'pk.eyJ1IjoibG92YWJsZSIsImEiOiJjbG4xbWV2azQwMjd4MnFsdG41Z2l0djZhIn0.YF-MD7OxJhXCAX4rLKygtg';
+    
+    const mapInstance = new mapboxgl.Map({
+      container: mapContainer.current,
+      style: {
+        version: 8,
+        sources: {
+          'osm-tiles': {
+            type: 'raster',
+            tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+            tileSize: 256,
+            attribution: '© OpenStreetMap contributors'
+          }
         },
-        center: mapCoordinates,
-        zoom: 15
-      });
+        layers: [
+          {
+            id: 'osm-tiles',
+            type: 'raster',
+            source: 'osm-tiles',
+            minzoom: 0,
+            maxzoom: 19
+          }
+        ]
+      },
+      center: mapCoordinates,
+      zoom: 15
+    });
 
-      map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
+    mapInstance.addControl(new mapboxgl.NavigationControl(), 'top-right');
+    
+    // Set the map reference
+    map.current = mapInstance;
+    
+    // Create marker when map is loaded
+    mapInstance.on('load', () => {
+      console.log("Map loaded successfully");
       setMapInitialized(true);
-    } else if (mapInitialized) {
-      console.log("Updating map center to:", mapCoordinates);
-      map.current.flyTo({
-        center: mapCoordinates,
-        zoom: 15,
-        essential: true
-      });
-    }
-
-    // Update marker
-    if (mapInitialized && map.current) {
-      // Remove existing markers
-      const existingMarkers = document.querySelectorAll('.mapboxgl-marker');
-      existingMarkers.forEach(marker => marker.remove());
       
-      // Add new marker
-      new mapboxgl.Marker()
-        .setLngLat(mapCoordinates)
-        .addTo(map.current);
-    }
+      // Add marker after map is loaded
+      if (mapCoordinates) {
+        const newMarker = new mapboxgl.Marker()
+          .setLngLat(mapCoordinates)
+          .addTo(mapInstance);
+        setMarker(newMarker);
+      }
+    });
 
+    // Cleanup function
     return () => {
-      if (map.current && !mapContainer.current) {
+      console.log("Cleaning up map");
+      if (marker) {
+        marker.remove();
+      }
+      if (map.current) {
         map.current.remove();
         map.current = null;
       }
     };
-  }, [mapCoordinates, mapInitialized]);
+  }, [mapCoordinates]); // Only initialize map when coordinates change or on first render
+
+  // Update marker and map center when coordinates change (but map already exists)
+  useEffect(() => {
+    if (!mapCoordinates || !map.current || !mapInitialized) return;
+
+    console.log("Updating map center to:", mapCoordinates);
+    
+    // Update map center with animation
+    map.current.flyTo({
+      center: mapCoordinates,
+      zoom: 15,
+      essential: true
+    });
+
+    // Update marker position
+    if (marker) {
+      marker.setLngLat(mapCoordinates);
+    } else if (map.current) {
+      // Create new marker if it doesn't exist
+      const newMarker = new mapboxgl.Marker()
+        .setLngLat(mapCoordinates)
+        .addTo(map.current);
+      setMarker(newMarker);
+    }
+  }, [mapCoordinates, mapInitialized, marker]);
 
   if (!latitude && !longitude && !address) {
     return (
@@ -103,7 +128,7 @@ export function AddressMap({ latitude, longitude, address, className = "h-[200px
   }
 
   return (
-    <div className={`rounded-lg overflow-hidden ${className} relative z-10`}>
+    <div className={`rounded-lg overflow-hidden ${className} relative z-20`}>
       <div ref={mapContainer} className="w-full h-full" />
     </div>
   );
