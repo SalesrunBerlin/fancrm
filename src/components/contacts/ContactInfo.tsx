@@ -56,7 +56,7 @@ export function ContactInfo({ contact, ownerName }: ContactInfoProps) {
         )}
       </div>
       {hasAddressData && (
-        <div>
+        <div className="relative" style={{ minHeight: "200px", zIndex: 30 }}>
           <h3 className="text-lg font-semibold mb-2">Location</h3>
           <AddressMap 
             latitude={contact.latitude} 

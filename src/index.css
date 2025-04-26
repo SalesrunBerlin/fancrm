@@ -117,7 +117,7 @@
 
 /* Map related styles */
 .map-container {
-  @apply relative z-20 rounded-lg overflow-hidden;
+  @apply relative z-50 rounded-lg overflow-hidden;
   height: 100%;
 }
 
@@ -125,3 +125,12 @@
   @apply flex items-center justify-center bg-gray-100 rounded-lg;
   height: 100%;
 }
+
+/* Ensure map elements are visible */
+.mapboxgl-canvas-container,
+.mapboxgl-canvas,
+.mapboxgl-control-container,
+.mapboxgl-marker {
+  z-index: 50 !important;
+}
+
