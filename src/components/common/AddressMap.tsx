@@ -33,7 +33,7 @@ export function AddressMap({ latitude, longitude, address, className = "h-[200px
 
     console.log("Creating new map with coordinates:", mapCoordinates);
     
-    // Konfiguration für OpenStreetMap als Tile-Layer
+    // Configuration for OpenStreetMap as tile layer
     mapboxgl.accessToken = 'pk.eyJ1IjoibG92YWJsZSIsImEiOiJjbG4xbWV2azQwMjd4MnFsdG41Z2l0djZhIn0.YF-MD7OxJhXCAX4rLKygtg';
     
     const mapInstance = new mapboxgl.Map({
@@ -128,7 +128,7 @@ export function AddressMap({ latitude, longitude, address, className = "h-[200px
   }
 
   return (
-    <div className={`rounded-lg overflow-hidden ${className} relative z-20`}>
+    <div className={`rounded-lg overflow-hidden ${className} relative z-30`}>
       <div ref={mapContainer} className="w-full h-full" />
     </div>
   );

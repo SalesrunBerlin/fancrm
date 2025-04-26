@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -102,4 +103,25 @@
 
 .crm-table-head {
   @apply h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0;
+}
+
+/* Animation utilities */
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out;
+}
+
+/* Map related styles */
+.map-container {
+  @apply relative z-20 rounded-lg overflow-hidden;
+  height: 100%;
+}
+
+.map-placeholder {
+  @apply flex items-center justify-center bg-gray-100 rounded-lg;
+  height: 100%;
 }

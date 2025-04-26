@@ -28,7 +28,7 @@ export function ActivityItem({ activity, onClick }: ActivityItemProps) {
 
   return (
     <div
-      className="border rounded-md p-4 hover:bg-muted/50 cursor-pointer transition-colors"
+      className="border rounded-md p-4 hover:bg-muted/50 cursor-pointer transition-colors animate-fade-in shadow-sm"
       onClick={onClick}
     >
       <div className="flex items-center justify-between mb-2">
@@ -40,7 +40,7 @@ export function ActivityItem({ activity, onClick }: ActivityItemProps) {
         </div>
         <div className="flex items-center gap-2">
           {getStatusIcon()}
-          <span className="text-xs text-muted-foreground">
+          <span className="text-xs text-muted-foreground font-medium">
             {activity.status.toUpperCase()}
           </span>
         </div>
