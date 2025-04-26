@@ -1,7 +1,7 @@
 
 import { useEffect, useRef, useState } from 'react';
-import mapboxgl from 'mapbox-gl';
-import 'mapbox-gl/dist/mapbox-gl.css';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 
 interface AddressMapProps {
   latitude?: number | null;
@@ -12,8 +12,8 @@ interface AddressMapProps {
 
 export function AddressMap({ latitude, longitude, address, className = "h-[200px]" }: AddressMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
-  const map = useRef<mapboxgl.Map | null>(null);
-  const marker = useRef<mapboxgl.Marker | null>(null);
+  const map = useRef<L.Map | null>(null);
+  const marker = useRef<L.Marker | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -24,49 +24,50 @@ export function AddressMap({ latitude, longitude, address, className = "h-[200px
 
     try {
       console.log("Initializing map with coordinates:", { latitude, longitude });
-      
-      mapboxgl.accessToken = 'pk.eyJ1IjoibG92YWJsZSIsImEiOiJjbG4xbWV2azQwMjd4MnFsdG41Z2l0djZhIn0.YF-MD7OxJhXCAX4rLKygtg';
-      
-      const newMap = new mapboxgl.Map({
-        container: mapContainer.current,
-        style: 'mapbox://styles/mapbox/streets-v11',
-        center: [longitude, latitude],
-        zoom: 15,
-      });
 
-      newMap.on('load', () => {
-        console.log("Map loaded successfully");
-      });
+      // Initialize the map if it hasn't been initialized yet
+      if (!map.current) {
+        map.current = L.map(mapContainer.current).setView([latitude, longitude], 15);
+        
+        // Add OpenStreetMap tiles
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          maxZoom: 19,
+          attribution: '© OpenStreetMap contributors'
+        }).addTo(map.current);
 
-      newMap.on('error', (e) => {
-        console.error("Map error:", e);
-        setError("Error loading map");
-      });
+        // Add zoom control
+        L.control.zoom({ position: 'topright' }).addTo(map.current);
+      } else {
+        // If map exists, just update the view
+        map.current.setView([latitude, longitude], 15);
+      }
 
-      // Add navigation control
-      newMap.addControl(new mapboxgl.NavigationControl(), 'top-right');
+      // Update or create marker
+      if (marker.current) {
+        marker.current.setLatLng([latitude, longitude]);
+      } else {
+        marker.current = L.marker([latitude, longitude]).addTo(map.current);
+      }
 
-      // Add marker
-      const newMarker = new mapboxgl.Marker({ color: '#FF0000' })
-        .setLngLat([longitude, latitude])
-        .addTo(newMap);
+      // Add popup with address if provided
+      if (address) {
+        marker.current.bindPopup(address).openPopup();
+      }
 
-      map.current = newMap;
-      marker.current = newMarker;
-
-      return () => {
-        if (marker.current) {
-          marker.current.remove();
-        }
-        if (map.current) {
-          map.current.remove();
-        }
-      };
+      console.log("Map initialized successfully");
     } catch (err) {
       console.error("Map initialization error:", err);
       setError("Could not initialize map");
     }
-  }, [latitude, longitude]);
+
+    return () => {
+      if (map.current) {
+        map.current.remove();
+        map.current = null;
+      }
+      marker.current = null;
+    };
+  }, [latitude, longitude, address]);
 
   if (!latitude || !longitude) {
     return (
@@ -86,7 +87,7 @@ export function AddressMap({ latitude, longitude, address, className = "h-[200px
 
   return (
     <div className="map-wrapper">
-      <div ref={mapContainer} className="map-container" />
+      <div ref={mapContainer} className={`map-container ${className}`} />
     </div>
   );
 }

@@ -136,29 +136,26 @@
   overflow: hidden;
 }
 
-.mapboxgl-canvas-container,
-.mapboxgl-canvas {
-  width: 100% !important;
-  height: 100% !important;
-}
-
-.mapboxgl-map {
-  position: absolute;
-  top: 0;
-  bottom: 0;
+/* Leaflet specific styles */
+.leaflet-container {
   width: 100%;
   height: 100%;
 }
 
+.leaflet-div-icon {
+  background: transparent;
+  border: none;
+}
+
 /* Ensure map controls appear above other content */
-.mapboxgl-control-container {
+.leaflet-control-container {
   z-index: 2;
 }
 
-.mapboxgl-popup {
+.leaflet-popup {
   z-index: 3;
 }
 
-.mapboxgl-marker {
+.leaflet-marker-icon {
   z-index: 3;
 }
