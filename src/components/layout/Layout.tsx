@@ -46,7 +46,7 @@ export function Layout() {
       <div className="flex flex-col flex-1 overflow-hidden">
         <Header onMenuClick={toggleSidebar} buttonRef={buttonRef} />
         
-        <main className="flex-1 overflow-auto p-4 md:p-6 relative">
+        <main className="flex-1 overflow-auto p-4 md:p-6 relative" style={{ isolation: "isolate" }}>
           <Outlet />
         </main>
       </div>

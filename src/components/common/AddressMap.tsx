@@ -18,6 +18,7 @@ export function AddressMap({ latitude, longitude, address, className = "h-[200px
     latitude && longitude ? [longitude, latitude] : null
   );
   const [marker, setMarker] = useState<mapboxgl.Marker | null>(null);
+  const [mapError, setMapError] = useState<string | null>(null);
 
   // Update map coordinates when props change
   useEffect(() => {
@@ -33,53 +34,66 @@ export function AddressMap({ latitude, longitude, address, className = "h-[200px
 
     console.log("Creating new map with coordinates:", mapCoordinates);
     
-    // Configuration for OpenStreetMap as tile layer
-    mapboxgl.accessToken = 'pk.eyJ1IjoibG92YWJsZSIsImEiOiJjbG4xbWV2azQwMjd4MnFsdG41Z2l0djZhIn0.YF-MD7OxJhXCAX4rLKygtg';
-    
-    const mapInstance = new mapboxgl.Map({
-      container: mapContainer.current,
-      style: {
-        version: 8,
-        sources: {
-          'osm-tiles': {
-            type: 'raster',
-            tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
-            tileSize: 256,
-            attribution: '© OpenStreetMap contributors'
-          }
-        },
-        layers: [
-          {
-            id: 'osm-tiles',
-            type: 'raster',
-            source: 'osm-tiles',
-            minzoom: 0,
-            maxzoom: 19
-          }
-        ]
-      },
-      center: mapCoordinates,
-      zoom: 15
-    });
-
-    mapInstance.addControl(new mapboxgl.NavigationControl(), 'top-right');
-    
-    // Set the map reference
-    map.current = mapInstance;
-    
-    // Create marker when map is loaded
-    mapInstance.on('load', () => {
-      console.log("Map loaded successfully");
-      setMapInitialized(true);
+    try {
+      // Configuration for OpenStreetMap as tile layer
+      mapboxgl.accessToken = 'pk.eyJ1IjoibG92YWJsZSIsImEiOiJjbG4xbWV2azQwMjd4MnFsdG41Z2l0djZhIn0.YF-MD7OxJhXCAX4rLKygtg';
       
-      // Add marker after map is loaded
-      if (mapCoordinates) {
-        const newMarker = new mapboxgl.Marker()
+      const mapInstance = new mapboxgl.Map({
+        container: mapContainer.current,
+        style: {
+          version: 8,
+          sources: {
+            'osm-tiles': {
+              type: 'raster',
+              tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+              tileSize: 256,
+              attribution: '© OpenStreetMap contributors'
+            }
+          },
+          layers: [
+            {
+              id: 'osm-tiles',
+              type: 'raster',
+              source: 'osm-tiles',
+              minzoom: 0,
+              maxzoom: 19
+            }
+          ]
+        },
+        center: mapCoordinates,
+        zoom: 15
+      });
+
+      mapInstance.addControl(new mapboxgl.NavigationControl(), 'top-right');
+      
+      // Set the map reference
+      map.current = mapInstance;
+      
+      // Create marker when map is loaded
+      mapInstance.on('load', () => {
+        console.log("Map loaded successfully");
+        setMapInitialized(true);
+        
+        // Add marker after map is loaded
+        if (mapCoordinates) {
+          const newMarker = new mapboxgl.Marker({
+            color: "#FF0000",
+            draggable: false
+          })
           .setLngLat(mapCoordinates)
           .addTo(mapInstance);
-        setMarker(newMarker);
-      }
-    });
+          setMarker(newMarker);
+        }
+      });
+
+      mapInstance.on('error', (e) => {
+        console.error("Map error:", e);
+        setMapError("Error loading map");
+      });
+    } catch (error) {
+      console.error("Map initialization error:", error);
+      setMapError("Could not initialize map");
+    }
 
     // Cleanup function
     return () => {
@@ -112,9 +126,12 @@ export function AddressMap({ latitude, longitude, address, className = "h-[200px
       marker.setLngLat(mapCoordinates);
     } else if (map.current) {
       // Create new marker if it doesn't exist
-      const newMarker = new mapboxgl.Marker()
-        .setLngLat(mapCoordinates)
-        .addTo(map.current);
+      const newMarker = new mapboxgl.Marker({
+        color: "#FF0000",
+        draggable: false
+      })
+      .setLngLat(mapCoordinates)
+      .addTo(map.current);
       setMarker(newMarker);
     }
   }, [mapCoordinates, mapInitialized, marker]);
@@ -127,9 +144,17 @@ export function AddressMap({ latitude, longitude, address, className = "h-[200px
     );
   }
 
+  if (mapError) {
+    return (
+      <div className={`flex items-center justify-center bg-gray-100 rounded-lg ${className}`}>
+        <p className="text-gray-500 text-sm">{mapError}</p>
+      </div>
+    );
+  }
+
   return (
-    <div className={`rounded-lg overflow-hidden ${className} relative z-50`}>
-      <div ref={mapContainer} className="w-full h-full" />
+    <div className="map-wrapper">
+      <div ref={mapContainer} className="map-container" style={{ height: '100%', width: '100%' }} />
     </div>
   );
 }

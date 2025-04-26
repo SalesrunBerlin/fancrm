@@ -116,9 +116,25 @@
 }
 
 /* Map related styles */
-.map-container {
-  @apply relative z-50 rounded-lg overflow-hidden;
+.map-wrapper {
+  position: relative;
   height: 100%;
+  width: 100%;
+  min-height: 200px;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.map-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 100;
+  border-radius: 0.5rem;
+  overflow: hidden;
 }
 
 .map-placeholder {
@@ -126,11 +142,17 @@
   height: 100%;
 }
 
-/* Ensure map elements are visible */
+/* Force map elements to appear above all other content */
 .mapboxgl-canvas-container,
 .mapboxgl-canvas,
-.mapboxgl-control-container,
-.mapboxgl-marker {
-  z-index: 50 !important;
+.mapboxgl-control-container {
+  z-index: 101 !important;
 }
 
+.mapboxgl-marker {
+  z-index: 102 !important;
+}
+
+.mapboxgl-popup {
+  z-index: 103 !important;
+}

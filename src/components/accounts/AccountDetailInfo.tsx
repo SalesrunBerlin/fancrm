@@ -84,13 +84,13 @@ export function AccountDetailInfo({
                   </div>
                 </div>
                 {hasAddressData && (
-                  <div className="relative" style={{ minHeight: "200px", zIndex: 30 }}>
+                  <div className="map-container-wrapper" style={{ height: "250px" }}>
                     <h3 className="text-lg font-semibold mb-2">Location</h3>
                     <AddressMap 
                       latitude={account.latitude} 
                       longitude={account.longitude}
                       address={fullAddress || undefined}
-                      className="h-[200px] w-full"
+                      className="h-full w-full"
                     />
                   </div>
                 )}
