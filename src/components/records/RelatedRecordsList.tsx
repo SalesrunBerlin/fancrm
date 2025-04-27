@@ -1,12 +1,12 @@
 
+import { useQuery } from "@tanstack/react-query";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useObjectFields } from "@/hooks/useObjectFields";
-import { useObjectRecords } from "@/hooks/useObjectRecords";
-import { Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useObjectFields } from "@/hooks/useObjectFields";
+import { LookupValueDisplay } from "./LookupValueDisplay";
 
 interface RelatedRecordsListProps {
   objectTypeId: string;
@@ -15,109 +15,90 @@ interface RelatedRecordsListProps {
 
 export function RelatedRecordsList({ objectTypeId, recordId }: RelatedRecordsListProps) {
   const { fields } = useObjectFields(objectTypeId);
-  const lookupFields = fields?.filter(f => f.data_type === 'lookup') || [];
-  
-  // Group records by their target object type
-  const relatedRecordSections = lookupFields.map(field => {
-    const targetObjectTypeId = field.options?.target_object_type_id;
-    if (!targetObjectTypeId) return null;
 
-    return (
-      <RelatedRecordsSection 
-        key={field.id}
-        fieldName={field.name}
-        targetObjectTypeId={targetObjectTypeId}
-        sourceFieldApi={field.api_name}
-        recordId={recordId}
-      />
-    );
-  });
-
-  return (
-    <div className="space-y-6">
-      {relatedRecordSections.length > 0 ? relatedRecordSections : (
-        <div className="text-center text-muted-foreground py-8">
-          No related records found
-        </div>
-      )}
-    </div>
-  );
-}
-
-function RelatedRecordsSection({ 
-  fieldName, 
-  targetObjectTypeId, 
-  sourceFieldApi,
-  recordId 
-}: { 
-  fieldName: string;
-  targetObjectTypeId: string;
-  sourceFieldApi: string;
-  recordId: string;
-}) {
-  // Fetch records from the target object type that reference this record
-  const { data: relatedRecords, isLoading } = useQuery({
-    queryKey: ["related-records", targetObjectTypeId, recordId, sourceFieldApi],
+  // Find lookup fields that reference this object type
+  const { data: referencingFields, isLoading: isFieldsLoading } = useQuery({
+    queryKey: ["referencing-fields", objectTypeId],
     queryFn: async () => {
-      // Find field values that reference this record
-      const { data: fieldValues, error: fieldValuesError } = await supabase
-        .from("object_field_values")
-        .select("record_id")
-        .eq("field_api_name", sourceFieldApi)
-        .eq("value", recordId);
-
-      if (fieldValuesError) throw fieldValuesError;
-      
-      if (!fieldValues || fieldValues.length === 0) {
-        return [];
-      }
-      
-      const relatedRecordIds = fieldValues.map(fv => fv.record_id);
-      
-      // Find the name field or configured display field
-      const { data: displayField } = await supabase
+      const { data: fields, error } = await supabase
         .from("object_fields")
         .select(`
           id,
+          name,
           api_name,
-          field_display_configs!inner (
-            display_field_api_name
-          )
+          object_type_id,
+          options
         `)
-        .eq("object_type_id", targetObjectTypeId)
-        .eq("api_name", "name")
-        .single();
+        .eq("data_type", "lookup")
+        .filter("options->target_object_type_id", "eq", objectTypeId);
 
-      const displayFieldName = displayField?.field_display_configs?.[0]?.display_field_api_name || "name";
+      if (error) throw error;
+      return fields;
+    }
+  });
 
-      // Fetch records with their display values
-      const { data: records, error: recordsError } = await supabase
-        .from("object_records")
-        .select("*")
-        .in("id", relatedRecordIds);
+  // For each referencing field, fetch records that reference the current record
+  const { data: relatedSections, isLoading: isRecordsLoading } = useQuery({
+    queryKey: ["related-records", objectTypeId, recordId, referencingFields],
+    queryFn: async () => {
+      if (!referencingFields) return [];
 
-      if (recordsError) throw recordsError;
+      const sections = await Promise.all(referencingFields.map(async (field) => {
+        // Fetch records where this field references the current record
+        const { data: fieldValues } = await supabase
+          .from("object_field_values")
+          .select("record_id")
+          .eq("field_api_name", field.api_name)
+          .eq("value", recordId);
 
-      const recordsWithValues = await Promise.all(records.map(async (record) => {
+        if (!fieldValues || fieldValues.length === 0) return null;
+
+        const recordIds = fieldValues.map(fv => fv.record_id);
+
+        // Get the actual records
+        const { data: records } = await supabase
+          .from("object_records")
+          .select("*")
+          .in("id", recordIds);
+
+        if (!records) return null;
+
+        // Get field values for these records
         const { data: values } = await supabase
           .from("object_field_values")
-          .select("field_api_name, value")
-          .eq("record_id", record.id);
+          .select("*")
+          .in("record_id", records.map(r => r.id));
 
-        const displayValue = values?.find(v => v.field_api_name === displayFieldName)?.value || record.record_id;
+        const recordsWithValues = records.map(record => ({
+          ...record,
+          field_values: values
+            ?.filter(v => v.record_id === record.id)
+            .reduce((acc, v) => ({
+              ...acc,
+              [v.field_api_name]: v.value
+            }), {})
+        }));
+
+        // Get the object type info for these records
+        const { data: objectType } = await supabase
+          .from("object_types")
+          .select("*")
+          .eq("id", field.object_type_id)
+          .single();
 
         return {
-          ...record,
-          display_value: displayValue
+          objectType,
+          field,
+          records: recordsWithValues
         };
       }));
 
-      return recordsWithValues;
+      return sections.filter(Boolean);
     },
-    enabled: !!targetObjectTypeId && !!recordId,
+    enabled: !!referencingFields
   });
 
-  if (isLoading) {
+  if (isFieldsLoading || isRecordsLoading) {
     return (
       <div className="flex justify-center p-4">
         <Loader2 className="h-6 w-6 animate-spin" />
@@ -125,42 +106,50 @@ function RelatedRecordsSection({
     );
   }
 
-  if (!relatedRecords || relatedRecords.length === 0) {
-    return null;
+  if (!relatedSections || relatedSections.length === 0) {
+    return (
+      <div className="text-center text-muted-foreground py-8">
+        No related records found
+      </div>
+    );
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{fieldName}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Created At</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {relatedRecords.map((record) => (
-              <TableRow key={record.id}>
-                <TableCell>
-                  <Link 
-                    to={`/objects/${targetObjectTypeId}/${record.id}`}
-                    className="text-blue-600 hover:underline"
-                  >
-                    {record.display_value}
-                  </Link>
-                </TableCell>
-                <TableCell>
-                  {new Date(record.created_at).toLocaleDateString()}
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </CardContent>
-    </Card>
+    <div className="space-y-6">
+      {relatedSections.map((section) => (
+        <Card key={section.field.id}>
+          <CardHeader>
+            <CardTitle>{section.objectType.name}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Created At</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {section.records.map((record) => (
+                  <TableRow key={record.id}>
+                    <TableCell>
+                      <Link 
+                        to={`/objects/${section.objectType.id}/${record.id}`}
+                        className="text-blue-600 hover:underline"
+                      >
+                        {record.field_values?.name || record.record_id}
+                      </Link>
+                    </TableCell>
+                    <TableCell>
+                      {new Date(record.created_at).toLocaleDateString()}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
   );
 }

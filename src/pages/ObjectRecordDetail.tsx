@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
@@ -28,7 +27,6 @@ export default function ObjectRecordDetail() {
   const [editedValues, setEditedValues] = useState<Record<string, any>>({});
   const navigate = useNavigate();
 
-  // Enhanced record fetching with React Query
   const { data: record, isLoading, error } = useQuery({
     queryKey: ["object-record", recordId],
     queryFn: async () => {
@@ -36,7 +34,6 @@ export default function ObjectRecordDetail() {
       
       console.log("Fetching record:", recordId);
       
-      // Get the record
       const { data: record, error: recordError } = await supabase
         .from("object_records")
         .select("*")
@@ -45,7 +42,6 @@ export default function ObjectRecordDetail() {
 
       if (recordError) throw recordError;
 
-      // Get field values
       const { data: fieldValues, error: fieldValuesError } = await supabase
         .from("object_field_values")
         .select("field_api_name, value")
@@ -56,7 +52,6 @@ export default function ObjectRecordDetail() {
       console.log("Record loaded:", record);
       console.log("Field values:", fieldValues);
 
-      // Convert field values array to object
       const valuesObject = fieldValues.reduce((acc, curr) => {
         acc[curr.field_api_name] = curr.value;
         return acc;
@@ -69,15 +64,12 @@ export default function ObjectRecordDetail() {
     },
     enabled: !!recordId,
   });
-  
+
   const objectType = objectTypes?.find(type => type.id === objectTypeId);
 
-  // Mutation for updating records
   const updateRecordMutation = useMutation({
     mutationFn: async ({ id, field_values }: { id: string, field_values: Record<string, any> }) => {
-      // Update the object_field_values for each changed field
       const updates = Object.entries(field_values).map(async ([fieldApiName, value]) => {
-        // Check if the field value exists
         const { data: existingValue } = await supabase
           .from("object_field_values")
           .select("*")
@@ -88,7 +80,6 @@ export default function ObjectRecordDetail() {
         const stringValue = value !== null && value !== undefined ? String(value) : null;
 
         if (existingValue) {
-          // Update existing field value
           const { error } = await supabase
             .from("object_field_values")
             .update({ value: stringValue })
@@ -97,7 +88,6 @@ export default function ObjectRecordDetail() {
 
           if (error) throw error;
         } else {
-          // Insert new field value
           const { error } = await supabase
             .from("object_field_values")
             .insert({
@@ -110,10 +100,8 @@ export default function ObjectRecordDetail() {
         }
       });
 
-      // Wait for all updates to complete
       await Promise.all(updates);
 
-      // Update the last_modified timestamp on the record
       const { error: recordUpdateError } = await supabase
         .from("object_records")
         .update({ updated_at: new Date().toISOString() })
@@ -137,7 +125,6 @@ export default function ObjectRecordDetail() {
 
   const handleEditToggle = () => {
     if (isEditing) {
-      // Discard changes when canceling edit
       setEditedValues({});
     }
     setIsEditing(!isEditing);
@@ -274,25 +261,27 @@ export default function ObjectRecordDetail() {
                 />
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
+                  <div className="space-y-1">
                     <label className="text-sm font-medium text-muted-foreground">Record ID</label>
                     <p>{record.record_id}</p>
                   </div>
                   
                   {fields?.map(field => (
-                    <div key={field.api_name}>
+                    <div key={field.api_name} className="space-y-1">
                       <label className="text-sm font-medium text-muted-foreground">
                         {field.name}
                         {field.is_required && <span className="text-red-500 ml-1">*</span>}
                       </label>
-                      {field.data_type === 'lookup' && field.options?.target_object_type_id ? (
-                        <LookupValueDisplay
-                          value={record.field_values?.[field.api_name] || null}
-                          fieldOptions={field.options}
-                        />
-                      ) : (
-                        <p>{record.field_values?.[field.api_name] || "-"}</p>
-                      )}
+                      <div className="pt-1">
+                        {field.data_type === 'lookup' && field.options?.target_object_type_id ? (
+                          <LookupValueDisplay
+                            value={record.field_values?.[field.api_name] || null}
+                            fieldOptions={field.options}
+                          />
+                        ) : (
+                          <p>{record.field_values?.[field.api_name] || "-"}</p>
+                        )}
+                      </div>
                     </div>
                   ))}
                   
