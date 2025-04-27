@@ -58,12 +58,22 @@ export function ObjectFieldEdit({ field, isOpen, onClose }: ObjectFieldEditProps
         display_field_api_name: values.display_field_api_name,
       };
 
-      await updateField.mutateAsync({
-        id: field.id,
-        name: values.name,
-        api_name: values.api_name,
-        options: updatedOptions,
-      });
+      // For system fields, only update the options
+      if (field.is_system) {
+        await updateField.mutateAsync({
+          id: field.id,
+          options: updatedOptions,
+        });
+      } else {
+        // For non-system fields, update all editable fields
+        await updateField.mutateAsync({
+          id: field.id,
+          name: values.name,
+          api_name: values.api_name,
+          options: updatedOptions,
+        });
+      }
+      
       onClose();
     } finally {
       setIsSubmitting(false);
@@ -85,7 +95,7 @@ export function ObjectFieldEdit({ field, isOpen, onClose }: ObjectFieldEditProps
                 <FormItem>
                   <FormLabel>Field Name</FormLabel>
                   <FormControl>
-                    <Input {...field} />
+                    <Input {...field} disabled={field.is_system} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

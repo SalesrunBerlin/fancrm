@@ -1,14 +1,11 @@
+
 import React from "react";
 import {
   Home,
   LayoutDashboard,
-  Users,
-  Building,
-  Briefcase,
   Settings,
   Package,
   LogOut,
-  Phone
 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -54,33 +51,6 @@ export const Sidebar = React.forwardRef<HTMLDivElement, SidebarProps>(
               Dashboard
             </Button>
           </Link>
-          <Link to="/contacts" onClick={handleLinkClick}>
-            <Button
-              variant={location.pathname.includes("/contacts") ? "default" : "ghost"}
-              className="w-full justify-start"
-            >
-              <Users className="mr-2 h-4 w-4" />
-              Contacts
-            </Button>
-          </Link>
-          <Link to="/accounts" onClick={handleLinkClick}>
-            <Button
-              variant={location.pathname.includes("/accounts") ? "default" : "ghost"}
-              className="w-full justify-start"
-            >
-              <Building className="mr-2 h-4 w-4" />
-              Accounts
-            </Button>
-          </Link>
-          <Link to="/deals" onClick={handleLinkClick}>
-            <Button
-              variant={location.pathname.includes("/deals") ? "default" : "ghost"}
-              className="w-full justify-start"
-            >
-              <Briefcase className="mr-2 h-4 w-4" />
-              Deals
-            </Button>
-          </Link>
           <Link to="/settings" onClick={handleLinkClick}>
             <Button
               variant={location.pathname === "/settings" ? "default" : "ghost"}
@@ -97,15 +67,6 @@ export const Sidebar = React.forwardRef<HTMLDivElement, SidebarProps>(
             >
               <Package className="mr-2 h-4 w-4" />
               Produkte
-            </Button>
-          </Link>
-          <Link to="/activities" onClick={handleLinkClick}>
-            <Button
-              variant={location.pathname.includes("/activities") ? "default" : "ghost"}
-              className="w-full justify-start"
-            >
-              <Phone className="mr-2 h-4 w-4" />
-              Aktivitäten
             </Button>
           </Link>
         </div>

@@ -198,7 +198,6 @@ export function ObjectFieldsList({ fields, isLoading, objectTypeId }: ObjectFiel
                     variant="ghost"
                     size="icon"
                     onClick={() => setEditingField(field)}
-                    disabled={field.is_system}
                   >
                     <Pencil className="h-4 w-4" />
                   </Button>
