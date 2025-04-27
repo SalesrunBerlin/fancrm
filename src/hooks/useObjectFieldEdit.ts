@@ -29,6 +29,7 @@ export function useObjectFieldEdit({ field, onClose }: UseObjectFieldEditProps) 
   const onSubmit = async (values: FieldEditFormData) => {
     try {
       setIsSubmitting(true);
+      console.log('Submitting field edit:', values);
 
       const updatedOptions = {
         ...field.options,
@@ -37,7 +38,7 @@ export function useObjectFieldEdit({ field, onClose }: UseObjectFieldEditProps) 
 
       await updateField.mutateAsync({
         id: field.id,
-        name: field.is_system ? field.name : values.name,
+        name: values.name,
         api_name: values.api_name,
         options: updatedOptions,
       });
@@ -45,6 +46,7 @@ export function useObjectFieldEdit({ field, onClose }: UseObjectFieldEditProps) 
       // Invalidate all relevant queries to ensure data is refreshed
       queryClient.invalidateQueries({ queryKey: ["object-fields", field.object_type_id] });
       queryClient.invalidateQueries({ queryKey: ["object-record"] });
+      queryClient.invalidateQueries({ queryKey: ["object-types"] });
       
       onClose();
     } finally {

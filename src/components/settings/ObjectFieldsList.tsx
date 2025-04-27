@@ -52,19 +52,22 @@ export function ObjectFieldsList({ fields, isLoading, objectTypeId }: ObjectFiel
     if (data?.default_field_api_name) {
       setDefaultDisplayField(data.default_field_api_name);
       setTempDisplayField(data.default_field_api_name);
-    } else if (fields.find(f => f.api_name === 'name')) {
-      setDefaultDisplayField('name');
-      setTempDisplayField('name');
     }
   };
 
   const handleDefaultFieldChange = (value: string) => {
-    setTempDisplayField(value);
-    setIsEditing(true);
+    const selectedField = fields.find(f => f.api_name === value);
+    if (selectedField) {
+      console.log('Setting default field:', { value, apiName: selectedField.api_name });
+      setTempDisplayField(selectedField.api_name);
+      setIsEditing(true);
+    }
   };
 
   const handleSave = async () => {
     try {
+      console.log('Saving default field:', tempDisplayField);
+      
       const { error } = await supabase
         .from('object_types')
         .update({ default_field_api_name: tempDisplayField })
@@ -78,6 +81,7 @@ export function ObjectFieldsList({ fields, isLoading, objectTypeId }: ObjectFiel
       // Invalidate all relevant queries to ensure data is refreshed
       queryClient.invalidateQueries({ queryKey: ["object-types"] });
       queryClient.invalidateQueries({ queryKey: ["object-record"] });
+      queryClient.invalidateQueries({ queryKey: ["object-fields", objectTypeId] });
       
       toast({
         title: "Success",
