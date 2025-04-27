@@ -1,9 +1,9 @@
+
 import { Account } from "@/lib/types/database";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Edit, X } from "lucide-react";
-import { AddressMap } from "@/components/common/AddressMap";
 
 interface AccountDetailInfoProps {
   account: Account;
@@ -24,10 +24,6 @@ export function AccountDetailInfo({
   onSave,
   onEditFieldChange,
 }: AccountDetailInfoProps) {
-  const fullAddress = account.street && account.city && account.postal_code
-    ? `${account.street}, ${account.postal_code} ${account.city}, ${account.country || 'Germany'}`
-    : null;
-
   const hasAddressData = !!(account.street || account.city || account.postal_code || account.country);
 
   return (
@@ -64,8 +60,8 @@ export function AccountDetailInfo({
             <div>
               <strong>Industry:</strong> {account.industry || 'Not specified'}
             </div>
-            <div className="pt-4 border-t">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {hasAddressData && (
+              <div className="pt-4 border-t">
                 <div className="space-y-2">
                   <h3 className="text-lg font-semibold mb-2">Address</h3>
                   <div>
@@ -81,21 +77,8 @@ export function AccountDetailInfo({
                     <strong>Country:</strong> {account.country || 'Germany'}
                   </div>
                 </div>
-                {hasAddressData && (
-                  <div className="relative h-[250px]">
-                    <h3 className="text-lg font-semibold mb-2">Location</h3>
-                    <div className="absolute inset-0 top-10">
-                      <AddressMap 
-                        latitude={account.latitude} 
-                        longitude={account.longitude}
-                        address={fullAddress || undefined}
-                        className="h-full w-full"
-                      />
-                    </div>
-                  </div>
-                )}
               </div>
-            </div>
+            )}
           </div>
         ) : (
           <div className="space-y-4">

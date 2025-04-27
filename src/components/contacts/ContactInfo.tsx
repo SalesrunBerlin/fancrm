@@ -1,5 +1,5 @@
+
 import { Contact } from "@/lib/types/database";
-import { AddressMap } from "@/components/common/AddressMap";
 
 interface ContactInfoProps {
   contact: Contact;
@@ -7,10 +7,6 @@ interface ContactInfoProps {
 }
 
 export function ContactInfo({ contact, ownerName }: ContactInfoProps) {
-  const fullAddress = contact.street && contact.city && contact.postal_code
-    ? `${contact.street}, ${contact.postal_code} ${contact.city}, ${contact.country || 'Germany'}`
-    : null;
-
   const hasAddressData = !!(contact.street || contact.city || contact.postal_code || contact.country);
 
   return (
@@ -53,19 +49,6 @@ export function ContactInfo({ contact, ownerName }: ContactInfoProps) {
           </div>
         )}
       </div>
-      {hasAddressData && (
-        <div className="relative h-[250px]">
-          <h3 className="text-lg font-semibold mb-2">Location</h3>
-          <div className="absolute inset-0 top-10">
-            <AddressMap 
-              latitude={contact.latitude} 
-              longitude={contact.longitude}
-              address={fullAddress || undefined}
-              className="h-full w-full"
-            />
-          </div>
-        </div>
-      )}
     </div>
   );
 }
