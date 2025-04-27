@@ -104,8 +104,10 @@ export function RecordField({ field, form }: RecordFieldProps) {
       <FormControl>
         {renderField()}
       </FormControl>
-      {/* Use optional chaining for description since it might not exist */}
-      <FormDescription>{field.description || ""}</FormDescription>
+      {/* Entferne die Beschreibung, wenn sie nicht existiert oder leer ist */}
+      {field.options?.description && (
+        <FormDescription>{field.options.description}</FormDescription>
+      )}
       <FormMessage />
     </FormItem>
   );
