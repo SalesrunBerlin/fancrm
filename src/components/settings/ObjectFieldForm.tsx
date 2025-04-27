@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -19,6 +19,7 @@ import { useObjectTypes } from "@/hooks/useObjectTypes";
 import { useObjectFields } from "@/hooks/useObjectFields";
 import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 const fieldSchema = z.object({
   name: z.string().min(2, {
@@ -26,6 +27,8 @@ const fieldSchema = z.object({
   }),
   api_name: z.string().min(2, {
     message: "API name must be at least 2 characters.",
+  }).refine(value => /^[a-z0-9_]+$/.test(value), {
+    message: "API name must contain only lowercase letters, numbers, and underscores."
   }),
   data_type: z.string().min(2, {
     message: "Data type must be selected.",
@@ -60,6 +63,23 @@ export function ObjectFieldForm({ objectTypeId, onComplete }: ObjectFieldFormPro
     }
   });
 
+  // Auto-generate API name from field name
+  useEffect(() => {
+    const name = form.watch("name");
+    if (name) {
+      const apiName = name
+        .toLowerCase()
+        .replace(/[^a-z0-9 ]/g, "")
+        .replace(/\s+/g, "_");
+      
+      // Only update if the api_name hasn't been manually modified
+      const currentApiName = form.watch("api_name");
+      if (!currentApiName || currentApiName === "") {
+        form.setValue("api_name", apiName);
+      }
+    }
+  }, [form.watch("name")]);
+
   const dataTypeOptions = [
     { label: "Text", value: "text" },
     { label: "Text Area", value: "textarea" },
@@ -92,29 +112,38 @@ export function ObjectFieldForm({ objectTypeId, onComplete }: ObjectFieldFormPro
             target_object_type_id: values.options?.target_object_type_id
           } : undefined,
         }])
-        .select()
-        .single();
+        .select();
 
-      if (fieldError) throw fieldError;
+      if (fieldError) {
+        console.error("Error creating field:", fieldError);
+        toast.error("Failed to create field: " + fieldError.message);
+        return;
+      }
 
       // If it's a lookup field and we have a display field, create the config
-      if (values.data_type === 'lookup' && values.options?.display_field_api_name && fieldData) {
+      if (values.data_type === 'lookup' && values.options?.display_field_api_name && fieldData && fieldData.length > 0) {
         const { error: configError } = await supabase
           .from('field_display_configs')
           .insert([{
-            field_id: fieldData.id,
+            field_id: fieldData[0].id,
             display_field_api_name: values.options.display_field_api_name
           }]);
 
-        if (configError) throw configError;
+        if (configError) {
+          console.error("Error creating display config:", configError);
+          toast.error("Failed to create display config: " + configError.message);
+          return;
+        }
       }
 
+      toast.success("Field created successfully");
       form.reset();
       if (onComplete) {
         onComplete();
       }
     } catch (error) {
       console.error("Error submitting form:", error);
+      toast.error("Failed to create field");
     } finally {
       setIsSubmitting(false);
     }

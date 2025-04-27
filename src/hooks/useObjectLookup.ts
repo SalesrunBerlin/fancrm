@@ -16,31 +16,45 @@ export function useObjectLookup(objectTypeId: string | undefined) {
     queryFn: async (): Promise<LookupRecord[]> => {
       if (!objectTypeId) return [];
 
-      // First get the name field for this object type
+      // First get records for this object type
+      const { data: records, error } = await supabase
+        .from("object_records")
+        .select("id")
+        .eq("object_type_id", objectTypeId);
+
+      if (error) throw error;
+
+      if (!records || records.length === 0) {
+        return [];
+      }
+
+      // Find the name field for this object type
       const { data: nameField } = await supabase
         .from("object_fields")
         .select("api_name")
         .eq("object_type_id", objectTypeId)
         .eq("api_name", "name")
-        .single();
+        .maybeSingle();
 
-      // Get all records for this object type
-      const { data: records, error } = await supabase
-        .from("object_records")
-        .select(`
-          id,
-          field_values:object_field_values(field_api_name, value)
-        `)
-        .eq("object_type_id", objectTypeId);
+      // Get all field values for these records
+      const recordsWithDisplayValue = await Promise.all(records.map(async (record) => {
+        const { data: fieldValues } = await supabase
+          .from("object_field_values")
+          .select("field_api_name, value")
+          .eq("record_id", record.id);
 
-      if (error) throw error;
+        // Find the name field value or use record ID as fallback
+        const displayValue = fieldValues?.find(
+          f => f.field_api_name === (nameField?.api_name || "name")
+        )?.value || record.id;
 
-      return records.map(record => ({
-        id: record.id,
-        display_value: record.field_values.find(
-          (f: any) => f.field_api_name === (nameField?.api_name || "name")
-        )?.value || record.id
+        return {
+          id: record.id,
+          display_value: displayValue || record.id
+        };
       }));
+
+      return recordsWithDisplayValue;
     },
     enabled: !!user && !!objectTypeId,
   });

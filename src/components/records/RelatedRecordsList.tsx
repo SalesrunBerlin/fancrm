@@ -3,9 +3,11 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useObjectFields } from "@/hooks/useObjectFields";
 import { useObjectRecords } from "@/hooks/useObjectRecords";
-import { useObjectLookup } from "@/hooks/useObjectLookup";
 import { Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
 
 interface RelatedRecordsListProps {
   objectTypeId: string;
@@ -26,6 +28,7 @@ export function RelatedRecordsList({ objectTypeId, recordId }: RelatedRecordsLis
         key={field.id}
         fieldName={field.name}
         targetObjectTypeId={targetObjectTypeId}
+        sourceFieldApi={field.api_name}
         recordId={recordId}
       />
     );
@@ -33,19 +36,83 @@ export function RelatedRecordsList({ objectTypeId, recordId }: RelatedRecordsLis
 
   return (
     <div className="space-y-6">
-      {relatedRecordSections}
+      {relatedRecordSections.length > 0 ? relatedRecordSections : (
+        <div className="text-center text-muted-foreground py-8">
+          No related records found
+        </div>
+      )}
     </div>
   );
 }
 
-function RelatedRecordsSection({ fieldName, targetObjectTypeId, recordId }: { 
+function RelatedRecordsSection({ 
+  fieldName, 
+  targetObjectTypeId, 
+  sourceFieldApi,
+  recordId 
+}: { 
   fieldName: string;
   targetObjectTypeId: string;
+  sourceFieldApi: string;
   recordId: string;
 }) {
-  const { records, isLoading } = useObjectRecords(targetObjectTypeId);
-  const { fields } = useObjectFields(targetObjectTypeId);
-  const nameField = fields?.find(f => f.api_name === 'name');
+  // Fetch records from the target object type that reference this record
+  const { data: relatedRecords, isLoading } = useQuery({
+    queryKey: ["related-records", targetObjectTypeId, recordId, sourceFieldApi],
+    queryFn: async () => {
+      // First, get all field values that reference this record
+      const { data: fieldValues, error: fieldValuesError } = await supabase
+        .from("object_field_values")
+        .select("record_id")
+        .eq("value", recordId)
+        .eq("field_api_name", sourceFieldApi);
+
+      if (fieldValuesError) throw fieldValuesError;
+      
+      if (!fieldValues || fieldValues.length === 0) {
+        return [];
+      }
+      
+      // Get the record IDs that reference this record
+      const relatedRecordIds = fieldValues.map(fv => fv.record_id);
+      
+      // Fetch the actual records
+      const { data: records, error: recordsError } = await supabase
+        .from("object_records")
+        .select("*")
+        .in("id", relatedRecordIds)
+        .eq("object_type_id", targetObjectTypeId);
+
+      if (recordsError) throw recordsError;
+
+      // For each record, get its field values
+      const recordsWithValues = await Promise.all(records.map(async (record) => {
+        const { data: values, error: valuesError } = await supabase
+          .from("object_field_values")
+          .select("field_api_name, value")
+          .eq("record_id", record.id);
+
+        if (valuesError) throw valuesError;
+
+        // Convert to map for easier access
+        const valuesMap = values.reduce((map, val) => {
+          map[val.field_api_name] = val.value;
+          return map;
+        }, {} as Record<string, string | null>);
+
+        return {
+          ...record,
+          field_values: valuesMap
+        };
+      }));
+
+      return recordsWithValues;
+    },
+    enabled: !!targetObjectTypeId && !!recordId,
+  });
+
+  const { fields: targetFields } = useObjectFields(targetObjectTypeId);
+  const nameField = targetFields?.find(f => f.api_name === 'name');
 
   if (isLoading) {
     return (
@@ -53,6 +120,10 @@ function RelatedRecordsSection({ fieldName, targetObjectTypeId, recordId }: {
         <Loader2 className="h-6 w-6 animate-spin" />
       </div>
     );
+  }
+
+  if (!relatedRecords || relatedRecords.length === 0) {
+    return null;
   }
 
   return (
@@ -69,7 +140,7 @@ function RelatedRecordsSection({ fieldName, targetObjectTypeId, recordId }: {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {records?.map((record) => (
+            {relatedRecords.map((record) => (
               <TableRow key={record.id}>
                 <TableCell>
                   <Link 
