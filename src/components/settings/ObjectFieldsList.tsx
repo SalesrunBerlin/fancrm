@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useObjectFields } from "@/hooks/useObjectFields";
 import {
@@ -11,7 +10,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Pencil, Trash2, Save, X } from "lucide-react";
+import { Loader2, Pencil, Trash2, Save, X, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { ObjectField } from "@/hooks/useObjectTypes";
 import { DeleteDialog } from "@/components/common/DeleteDialog";
@@ -25,6 +24,13 @@ import {
 } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface ObjectFieldsListProps {
   fields: ObjectField[];
@@ -41,6 +47,8 @@ export function ObjectFieldsList({ fields, isLoading, objectTypeId }: ObjectFiel
   const [defaultDisplayField, setDefaultDisplayField] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [tempDisplayField, setTempDisplayField] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchCurrentDefaultField = async () => {
     const { data, error } = await supabase
@@ -50,6 +58,7 @@ export function ObjectFieldsList({ fields, isLoading, objectTypeId }: ObjectFiel
       .single();
     
     if (data?.default_field_api_name) {
+      console.log('Current default field:', data.default_field_api_name);
       setDefaultDisplayField(data.default_field_api_name);
       setTempDisplayField(data.default_field_api_name);
     }
@@ -61,24 +70,37 @@ export function ObjectFieldsList({ fields, isLoading, objectTypeId }: ObjectFiel
       console.log('Setting default field:', { value, apiName: selectedField.api_name });
       setTempDisplayField(selectedField.api_name);
       setIsEditing(true);
+      setError(null);
     }
   };
 
   const handleSave = async () => {
     try {
+      setIsSaving(true);
+      setError(null);
       console.log('Saving default field:', tempDisplayField);
       
-      const { error } = await supabase
+      const { error: updateError } = await supabase
         .from('object_types')
         .update({ default_field_api_name: tempDisplayField })
         .eq('id', objectTypeId);
 
-      if (error) throw error;
+      if (updateError) throw updateError;
 
       setDefaultDisplayField(tempDisplayField);
       setIsEditing(false);
 
-      // Invalidate all relevant queries to ensure data is refreshed
+      // Optimistically update the cache
+      queryClient.setQueryData(["object-types"], (oldData: any) => {
+        if (!oldData) return oldData;
+        return oldData.map((type: any) => 
+          type.id === objectTypeId 
+            ? { ...type, default_field_api_name: tempDisplayField }
+            : type
+        );
+      });
+
+      // Then invalidate to ensure data is fresh
       queryClient.invalidateQueries({ queryKey: ["object-types"] });
       queryClient.invalidateQueries({ queryKey: ["object-record"] });
       queryClient.invalidateQueries({ queryKey: ["object-fields", objectTypeId] });
@@ -89,17 +111,21 @@ export function ObjectFieldsList({ fields, isLoading, objectTypeId }: ObjectFiel
       });
     } catch (error) {
       console.error("Error updating default field:", error);
+      setError("Failed to update default display field. Please try again.");
       toast({
         title: "Error",
         description: "Failed to update default display field",
         variant: "destructive",
       });
+    } finally {
+      setIsSaving(false);
     }
   };
 
   const handleCancel = () => {
     setTempDisplayField(defaultDisplayField);
     setIsEditing(false);
+    setError(null);
   };
 
   useEffect(() => {
@@ -131,36 +157,73 @@ export function ObjectFieldsList({ fields, isLoading, objectTypeId }: ObjectFiel
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-col gap-4">
+        <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold">Fields</h3>
-          <div className="flex items-center gap-2">
-            <Select value={tempDisplayField || ''} onValueChange={handleDefaultFieldChange}>
-              <SelectTrigger className="w-[200px]">
-                <SelectValue placeholder="Select default field" />
-              </SelectTrigger>
-              <SelectContent>
-                {fields.map((field) => (
-                  <SelectItem key={field.api_name} value={field.api_name}>
-                    {field.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {isEditing && (
-              <>
-                <Button size="sm" variant="default" onClick={handleSave}>
-                  <Save className="h-4 w-4 mr-1" />
-                  Save
-                </Button>
-                <Button size="sm" variant="ghost" onClick={handleCancel}>
-                  <X className="h-4 w-4 mr-1" />
-                  Cancel
-                </Button>
-              </>
-            )}
-          </div>
+          <TooltipProvider>
+            <div className="flex items-center gap-2">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="flex items-center gap-2">
+                    <Select 
+                      value={tempDisplayField || ''} 
+                      onValueChange={handleDefaultFieldChange}
+                      disabled={isSaving}
+                    >
+                      <SelectTrigger className="w-[200px]">
+                        <SelectValue placeholder="Select default field" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {fields.map((field) => (
+                          <SelectItem key={field.api_name} value={field.api_name}>
+                            {field.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Select the default display field for this object type</p>
+                </TooltipContent>
+              </Tooltip>
+
+              {isEditing && (
+                <div className="flex items-center gap-2">
+                  <Button 
+                    size="sm" 
+                    variant="default" 
+                    onClick={handleSave}
+                    disabled={isSaving}
+                  >
+                    {isSaving ? (
+                      <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                    ) : (
+                      <Save className="h-4 w-4 mr-1" />
+                    )}
+                    Save
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant="ghost" 
+                    onClick={handleCancel}
+                    disabled={isSaving}
+                  >
+                    <X className="h-4 w-4 mr-1" />
+                    Cancel
+                  </Button>
+                </div>
+              )}
+            </div>
+          </TooltipProvider>
         </div>
+
+        {error && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
       </div>
 
       <DeleteDialog
