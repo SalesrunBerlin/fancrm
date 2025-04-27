@@ -6,7 +6,8 @@ import { Link } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useObjectFields } from "@/hooks/useObjectFields";
-import { LookupValueDisplay } from "./LookupValueDisplay";
+import { useLocalStorage } from "@/hooks/useLocalStorage";
+import { EditableCell } from "./EditableCell";
 
 interface RelatedRecordsListProps {
   objectTypeId: string;
@@ -23,11 +24,9 @@ interface RelatedSection {
     relationship_type: string;
   };
   records: any[];
-  displayField: any;
 }
 
 export function RelatedRecordsList({ objectTypeId, recordId }: RelatedRecordsListProps) {
-  // Fetch both direct lookup references and reverse lookups through relationships
   const { data: relatedSections, isLoading } = useQuery({
     queryKey: ["related-records", objectTypeId, recordId],
     queryFn: async () => {
@@ -44,7 +43,6 @@ export function RelatedRecordsList({ objectTypeId, recordId }: RelatedRecordsLis
         .or(`from_object_id.eq.${objectTypeId},to_object_id.eq.${objectTypeId}`);
 
       if (relError) throw relError;
-      
       if (!relationships) return [];
 
       const sections = await Promise.all(relationships.map(async (relationship) => {
@@ -56,7 +54,7 @@ export function RelatedRecordsList({ objectTypeId, recordId }: RelatedRecordsLis
         const { data: fields } = await supabase
           .from("object_fields")
           .select("*")
-          .eq("object_type_id", isForward ? relationship.to_object_id : relationship.from_object_id)
+          .eq("object_type_id", relatedObjectTypeId)
           .eq("data_type", "lookup");
 
         if (!fields) return null;
@@ -64,7 +62,10 @@ export function RelatedRecordsList({ objectTypeId, recordId }: RelatedRecordsLis
         // Find the field that references our object type
         const lookupField = fields.find(f => 
           f.data_type === "lookup" && 
-          f.options?.target_object_type_id === objectTypeId
+          f.options && 
+          typeof f.options === 'object' && 
+          'target_object_type_id' in f.options && 
+          f.options.target_object_type_id === objectTypeId
         );
 
         if (!lookupField && !isForward) return null;
@@ -138,20 +139,10 @@ export function RelatedRecordsList({ objectTypeId, recordId }: RelatedRecordsLis
 
         if (!objectType) return null;
 
-        // Get the name field or first field for display
-        const { data: objectFields } = await supabase
-          .from("object_fields")
-          .select("*")
-          .eq("object_type_id", relatedObjectTypeId)
-          .order("display_order");
-
-        const displayField = objectFields?.find(f => f.api_name === "name") || objectFields?.[0];
-
         return {
           objectType,
           relationship,
-          records: recordsWithValues,
-          displayField
+          records: recordsWithValues
         };
       }));
 
@@ -175,42 +166,62 @@ export function RelatedRecordsList({ objectTypeId, recordId }: RelatedRecordsLis
     );
   }
 
+  const getVisibleFields = (objectTypeId: string) => {
+    const storedFields = localStorage.getItem(`visible-fields-${objectTypeId}`);
+    return storedFields ? JSON.parse(storedFields) : [];
+  };
+
   return (
     <div className="space-y-6">
-      {relatedSections.map((section) => (
-        <Card key={section.relationship.id}>
-          <CardHeader>
-            <CardTitle>{section.relationship.name}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Created At</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {section.records.map((record) => (
-                  <TableRow key={record.id}>
-                    <TableCell>
-                      <Link 
-                        to={`/objects/${section.objectType.id}/${record.id}`}
-                        className="text-blue-600 hover:underline"
-                      >
-                        {record.field_values[section.displayField?.api_name || ""] || record.record_id}
-                      </Link>
-                    </TableCell>
-                    <TableCell>
-                      {new Date(record.created_at).toLocaleDateString()}
-                    </TableCell>
+      {relatedSections.map((section) => {
+        const { fields } = useObjectFields(section.objectType.id);
+        const visibleFields = getVisibleFields(section.objectType.id);
+        const visibleFieldsList = fields?.filter(field => visibleFields.includes(field.api_name)) || [];
+
+        return (
+          <Card key={section.relationship.id}>
+            <CardHeader>
+              <CardTitle>{section.relationship.name}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    {visibleFieldsList.map(field => (
+                      <TableHead key={field.api_name}>{field.name}</TableHead>
+                    ))}
+                    <TableHead>Created At</TableHead>
+                    <TableHead>Last Modified</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      ))}
+                </TableHeader>
+                <TableBody>
+                  {section.records.map((record) => (
+                    <TableRow 
+                      key={record.id}
+                      className="cursor-pointer hover:bg-muted/50"
+                      onClick={() => window.location.href = `/objects/${section.objectType.id}/${record.id}`}
+                    >
+                      {visibleFieldsList.map(field => (
+                        <EditableCell
+                          key={`${record.id}-${field.api_name}`}
+                          value={record.field_values?.[field.api_name]}
+                          editMode={false}
+                          onChange={() => {}}
+                          fieldType={field.data_type}
+                          isRequired={field.is_required}
+                          fieldOptions={field.options}
+                        />
+                      ))}
+                      <TableCell>{new Date(record.created_at).toLocaleDateString()}</TableCell>
+                      <TableCell>{new Date(record.updated_at).toLocaleDateString()}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        );
+      })}
     </div>
   );
 }
