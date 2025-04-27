@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
@@ -8,18 +9,20 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, Edit, Save, Loader2, X, Trash2 } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import { RecordDetailForm } from "@/components/records/RecordDetailForm";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RelatedRecordsList } from "@/components/records/RelatedRecordsList";
 import { RecordDeleteDialog } from "@/components/records/RecordDeleteDialog";
 import { toast } from "sonner";
+import { LookupValueDisplay } from "@/components/records/LookupValueDisplay";
 
 export default function ObjectRecordDetail() {
   const { objectTypeId, recordId } = useParams<{ objectTypeId: string; recordId: string }>();
   const { objectTypes } = useObjectTypes();
   const { fields } = useObjectFields(objectTypeId);
+  const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [editedValues, setEditedValues] = useState<Record<string, any>>({});
@@ -69,6 +72,69 @@ export default function ObjectRecordDetail() {
   
   const objectType = objectTypes?.find(type => type.id === objectTypeId);
 
+  // Mutation for updating records
+  const updateRecordMutation = useMutation({
+    mutationFn: async ({ id, field_values }: { id: string, field_values: Record<string, any> }) => {
+      // Update the object_field_values for each changed field
+      const updates = Object.entries(field_values).map(async ([fieldApiName, value]) => {
+        // Check if the field value exists
+        const { data: existingValue } = await supabase
+          .from("object_field_values")
+          .select("*")
+          .eq("record_id", id)
+          .eq("field_api_name", fieldApiName)
+          .maybeSingle();
+
+        const stringValue = value !== null && value !== undefined ? String(value) : null;
+
+        if (existingValue) {
+          // Update existing field value
+          const { error } = await supabase
+            .from("object_field_values")
+            .update({ value: stringValue })
+            .eq("record_id", id)
+            .eq("field_api_name", fieldApiName);
+
+          if (error) throw error;
+        } else {
+          // Insert new field value
+          const { error } = await supabase
+            .from("object_field_values")
+            .insert({
+              record_id: id,
+              field_api_name: fieldApiName,
+              value: stringValue
+            });
+
+          if (error) throw error;
+        }
+      });
+
+      // Wait for all updates to complete
+      await Promise.all(updates);
+
+      // Update the last_modified timestamp on the record
+      const { error: recordUpdateError } = await supabase
+        .from("object_records")
+        .update({ updated_at: new Date().toISOString() })
+        .eq("id", id);
+
+      if (recordUpdateError) throw recordUpdateError;
+
+      return { id, field_values };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["object-record", recordId] });
+      toast.success("Record updated successfully");
+      setIsEditing(false);
+      setEditedValues({});
+    },
+    onError: (error) => {
+      console.error("Error updating record:", error);
+      toast.error("Failed to update record");
+    },
+  });
+
   const handleEditToggle = () => {
     if (isEditing) {
       // Discard changes when canceling edit
@@ -87,28 +153,10 @@ export default function ObjectRecordDetail() {
   const handleSave = async () => {
     if (!recordId || Object.keys(editedValues).length === 0) return;
     
-    try {
-      // TODO: Replace with react query mutation
-      // await updateRecord.mutateAsync({
-      //   id: recordId,
-      //   field_values: editedValues
-      // });
-      
-      // // Update local state with new values
-      // setRecord(prev => ({
-      //   ...prev,
-      //   field_values: {
-      //     ...(prev?.field_values || {}),
-      //     ...editedValues
-      //   }
-      // }));
-      
-      // Exit edit mode and clear edited values
-      setIsEditing(false);
-      setEditedValues({});
-    } catch (error) {
-      console.error("Error updating record:", error);
-    }
+    updateRecordMutation.mutate({
+      id: recordId,
+      field_values: editedValues
+    });
   };
 
   const handleDelete = async () => {
@@ -172,8 +220,16 @@ export default function ObjectRecordDetail() {
         <div className="flex items-center gap-2">
           {isEditing ? (
             <>
-              <Button variant="default" onClick={handleSave}>
-                <Save className="h-4 w-4 mr-2" />
+              <Button 
+                variant="default" 
+                onClick={handleSave}
+                disabled={updateRecordMutation.isPending}
+              >
+                {updateRecordMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Save className="h-4 w-4 mr-2" />
+                )}
                 Save
               </Button>
               <Button variant="outline" onClick={handleEditToggle}>
@@ -214,6 +270,7 @@ export default function ObjectRecordDetail() {
                   fields={fields || []}
                   onFieldChange={handleFieldChange}
                   editedValues={editedValues}
+                  isEditing={true}
                 />
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -228,7 +285,14 @@ export default function ObjectRecordDetail() {
                         {field.name}
                         {field.is_required && <span className="text-red-500 ml-1">*</span>}
                       </label>
-                      <p>{record.field_values?.[field.api_name] || "-"}</p>
+                      {field.data_type === 'lookup' && field.options?.target_object_type_id ? (
+                        <LookupValueDisplay
+                          value={record.field_values?.[field.api_name] || null}
+                          fieldOptions={field.options}
+                        />
+                      ) : (
+                        <p>{record.field_values?.[field.api_name] || "-"}</p>
+                      )}
                     </div>
                   ))}
                   

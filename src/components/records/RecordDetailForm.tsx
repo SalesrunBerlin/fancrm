@@ -1,3 +1,4 @@
+
 import { ObjectField } from "@/hooks/useObjectTypes";
 import { ObjectRecord } from "@/hooks/useObjectRecords";
 import { Input } from "@/components/ui/input";
@@ -57,6 +58,7 @@ export function RecordDetailForm({ record, fields, onFieldChange, editedValues, 
             value={value}
             onChange={(e) => onFieldChange(field.api_name, e.target.value)}
             required={field.is_required}
+            disabled={!isEditing}
           />
         );
       case "picklist":
@@ -65,6 +67,7 @@ export function RecordDetailForm({ record, fields, onFieldChange, editedValues, 
           <Select 
             value={value} 
             onValueChange={(val) => onFieldChange(field.api_name, val)}
+            disabled={!isEditing}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select..." />
@@ -81,6 +84,7 @@ export function RecordDetailForm({ record, fields, onFieldChange, editedValues, 
           <Select 
             value={String(!!value)} 
             onValueChange={(val) => onFieldChange(field.api_name, val === "true")}
+            disabled={!isEditing}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select..." />
@@ -99,6 +103,7 @@ export function RecordDetailForm({ record, fields, onFieldChange, editedValues, 
             value={value}
             onChange={(e) => onFieldChange(field.api_name, e.target.value)}
             required={field.is_required}
+            disabled={!isEditing}
           />
         );
       case "datetime":
@@ -109,6 +114,7 @@ export function RecordDetailForm({ record, fields, onFieldChange, editedValues, 
             value={value}
             onChange={(e) => onFieldChange(field.api_name, e.target.value)}
             required={field.is_required}
+            disabled={!isEditing}
           />
         );
       case "number":
@@ -121,6 +127,7 @@ export function RecordDetailForm({ record, fields, onFieldChange, editedValues, 
             onChange={(e) => onFieldChange(field.api_name, e.target.value ? Number(e.target.value) : null)}
             required={field.is_required}
             step={field.data_type === "currency" ? "0.01" : "1"}
+            disabled={!isEditing}
           />
         );
       case "email":
@@ -131,6 +138,7 @@ export function RecordDetailForm({ record, fields, onFieldChange, editedValues, 
             value={value}
             onChange={(e) => onFieldChange(field.api_name, e.target.value)}
             required={field.is_required}
+            disabled={!isEditing}
           />
         );
       case "url":
@@ -141,6 +149,7 @@ export function RecordDetailForm({ record, fields, onFieldChange, editedValues, 
             value={value}
             onChange={(e) => onFieldChange(field.api_name, e.target.value)}
             required={field.is_required}
+            disabled={!isEditing}
           />
         );
       case "text":
@@ -152,6 +161,7 @@ export function RecordDetailForm({ record, fields, onFieldChange, editedValues, 
             value={value}
             onChange={(e) => onFieldChange(field.api_name, e.target.value)}
             required={field.is_required}
+            disabled={!isEditing}
           />
         );
     }

@@ -80,7 +80,7 @@ function RelatedRecordsSection({
         .select(`
           id,
           api_name,
-          field_display_configs (
+          field_display_configs!inner (
             display_field_api_name
           )
         `)
@@ -88,7 +88,7 @@ function RelatedRecordsSection({
         .eq("api_name", "name")
         .single();
 
-      const displayFieldName = displayField?.field_display_configs?.display_field_api_name || "name";
+      const displayFieldName = displayField?.field_display_configs?.[0]?.display_field_api_name || "name";
 
       // Fetch records with their display values
       const { data: records, error: recordsError } = await supabase
