@@ -486,6 +486,7 @@ export type Database = {
           description: string | null
           icon: string | null
           id: string
+          is_active: boolean
           is_system: boolean
           name: string
           owner_id: string | null
@@ -497,6 +498,7 @@ export type Database = {
           description?: string | null
           icon?: string | null
           id?: string
+          is_active?: boolean
           is_system?: boolean
           name: string
           owner_id?: string | null
@@ -508,6 +510,7 @@ export type Database = {
           description?: string | null
           icon?: string | null
           id?: string
+          is_active?: boolean
           is_system?: boolean
           name?: string
           owner_id?: string | null

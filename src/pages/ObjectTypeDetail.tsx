@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
@@ -8,6 +7,9 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { ArrowLeft, Loader2, User, Building, Briefcase, Calendar } from "lucide-react";
 import { ObjectFieldsList } from "@/components/settings/ObjectFieldsList";
 import { ObjectFieldForm } from "@/components/settings/ObjectFieldForm";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
 
 export default function ObjectTypeDetail() {
   const { objectTypeId } = useParams<{ objectTypeId: string }>();
@@ -24,6 +26,22 @@ export default function ObjectTypeDetail() {
       case 'briefcase': return <Briefcase className="h-5 w-5" />;
       case 'calendar': return <Calendar className="h-5 w-5" />;
       default: return <Building className="h-5 w-5" />;
+    }
+  };
+
+  const handleActiveToggle = async (checked: boolean) => {
+    if (!objectType) return;
+    
+    try {
+      await updateObjectType.mutateAsync({
+        id: objectType.id,
+        is_active: checked
+      });
+      
+      toast.success(checked ? "Object activated" : "Object deactivated");
+    } catch (error) {
+      console.error("Error updating object status:", error);
+      toast.error("Failed to update object status");
     }
   };
 
@@ -55,17 +73,28 @@ export default function ObjectTypeDetail() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Button variant="outline" asChild>
-          <Link to="/settings">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Settings
-          </Link>
-        </Button>
-        <h1 className="text-3xl font-bold flex items-center gap-2">
-          {getIconComponent(objectType.icon)}
-          {objectType.name}
-        </h1>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Button variant="outline" asChild>
+            <Link to="/settings">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to Settings
+            </Link>
+          </Button>
+          <h1 className="text-3xl font-bold flex items-center gap-2">
+            {getIconComponent(objectType.icon)}
+            {objectType.name}
+          </h1>
+        </div>
+        <div className="flex items-center gap-2">
+          <Switch
+            id="active-toggle"
+            checked={objectType.is_active}
+            onCheckedChange={handleActiveToggle}
+            disabled={objectType.is_system}
+          />
+          <Label htmlFor="active-toggle">Active</Label>
+        </div>
       </div>
       
       <Card>

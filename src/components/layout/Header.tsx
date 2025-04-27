@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { Search, Menu } from "lucide-react";
 import { UserProfileMenu } from "./UserProfileMenu";
 import { CommandSearch } from "@/components/search/CommandSearch";
+import { ActiveObjectsMenu } from "./ActiveObjectsMenu";
 
 interface HeaderProps extends React.HTMLAttributes<HTMLElement> {
   onMenuClick: () => void;
@@ -15,7 +15,6 @@ interface HeaderProps extends React.HTMLAttributes<HTMLElement> {
 export function Header({ onMenuClick, buttonRef, className }: HeaderProps) {
   const [searchDialogOpen, setSearchDialogOpen] = useState(false);
   
-  // Handle keyboard shortcut (Ctrl+K or Cmd+K) to open search
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === "k") {
@@ -33,7 +32,7 @@ export function Header({ onMenuClick, buttonRef, className }: HeaderProps) {
       "sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-background px-4",
       className
     )}>
-      <div className="flex items-center">
+      <div className="flex items-center gap-4">
         <Button
           variant="ghost"
           size="icon"
@@ -45,6 +44,7 @@ export function Header({ onMenuClick, buttonRef, className }: HeaderProps) {
           <Menu className="h-5 w-5" />
         </Button>
         <h1 className="font-semibold hidden md:block">CRMbeauty</h1>
+        <ActiveObjectsMenu />
       </div>
       
       <div className="flex items-center gap-4">

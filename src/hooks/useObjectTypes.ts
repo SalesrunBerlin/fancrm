@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -12,6 +11,7 @@ export interface ObjectType {
   icon: string | null;
   owner_id: string;
   is_system: boolean;
+  is_active: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -84,9 +84,27 @@ export function useObjectTypes() {
     },
   });
 
+  const updateObjectType = useMutation({
+    mutationFn: async (updates: Partial<ObjectType> & { id: string }) => {
+      const { data, error } = await supabase
+        .from("object_types")
+        .update(updates)
+        .eq("id", updates.id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["object-types"] });
+    },
+  });
+
   return {
     objectTypes,
     isLoading,
     createObjectType,
+    updateObjectType,
   };
 }
