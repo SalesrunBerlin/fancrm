@@ -58,21 +58,12 @@ export function ObjectFieldEdit({ field, isOpen, onClose }: ObjectFieldEditProps
         display_field_api_name: values.display_field_api_name,
       };
 
-      // For system fields, only update the options
-      if (field.is_system) {
-        await updateField.mutateAsync({
-          id: field.id,
-          options: updatedOptions,
-        });
-      } else {
-        // For non-system fields, update all editable fields
-        await updateField.mutateAsync({
-          id: field.id,
-          name: values.name,
-          api_name: values.api_name,
-          options: updatedOptions,
-        });
-      }
+      await updateField.mutateAsync({
+        id: field.id,
+        name: field.is_system ? field.name : values.name,
+        api_name: values.api_name,
+        options: updatedOptions,
+      });
       
       onClose();
     } finally {
@@ -91,11 +82,11 @@ export function ObjectFieldEdit({ field, isOpen, onClose }: ObjectFieldEditProps
             <FormField
               control={form.control}
               name="name"
-              render={({ field }) => (
+              render={({ field: formField }) => (
                 <FormItem>
                   <FormLabel>Field Name</FormLabel>
                   <FormControl>
-                    <Input {...field} disabled={field.is_system} />
+                    <Input {...formField} disabled={field.is_system} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -105,11 +96,11 @@ export function ObjectFieldEdit({ field, isOpen, onClose }: ObjectFieldEditProps
             <FormField
               control={form.control}
               name="api_name"
-              render={({ field }) => (
+              render={({ field: formField }) => (
                 <FormItem>
                   <FormLabel>API Name</FormLabel>
                   <FormControl>
-                    <Input {...field} disabled />
+                    <Input {...formField} disabled />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
