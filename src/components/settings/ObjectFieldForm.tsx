@@ -10,13 +10,14 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-  FormDescription
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
+import { useObjectFields } from "@/hooks/useObjectFields";
+import { Loader2 } from "lucide-react";
 
 const fieldSchema = z.object({
   name: z.string().min(2, {
@@ -39,9 +40,10 @@ interface ObjectFieldFormProps {
 
 export function ObjectFieldForm({ objectTypeId, onComplete }: ObjectFieldFormProps) {
   const { objectTypes } = useObjectTypes();
+  const { createField } = useObjectFields(objectTypeId);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
-  // Create a form instance instead of using useFormContext
-  const form = useForm({
+  const form = useForm<z.infer<typeof fieldSchema>>({
     resolver: zodResolver(fieldSchema),
     defaultValues: {
       name: "",
@@ -68,15 +70,29 @@ export function ObjectFieldForm({ objectTypeId, onComplete }: ObjectFieldFormPro
 
   const onSubmit = async (values: z.infer<typeof fieldSchema>) => {
     try {
-      console.log("Form submitted with values:", values);
-      // Handle form submission logic here
-      
-      // Call onComplete callback if provided
+      setIsSubmitting(true);
+      console.log("Form values before submission:", values);
+
+      // Create the field with proper options for lookup
+      await createField.mutateAsync({
+        name: values.name,
+        api_name: values.api_name,
+        data_type: values.data_type,
+        is_required: values.is_required,
+        options: values.data_type === 'lookup' ? {
+          target_object_type_id: values.options?.target_object_type_id
+        } : values.options,
+        object_type_id: objectTypeId,
+      });
+
+      form.reset();
       if (onComplete) {
         onComplete();
       }
     } catch (error) {
       console.error("Error submitting form:", error);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -96,6 +112,7 @@ export function ObjectFieldForm({ objectTypeId, onComplete }: ObjectFieldFormPro
             </FormItem>
           )}
         />
+
         <FormField
           control={form.control}
           name="api_name"
@@ -121,7 +138,7 @@ export function ObjectFieldForm({ objectTypeId, onComplete }: ObjectFieldFormPro
                 onValueChange={(value) => {
                   field.onChange(value);
                   if (value === "lookup") {
-                    form.setValue("options", { target_object_type_id: null });
+                    form.setValue("options", { target_object_type_id: "" });
                   }
                 }}
               >
@@ -149,7 +166,7 @@ export function ObjectFieldForm({ objectTypeId, onComplete }: ObjectFieldFormPro
               <FormItem>
                 <FormLabel>Target Object</FormLabel>
                 <Select
-                  value={field.value || ""}
+                  value={field.value ?? ""}
                   onValueChange={field.onChange}
                 >
                   <SelectTrigger>
@@ -176,9 +193,6 @@ export function ObjectFieldForm({ objectTypeId, onComplete }: ObjectFieldFormPro
             <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
               <div className="space-y-0.5">
                 <FormLabel>Required</FormLabel>
-                <FormDescription>
-                  Mark this field as required.
-                </FormDescription>
               </div>
               <FormControl>
                 <Switch
@@ -190,7 +204,13 @@ export function ObjectFieldForm({ objectTypeId, onComplete }: ObjectFieldFormPro
           )}
         />
 
-        <Button type="submit">Create Field</Button>
+        <Button 
+          type="submit" 
+          disabled={isSubmitting}
+        >
+          {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          Create Field
+        </Button>
       </form>
     </Form>
   );
