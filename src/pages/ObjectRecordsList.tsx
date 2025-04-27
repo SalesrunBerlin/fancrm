@@ -110,9 +110,16 @@ export default function ObjectRecordsList() {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center">
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h1 className="text-3xl font-bold">{objectType?.name}</h1>
+          <Button onClick={() => setShowCreateDialog(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            New {objectType?.name}
+          </Button>
+        </div>
+
         <div className="flex items-center gap-2">
-          <h1 className="text-3xl font-bold">{objectType.name}</h1>
           <Button
             variant="outline"
             size="sm"
@@ -122,8 +129,7 @@ export default function ObjectRecordsList() {
             <Edit className="h-4 w-4 mr-1" />
             {editMode ? "Exit Edit Mode" : "Edit Mode"}
           </Button>
-        </div>
-        <div className="flex items-center gap-2">
+          
           <Collapsible open={showFilters} onOpenChange={setShowFilters}>
             <CollapsibleTrigger asChild>
               <Button variant="outline" size="sm" className={showFilters ? "bg-blue-100" : ""}>
@@ -132,10 +138,6 @@ export default function ObjectRecordsList() {
               </Button>
             </CollapsibleTrigger>
           </Collapsible>
-          <Button onClick={() => setShowCreateDialog(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            New {objectType.name}
-          </Button>
         </div>
       </div>
 
