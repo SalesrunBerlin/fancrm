@@ -24,6 +24,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface ObjectFieldsListProps {
   fields: ObjectField[];
@@ -34,6 +35,7 @@ interface ObjectFieldsListProps {
 export function ObjectFieldsList({ fields, isLoading, objectTypeId }: ObjectFieldsListProps) {
   const { deleteField } = useObjectFields(objectTypeId);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [editingField, setEditingField] = useState<ObjectField | null>(null);
   const [fieldToDelete, setFieldToDelete] = useState<ObjectField | null>(null);
   const [defaultDisplayField, setDefaultDisplayField] = useState<string | null>(null);
@@ -72,6 +74,11 @@ export function ObjectFieldsList({ fields, isLoading, objectTypeId }: ObjectFiel
 
       setDefaultDisplayField(tempDisplayField);
       setIsEditing(false);
+
+      // Invalidate all relevant queries to ensure data is refreshed
+      queryClient.invalidateQueries({ queryKey: ["object-types"] });
+      queryClient.invalidateQueries({ queryKey: ["object-record"] });
+      
       toast({
         title: "Success",
         description: "Default display field updated",

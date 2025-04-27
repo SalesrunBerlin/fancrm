@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
@@ -32,11 +33,17 @@ export default function ObjectRecordDetail() {
     queryFn: async () => {
       if (!recordId) throw new Error("Record ID is required");
       
-      const { data: objectType } = await supabase
+      // First get the object type to determine the display field
+      const { data: objectType, error: objectTypeError } = await supabase
         .from('object_types')
         .select('default_field_api_name')
         .eq('id', objectTypeId)
         .single();
+
+      if (objectTypeError) {
+        console.error("Error fetching object type:", objectTypeError);
+        throw objectTypeError;
+      }
 
       const defaultFieldApiName = objectType?.default_field_api_name || 'name';
       
@@ -66,7 +73,7 @@ export default function ObjectRecordDetail() {
         display_field_api_name: defaultFieldApiName
       };
     },
-    enabled: !!recordId,
+    enabled: !!recordId && !!objectTypeId,
   });
 
   const objectType = objectTypes?.find(type => type.id === objectTypeId);
@@ -169,6 +176,7 @@ export default function ObjectRecordDetail() {
     }
   };
 
+  // Get the display name from the field values based on the display_field_api_name
   const displayName = record?.field_values?.[record.display_field_api_name] || record?.record_id || 'New Record';
 
   if (!objectType) {
