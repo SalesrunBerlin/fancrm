@@ -1,4 +1,5 @@
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
 import { useObjectFields } from "@/hooks/useObjectFields";
 import {
   Table,
@@ -38,7 +39,7 @@ export function ObjectFieldsList({ fields, isLoading, objectTypeId }: ObjectFiel
   const [defaultDisplayField, setDefaultDisplayField] = useState<string | null>(null);
 
   const fetchCurrentDefaultField = async () => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('object_types')
       .select('default_field_api_name')
       .eq('id', objectTypeId)
@@ -75,9 +76,16 @@ export function ObjectFieldsList({ fields, isLoading, objectTypeId }: ObjectFiel
     }
   };
 
-  useState(() => {
+  useEffect(() => {
     fetchCurrentDefaultField();
   }, [objectTypeId]);
+
+  const handleDeleteField = async () => {
+    if (!fieldToDelete) return;
+    
+    await deleteField.mutateAsync(fieldToDelete.id);
+    setFieldToDelete(null);
+  };
 
   if (isLoading) {
     return (

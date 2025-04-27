@@ -559,6 +559,7 @@ export type Database = {
         Row: {
           api_name: string
           created_at: string
+          default_field_api_name: string | null
           description: string | null
           icon: string | null
           id: string
@@ -571,6 +572,7 @@ export type Database = {
         Insert: {
           api_name: string
           created_at?: string
+          default_field_api_name?: string | null
           description?: string | null
           icon?: string | null
           id?: string
@@ -583,6 +585,7 @@ export type Database = {
         Update: {
           api_name?: string
           created_at?: string
+          default_field_api_name?: string | null
           description?: string | null
           icon?: string | null
           id?: string
