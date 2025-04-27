@@ -1,3 +1,4 @@
+
 import { useFormField } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -103,7 +104,8 @@ export function RecordField({ field, form }: RecordFieldProps) {
       <FormControl>
         {renderField()}
       </FormControl>
-      <FormDescription>{field.description}</FormDescription>
+      {/* Use optional chaining for description since it might not exist */}
+      <FormDescription>{field.description || ""}</FormDescription>
       <FormMessage />
     </FormItem>
   );

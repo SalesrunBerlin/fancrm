@@ -1,7 +1,8 @@
-import { useFormContext } from "react-hook-form";
+
+import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useToast } from "@/hooks/use-toast";
+import { useForm } from "react-hook-form";
 import {
   Form,
   FormControl,
@@ -9,10 +10,10 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  FormDescription
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
@@ -38,8 +39,18 @@ interface ObjectFieldFormProps {
 
 export function ObjectFieldForm({ objectTypeId, onComplete }: ObjectFieldFormProps) {
   const { objectTypes } = useObjectTypes();
-  const { toast } = useToast();
-  const form = useFormContext();
+  
+  // Create a form instance instead of using useFormContext
+  const form = useForm({
+    resolver: zodResolver(fieldSchema),
+    defaultValues: {
+      name: "",
+      api_name: "",
+      data_type: "",
+      is_required: false,
+      options: {}
+    }
+  });
 
   const dataTypeOptions = [
     { label: "Text", value: "text" },
@@ -55,84 +66,72 @@ export function ObjectFieldForm({ objectTypeId, onComplete }: ObjectFieldFormPro
     { label: "Lookup", value: "lookup" }
   ];
 
+  const onSubmit = async (values: z.infer<typeof fieldSchema>) => {
+    try {
+      console.log("Form submitted with values:", values);
+      // Handle form submission logic here
+      
+      // Call onComplete callback if provided
+      if (onComplete) {
+        onComplete();
+      }
+    } catch (error) {
+      console.error("Error submitting form:", error);
+    }
+  };
+
   return (
-    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-      <FormField
-        control={form.control}
-        name="name"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>Field Name</FormLabel>
-            <FormControl>
-              <Input placeholder="Field Name" {...field} />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
-      <FormField
-        control={form.control}
-        name="api_name"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>API Name</FormLabel>
-            <FormControl>
-              <Input placeholder="api_name" {...field} />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
-
-      <FormField
-        control={form.control}
-        name="data_type"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>Field Type</FormLabel>
-            <Select
-              value={field.value}
-              onValueChange={(value) => {
-                field.onChange(value);
-                if (value === "lookup") {
-                  form.setValue("options", { target_object_type_id: null });
-                }
-              }}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select field type" />
-              </SelectTrigger>
-              <SelectContent>
-                {dataTypeOptions.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
-
-      {form.watch("data_type") === "lookup" && (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
         <FormField
           control={form.control}
-          name="options.target_object_type_id"
+          name="name"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Target Object</FormLabel>
+              <FormLabel>Field Name</FormLabel>
+              <FormControl>
+                <Input placeholder="Field Name" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="api_name"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>API Name</FormLabel>
+              <FormControl>
+                <Input placeholder="api_name" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="data_type"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Field Type</FormLabel>
               <Select
-                value={field.value || ""}
-                onValueChange={field.onChange}
+                value={field.value}
+                onValueChange={(value) => {
+                  field.onChange(value);
+                  if (value === "lookup") {
+                    form.setValue("options", { target_object_type_id: null });
+                  }
+                }}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select target object" />
+                  <SelectValue placeholder="Select field type" />
                 </SelectTrigger>
                 <SelectContent>
-                  {objectTypes?.filter(t => t.id !== objectTypeId).map((type) => (
-                    <SelectItem key={type.id} value={type.id}>
-                      {type.name}
+                  {dataTypeOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -141,30 +140,58 @@ export function ObjectFieldForm({ objectTypeId, onComplete }: ObjectFieldFormPro
             </FormItem>
           )}
         />
-      )}
 
-      <FormField
-        control={form.control}
-        name="is_required"
-        render={({ field }) => (
-          <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-            <div className="space-y-0.5">
-              <FormLabel>Required</FormLabel>
-              <FormDescription>
-                Mark this field as required.
-              </FormDescription>
-            </div>
-            <FormControl>
-              <Switch
-                checked={field.value}
-                onCheckedChange={field.onChange}
-              />
-            </FormControl>
-          </FormItem>
+        {form.watch("data_type") === "lookup" && (
+          <FormField
+            control={form.control}
+            name="options.target_object_type_id"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Target Object</FormLabel>
+                <Select
+                  value={field.value || ""}
+                  onValueChange={field.onChange}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select target object" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {objectTypes?.filter(t => t.id !== objectTypeId).map((type) => (
+                      <SelectItem key={type.id} value={type.id}>
+                        {type.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
         )}
-      />
 
-      <Button type="submit">Create Field</Button>
-    </form>
+        <FormField
+          control={form.control}
+          name="is_required"
+          render={({ field }) => (
+            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+              <div className="space-y-0.5">
+                <FormLabel>Required</FormLabel>
+                <FormDescription>
+                  Mark this field as required.
+                </FormDescription>
+              </div>
+              <FormControl>
+                <Switch
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+
+        <Button type="submit">Create Field</Button>
+      </form>
+    </Form>
   );
 }
