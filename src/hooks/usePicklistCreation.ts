@@ -8,7 +8,7 @@ export function usePicklistCreation(fieldId: string | null) {
   const { addValue, removeValue } = useFieldPicklistValues(fieldId || '');
 
   const addPicklistValue = async (value: string) => {
-    if (!fieldId) return;
+    if (!fieldId) return false;
     
     setIsAddingValues(true);
     try {
@@ -26,8 +26,31 @@ export function usePicklistCreation(fieldId: string | null) {
     }
   };
 
+  const addBatchPicklistValues = async (values: string[]) => {
+    if (!fieldId || values.length === 0) return false;
+    
+    setIsAddingValues(true);
+    try {
+      const results = await Promise.all(
+        values.map(value => 
+          addValue.mutateAsync({
+            value: value.trim(),
+            label: value.trim(),
+          })
+        )
+      );
+      return true;
+    } catch (error) {
+      console.error('Error adding picklist values in batch:', error);
+      toast.error('Failed to add some picklist values');
+      return false;
+    } finally {
+      setIsAddingValues(false);
+    }
+  };
+
   const removePicklistValue = async (valueId: string) => {
-    if (!fieldId) return;
+    if (!fieldId) return false;
     
     try {
       await removeValue.mutateAsync(valueId);
@@ -42,6 +65,7 @@ export function usePicklistCreation(fieldId: string | null) {
   return {
     isAddingValues,
     addPicklistValue,
+    addBatchPicklistValues,
     removePicklistValue,
   };
 }

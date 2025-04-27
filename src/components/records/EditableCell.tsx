@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { TableCell } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
@@ -6,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { LookupField } from "./LookupField";
 import { LookupValueDisplay } from "./LookupValueDisplay";
 import { useFieldPicklistValues } from "@/hooks/useFieldPicklistValues";
+import { Loader2 } from "lucide-react";
 
 interface EditableCellProps {
   value: any;
@@ -26,7 +28,7 @@ export function EditableCell({
 }: EditableCellProps) {
   const [editValue, setEditValue] = useState<any>(value);
   const [error, setError] = useState<string | null>(null);
-  const { picklistValues } = useFieldPicklistValues(fieldOptions?.field_id);
+  const { picklistValues, isLoading: loadingPicklist } = useFieldPicklistValues(fieldOptions?.field_id || '');
 
   useEffect(() => {
     setEditValue(value);
@@ -54,6 +56,12 @@ export function EditableCell({
         </TableCell>
       );
     }
+    
+    if (fieldType === 'picklist' && picklistValues) {
+      const selectedOption = picklistValues.find(option => option.value === value);
+      return <TableCell>{selectedOption?.label || value || "-"}</TableCell>;
+    }
+    
     return <TableCell>{value || "-"}</TableCell>;
   }
 
@@ -68,6 +76,15 @@ export function EditableCell({
           />
         );
       case "picklist":
+        if (loadingPicklist) {
+          return (
+            <div className="flex items-center space-x-2">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span>Loading options...</span>
+            </div>
+          );
+        }
+        
         return (
           <Select 
             value={editValue || ""} 
@@ -78,7 +95,7 @@ export function EditableCell({
             </SelectTrigger>
             <SelectContent>
               {picklistValues?.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
+                <SelectItem key={option.id} value={option.value}>
                   {option.label}
                 </SelectItem>
               ))}
@@ -141,13 +158,25 @@ export function EditableCell({
         );
       case "text":
       case "lookup":
-        if (!fieldOptions?.target_object_type_id) return null;
+        if (fieldType === "lookup" && !fieldOptions?.target_object_type_id) return null;
+        
+        if (fieldType === "lookup") {
+          return (
+            <LookupField
+              value={value}
+              onChange={handleChange}
+              targetObjectTypeId={fieldOptions.target_object_type_id}
+              disabled={false}
+            />
+          );
+        }
+        
         return (
-          <LookupField
-            value={value}
-            onChange={handleChange}
-            targetObjectTypeId={fieldOptions.target_object_type_id}
-            disabled={false}
+          <Input 
+            type="text"
+            value={editValue || ""}
+            onChange={(e) => handleChange(e.target.value)}
+            className={error ? "border-red-500" : ""}
           />
         );
       default:
