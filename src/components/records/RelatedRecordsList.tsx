@@ -13,57 +13,107 @@ interface RelatedRecordsListProps {
   recordId: string;
 }
 
-export function RelatedRecordsList({ objectTypeId, recordId }: RelatedRecordsListProps) {
-  const { fields } = useObjectFields(objectTypeId);
+interface RelatedSection {
+  objectType: {
+    id: string;
+    name: string;
+  };
+  relationship: {
+    name: string;
+    relationship_type: string;
+  };
+  records: any[];
+  displayField: any;
+}
 
-  // Find lookup fields that reference this object type
-  const { data: referencingFields, isLoading: isFieldsLoading } = useQuery({
-    queryKey: ["referencing-fields", objectTypeId],
+export function RelatedRecordsList({ objectTypeId, recordId }: RelatedRecordsListProps) {
+  // Fetch both direct lookup references and reverse lookups through relationships
+  const { data: relatedSections, isLoading } = useQuery({
+    queryKey: ["related-records", objectTypeId, recordId],
     queryFn: async () => {
-      const { data: fields, error } = await supabase
-        .from("object_fields")
+      // Get all relationships where this object type is involved
+      const { data: relationships, error: relError } = await supabase
+        .from("object_relationships")
         .select(`
           id,
           name,
-          api_name,
-          object_type_id,
-          options
+          relationship_type,
+          from_object_id,
+          to_object_id
         `)
-        .eq("data_type", "lookup")
-        .filter("options->target_object_type_id", "eq", objectTypeId);
+        .or(`from_object_id.eq.${objectTypeId},to_object_id.eq.${objectTypeId}`);
 
-      if (error) throw error;
-      return fields;
-    }
-  });
+      if (relError) throw relError;
+      
+      if (!relationships) return [];
 
-  // For each referencing field, fetch records that reference the current record
-  const { data: relatedSections, isLoading: isRecordsLoading } = useQuery({
-    queryKey: ["related-records", objectTypeId, recordId, referencingFields],
-    queryFn: async () => {
-      if (!referencingFields) return [];
-
-      const sections = await Promise.all(referencingFields.map(async (field) => {
-        // Fetch records where this field references the current record
-        const { data: fieldValues } = await supabase
-          .from("object_field_values")
-          .select("record_id")
-          .eq("field_api_name", field.api_name)
-          .eq("value", recordId);
-
-        if (!fieldValues || fieldValues.length === 0) return null;
-
-        const recordIds = fieldValues.map(fv => fv.record_id);
-
-        // Get the actual records
-        const { data: records } = await supabase
-          .from("object_records")
+      const sections = await Promise.all(relationships.map(async (relationship) => {
+        // Determine if this is a forward or reverse relationship
+        const isForward = relationship.from_object_id === objectTypeId;
+        const relatedObjectTypeId = isForward ? relationship.to_object_id : relationship.from_object_id;
+        
+        // Get the fields for the related object type to find lookup fields
+        const { data: fields } = await supabase
+          .from("object_fields")
           .select("*")
-          .in("id", recordIds);
+          .eq("object_type_id", isForward ? relationship.to_object_id : relationship.from_object_id)
+          .eq("data_type", "lookup");
 
-        if (!records) return null;
+        if (!fields) return null;
 
-        // Get field values for these records
+        // Find the field that references our object type
+        const lookupField = fields.find(f => 
+          f.data_type === "lookup" && 
+          f.options?.target_object_type_id === objectTypeId
+        );
+
+        if (!lookupField && !isForward) return null;
+
+        // Get records that reference this record
+        let records;
+        if (isForward) {
+          // For forward relationships, get records from field values
+          const { data: fieldValues } = await supabase
+            .from("object_field_values")
+            .select("record_id")
+            .eq("field_api_name", lookupField?.api_name)
+            .eq("value", recordId);
+
+          if (!fieldValues || fieldValues.length === 0) return null;
+
+          const recordIds = fieldValues.map(fv => fv.record_id);
+
+          const { data: relatedRecords } = await supabase
+            .from("object_records")
+            .select("*")
+            .in("id", recordIds);
+
+          records = relatedRecords;
+        } else {
+          // For reverse relationships, find records that this record references
+          const { data: fieldValues } = await supabase
+            .from("object_field_values")
+            .select("value")
+            .eq("record_id", recordId)
+            .eq("field_api_name", lookupField.api_name);
+
+          if (!fieldValues || fieldValues.length === 0) return null;
+
+          const relatedRecordIds = fieldValues.map(fv => fv.value).filter(Boolean);
+
+          if (relatedRecordIds.length === 0) return null;
+
+          const { data: relatedRecords } = await supabase
+            .from("object_records")
+            .select("*")
+            .in("id", relatedRecordIds);
+
+          records = relatedRecords;
+        }
+
+        if (!records || records.length === 0) return null;
+
+        // Get values for these records
         const { data: values } = await supabase
           .from("object_field_values")
           .select("*")
@@ -79,37 +129,37 @@ export function RelatedRecordsList({ objectTypeId, recordId }: RelatedRecordsLis
             }), {})
         }));
 
-        // Get the object type info for these records
+        // Get the object type info
         const { data: objectType } = await supabase
           .from("object_types")
           .select("*")
-          .eq("id", field.object_type_id)
+          .eq("id", relatedObjectTypeId)
           .single();
 
-        // Get the name field or the first field of the source object type
-        const { data: sourceFields } = await supabase
+        if (!objectType) return null;
+
+        // Get the name field or first field for display
+        const { data: objectFields } = await supabase
           .from("object_fields")
           .select("*")
-          .eq("object_type_id", field.object_type_id)
+          .eq("object_type_id", relatedObjectTypeId)
           .order("display_order");
 
-        // Find the name field or use the first field
-        const displayField = sourceFields?.find(f => f.api_name === "name") || sourceFields?.[0];
+        const displayField = objectFields?.find(f => f.api_name === "name") || objectFields?.[0];
 
         return {
           objectType,
-          field,
+          relationship,
           records: recordsWithValues,
           displayField
         };
       }));
 
       return sections.filter(Boolean);
-    },
-    enabled: !!referencingFields
+    }
   });
 
-  if (isFieldsLoading || isRecordsLoading) {
+  if (isLoading) {
     return (
       <div className="flex justify-center p-4">
         <Loader2 className="h-6 w-6 animate-spin" />
@@ -128,9 +178,9 @@ export function RelatedRecordsList({ objectTypeId, recordId }: RelatedRecordsLis
   return (
     <div className="space-y-6">
       {relatedSections.map((section) => (
-        <Card key={section.field.id}>
+        <Card key={section.relationship.id}>
           <CardHeader>
-            <CardTitle>{section.objectType.name}</CardTitle>
+            <CardTitle>{section.relationship.name}</CardTitle>
           </CardHeader>
           <CardContent>
             <Table>
