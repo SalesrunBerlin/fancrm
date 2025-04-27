@@ -6,7 +6,9 @@ import { Link } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useObjectFields } from "@/hooks/useObjectFields";
-import { LookupValueDisplay } from "./LookupValueDisplay";
+import { EditableCell } from "./EditableCell";
+import { useLocalStorage } from "@/hooks/useLocalStorage";
+import { FieldsConfigDialog } from "./FieldsConfigDialog";
 
 interface RelatedRecordsListProps {
   objectTypeId: string;
@@ -23,11 +25,11 @@ interface RelatedSection {
     relationship_type: string;
   };
   records: any[];
+  fields: any[];
   displayField: any;
 }
 
 export function RelatedRecordsList({ objectTypeId, recordId }: RelatedRecordsListProps) {
-  // Fetch both direct lookup references and reverse lookups through relationships
   const { data: relatedSections, isLoading } = useQuery({
     queryKey: ["related-records", objectTypeId, recordId],
     queryFn: async () => {
@@ -44,7 +46,6 @@ export function RelatedRecordsList({ objectTypeId, recordId }: RelatedRecordsLis
         .or(`from_object_id.eq.${objectTypeId},to_object_id.eq.${objectTypeId}`);
 
       if (relError) throw relError;
-      
       if (!relationships) return [];
 
       const sections = await Promise.all(relationships.map(async (relationship) => {
@@ -52,31 +53,28 @@ export function RelatedRecordsList({ objectTypeId, recordId }: RelatedRecordsLis
         const isForward = relationship.from_object_id === objectTypeId;
         const relatedObjectTypeId = isForward ? relationship.to_object_id : relationship.from_object_id;
         
-        // Get the fields for the related object type to find lookup fields
+        // Get the fields for the related object type
         const { data: fields } = await supabase
           .from("object_fields")
           .select("*")
-          .eq("object_type_id", isForward ? relationship.to_object_id : relationship.from_object_id)
-          .eq("data_type", "lookup");
+          .eq("object_type_id", relatedObjectTypeId)
+          .order("display_order");
 
         if (!fields) return null;
 
-        // Find the field that references our object type
+        // Get records that reference this record
+        let records;
         const lookupField = fields.find(f => 
           f.data_type === "lookup" && 
           f.options?.target_object_type_id === objectTypeId
         );
 
-        if (!lookupField && !isForward) return null;
-
-        // Get records that reference this record
-        let records;
-        if (isForward) {
+        if (isForward && lookupField) {
           // For forward relationships, get records from field values
           const { data: fieldValues } = await supabase
             .from("object_field_values")
             .select("record_id")
-            .eq("field_api_name", lookupField?.api_name)
+            .eq("field_api_name", lookupField.api_name)
             .eq("value", recordId);
 
           if (!fieldValues || fieldValues.length === 0) return null;
@@ -89,7 +87,7 @@ export function RelatedRecordsList({ objectTypeId, recordId }: RelatedRecordsLis
             .in("id", recordIds);
 
           records = relatedRecords;
-        } else {
+        } else if (!isForward && lookupField) {
           // For reverse relationships, find records that this record references
           const { data: fieldValues } = await supabase
             .from("object_field_values")
@@ -100,7 +98,7 @@ export function RelatedRecordsList({ objectTypeId, recordId }: RelatedRecordsLis
           if (!fieldValues || fieldValues.length === 0) return null;
 
           const relatedRecordIds = fieldValues.map(fv => fv.value).filter(Boolean);
-
+          
           if (relatedRecordIds.length === 0) return null;
 
           const { data: relatedRecords } = await supabase
@@ -138,20 +136,16 @@ export function RelatedRecordsList({ objectTypeId, recordId }: RelatedRecordsLis
 
         if (!objectType) return null;
 
-        // Get the name field or first field for display
-        const { data: objectFields } = await supabase
-          .from("object_fields")
-          .select("*")
-          .eq("object_type_id", relatedObjectTypeId)
-          .order("display_order");
-
-        const displayField = objectFields?.find(f => f.api_name === "name") || objectFields?.[0];
+        // Get stored visible fields from localStorage
+        const storedFields = localStorage.getItem(`visible-fields-${relatedObjectTypeId}`);
+        const visibleFields = storedFields ? JSON.parse(storedFields) : fields.map(f => f.api_name);
 
         return {
           objectType,
           relationship,
           records: recordsWithValues,
-          displayField
+          fields: fields.filter(f => visibleFields.includes(f.api_name)),
+          displayField: fields.find(f => f.api_name === objectType.default_field_api_name) || fields[0]
         };
       }));
 
@@ -179,31 +173,45 @@ export function RelatedRecordsList({ objectTypeId, recordId }: RelatedRecordsLis
     <div className="space-y-6">
       {relatedSections.map((section) => (
         <Card key={section.relationship.id}>
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>{section.relationship.name}</CardTitle>
+            <FieldsConfigDialog
+              objectTypeId={section.objectType.id}
+              onVisibilityChange={() => {}}
+              defaultVisibleFields={section.fields.map(f => f.api_name)}
+            />
           </CardHeader>
           <CardContent>
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Name</TableHead>
+                  {section.fields.map((field) => (
+                    <TableHead key={field.api_name}>{field.name}</TableHead>
+                  ))}
                   <TableHead>Created At</TableHead>
+                  <TableHead>Last Modified</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {section.records.map((record) => (
-                  <TableRow key={record.id}>
-                    <TableCell>
-                      <Link 
-                        to={`/objects/${section.objectType.id}/${record.id}`}
-                        className="text-blue-600 hover:underline"
-                      >
-                        {record.field_values[section.displayField?.api_name || ""] || record.record_id}
-                      </Link>
-                    </TableCell>
-                    <TableCell>
-                      {new Date(record.created_at).toLocaleDateString()}
-                    </TableCell>
+                  <TableRow 
+                    key={record.id}
+                    className="cursor-pointer hover:bg-muted/50"
+                    onClick={() => window.location.href = `/objects/${section.objectType.id}/${record.id}`}
+                  >
+                    {section.fields.map((field) => (
+                      <EditableCell
+                        key={`${record.id}-${field.api_name}`}
+                        value={record.field_values?.[field.api_name]}
+                        editMode={false}
+                        onChange={() => {}}
+                        fieldType={field.data_type}
+                        isRequired={field.is_required}
+                        fieldOptions={field.options}
+                      />
+                    ))}
+                    <TableCell>{new Date(record.created_at).toLocaleDateString()}</TableCell>
+                    <TableCell>{new Date(record.updated_at).toLocaleDateString()}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
