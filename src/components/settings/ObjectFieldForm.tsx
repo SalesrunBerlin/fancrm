@@ -20,6 +20,7 @@ import { useObjectFields } from "@/hooks/useObjectFields";
 import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
 
 const fieldSchema = z.object({
   name: z.string().min(2, {
@@ -51,6 +52,7 @@ export function ObjectFieldForm({ objectTypeId, onComplete }: ObjectFieldFormPro
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedTargetType, setSelectedTargetType] = useState<string | null>(null);
   const { fields: targetFields } = useObjectFields(selectedTargetType || undefined);
+  const { user } = useAuth();
   
   const form = useForm<z.infer<typeof fieldSchema>>({
     resolver: zodResolver(fieldSchema),
@@ -99,6 +101,11 @@ export function ObjectFieldForm({ objectTypeId, onComplete }: ObjectFieldFormPro
       setIsSubmitting(true);
       console.log("Form values before submission:", values);
 
+      if (!user) {
+        toast.error("You must be logged in to create fields");
+        return;
+      }
+
       // First create the field
       const { data: fieldData, error: fieldError } = await supabase
         .from('object_fields')
@@ -108,6 +115,7 @@ export function ObjectFieldForm({ objectTypeId, onComplete }: ObjectFieldFormPro
           data_type: values.data_type,
           is_required: values.is_required,
           object_type_id: objectTypeId,
+          owner_id: user.id, // Make sure owner_id is set to the current user's ID
           options: values.data_type === 'lookup' ? {
             target_object_type_id: values.options?.target_object_type_id
           } : undefined,

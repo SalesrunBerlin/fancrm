@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -29,6 +28,7 @@ export function useObjectFields(objectTypeId?: string) {
     mutationFn: async (newField: Omit<ObjectField, "id" | "created_at" | "updated_at" | "owner_id" | "is_system" | "display_order" | "options" | "default_value">) => {
       if (!user) throw new Error("User must be logged in to create fields");
 
+      // Ensure owner_id is set to the current user's ID
       const { data, error } = await supabase
         .from("object_fields")
         .insert([{
@@ -54,7 +54,7 @@ export function useObjectFields(objectTypeId?: string) {
       console.error("Error creating field:", error);
       toast({
         title: "Error",
-        description: "Failed to create field",
+        description: "Failed to create field: " + (error instanceof Error ? error.message : "Unknown error"),
         variant: "destructive",
       });
     },
