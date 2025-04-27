@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,6 +39,7 @@ export function ObjectTypeForm() {
         description: description.trim() || null,
         icon: icon,
         is_system: false,
+        is_active: false,
       });
 
       setName("");

@@ -1,19 +1,20 @@
-import { useState, useEffect } from "react";
+
+import { useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
 import { useObjectFields } from "@/hooks/useObjectFields";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { ArrowLeft, Loader2, User, Building, Briefcase, Calendar } from "lucide-react";
 import { ObjectFieldsList } from "@/components/settings/ObjectFieldsList";
 import { ObjectFieldForm } from "@/components/settings/ObjectFieldForm";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 
 export default function ObjectTypeDetail() {
   const { objectTypeId } = useParams<{ objectTypeId: string }>();
-  const { objectTypes, isLoading: isLoadingTypes } = useObjectTypes();
+  const { objectTypes, isLoading: isLoadingTypes, updateObjectType } = useObjectTypes();
   const { fields, isLoading: isLoadingFields } = useObjectFields(objectTypeId);
   const [showFieldForm, setShowFieldForm] = useState(false);
 
@@ -31,6 +32,11 @@ export default function ObjectTypeDetail() {
 
   const handleActiveToggle = async (checked: boolean) => {
     if (!objectType) return;
+    
+    if (objectType.is_system && !checked) {
+      toast.error("Cannot deactivate system objects");
+      return;
+    }
     
     try {
       await updateObjectType.mutateAsync({
@@ -91,7 +97,7 @@ export default function ObjectTypeDetail() {
             id="active-toggle"
             checked={objectType.is_active}
             onCheckedChange={handleActiveToggle}
-            disabled={objectType.is_system}
+            disabled={updateObjectType.isPending}
           />
           <Label htmlFor="active-toggle">Active</Label>
         </div>
