@@ -1,4 +1,3 @@
-
 import { Account } from "@/lib/types/database";
 import { useNavigate } from "react-router-dom";
 import { 
@@ -17,7 +16,10 @@ interface AccountsTableProps {
 export function AccountsTable({ accounts }: AccountsTableProps) {
   const navigate = useNavigate();
 
-  const handleAccountClick = (id: string) => {
+  const handleAccountClick = (id: string, event: React.MouseEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    console.log("Navigating to account:", id);
     navigate(`/accounts/${id}`);
   };
 
@@ -37,7 +39,7 @@ export function AccountsTable({ accounts }: AccountsTableProps) {
             <TableRow 
               key={account.id} 
               className="cursor-pointer hover:bg-muted/50" 
-              onClick={() => handleAccountClick(account.id)}
+              onClick={(e) => handleAccountClick(account.id, e)}
             >
               <TableCell className="font-medium">{account.name}</TableCell>
               <TableCell>{account.type || "Business"}</TableCell>

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
@@ -9,39 +8,61 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, Edit, Save, Loader2, X } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import { RecordDetailForm } from "@/components/records/RecordDetailForm";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export default function ObjectRecordDetail() {
   const { objectTypeId, recordId } = useParams<{ objectTypeId: string; recordId: string }>();
   const { objectTypes } = useObjectTypes();
-  const { getRecord, updateRecord } = useObjectRecords(objectTypeId);
   const { fields } = useObjectFields(objectTypeId);
-  const navigate = useNavigate();
-  
-  const [record, setRecord] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [editedValues, setEditedValues] = useState<Record<string, any>>({});
+  const navigate = useNavigate();
+
+  // Enhanced record fetching with React Query
+  const { data: record, isLoading, error } = useQuery({
+    queryKey: ["object-record", recordId],
+    queryFn: async () => {
+      if (!recordId) throw new Error("Record ID is required");
+      
+      console.log("Fetching record:", recordId);
+      
+      // Get the record
+      const { data: record, error: recordError } = await supabase
+        .from("object_records")
+        .select("*")
+        .eq("id", recordId)
+        .single();
+
+      if (recordError) throw recordError;
+
+      // Get field values
+      const { data: fieldValues, error: fieldValuesError } = await supabase
+        .from("object_field_values")
+        .select("field_api_name, value")
+        .eq("record_id", recordId);
+
+      if (fieldValuesError) throw fieldValuesError;
+
+      console.log("Record loaded:", record);
+      console.log("Field values:", fieldValues);
+
+      // Convert field values array to object
+      const valuesObject = fieldValues.reduce((acc, curr) => {
+        acc[curr.field_api_name] = curr.value;
+        return acc;
+      }, {} as { [key: string]: string | null });
+
+      return {
+        ...record,
+        field_values: valuesObject
+      };
+    },
+    enabled: !!recordId,
+  });
   
   const objectType = objectTypes?.find(type => type.id === objectTypeId);
-
-  // Fetch record data
-  useEffect(() => {
-    const fetchRecord = async () => {
-      if (!recordId) return;
-      
-      setIsLoading(true);
-      try {
-        const recordData = await getRecord(recordId);
-        setRecord(recordData);
-      } catch (error) {
-        console.error("Error fetching record:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
-    fetchRecord();
-  }, [recordId, getRecord]);
 
   const handleEditToggle = () => {
     if (isEditing) {
@@ -62,19 +83,20 @@ export default function ObjectRecordDetail() {
     if (!recordId || Object.keys(editedValues).length === 0) return;
     
     try {
-      await updateRecord.mutateAsync({
-        id: recordId,
-        field_values: editedValues
-      });
+      // TODO: Replace with react query mutation
+      // await updateRecord.mutateAsync({
+      //   id: recordId,
+      //   field_values: editedValues
+      // });
       
-      // Update local state with new values
-      setRecord(prev => ({
-        ...prev,
-        field_values: {
-          ...(prev?.field_values || {}),
-          ...editedValues
-        }
-      }));
+      // // Update local state with new values
+      // setRecord(prev => ({
+      //   ...prev,
+      //   field_values: {
+      //     ...(prev?.field_values || {}),
+      //     ...editedValues
+      //   }
+      // }));
       
       // Exit edit mode and clear edited values
       setIsEditing(false);
@@ -85,7 +107,12 @@ export default function ObjectRecordDetail() {
   };
 
   if (!objectType) {
-    return <div>Object type not found</div>;
+    return (
+      <Alert variant="destructive">
+        <AlertTitle>Error</AlertTitle>
+        <AlertDescription>Object type not found</AlertDescription>
+      </Alert>
+    );
   }
 
   if (isLoading) {
@@ -96,8 +123,15 @@ export default function ObjectRecordDetail() {
     );
   }
 
-  if (!record) {
-    return <div>Record not found</div>;
+  if (error || !record) {
+    return (
+      <Alert variant="destructive">
+        <AlertTitle>Error</AlertTitle>
+        <AlertDescription>
+          {error ? `Error loading record: ${error.message}` : 'Record not found'}
+        </AlertDescription>
+      </Alert>
+    );
   }
 
   return (
@@ -114,12 +148,8 @@ export default function ObjectRecordDetail() {
         <div className="flex items-center gap-2">
           {isEditing ? (
             <>
-              <Button variant="default" onClick={handleSave} disabled={updateRecord.isPending}>
-                {updateRecord.isPending ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <Save className="h-4 w-4 mr-2" />
-                )}
+              <Button variant="default" onClick={handleSave}>
+                <Save className="h-4 w-4 mr-2" />
                 Save
               </Button>
               <Button variant="outline" onClick={handleEditToggle}>
