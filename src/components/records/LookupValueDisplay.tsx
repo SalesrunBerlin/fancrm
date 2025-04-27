@@ -2,7 +2,6 @@
 import { Link } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { useObjectLookup } from "@/hooks/useObjectLookup";
-import { useObjectFields } from "@/hooks/useObjectFields";
 
 interface LookupValueDisplayProps {
   value: string | null;

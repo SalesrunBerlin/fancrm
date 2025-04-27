@@ -1,3 +1,4 @@
+
 import { ObjectField } from "@/hooks/useObjectTypes";
 import { ObjectRecord } from "@/hooks/useObjectRecords";
 import { Input } from "@/components/ui/input";
@@ -115,15 +116,18 @@ export function RecordDetailForm({ record, fields, onFieldChange, editedValues, 
             />
           );
         case "lookup":
-          if (!field.options?.target_object_type_id) return null;
-          return (
-            <LookupField
-              value={value}
-              onChange={(newValue) => onFieldChange(field.api_name, newValue)}
-              targetObjectTypeId={field.options.target_object_type_id}
-              disabled={false}
-            />
-          );
+          // Only proceed if the field has options with a target_object_type_id
+          if (field.options && 'target_object_type_id' in field.options && field.options.target_object_type_id) {
+            return (
+              <LookupField
+                value={value}
+                onChange={(newValue) => onFieldChange(field.api_name, newValue)}
+                targetObjectTypeId={field.options.target_object_type_id}
+                disabled={false}
+              />
+            );
+          }
+          return null;
         default:
           return (
             <Input
@@ -137,12 +141,12 @@ export function RecordDetailForm({ record, fields, onFieldChange, editedValues, 
       }
     } else {
       // Non-edit mode
-      if (field.data_type === 'lookup' && field.options?.target_object_type_id) {
+      if (field.data_type === 'lookup' && field.options && 'target_object_type_id' in field.options && field.options.target_object_type_id) {
         return (
           <div className="pt-1">
             <LookupValueDisplay 
               value={value} 
-              fieldOptions={field.options} 
+              fieldOptions={field.options as { target_object_type_id: string }}
             />
           </div>
         );

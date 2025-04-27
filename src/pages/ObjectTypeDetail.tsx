@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
@@ -12,6 +13,13 @@ import { ObjectFieldForm } from "@/components/settings/ObjectFieldForm";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { PicklistValuesManager } from "@/components/settings/PicklistValuesManager";
 import { toast } from "sonner";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export default function ObjectTypeDetail() {
   const { objectTypeId } = useParams<{ objectTypeId: string }>();
@@ -20,12 +28,22 @@ export default function ObjectTypeDetail() {
   const [showFieldForm, setShowFieldForm] = useState(false);
   const [showPicklistDialog, setShowPicklistDialog] = useState(false);
   const [selectedField, setSelectedField] = useState<string | null>(null);
+  const [defaultFieldApiName, setDefaultFieldApiName] = useState<string>("name");
 
   const objectType = objectTypes?.find(type => type.id === objectTypeId);
   
   const accountTypeField = objectType?.api_name === "account" 
     ? fields?.find(f => f.api_name === "type" && f.data_type === "picklist")
     : null;
+
+  // Initialize default field value from object type
+  useEffect(() => {
+    if (objectType?.default_field_api_name) {
+      setDefaultFieldApiName(objectType.default_field_api_name);
+    } else {
+      setDefaultFieldApiName("name"); // Default to "name" if not set
+    }
+  }, [objectType]);
 
   const getIconComponent = (iconName: string | null) => {
     switch(iconName) {
@@ -50,6 +68,24 @@ export default function ObjectTypeDetail() {
     } catch (error) {
       console.error("Error updating object status:", error);
       toast.error("Failed to update object status");
+    }
+  };
+
+  const handleDefaultFieldChange = async (value: string) => {
+    if (!objectType) return;
+    
+    setDefaultFieldApiName(value);
+    
+    try {
+      await updateObjectType.mutateAsync({
+        id: objectType.id,
+        default_field_api_name: value
+      });
+      
+      toast.success("Default display field updated");
+    } catch (error) {
+      console.error("Error updating default field:", error);
+      toast.error("Failed to update default field");
     }
   };
   
@@ -111,6 +147,36 @@ export default function ObjectTypeDetail() {
       </div>
       
       <Card>
+        <CardHeader>
+          <CardTitle>Object Settings</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="default-field">Default Display Field</Label>
+              <Select value={defaultFieldApiName} onValueChange={handleDefaultFieldChange}>
+                <SelectTrigger id="default-field">
+                  <SelectValue placeholder="Select default display field" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="name">Name</SelectItem>
+                  <SelectItem value="record_id">Record ID</SelectItem>
+                  {fields?.filter(f => !f.is_system && f.data_type === "text").map(field => (
+                    <SelectItem key={field.api_name} value={field.api_name}>
+                      {field.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                This field will be used as the title when viewing records
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+      
+      <Card>
         <CardHeader className="flex flex-row items-center justify-between pb-4">
           <CardTitle>Fields</CardTitle>
           <Button onClick={() => setShowFieldForm(!showFieldForm)}>
@@ -135,9 +201,15 @@ export default function ObjectTypeDetail() {
         </CardContent>
       </Card>
       
-      <Dialog open={showPicklistDialog && !!selectedField} onOpenChange={(open) => {
-        if (!open) setShowPicklistDialog(false);
-      }}>
+      <Dialog 
+        open={showPicklistDialog && !!selectedField} 
+        onOpenChange={(open) => {
+          if (!open) {
+            setShowPicklistDialog(false);
+            setSelectedField(null);
+          }
+        }}
+      >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Manage Picklist Values</DialogTitle>
@@ -155,12 +227,18 @@ export default function ObjectTypeDetail() {
                   ? ["Kunde", "Potenzial"] 
                   : undefined
               }
-              onComplete={() => setShowPicklistDialog(false)}
+              onComplete={() => {
+                setShowPicklistDialog(false);
+                setSelectedField(null);
+              }}
             />
           )}
           
           <div className="flex justify-end mt-4">
-            <Button variant="outline" onClick={() => setShowPicklistDialog(false)}>
+            <Button variant="outline" onClick={() => {
+              setShowPicklistDialog(false);
+              setSelectedField(null);
+            }}>
               Close
             </Button>
           </div>

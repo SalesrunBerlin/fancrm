@@ -24,6 +24,16 @@ export function useFieldPicklistValues(fieldId: string) {
   const { data: picklistValues, isLoading } = useQuery({
     queryKey: ["picklist-values", fieldId],
     queryFn: async (): Promise<PicklistValue[]> => {
+      // First check if this is a system field
+      const { data: fieldInfo, error: fieldError } = await supabase
+        .from("object_fields")
+        .select("is_system, object_type_id")
+        .eq("id", fieldId)
+        .maybeSingle();
+      
+      if (fieldError) throw fieldError;
+      
+      // Query picklist values with appropriate filtering
       const { data, error } = await supabase
         .from("field_picklist_values")
         .select("*")

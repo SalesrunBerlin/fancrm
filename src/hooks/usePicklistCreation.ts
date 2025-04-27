@@ -31,14 +31,13 @@ export function usePicklistCreation(fieldId: string | null) {
     
     setIsAddingValues(true);
     try {
-      const results = await Promise.all(
-        values.map(value => 
-          addValue.mutateAsync({
-            value: value.trim(),
-            label: value.trim(),
-          })
-        )
-      );
+      // Process one by one to avoid race conditions
+      for (const value of values) {
+        await addValue.mutateAsync({
+          value: value.trim(),
+          label: value.trim(),
+        });
+      }
       return true;
     } catch (error) {
       console.error('Error adding picklist values in batch:', error);

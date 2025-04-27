@@ -23,7 +23,12 @@ export function useObjectFields(objectTypeId?: string) {
         console.error("Error fetching fields:", error);
         throw error;
       }
-      return data;
+
+      // Transform the JSON options to match the expected type
+      return data.map(field => ({
+        ...field,
+        options: field.options ? field.options : undefined
+      }));
     },
     enabled: !!user && !!objectTypeId,
   });

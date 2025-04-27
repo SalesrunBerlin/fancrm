@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,6 +22,14 @@ export function ObjectTypeForm() {
   const [apiName, setApiName] = useState("");
   const [description, setDescription] = useState("");
   const [icon, setIcon] = useState("building");
+  const [defaultFieldApiName, setDefaultFieldApiName] = useState("name");
+
+  // Auto-generate API name from name
+  useEffect(() => {
+    if (name && !apiName) {
+      setApiName(name.toLowerCase().replace(/[^a-z0-9]/g, "_"));
+    }
+  }, [name, apiName]);
 
   const handleCreateObjectType = async () => {
     if (!name.trim() || !apiName.trim()) {
@@ -39,6 +47,7 @@ export function ObjectTypeForm() {
         api_name: apiName.trim().toLowerCase(),
         description: description.trim() || null,
         icon: icon,
+        default_field_api_name: defaultFieldApiName,
         is_system: false,
         is_active: false,
         show_in_navigation: false,
@@ -48,6 +57,7 @@ export function ObjectTypeForm() {
       setApiName("");
       setDescription("");
       setIcon("building");
+      setDefaultFieldApiName("name");
 
       toast({
         title: "Success",
@@ -98,6 +108,22 @@ export function ObjectTypeForm() {
             <SelectItem value="calendar">Calendar</SelectItem>
           </SelectContent>
         </Select>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="default-field">Default Display Field</Label>
+        <Select value={defaultFieldApiName} onValueChange={setDefaultFieldApiName}>
+          <SelectTrigger id="default-field">
+            <SelectValue placeholder="Select default display field" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="name">Name</SelectItem>
+            <SelectItem value="record_id">Record ID</SelectItem>
+          </SelectContent>
+        </Select>
+        <p className="text-xs text-muted-foreground">
+          Field to use as the record title in detail views
+        </p>
       </div>
 
       <div className="space-y-2">

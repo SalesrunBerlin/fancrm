@@ -288,10 +288,10 @@ export default function ObjectRecordDetail() {
                         {field.is_required && <span className="text-red-500 ml-1">*</span>}
                       </label>
                       <div className="pt-1">
-                        {field.data_type === 'lookup' && field.options?.target_object_type_id ? (
+                        {field.data_type === 'lookup' && field.options && 'target_object_type_id' in field.options && field.options.target_object_type_id ? (
                           <LookupValueDisplay
                             value={record.field_values?.[field.api_name] || null}
-                            fieldOptions={field.options}
+                            fieldOptions={{ target_object_type_id: field.options.target_object_type_id }}
                           />
                         ) : (
                           <p>{record.field_values?.[field.api_name] || "-"}</p>

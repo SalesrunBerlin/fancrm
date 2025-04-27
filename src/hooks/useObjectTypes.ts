@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -33,6 +34,7 @@ export interface ObjectType {
   is_system: boolean;
   is_active: boolean;
   show_in_navigation: boolean;
+  default_field_api_name?: string;
   created_at: string;
   updated_at: string;
 }
