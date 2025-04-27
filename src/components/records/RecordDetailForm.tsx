@@ -1,4 +1,3 @@
-
 import { ObjectField } from "@/hooks/useObjectTypes";
 import { ObjectRecord } from "@/hooks/useObjectRecords";
 import { Input } from "@/components/ui/input";
@@ -7,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { LookupField } from "./LookupField";
 import { LookupValueDisplay } from "./LookupValueDisplay";
+import { useFieldPicklistValues } from "@/hooks/useFieldPicklistValues";
 
 interface RecordDetailFormProps {
   record: ObjectRecord;
@@ -17,7 +17,6 @@ interface RecordDetailFormProps {
 }
 
 export function RecordDetailForm({ record, fields, onFieldChange, editedValues, isEditing = false }: RecordDetailFormProps) {
-  // Get field value, prioritizing edited values
   const getFieldValue = (fieldApiName: string) => {
     if (fieldApiName in editedValues) {
       return editedValues[fieldApiName];
@@ -27,6 +26,7 @@ export function RecordDetailForm({ record, fields, onFieldChange, editedValues, 
 
   const renderField = (field: ObjectField) => {
     const value = getFieldValue(field.api_name);
+    const { picklistValues } = useFieldPicklistValues(field.id);
     
     if (isEditing) {
       switch (field.data_type) {
@@ -49,9 +49,11 @@ export function RecordDetailForm({ record, fields, onFieldChange, editedValues, 
                 <SelectValue placeholder="Select..." />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="option1">Option 1</SelectItem>
-                <SelectItem value="option2">Option 2</SelectItem>
-                <SelectItem value="option3">Option 3</SelectItem>
+                {picklistValues?.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           );
@@ -134,7 +136,7 @@ export function RecordDetailForm({ record, fields, onFieldChange, editedValues, 
           );
       }
     } else {
-      // Non-edit mode for all fields
+      // Non-edit mode
       if (field.data_type === 'lookup' && field.options?.target_object_type_id) {
         return (
           <div className="pt-1">

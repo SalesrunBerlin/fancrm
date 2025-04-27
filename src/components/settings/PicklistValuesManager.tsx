@@ -15,7 +15,7 @@ export function PicklistValuesManager({ fieldId }: PicklistValuesManagerProps) {
   const { picklistValues, addValue, removeValue, isLoading } = useFieldPicklistValues(fieldId);
 
   const handleAddValue = async (e: React.FormEvent) => {
-    e.preventDefault();
+    e.preventDefault(); // Prevent form submission
     if (!newValue.trim()) return;
 
     try {
@@ -24,6 +24,7 @@ export function PicklistValuesManager({ fieldId }: PicklistValuesManagerProps) {
         label: newValue.trim(),
       });
       setNewValue("");
+      toast.success("Value added successfully");
     } catch (error) {
       console.error("Error adding picklist value:", error);
       toast.error("Failed to add picklist value");
@@ -33,6 +34,7 @@ export function PicklistValuesManager({ fieldId }: PicklistValuesManagerProps) {
   const handleRemoveValue = async (id: string) => {
     try {
       await removeValue.mutateAsync(id);
+      toast.success("Value removed successfully");
     } catch (error) {
       console.error("Error removing picklist value:", error);
       toast.error("Failed to remove picklist value");
@@ -55,7 +57,10 @@ export function PicklistValuesManager({ fieldId }: PicklistValuesManagerProps) {
           onChange={(e) => setNewValue(e.target.value)}
           placeholder="Enter new value"
         />
-        <Button type="submit" disabled={!newValue.trim()}>
+        <Button type="submit" disabled={!newValue.trim() || addValue.isPending}>
+          {addValue.isPending ? (
+            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+          ) : null}
           Add Value
         </Button>
       </form>
@@ -71,6 +76,7 @@ export function PicklistValuesManager({ fieldId }: PicklistValuesManagerProps) {
               variant="ghost"
               size="sm"
               onClick={() => handleRemoveValue(value.id)}
+              disabled={removeValue.isPending}
             >
               <X className="h-4 w-4" />
             </Button>

@@ -25,6 +25,7 @@ export function EditableCell({
 }: EditableCellProps) {
   const [editValue, setEditValue] = useState<any>(value);
   const [error, setError] = useState<string | null>(null);
+  const { picklistValues } = useFieldPicklistValues(fieldOptions?.field_id);
 
   useEffect(() => {
     setEditValue(value);
@@ -75,9 +76,11 @@ export function EditableCell({
               <SelectValue placeholder="Select..." />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="option1">Option 1</SelectItem>
-              <SelectItem value="option2">Option 2</SelectItem>
-              <SelectItem value="option3">Option 3</SelectItem>
+              {picklistValues?.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         );
