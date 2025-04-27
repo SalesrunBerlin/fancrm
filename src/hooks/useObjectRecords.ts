@@ -14,6 +14,7 @@ export interface ObjectRecord {
   created_by: string;
   last_modified_by: string;
   owner_id: string;
+  field_values?: { [key: string]: string | null };
 }
 
 export function useObjectRecords(objectTypeId?: string) {
@@ -24,14 +25,39 @@ export function useObjectRecords(objectTypeId?: string) {
   const { data: records, isLoading } = useQuery({
     queryKey: ["object-records", objectTypeId],
     queryFn: async (): Promise<ObjectRecord[]> => {
-      const { data, error } = await supabase
+      // First get the records
+      const { data: recordsData, error: recordsError } = await supabase
         .from("object_records")
         .select("*")
         .eq("object_type_id", objectTypeId)
         .order("created_at", { ascending: false });
 
-      if (error) throw error;
-      return data;
+      if (recordsError) throw recordsError;
+
+      // Then get their field values
+      const recordsWithValues = await Promise.all(
+        recordsData.map(async (record) => {
+          const { data: fieldValues, error: fieldValuesError } = await supabase
+            .from("object_field_values")
+            .select("field_api_name, value")
+            .eq("record_id", record.id);
+
+          if (fieldValuesError) throw fieldValuesError;
+
+          // Convert field values array to object
+          const valuesObject = fieldValues.reduce((acc, curr) => {
+            acc[curr.field_api_name] = curr.value;
+            return acc;
+          }, {} as { [key: string]: string | null });
+
+          return {
+            ...record,
+            field_values: valuesObject
+          };
+        })
+      );
+
+      return recordsWithValues;
     },
     enabled: !!user && !!objectTypeId,
   });
@@ -52,7 +78,7 @@ export function useObjectRecords(objectTypeId?: string) {
 
       if (recordError) throw recordError;
 
-      // Step 2: Create field values in the object_field_values table for each form field
+      // Step 2: Create field values in the object_field_values table
       const fieldValues = Object.entries(formData).map(([fieldName, value]) => ({
         record_id: recordData.id,
         field_api_name: fieldName,

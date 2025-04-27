@@ -343,6 +343,41 @@ export type Database = {
           },
         ]
       }
+      object_field_values: {
+        Row: {
+          created_at: string | null
+          field_api_name: string
+          id: string
+          record_id: string
+          updated_at: string | null
+          value: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          field_api_name: string
+          id?: string
+          record_id: string
+          updated_at?: string | null
+          value?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          field_api_name?: string
+          id?: string
+          record_id?: string
+          updated_at?: string | null
+          value?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "object_field_values_record_id_fkey"
+            columns: ["record_id"]
+            isOneToOne: false
+            referencedRelation: "object_records"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       object_fields: {
         Row: {
           api_name: string
