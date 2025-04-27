@@ -86,10 +86,21 @@ export function RelatedRecordsList({ objectTypeId, recordId }: RelatedRecordsLis
           .eq("id", field.object_type_id)
           .single();
 
+        // Get the name field or the first field of the source object type
+        const { data: sourceFields } = await supabase
+          .from("object_fields")
+          .select("*")
+          .eq("object_type_id", field.object_type_id)
+          .order("display_order");
+
+        // Find the name field or use the first field
+        const displayField = sourceFields?.find(f => f.api_name === "name") || sourceFields?.[0];
+
         return {
           objectType,
           field,
-          records: recordsWithValues
+          records: recordsWithValues,
+          displayField
         };
       }));
 
@@ -137,7 +148,7 @@ export function RelatedRecordsList({ objectTypeId, recordId }: RelatedRecordsLis
                         to={`/objects/${section.objectType.id}/${record.id}`}
                         className="text-blue-600 hover:underline"
                       >
-                        {record.field_values?.name || record.record_id}
+                        {record.field_values[section.displayField?.api_name || ""] || record.record_id}
                       </Link>
                     </TableCell>
                     <TableCell>

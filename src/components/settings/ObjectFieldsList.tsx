@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useObjectFields } from "@/hooks/useObjectFields";
 import {
@@ -15,6 +14,7 @@ import { Loader2, Pencil, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { ObjectField } from "@/hooks/useObjectTypes";
 import { DeleteDialog } from "@/components/common/DeleteDialog";
+import { ObjectFieldEdit } from "./ObjectFieldEdit";
 
 interface ObjectFieldsListProps {
   fields: ObjectField[];
@@ -74,6 +74,14 @@ export function ObjectFieldsList({ fields, isLoading, objectTypeId }: ObjectFiel
         title="Delete Field"
         description={`Are you sure you want to delete the field "${fieldToDelete?.name}"? This action cannot be undone.`}
       />
+
+      {editingField && (
+        <ObjectFieldEdit
+          field={editingField}
+          isOpen={!!editingField}
+          onClose={() => setEditingField(null)}
+        />
+      )}
 
       <Table>
         <TableHeader>

@@ -165,6 +165,8 @@ export default function ObjectRecordDetail() {
     }
   };
 
+  const displayName = record?.field_values?.name || record?.record_id || 'New Record';
+
   if (!objectType) {
     return (
       <Alert variant="destructive">
@@ -200,9 +202,10 @@ export default function ObjectRecordDetail() {
           <Button variant="outline" asChild>
             <Link to={`/objects/${objectTypeId}`}>
               <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to {objectType.name}
+              Back to {objectType?.name}
             </Link>
           </Button>
+          <h1 className="text-3xl font-bold">{displayName}</h1>
         </div>
         <div className="flex items-center gap-2">
           {isEditing ? (
