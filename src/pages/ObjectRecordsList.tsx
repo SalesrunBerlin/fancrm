@@ -1,20 +1,23 @@
 
 import { useState, useEffect } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
 import { useObjectRecords } from "@/hooks/useObjectRecords";
 import { useObjectFields } from "@/hooks/useObjectFields";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Edit, Save, X } from "lucide-react";
+import { Plus, Edit, Save, X, Filter } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import { CreateRecordDialog } from "@/components/records/CreateRecordDialog";
 import { FieldsConfigDialog } from "@/components/records/FieldsConfigDialog";
 import { EditableCell } from "@/components/records/EditableCell";
+import { ObjectRecordsFilter } from "@/components/records/ObjectRecordsFilter";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 export default function ObjectRecordsList() {
   const { objectTypeId } = useParams<{ objectTypeId: string }>();
+  const navigate = useNavigate();
   const { objectTypes } = useObjectTypes();
   const { records, isLoading, updateRecord } = useObjectRecords(objectTypeId);
   const { fields } = useObjectFields(objectTypeId);
@@ -22,6 +25,7 @@ export default function ObjectRecordsList() {
   const [visibleFields, setVisibleFields] = useState<string[]>([]);
   const [editMode, setEditMode] = useState(false);
   const [editedRecords, setEditedRecords] = useState<Record<string, Record<string, any>>>({});
+  const [showFilters, setShowFilters] = useState(false);
   
   const objectType = objectTypes?.find(type => type.id === objectTypeId);
 
@@ -94,6 +98,13 @@ export default function ObjectRecordsList() {
     setEditMode(!editMode);
   };
 
+  // Navigate to record detail page
+  const handleRowClick = (recordId: string) => {
+    if (!editMode) {
+      navigate(`/objects/${objectTypeId}/${recordId}`);
+    }
+  };
+
   if (!objectType) {
     return <div>Object type not found</div>;
   }
@@ -113,11 +124,34 @@ export default function ObjectRecordsList() {
             {editMode ? "Exit Edit Mode" : "Edit Mode"}
           </Button>
         </div>
-        <Button onClick={() => setShowCreateDialog(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          New {objectType.name}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Collapsible open={showFilters} onOpenChange={setShowFilters}>
+            <CollapsibleTrigger asChild>
+              <Button variant="outline" size="sm" className={showFilters ? "bg-blue-100" : ""}>
+                <Filter className="h-4 w-4 mr-1" />
+                Filters
+              </Button>
+            </CollapsibleTrigger>
+          </Collapsible>
+          <Button onClick={() => setShowCreateDialog(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            New {objectType.name}
+          </Button>
+        </div>
       </div>
+
+      <Collapsible open={showFilters} className="w-full">
+        <CollapsibleContent className="space-y-2">
+          <Card className="mb-4">
+            <CardContent className="pt-6">
+              <ObjectRecordsFilter 
+                objectTypeId={objectTypeId} 
+                fields={fields || []} 
+              />
+            </CardContent>
+          </Card>
+        </CollapsibleContent>
+      </Collapsible>
 
       <Card>
         <CardContent className="p-0">
@@ -144,14 +178,13 @@ export default function ObjectRecordsList() {
             </TableHeader>
             <TableBody>
               {records?.map((record) => (
-                <TableRow key={record.id}>
+                <TableRow 
+                  key={record.id} 
+                  className={!editMode ? "cursor-pointer" : ""}
+                  onClick={!editMode ? () => handleRowClick(record.id) : undefined}
+                >
                   <TableCell className="p-0 w-10">
-                    {!editMode && (
-                      <Link
-                        to={`/objects/${objectTypeId}/${record.id}`}
-                        className="block w-full h-full p-4"
-                      />
-                    )}
+                    {/* Empty cell for alignment, clicking handled at row level */}
                   </TableCell>
                   {fields?.filter(field => visibleFields.includes(field.api_name))
                     .map(field => (
@@ -173,14 +206,20 @@ export default function ObjectRecordsList() {
                           <Button
                             size="sm"
                             variant="ghost"
-                            onClick={() => saveRecord(record.id)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              saveRecord(record.id);
+                            }}
                           >
                             <Save className="h-4 w-4" />
                           </Button>
                           <Button
                             size="sm"
                             variant="ghost"
-                            onClick={() => cancelEditing(record.id)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              cancelEditing(record.id);
+                            }}
                           >
                             <X className="h-4 w-4" />
                           </Button>
