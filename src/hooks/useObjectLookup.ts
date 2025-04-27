@@ -28,7 +28,7 @@ export function useObjectLookup(objectTypeId: string | undefined) {
         return [];
       }
 
-      // Find the name field for this object type
+      // Find the display configuration for the lookup field
       const { data: nameField } = await supabase
         .from("object_fields")
         .select("api_name")
@@ -36,7 +36,7 @@ export function useObjectLookup(objectTypeId: string | undefined) {
         .eq("api_name", "name")
         .maybeSingle();
 
-      // Get all field values for these records
+      // Get all field values for these records and use display field
       const recordsWithDisplayValue = await Promise.all(records.map(async (record) => {
         const { data: fieldValues } = await supabase
           .from("object_field_values")

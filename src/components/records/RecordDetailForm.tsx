@@ -1,19 +1,21 @@
-
 import { ObjectField } from "@/hooks/useObjectTypes";
 import { ObjectRecord } from "@/hooks/useObjectRecords";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { LookupField } from "./LookupField";
+import { LookupValueDisplay } from "./LookupValueDisplay";
 
 interface RecordDetailFormProps {
   record: ObjectRecord;
   fields: ObjectField[];
   onFieldChange: (fieldName: string, value: any) => void;
   editedValues: Record<string, any>;
+  isEditing?: boolean;
 }
 
-export function RecordDetailForm({ record, fields, onFieldChange, editedValues }: RecordDetailFormProps) {
+export function RecordDetailForm({ record, fields, onFieldChange, editedValues, isEditing = false }: RecordDetailFormProps) {
   // Get field value, prioritizing edited values
   const getFieldValue = (fieldApiName: string) => {
     if (fieldApiName in editedValues) {
@@ -25,6 +27,28 @@ export function RecordDetailForm({ record, fields, onFieldChange, editedValues }
   const renderFieldInput = (field: ObjectField) => {
     const value = getFieldValue(field.api_name);
     
+    if (field.data_type === 'lookup') {
+      if (!field.options?.target_object_type_id) return null;
+      
+      if (isEditing) {
+        return (
+          <LookupField
+            value={value}
+            onChange={(newValue) => onFieldChange(field.api_name, newValue)}
+            targetObjectTypeId={field.options.target_object_type_id}
+            disabled={false}
+          />
+        );
+      }
+      
+      return (
+        <LookupValueDisplay 
+          value={value} 
+          fieldOptions={field.options} 
+        />
+      );
+    }
+
     switch (field.data_type) {
       case "textarea":
         return (

@@ -5,9 +5,8 @@ import { useObjectFields } from "@/hooks/useObjectFields";
 import { useObjectRecords } from "@/hooks/useObjectRecords";
 import { Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
-import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface RelatedRecordsListProps {
   objectTypeId: string;
@@ -60,7 +59,7 @@ function RelatedRecordsSection({
   const { data: relatedRecords, isLoading } = useQuery({
     queryKey: ["related-records", targetObjectTypeId, recordId, sourceFieldApi],
     queryFn: async () => {
-      // First, get all field values that reference this record
+      // Find all field values that reference this record
       const { data: fieldValues, error: fieldValuesError } = await supabase
         .from("object_field_values")
         .select("record_id")
