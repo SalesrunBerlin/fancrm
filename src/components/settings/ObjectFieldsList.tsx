@@ -15,6 +15,14 @@ import { useToast } from "@/hooks/use-toast";
 import { ObjectField } from "@/hooks/useObjectTypes";
 import { DeleteDialog } from "@/components/common/DeleteDialog";
 import { ObjectFieldEdit } from "./ObjectFieldEdit";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { supabase } from "@/integrations/supabase/client";
 
 interface ObjectFieldsListProps {
   fields: ObjectField[];
@@ -27,27 +35,49 @@ export function ObjectFieldsList({ fields, isLoading, objectTypeId }: ObjectFiel
   const { toast } = useToast();
   const [editingField, setEditingField] = useState<ObjectField | null>(null);
   const [fieldToDelete, setFieldToDelete] = useState<ObjectField | null>(null);
+  const [defaultDisplayField, setDefaultDisplayField] = useState<string | null>(null);
 
-  const handleDeleteField = async () => {
-    if (!fieldToDelete) return;
-
-    try {
-      await deleteField.mutateAsync(fieldToDelete.id);
-      toast({
-        title: "Success",
-        description: "Field deleted successfully",
-      });
-    } catch (error) {
-      console.error("Error deleting field:", error);
-      toast({
-        title: "Error",
-        description: "Failed to delete field",
-        variant: "destructive",
-      });
-    } finally {
-      setFieldToDelete(null);
+  const fetchCurrentDefaultField = async () => {
+    const { data } = await supabase
+      .from('object_types')
+      .select('default_field_api_name')
+      .eq('id', objectTypeId)
+      .single();
+    
+    if (data?.default_field_api_name) {
+      setDefaultDisplayField(data.default_field_api_name);
+    } else if (fields.find(f => f.api_name === 'name')) {
+      setDefaultDisplayField('name');
     }
   };
+
+  const handleDefaultFieldChange = async (value: string) => {
+    try {
+      const { error } = await supabase
+        .from('object_types')
+        .update({ default_field_api_name: value })
+        .eq('id', objectTypeId);
+
+      if (error) throw error;
+
+      setDefaultDisplayField(value);
+      toast({
+        title: "Success",
+        description: "Default display field updated",
+      });
+    } catch (error) {
+      console.error("Error updating default field:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update default display field",
+        variant: "destructive",
+      });
+    }
+  };
+
+  useState(() => {
+    fetchCurrentDefaultField();
+  }, [objectTypeId]);
 
   if (isLoading) {
     return (
@@ -67,6 +97,24 @@ export function ObjectFieldsList({ fields, isLoading, objectTypeId }: ObjectFiel
 
   return (
     <div className="space-y-4">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-4">
+          <h3 className="text-lg font-semibold">Fields</h3>
+          <Select value={defaultDisplayField || ''} onValueChange={handleDefaultFieldChange}>
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder="Select default field" />
+            </SelectTrigger>
+            <SelectContent>
+              {fields.map((field) => (
+                <SelectItem key={field.api_name} value={field.api_name}>
+                  {field.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
       <DeleteDialog
         isOpen={!!fieldToDelete}
         onClose={() => setFieldToDelete(null)}

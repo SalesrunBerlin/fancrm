@@ -32,7 +32,13 @@ export default function ObjectRecordDetail() {
     queryFn: async () => {
       if (!recordId) throw new Error("Record ID is required");
       
-      console.log("Fetching record:", recordId);
+      const { data: objectType } = await supabase
+        .from('object_types')
+        .select('default_field_api_name')
+        .eq('id', objectTypeId)
+        .single();
+
+      const defaultFieldApiName = objectType?.default_field_api_name || 'name';
       
       const { data: record, error: recordError } = await supabase
         .from("object_records")
@@ -49,9 +55,6 @@ export default function ObjectRecordDetail() {
 
       if (fieldValuesError) throw fieldValuesError;
 
-      console.log("Record loaded:", record);
-      console.log("Field values:", fieldValues);
-
       const valuesObject = fieldValues.reduce((acc, curr) => {
         acc[curr.field_api_name] = curr.value;
         return acc;
@@ -59,7 +62,8 @@ export default function ObjectRecordDetail() {
 
       return {
         ...record,
-        field_values: valuesObject
+        field_values: valuesObject,
+        display_field_api_name: defaultFieldApiName
       };
     },
     enabled: !!recordId,
@@ -165,7 +169,7 @@ export default function ObjectRecordDetail() {
     }
   };
 
-  const displayName = record?.field_values?.name || record?.record_id || 'New Record';
+  const displayName = record?.field_values?.[record.display_field_api_name] || record?.record_id || 'New Record';
 
   if (!objectType) {
     return (
