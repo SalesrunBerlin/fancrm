@@ -343,6 +343,178 @@ export type Database = {
           },
         ]
       }
+      object_fields: {
+        Row: {
+          api_name: string
+          created_at: string
+          data_type: string
+          default_value: Json | null
+          display_order: number
+          id: string
+          is_required: boolean
+          is_system: boolean
+          name: string
+          object_type_id: string
+          options: Json | null
+          owner_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          api_name: string
+          created_at?: string
+          data_type: string
+          default_value?: Json | null
+          display_order?: number
+          id?: string
+          is_required?: boolean
+          is_system?: boolean
+          name: string
+          object_type_id: string
+          options?: Json | null
+          owner_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          api_name?: string
+          created_at?: string
+          data_type?: string
+          default_value?: Json | null
+          display_order?: number
+          id?: string
+          is_required?: boolean
+          is_system?: boolean
+          name?: string
+          object_type_id?: string
+          options?: Json | null
+          owner_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "object_fields_object_type_id_fkey"
+            columns: ["object_type_id"]
+            isOneToOne: false
+            referencedRelation: "object_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      object_records: {
+        Row: {
+          created_at: string
+          id: string
+          object_type_id: string
+          owner_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          object_type_id: string
+          owner_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          object_type_id?: string
+          owner_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "object_records_object_type_id_fkey"
+            columns: ["object_type_id"]
+            isOneToOne: false
+            referencedRelation: "object_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      object_relationships: {
+        Row: {
+          created_at: string
+          from_object_id: string
+          id: string
+          name: string
+          owner_id: string | null
+          relationship_type: string
+          to_object_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          from_object_id: string
+          id?: string
+          name: string
+          owner_id?: string | null
+          relationship_type: string
+          to_object_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          from_object_id?: string
+          id?: string
+          name?: string
+          owner_id?: string | null
+          relationship_type?: string
+          to_object_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "object_relationships_from_object_id_fkey"
+            columns: ["from_object_id"]
+            isOneToOne: false
+            referencedRelation: "object_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "object_relationships_to_object_id_fkey"
+            columns: ["to_object_id"]
+            isOneToOne: false
+            referencedRelation: "object_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      object_types: {
+        Row: {
+          api_name: string
+          created_at: string
+          description: string | null
+          icon: string | null
+          id: string
+          is_system: boolean
+          name: string
+          owner_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          api_name: string
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_system?: boolean
+          name: string
+          owner_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          api_name?: string
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_system?: boolean
+          name?: string
+          owner_id?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       product_families: {
         Row: {
           created_at: string
@@ -444,6 +616,48 @@ export type Database = {
         }
         Relationships: []
       }
+      record_field_values: {
+        Row: {
+          created_at: string
+          field_id: string
+          id: string
+          record_id: string
+          updated_at: string
+          value: Json | null
+        }
+        Insert: {
+          created_at?: string
+          field_id: string
+          id?: string
+          record_id: string
+          updated_at?: string
+          value?: Json | null
+        }
+        Update: {
+          created_at?: string
+          field_id?: string
+          id?: string
+          record_id?: string
+          updated_at?: string
+          value?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "record_field_values_field_id_fkey"
+            columns: ["field_id"]
+            isOneToOne: false
+            referencedRelation: "object_fields"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "record_field_values_record_id_fkey"
+            columns: ["record_id"]
+            isOneToOne: false
+            referencedRelation: "object_records"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_color_preferences: {
         Row: {
           colors: Json
@@ -481,6 +695,10 @@ export type Database = {
         Returns: undefined
       }
       initialize_product_families: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      initialize_standard_objects: {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }

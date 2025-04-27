@@ -1,74 +1,29 @@
 
-import { useState, useEffect } from "react";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { useDealStatuses } from "@/hooks/useDealStatuses";
-import { StatusForm } from "@/components/settings/StatusForm";
 import { StatusList } from "@/components/settings/StatusList";
-import { useTheme } from "@/hooks/useTheme";
-import { Switch } from "@/components/ui/switch";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
-import { ChevronRight } from "lucide-react";
+import { StatusForm } from "@/components/settings/StatusForm";
+import { ObjectTypesList } from "@/components/settings/ObjectTypesList";
 
 export default function Settings() {
-  const {
-    dealStatuses,
-    isLoading,
-    createStatus,
-    updateStatus,
-    deleteStatus,
-    initializeDefaultStatuses
-  } = useDealStatuses();
-
-  const [isStatusOpen, setIsStatusOpen] = useState(false);
-
-  useEffect(() => {
-    if (dealStatuses && dealStatuses.length === 0 && !isLoading) {
-      initializeDefaultStatuses();
-    }
-  }, [dealStatuses, isLoading, initializeDefaultStatuses]);
-
-  // Theme Toggle
-  const { theme, toggleTheme } = useTheme();
-
   return (
-    <div className="container mx-auto p-4 space-y-6">
-      <h1 className="text-3xl font-bold">Einstellungen</h1>
-      <Card className="p-6 space-y-4">
-        <div className="flex items-center mb-6">
-          <span className="font-semibold text-lg mr-4">Dark Mode</span>
-          <Switch checked={theme === "dark"} onCheckedChange={toggleTheme} />
+    <div className="space-y-6">
+      <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
+      
+      <div className="space-y-6">
+        {/* Object Types Section */}
+        <div>
+          <h2 className="text-xl font-semibold mb-4">Objects</h2>
+          <ObjectTypesList />
         </div>
-        
-        <Collapsible open={isStatusOpen} onOpenChange={setIsStatusOpen}>
-          <div className="flex items-center space-x-2">
-            <CollapsibleTrigger asChild>
-              <Button variant="ghost" size="sm" className="p-0 hover:bg-transparent">
-                <ChevronRight className={`h-4 w-4 transition-transform ${isStatusOpen ? 'rotate-90' : ''}`} />
-              </Button>
-            </CollapsibleTrigger>
-            <h2 className="text-xl font-semibold">Deal Status Verwaltung</h2>
+
+        {/* Deal Status Section */}
+        <div>
+          <h2 className="text-xl font-semibold mb-4">Deal Statuses</h2>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <StatusList />
+            <StatusForm />
           </div>
-          
-          <CollapsibleContent className="mt-4">
-            <StatusForm 
-              dealStatuses={dealStatuses || []} 
-              createStatus={createStatus} 
-              isPending={createStatus.isPending}
-            />
-            <StatusList 
-              dealStatuses={dealStatuses || []}
-              isLoading={isLoading}
-              updateStatus={updateStatus}
-              deleteStatus={deleteStatus}
-            />
-          </CollapsibleContent>
-        </Collapsible>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 }
