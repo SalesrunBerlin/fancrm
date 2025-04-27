@@ -51,13 +51,18 @@ export function ObjectFieldEdit({ field, isOpen, onClose }: ObjectFieldEditProps
   const onSubmit = async (values: z.infer<typeof fieldEditSchema>) => {
     try {
       setIsSubmitting(true);
+
+      // Preserve existing options while updating display_field_api_name
+      const updatedOptions = {
+        ...field.options,
+        display_field_api_name: values.display_field_api_name,
+      };
+
       await updateField.mutateAsync({
         id: field.id,
-        ...values,
-        options: {
-          ...field.options,
-          display_field_api_name: values.display_field_api_name,
-        },
+        name: values.name,
+        api_name: values.api_name,
+        options: updatedOptions,
       });
       onClose();
     } finally {

@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Pencil, Trash2 } from "lucide-react";
+import { Loader2, Pencil, Trash2, Save, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { ObjectField } from "@/hooks/useObjectTypes";
 import { DeleteDialog } from "@/components/common/DeleteDialog";
@@ -37,6 +37,8 @@ export function ObjectFieldsList({ fields, isLoading, objectTypeId }: ObjectFiel
   const [editingField, setEditingField] = useState<ObjectField | null>(null);
   const [fieldToDelete, setFieldToDelete] = useState<ObjectField | null>(null);
   const [defaultDisplayField, setDefaultDisplayField] = useState<string | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [tempDisplayField, setTempDisplayField] = useState<string | null>(null);
 
   const fetchCurrentDefaultField = async () => {
     const { data, error } = await supabase
@@ -47,21 +49,29 @@ export function ObjectFieldsList({ fields, isLoading, objectTypeId }: ObjectFiel
     
     if (data?.default_field_api_name) {
       setDefaultDisplayField(data.default_field_api_name);
+      setTempDisplayField(data.default_field_api_name);
     } else if (fields.find(f => f.api_name === 'name')) {
       setDefaultDisplayField('name');
+      setTempDisplayField('name');
     }
   };
 
-  const handleDefaultFieldChange = async (value: string) => {
+  const handleDefaultFieldChange = (value: string) => {
+    setTempDisplayField(value);
+    setIsEditing(true);
+  };
+
+  const handleSave = async () => {
     try {
       const { error } = await supabase
         .from('object_types')
-        .update({ default_field_api_name: value })
+        .update({ default_field_api_name: tempDisplayField })
         .eq('id', objectTypeId);
 
       if (error) throw error;
 
-      setDefaultDisplayField(value);
+      setDefaultDisplayField(tempDisplayField);
+      setIsEditing(false);
       toast({
         title: "Success",
         description: "Default display field updated",
@@ -74,6 +84,11 @@ export function ObjectFieldsList({ fields, isLoading, objectTypeId }: ObjectFiel
         variant: "destructive",
       });
     }
+  };
+
+  const handleCancel = () => {
+    setTempDisplayField(defaultDisplayField);
+    setIsEditing(false);
   };
 
   useEffect(() => {
@@ -108,18 +123,32 @@ export function ObjectFieldsList({ fields, isLoading, objectTypeId }: ObjectFiel
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-4">
           <h3 className="text-lg font-semibold">Fields</h3>
-          <Select value={defaultDisplayField || ''} onValueChange={handleDefaultFieldChange}>
-            <SelectTrigger className="w-[200px]">
-              <SelectValue placeholder="Select default field" />
-            </SelectTrigger>
-            <SelectContent>
-              {fields.map((field) => (
-                <SelectItem key={field.api_name} value={field.api_name}>
-                  {field.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="flex items-center gap-2">
+            <Select value={tempDisplayField || ''} onValueChange={handleDefaultFieldChange}>
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="Select default field" />
+              </SelectTrigger>
+              <SelectContent>
+                {fields.map((field) => (
+                  <SelectItem key={field.api_name} value={field.api_name}>
+                    {field.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {isEditing && (
+              <>
+                <Button size="sm" variant="default" onClick={handleSave}>
+                  <Save className="h-4 w-4 mr-1" />
+                  Save
+                </Button>
+                <Button size="sm" variant="ghost" onClick={handleCancel}>
+                  <X className="h-4 w-4 mr-1" />
+                  Cancel
+                </Button>
+              </>
+            )}
+          </div>
         </div>
       </div>
 
