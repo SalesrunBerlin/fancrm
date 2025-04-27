@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { ActivityItem } from "@/components/activities/ActivityItem";
@@ -89,14 +89,13 @@ export function ActivitiesList({
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>{title}</CardTitle>
         {showAddButton && (
           <Button
-            size="sm"
+            variant="outline"
+            size="icon"
             onClick={() => setShowActivityForm(true)}
           >
-            <Plus className="mr-2 h-4 w-4" />
-            Add Activity
+            <Plus className="h-4 w-4" />
           </Button>
         )}
       </CardHeader>

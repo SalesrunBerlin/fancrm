@@ -1,5 +1,5 @@
 
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { ActivitiesList } from "./ActivitiesList";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
@@ -27,7 +27,6 @@ export function RelatedActivities({ entityId, entityType }: RelatedActivitiesPro
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-        <CardTitle className="text-xl">Aktivitäten</CardTitle>
         <Button 
           variant="outline" 
           size="icon" 

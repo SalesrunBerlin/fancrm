@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { ActivityForm } from "@/components/activities/ActivityForm";
 import { ActivitiesList } from "@/components/activities/ActivitiesList";
 import { Plus } from "lucide-react";
@@ -20,9 +20,8 @@ export default function Activities() {
     <div className="space-y-6 animate-fade-in max-w-2xl mx-auto">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold tracking-tight">Meine Aktivitäten</h1>
-        <Button onClick={() => setShowForm((v) => !v)}>
-          <Plus className="w-4 h-4 mr-2" />
-          {showForm ? "Abbrechen" : "Neuer Anruf"}
+        <Button onClick={() => setShowForm((v) => !v)} variant="outline" size="icon">
+          <Plus className="w-4 h-4" />
         </Button>
       </div>
       {showForm && (
