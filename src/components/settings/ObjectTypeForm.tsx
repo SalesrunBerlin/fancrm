@@ -7,6 +7,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export function ObjectTypeForm() {
   const { createObjectType } = useObjectTypes();
@@ -14,6 +21,7 @@ export function ObjectTypeForm() {
   const [name, setName] = useState("");
   const [apiName, setApiName] = useState("");
   const [description, setDescription] = useState("");
+  const [icon, setIcon] = useState("building");
 
   const handleCreateObjectType = async () => {
     if (!name.trim() || !apiName.trim()) {
@@ -30,12 +38,14 @@ export function ObjectTypeForm() {
         name: name.trim(),
         api_name: apiName.trim().toLowerCase(),
         description: description.trim() || null,
+        icon: icon,
         is_system: false,
       });
 
       setName("");
       setApiName("");
       setDescription("");
+      setIcon("building");
 
       toast({
         title: "Success",
@@ -71,6 +81,21 @@ export function ObjectTypeForm() {
           value={apiName}
           onChange={(e) => setApiName(e.target.value)}
         />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="icon">Icon</Label>
+        <Select value={icon} onValueChange={setIcon}>
+          <SelectTrigger id="icon">
+            <SelectValue placeholder="Select an icon" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="building">Building</SelectItem>
+            <SelectItem value="user">User</SelectItem>
+            <SelectItem value="briefcase">Briefcase</SelectItem>
+            <SelectItem value="calendar">Calendar</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="space-y-2">
