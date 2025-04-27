@@ -45,22 +45,6 @@ export default function ObjectTypeDetail() {
     }
   };
 
-  const handleNavigationVisibilityToggle = async (checked: boolean) => {
-    if (!objectType) return;
-    
-    try {
-      await updateObjectType.mutateAsync({
-        id: objectType.id,
-        show_in_navigation: checked
-      });
-      
-      toast.success(checked ? "Object added to navigation" : "Object removed from navigation");
-    } catch (error) {
-      console.error("Error updating navigation visibility:", error);
-      toast.error("Failed to update navigation visibility");
-    }
-  };
-
   if (isLoadingTypes) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -102,25 +86,14 @@ export default function ObjectTypeDetail() {
             {objectType.name}
           </h1>
         </div>
-        <div className="flex items-center gap-6">
-          <div className="flex items-center gap-2">
-            <Switch
-              id="navigation-toggle"
-              checked={objectType.show_in_navigation}
-              onCheckedChange={handleNavigationVisibilityToggle}
-              disabled={updateObjectType.isPending}
-            />
-            <Label htmlFor="navigation-toggle">Show in Navigation</Label>
-          </div>
-          <div className="flex items-center gap-2">
-            <Switch
-              id="active-toggle"
-              checked={objectType.is_active}
-              onCheckedChange={handleActiveToggle}
-              disabled={updateObjectType.isPending}
-            />
-            <Label htmlFor="active-toggle">Active</Label>
-          </div>
+        <div className="flex items-center gap-2">
+          <Switch
+            id="active-toggle"
+            checked={objectType.is_active}
+            onCheckedChange={handleActiveToggle}
+            disabled={updateObjectType.isPending}
+          />
+          <Label htmlFor="active-toggle">Active</Label>
         </div>
       </div>
       

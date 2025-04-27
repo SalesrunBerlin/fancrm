@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -87,19 +88,33 @@ export function useObjectTypes() {
 
   const updateObjectType = useMutation({
     mutationFn: async (updates: Partial<ObjectType> & { id: string }) => {
+      // If updating active status, also update navigation visibility to match
+      let updateData = { ...updates };
+      if ('is_active' in updates && objectTypes) {
+        const objectType = objectTypes.find(obj => obj.id === updates.id);
+        if (objectType && objectType.is_system) {
+          updateData.show_in_navigation = updates.is_active;
+        }
+      }
+      
       const { data, error } = await supabase
         .from("object_types")
-        .update(updates)
+        .update(updateData)
         .eq("id", updates.id)
-        .select()
-        .single();
+        .select();
 
       if (error) throw error;
-      return data;
+      if (!data || data.length === 0) {
+        throw new Error("No rows updated");
+      }
+      return data[0];
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["object-types"] });
     },
+    onError: (error) => {
+      console.error("Error updating object type:", error);
+    }
   });
 
   return {

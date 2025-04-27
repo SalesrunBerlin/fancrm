@@ -7,7 +7,7 @@ import { ObjectType } from "@/hooks/useObjectTypes";
 
 export function ActiveObjectsMenu() {
   const { objectTypes } = useObjectTypes();
-  const visibleObjects = objectTypes?.filter(obj => obj.is_active && obj.show_in_navigation) || [];
+  const visibleObjects = objectTypes?.filter(obj => obj.is_active) || [];
 
   const getIconComponent = (iconName: string | null) => {
     switch(iconName) {
