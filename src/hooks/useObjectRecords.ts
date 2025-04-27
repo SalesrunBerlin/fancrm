@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -37,17 +36,15 @@ export function useObjectRecords(objectTypeId?: string) {
 
   const createRecord = useMutation({
     mutationFn: async (newRecord: Partial<ObjectRecord>) => {
-      // Fix: Ensure object_type_id is provided as required by the database
-      if (!newRecord.object_type_id && objectTypeId) {
-        newRecord.object_type_id = objectTypeId;
-      }
+      if (!objectTypeId) throw new Error("Object type ID is required");
       
       const { data, error } = await supabase
         .from("object_records")
-        .insert([{
-          ...newRecord,
+        .insert({
+          object_type_id: objectTypeId,
           owner_id: user?.id,
-        }])
+          ...newRecord
+        })
         .select()
         .single();
 
