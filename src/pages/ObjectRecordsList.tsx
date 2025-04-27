@@ -28,7 +28,6 @@ export default function ObjectRecordsList() {
   
   const objectType = objectTypes?.find(type => type.id === objectTypeId);
 
-  // Load visible fields from localStorage or set defaults
   useEffect(() => {
     if (fields && objectTypeId) {
       const storedFields = localStorage.getItem(`visible-fields-${objectTypeId}`);
@@ -38,7 +37,6 @@ export default function ObjectRecordsList() {
     }
   }, [fields, objectTypeId]);
 
-  // Save visible fields to localStorage
   const handleVisibilityChange = (newVisibleFields: string[]) => {
     setVisibleFields(newVisibleFields);
     if (objectTypeId) {
@@ -46,7 +44,6 @@ export default function ObjectRecordsList() {
     }
   };
 
-  // Handle field value change
   const handleFieldChange = (recordId: string, fieldApiName: string, value: any) => {
     setEditedRecords(prev => ({
       ...prev,
@@ -57,12 +54,10 @@ export default function ObjectRecordsList() {
     }));
   };
 
-  // Check if a record has been edited
   const isRecordEdited = (recordId: string) => {
     return editedRecords[recordId] && Object.keys(editedRecords[recordId]).length > 0;
   };
 
-  // Save edited record
   const saveRecord = async (recordId: string) => {
     if (editedRecords[recordId]) {
       await updateRecord.mutateAsync({
@@ -70,7 +65,6 @@ export default function ObjectRecordsList() {
         field_values: editedRecords[recordId]
       });
       
-      // Clear edited values for this record after save
       setEditedRecords(prev => {
         const newState = { ...prev };
         delete newState[recordId];
@@ -79,7 +73,6 @@ export default function ObjectRecordsList() {
     }
   };
 
-  // Cancel editing for a record
   const cancelEditing = (recordId: string) => {
     setEditedRecords(prev => {
       const newState = { ...prev };
@@ -88,16 +81,13 @@ export default function ObjectRecordsList() {
     });
   };
 
-  // Toggle edit mode for all records
   const toggleEditMode = () => {
     if (editMode && Object.keys(editedRecords).length > 0) {
-      // If turning off edit mode with unsaved changes, clear them
       setEditedRecords({});
     }
     setEditMode(!editMode);
   };
 
-  // Navigate to record detail page
   const handleRowClick = (recordId: string) => {
     if (!editMode) {
       navigate(`/objects/${objectTypeId}/${recordId}`);
@@ -159,7 +149,6 @@ export default function ObjectRecordsList() {
           <Table>
             <TableHeader>
               <TableRow>
-                {/* Configuration button */}
                 <TableHead className="w-10 p-0">
                   <FieldsConfigDialog
                     objectTypeId={objectTypeId}
@@ -167,7 +156,6 @@ export default function ObjectRecordsList() {
                     defaultVisibleFields={visibleFields}
                   />
                 </TableHead>
-                {/* Visible field columns */}
                 {fields?.filter(field => visibleFields.includes(field.api_name))
                   .map(field => (
                     <TableHead key={field.api_name}>{field.name}</TableHead>
@@ -185,7 +173,6 @@ export default function ObjectRecordsList() {
                   onClick={!editMode ? () => handleRowClick(record.id) : undefined}
                 >
                   <TableCell className="p-0 w-10">
-                    {/* Empty cell for alignment, clicking handled at row level */}
                   </TableCell>
                   {fields?.filter(field => visibleFields.includes(field.api_name))
                     .map(field => (
@@ -196,6 +183,7 @@ export default function ObjectRecordsList() {
                         onChange={(value) => handleFieldChange(record.id, field.api_name, value)}
                         fieldType={field.data_type}
                         isRequired={field.is_required}
+                        fieldOptions={field.options}
                       />
                     ))}
                   <TableCell>{formatDate(record.created_at)}</TableCell>

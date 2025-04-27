@@ -1,9 +1,10 @@
-
 import { useState, useEffect } from "react";
 import { TableCell } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { LookupField } from "./LookupField";
+import { LookupValueDisplay } from "./LookupValueDisplay";
 
 interface EditableCellProps {
   value: any;
@@ -11,13 +12,20 @@ interface EditableCellProps {
   editMode: boolean;
   fieldType: string;
   isRequired: boolean;
+  fieldOptions?: any;
 }
 
-export function EditableCell({ value, onChange, editMode, fieldType, isRequired }: EditableCellProps) {
+export function EditableCell({ 
+  value, 
+  onChange, 
+  editMode, 
+  fieldType, 
+  isRequired,
+  fieldOptions
+}: EditableCellProps) {
   const [editValue, setEditValue] = useState<any>(value);
   const [error, setError] = useState<string | null>(null);
 
-  // Update local state when value prop changes
   useEffect(() => {
     setEditValue(value);
   }, [value]);
@@ -25,7 +33,6 @@ export function EditableCell({ value, onChange, editMode, fieldType, isRequired 
   const handleChange = (newValue: any) => {
     setEditValue(newValue);
     
-    // Basic validation
     if (isRequired && (newValue === "" || newValue === null || newValue === undefined)) {
       setError("This field is required");
     } else {
@@ -35,6 +42,16 @@ export function EditableCell({ value, onChange, editMode, fieldType, isRequired 
   };
 
   if (!editMode) {
+    if (fieldType === 'lookup' && fieldOptions?.target_object_type_id) {
+      return (
+        <TableCell>
+          <LookupValueDisplay 
+            value={value} 
+            fieldOptions={fieldOptions}
+          />
+        </TableCell>
+      );
+    }
     return <TableCell>{value || "-"}</TableCell>;
   }
 
@@ -49,7 +66,6 @@ export function EditableCell({ value, onChange, editMode, fieldType, isRequired 
           />
         );
       case "picklist":
-        // Just a simple example for picklist, in real app you'd need to get options from field definition
         return (
           <Select 
             value={editValue || ""} 
@@ -120,6 +136,16 @@ export function EditableCell({ value, onChange, editMode, fieldType, isRequired 
           />
         );
       case "text":
+      case "lookup":
+        if (!fieldOptions?.target_object_type_id) return null;
+        return (
+          <LookupField
+            value={value}
+            onChange={handleChange}
+            targetObjectTypeId={fieldOptions.target_object_type_id}
+            disabled={false}
+          />
+        );
       default:
         return (
           <Input 
