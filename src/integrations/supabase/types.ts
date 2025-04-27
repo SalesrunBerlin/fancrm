@@ -343,6 +343,38 @@ export type Database = {
           },
         ]
       }
+      field_display_configs: {
+        Row: {
+          created_at: string
+          display_field_api_name: string
+          field_id: string
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          display_field_api_name: string
+          field_id: string
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          display_field_api_name?: string
+          field_id?: string
+          id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "field_display_configs_field_id_fkey"
+            columns: ["field_id"]
+            isOneToOne: false
+            referencedRelation: "object_fields"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       object_field_values: {
         Row: {
           created_at: string | null

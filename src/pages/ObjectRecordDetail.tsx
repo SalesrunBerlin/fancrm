@@ -1,22 +1,27 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
 import { useObjectRecords } from "@/hooks/useObjectRecords";
 import { useObjectFields } from "@/hooks/useObjectFields";
-import { Card, CardHeader, CardContent } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Edit, Save, Loader2, X } from "lucide-react";
+import { ArrowLeft, Edit, Save, Loader2, X, Trash2 } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import { RecordDetailForm } from "@/components/records/RecordDetailForm";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { RelatedRecordsList } from "@/components/records/RelatedRecordsList";
+import { RecordDeleteDialog } from "@/components/records/RecordDeleteDialog";
+import { toast } from "sonner";
 
 export default function ObjectRecordDetail() {
   const { objectTypeId, recordId } = useParams<{ objectTypeId: string; recordId: string }>();
   const { objectTypes } = useObjectTypes();
   const { fields } = useObjectFields(objectTypeId);
   const [isEditing, setIsEditing] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [editedValues, setEditedValues] = useState<Record<string, any>>({});
   const navigate = useNavigate();
 
@@ -106,6 +111,25 @@ export default function ObjectRecordDetail() {
     }
   };
 
+  const handleDelete = async () => {
+    if (!recordId) return;
+    
+    try {
+      const { error } = await supabase
+        .from('object_records')
+        .delete()
+        .eq('id', recordId);
+      
+      if (error) throw error;
+      
+      toast.success("Record deleted successfully");
+      navigate(`/objects/${objectTypeId}`);
+    } catch (error) {
+      console.error("Error deleting record:", error);
+      toast.error("Failed to delete record");
+    }
+  };
+
   if (!objectType) {
     return (
       <Alert variant="destructive">
@@ -158,56 +182,81 @@ export default function ObjectRecordDetail() {
               </Button>
             </>
           ) : (
-            <Button variant="outline" onClick={handleEditToggle}>
-              <Edit className="h-4 w-4 mr-2" />
-              Edit
-            </Button>
+            <>
+              <Button variant="outline" onClick={handleEditToggle}>
+                <Edit className="h-4 w-4 mr-2" />
+                Edit
+              </Button>
+              <Button 
+                variant="destructive" 
+                onClick={() => setShowDeleteDialog(true)}
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete
+              </Button>
+            </>
           )}
         </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <h2 className="text-2xl font-semibold">Record Details</h2>
-        </CardHeader>
-        <CardContent>
-          {isEditing ? (
-            <RecordDetailForm
-              record={record}
-              fields={fields || []}
-              onFieldChange={handleFieldChange}
-              editedValues={editedValues}
-            />
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">Record ID</label>
-                <p>{record.record_id}</p>
-              </div>
-              
-              {fields?.map(field => (
-                <div key={field.api_name}>
-                  <label className="text-sm font-medium text-muted-foreground">
-                    {field.name}
-                    {field.is_required && <span className="text-red-500 ml-1">*</span>}
-                  </label>
-                  <p>{record.field_values?.[field.api_name] || "-"}</p>
+      <Tabs defaultValue="details">
+        <TabsList>
+          <TabsTrigger value="details">Details</TabsTrigger>
+          <TabsTrigger value="related">Related</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="details">
+          <Card>
+            <CardContent className="pt-6">
+              {isEditing ? (
+                <RecordDetailForm
+                  record={record}
+                  fields={fields || []}
+                  onFieldChange={handleFieldChange}
+                  editedValues={editedValues}
+                />
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">Record ID</label>
+                    <p>{record.record_id}</p>
+                  </div>
+                  
+                  {fields?.map(field => (
+                    <div key={field.api_name}>
+                      <label className="text-sm font-medium text-muted-foreground">
+                        {field.name}
+                        {field.is_required && <span className="text-red-500 ml-1">*</span>}
+                      </label>
+                      <p>{record.field_values?.[field.api_name] || "-"}</p>
+                    </div>
+                  ))}
+                  
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">Created At</label>
+                    <p>{formatDate(record.created_at)}</p>
+                  </div>
+                  
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">Last Modified</label>
+                    <p>{formatDate(record.updated_at)}</p>
+                  </div>
                 </div>
-              ))}
-              
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">Created At</label>
-                <p>{formatDate(record.created_at)}</p>
-              </div>
-              
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">Last Modified</label>
-                <p>{formatDate(record.updated_at)}</p>
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="related">
+          <RelatedRecordsList objectTypeId={objectTypeId!} recordId={recordId!} />
+        </TabsContent>
+      </Tabs>
+
+      <RecordDeleteDialog
+        isOpen={showDeleteDialog}
+        onClose={() => setShowDeleteDialog(false)}
+        onConfirm={handleDelete}
+      />
     </div>
   );
 }

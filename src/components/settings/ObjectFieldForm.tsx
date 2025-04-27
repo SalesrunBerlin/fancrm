@@ -18,6 +18,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useObjectTypes } from "@/hooks/useObjectTypes";
 import { useObjectFields } from "@/hooks/useObjectFields";
 import { Loader2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 const fieldSchema = z.object({
   name: z.string().min(2, {
@@ -30,7 +31,10 @@ const fieldSchema = z.object({
     message: "Data type must be selected.",
   }),
   is_required: z.boolean().default(false),
-  options: z.record(z.any()).optional(),
+  options: z.object({
+    target_object_type_id: z.string().optional(),
+    display_field_api_name: z.string().optional(),
+  }).optional(),
 });
 
 interface ObjectFieldFormProps {
@@ -42,6 +46,8 @@ export function ObjectFieldForm({ objectTypeId, onComplete }: ObjectFieldFormPro
   const { objectTypes } = useObjectTypes();
   const { createField } = useObjectFields(objectTypeId);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedTargetType, setSelectedTargetType] = useState<string | null>(null);
+  const { fields: targetFields } = useObjectFields(selectedTargetType || undefined);
   
   const form = useForm<z.infer<typeof fieldSchema>>({
     resolver: zodResolver(fieldSchema),
@@ -73,17 +79,35 @@ export function ObjectFieldForm({ objectTypeId, onComplete }: ObjectFieldFormPro
       setIsSubmitting(true);
       console.log("Form values before submission:", values);
 
-      // Create the field with proper options for lookup
-      await createField.mutateAsync({
-        name: values.name,
-        api_name: values.api_name,
-        data_type: values.data_type,
-        is_required: values.is_required,
-        options: values.data_type === 'lookup' ? {
-          target_object_type_id: values.options?.target_object_type_id
-        } : values.options,
-        object_type_id: objectTypeId,
-      });
+      // First create the field
+      const { data: fieldData, error: fieldError } = await supabase
+        .from('object_fields')
+        .insert([{
+          name: values.name,
+          api_name: values.api_name,
+          data_type: values.data_type,
+          is_required: values.is_required,
+          object_type_id: objectTypeId,
+          options: values.data_type === 'lookup' ? {
+            target_object_type_id: values.options?.target_object_type_id
+          } : undefined,
+        }])
+        .select()
+        .single();
+
+      if (fieldError) throw fieldError;
+
+      // If it's a lookup field and we have a display field, create the config
+      if (values.data_type === 'lookup' && values.options?.display_field_api_name && fieldData) {
+        const { error: configError } = await supabase
+          .from('field_display_configs')
+          .insert([{
+            field_id: fieldData.id,
+            display_field_api_name: values.options.display_field_api_name
+          }]);
+
+        if (configError) throw configError;
+      }
 
       form.reset();
       if (onComplete) {
@@ -139,6 +163,7 @@ export function ObjectFieldForm({ objectTypeId, onComplete }: ObjectFieldFormPro
                   field.onChange(value);
                   if (value === "lookup") {
                     form.setValue("options", { target_object_type_id: "" });
+                    setSelectedTargetType(null);
                   }
                 }}
               >
@@ -159,31 +184,64 @@ export function ObjectFieldForm({ objectTypeId, onComplete }: ObjectFieldFormPro
         />
 
         {form.watch("data_type") === "lookup" && (
-          <FormField
-            control={form.control}
-            name="options.target_object_type_id"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Target Object</FormLabel>
-                <Select
-                  value={field.value ?? ""}
-                  onValueChange={field.onChange}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select target object" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {objectTypes?.filter(t => t.id !== objectTypeId).map((type) => (
-                      <SelectItem key={type.id} value={type.id}>
-                        {type.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
+          <>
+            <FormField
+              control={form.control}
+              name="options.target_object_type_id"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Target Object</FormLabel>
+                  <Select
+                    value={field.value ?? ""}
+                    onValueChange={(value) => {
+                      field.onChange(value);
+                      setSelectedTargetType(value);
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select target object" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {objectTypes?.filter(t => t.id !== objectTypeId).map((type) => (
+                        <SelectItem key={type.id} value={type.id}>
+                          {type.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {selectedTargetType && (
+              <FormField
+                control={form.control}
+                name="options.display_field_api_name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Display Field</FormLabel>
+                    <Select
+                      value={field.value ?? ""}
+                      onValueChange={field.onChange}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select display field" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {targetFields?.map((targetField) => (
+                          <SelectItem key={targetField.api_name} value={targetField.api_name}>
+                            {targetField.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             )}
-          />
+          </>
         )}
 
         <FormField
