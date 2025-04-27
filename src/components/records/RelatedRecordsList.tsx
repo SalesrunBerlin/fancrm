@@ -59,12 +59,12 @@ function RelatedRecordsSection({
   const { data: relatedRecords, isLoading } = useQuery({
     queryKey: ["related-records", targetObjectTypeId, recordId, sourceFieldApi],
     queryFn: async () => {
-      // Find all field values that reference this record
+      // Find field values that reference this record
       const { data: fieldValues, error: fieldValuesError } = await supabase
         .from("object_field_values")
         .select("record_id")
-        .eq("value", recordId)
-        .eq("field_api_name", sourceFieldApi);
+        .eq("field_api_name", sourceFieldApi)
+        .eq("value", recordId);
 
       if (fieldValuesError) throw fieldValuesError;
       
@@ -72,36 +72,43 @@ function RelatedRecordsSection({
         return [];
       }
       
-      // Get the record IDs that reference this record
       const relatedRecordIds = fieldValues.map(fv => fv.record_id);
       
-      // Fetch the actual records
+      // Find the name field or configured display field
+      const { data: displayField } = await supabase
+        .from("object_fields")
+        .select(`
+          id,
+          api_name,
+          field_display_configs (
+            display_field_api_name
+          )
+        `)
+        .eq("object_type_id", targetObjectTypeId)
+        .eq("api_name", "name")
+        .single();
+
+      const displayFieldName = displayField?.field_display_configs?.display_field_api_name || "name";
+
+      // Fetch records with their display values
       const { data: records, error: recordsError } = await supabase
         .from("object_records")
         .select("*")
-        .in("id", relatedRecordIds)
-        .eq("object_type_id", targetObjectTypeId);
+        .in("id", relatedRecordIds);
 
       if (recordsError) throw recordsError;
 
-      // For each record, get its field values
       const recordsWithValues = await Promise.all(records.map(async (record) => {
-        const { data: values, error: valuesError } = await supabase
+        const { data: values } = await supabase
           .from("object_field_values")
           .select("field_api_name, value")
           .eq("record_id", record.id);
 
-        if (valuesError) throw valuesError;
-
-        // Convert to map for easier access
-        const valuesMap = values.reduce((map, val) => {
-          map[val.field_api_name] = val.value;
-          return map;
-        }, {} as Record<string, string | null>);
+        const displayValue = values?.find(v => v.field_api_name === displayFieldName)?.value || record.record_id;
 
         return {
           ...record,
-          field_values: valuesMap
+          display_value: displayValue
         };
       }));
 
@@ -109,9 +116,6 @@ function RelatedRecordsSection({
     },
     enabled: !!targetObjectTypeId && !!recordId,
   });
-
-  const { fields: targetFields } = useObjectFields(targetObjectTypeId);
-  const nameField = targetFields?.find(f => f.api_name === 'name');
 
   if (isLoading) {
     return (
@@ -146,7 +150,7 @@ function RelatedRecordsSection({
                     to={`/objects/${targetObjectTypeId}/${record.id}`}
                     className="text-blue-600 hover:underline"
                   >
-                    {record.field_values?.[nameField?.api_name || 'name'] || record.record_id}
+                    {record.display_value}
                   </Link>
                 </TableCell>
                 <TableCell>

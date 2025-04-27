@@ -19,8 +19,7 @@ export function useObjectLookup(objectTypeId: string | undefined) {
       // First get records for this object type
       const { data: records, error } = await supabase
         .from("object_records")
-        .select("id")
-        .eq("object_type_id", objectTypeId);
+        .select("id");
 
       if (error) throw error;
 
@@ -28,29 +27,37 @@ export function useObjectLookup(objectTypeId: string | undefined) {
         return [];
       }
 
-      // Find the display configuration for the lookup field
-      const { data: nameField } = await supabase
+      // Find the display field configuration
+      const { data: fields } = await supabase
         .from("object_fields")
-        .select("api_name")
+        .select(`
+          id,
+          api_name,
+          field_display_configs (
+            display_field_api_name
+          )
+        `)
         .eq("object_type_id", objectTypeId)
         .eq("api_name", "name")
-        .maybeSingle();
+        .single();
 
-      // Get all field values for these records and use display field
+      const displayFieldName = fields?.field_display_configs?.display_field_api_name || "name";
+
+      // Get all field values using the correct display field
       const recordsWithDisplayValue = await Promise.all(records.map(async (record) => {
         const { data: fieldValues } = await supabase
           .from("object_field_values")
           .select("field_api_name, value")
           .eq("record_id", record.id);
 
-        // Find the name field value or use record ID as fallback
+        // Find the display field value or use record ID as fallback
         const displayValue = fieldValues?.find(
-          f => f.field_api_name === (nameField?.api_name || "name")
+          f => f.field_api_name === displayFieldName
         )?.value || record.id;
 
         return {
           id: record.id,
-          display_value: displayValue || record.id
+          display_value: displayValue
         };
       }));
 
