@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -19,6 +20,7 @@ import Products from "./pages/Products";
 import ProductDetail from "./pages/ProductDetail";
 import Activities from "./pages/Activities";
 import ActivityDetail from "./pages/ActivityDetail";
+import ObjectTypeDetail from "./pages/ObjectTypeDetail";
 
 const queryClient = new QueryClient();
 
@@ -39,6 +41,7 @@ const App = () => (
               <Route path="/deals" element={<Deals />} />
               <Route path="/deals/:id" element={<DealDetail />} />
               <Route path="/settings" element={<Settings />} />
+              <Route path="/settings/objects/:objectTypeId" element={<ObjectTypeDetail />} />
               <Route path="/products" element={<Products />} />
               <Route path="/products/:id" element={<ProductDetail />} />
               <Route path="/activities" element={<Activities />} />
