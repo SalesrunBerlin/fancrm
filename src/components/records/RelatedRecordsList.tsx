@@ -1,4 +1,3 @@
-
 import { useQuery } from "@tanstack/react-query";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -66,7 +65,9 @@ export function RelatedRecordsList({ objectTypeId, recordId }: RelatedRecordsLis
         let records;
         const lookupField = fields.find(f => 
           f.data_type === "lookup" && 
-          f.options?.target_object_type_id === objectTypeId
+          f.options && 
+          typeof f.options === 'object' &&
+          'target_object_type_id' in f.options
         );
 
         if (isForward && lookupField) {

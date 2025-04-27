@@ -375,6 +375,47 @@ export type Database = {
           },
         ]
       }
+      field_picklist_values: {
+        Row: {
+          created_at: string | null
+          field_id: string
+          id: string
+          label: string
+          order_position: number
+          owner_id: string | null
+          updated_at: string | null
+          value: string
+        }
+        Insert: {
+          created_at?: string | null
+          field_id: string
+          id?: string
+          label: string
+          order_position?: number
+          owner_id?: string | null
+          updated_at?: string | null
+          value: string
+        }
+        Update: {
+          created_at?: string | null
+          field_id?: string
+          id?: string
+          label?: string
+          order_position?: number
+          owner_id?: string | null
+          updated_at?: string | null
+          value?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "field_picklist_values_field_id_fkey"
+            columns: ["field_id"]
+            isOneToOne: false
+            referencedRelation: "object_fields"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       object_field_values: {
         Row: {
           created_at: string | null

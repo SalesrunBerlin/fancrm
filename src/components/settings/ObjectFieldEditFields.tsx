@@ -1,4 +1,3 @@
-
 import { ObjectField } from "@/hooks/useObjectTypes";
 import { Input } from "@/components/ui/input";
 import {
@@ -17,6 +16,7 @@ import {
 } from "@/components/ui/select";
 import { UseFormReturn } from "react-hook-form";
 import { FieldEditFormData } from "./schemas/fieldEditSchema";
+import { PicklistValuesManager } from "./PicklistValuesManager";
 
 interface ObjectFieldEditFieldsProps {
   form: UseFormReturn<FieldEditFormData>;
@@ -54,6 +54,13 @@ export function ObjectFieldEditFields({ form, field, targetFields }: ObjectField
           </FormItem>
         )}
       />
+
+      {field.data_type === "picklist" && (
+        <div className="mt-4 border-t pt-4">
+          <h3 className="text-sm font-medium mb-2">Picklist Values</h3>
+          <PicklistValuesManager fieldId={field.id} />
+        </div>
+      )}
 
       {field.data_type === "lookup" && targetFields && (
         <FormField
