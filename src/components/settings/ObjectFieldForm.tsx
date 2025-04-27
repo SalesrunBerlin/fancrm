@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -18,9 +17,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useObjectTypes } from "@/hooks/useObjectTypes";
 import { useObjectFields } from "@/hooks/useObjectFields";
 import { Loader2 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
+import { Separator } from "@/components/ui/separator";
+import { PicklistValuesManager } from "./PicklistValuesManager";
 
 const fieldSchema = z.object({
   name: z.string().min(2, {
@@ -47,11 +47,11 @@ interface ObjectFieldFormProps {
 }
 
 export function ObjectFieldForm({ objectTypeId, onComplete }: ObjectFieldFormProps) {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPicklistValues, setShowPicklistValues] = useState(false);
+  const [createdFieldId, setCreatedFieldId] = useState<string | null>(null);
   const { objectTypes } = useObjectTypes();
   const { createField } = useObjectFields(objectTypeId);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [selectedTargetType, setSelectedTargetType] = useState<string | null>(null);
-  const { fields: targetFields } = useObjectFields(selectedTargetType || undefined);
   const { user } = useAuth();
   
   const form = useForm<z.infer<typeof fieldSchema>>({
@@ -64,6 +64,68 @@ export function ObjectFieldForm({ objectTypeId, onComplete }: ObjectFieldFormPro
       options: {}
     }
   });
+
+  // Watch for data_type changes
+  const dataType = form.watch("data_type");
+
+  useEffect(() => {
+    if (dataType === "picklist") {
+      setShowPicklistValues(true);
+    } else {
+      setShowPicklistValues(false);
+      setCreatedFieldId(null);
+    }
+  }, [dataType]);
+
+  const onSubmit = async (values: z.infer<typeof fieldSchema>) => {
+    try {
+      setIsSubmitting(true);
+      
+      const fieldData = await createField.mutateAsync({
+        name: values.name,
+        api_name: values.api_name,
+        data_type: values.data_type,
+        is_required: values.is_required,
+        object_type_id: objectTypeId,
+      });
+
+      if (values.data_type === "picklist") {
+        setCreatedFieldId(fieldData.id);
+        toast.success("Field created! You can now add picklist values.");
+      } else {
+        toast.success("Field created successfully");
+        if (onComplete) {
+          onComplete();
+        }
+      }
+    } catch (error) {
+      console.error("Error creating field:", error);
+      toast.error("Failed to create field");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handlePicklistComplete = () => {
+    toast.success("Field and picklist values created successfully");
+    if (onComplete) {
+      onComplete();
+    }
+  };
+
+  const dataTypeOptions = [
+    { label: "Text", value: "text" },
+    { label: "Text Area", value: "textarea" },
+    { label: "Number", value: "number" },
+    { label: "Email", value: "email" },
+    { label: "URL", value: "url" },
+    { label: "Date", value: "date" },
+    { label: "Date & Time", value: "datetime" },
+    { label: "Boolean", value: "boolean" },
+    { label: "Picklist", value: "picklist" },
+    { label: "Currency", value: "currency" },
+    { label: "Lookup", value: "lookup" }
+  ];
 
   // Auto-generate API name from field name
   useEffect(() => {
@@ -81,81 +143,6 @@ export function ObjectFieldForm({ objectTypeId, onComplete }: ObjectFieldFormPro
       }
     }
   }, [form.watch("name")]);
-
-  const dataTypeOptions = [
-    { label: "Text", value: "text" },
-    { label: "Text Area", value: "textarea" },
-    { label: "Number", value: "number" },
-    { label: "Email", value: "email" },
-    { label: "URL", value: "url" },
-    { label: "Date", value: "date" },
-    { label: "Date & Time", value: "datetime" },
-    { label: "Boolean", value: "boolean" },
-    { label: "Picklist", value: "picklist" },
-    { label: "Currency", value: "currency" },
-    { label: "Lookup", value: "lookup" }
-  ];
-
-  const onSubmit = async (values: z.infer<typeof fieldSchema>) => {
-    try {
-      setIsSubmitting(true);
-      console.log("Form values before submission:", values);
-
-      if (!user) {
-        toast.error("You must be logged in to create fields");
-        return;
-      }
-
-      // First create the field
-      const { data: fieldData, error: fieldError } = await supabase
-        .from('object_fields')
-        .insert([{
-          name: values.name,
-          api_name: values.api_name,
-          data_type: values.data_type,
-          is_required: values.is_required,
-          object_type_id: objectTypeId,
-          owner_id: user.id, // Make sure owner_id is set to the current user's ID
-          options: values.data_type === 'lookup' ? {
-            target_object_type_id: values.options?.target_object_type_id
-          } : undefined,
-        }])
-        .select();
-
-      if (fieldError) {
-        console.error("Error creating field:", fieldError);
-        toast.error("Failed to create field: " + fieldError.message);
-        return;
-      }
-
-      // If it's a lookup field and we have a display field, create the config
-      if (values.data_type === 'lookup' && values.options?.display_field_api_name && fieldData && fieldData.length > 0) {
-        const { error: configError } = await supabase
-          .from('field_display_configs')
-          .insert([{
-            field_id: fieldData[0].id,
-            display_field_api_name: values.options.display_field_api_name
-          }]);
-
-        if (configError) {
-          console.error("Error creating display config:", configError);
-          toast.error("Failed to create display config: " + configError.message);
-          return;
-        }
-      }
-
-      toast.success("Field created successfully");
-      form.reset();
-      if (onComplete) {
-        onComplete();
-      }
-    } catch (error) {
-      console.error("Error submitting form:", error);
-      toast.error("Failed to create field");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
 
   return (
     <Form {...form}>
@@ -198,9 +185,10 @@ export function ObjectFieldForm({ objectTypeId, onComplete }: ObjectFieldFormPro
                 value={field.value}
                 onValueChange={(value) => {
                   field.onChange(value);
-                  if (value === "lookup") {
-                    form.setValue("options", { target_object_type_id: "" });
-                    setSelectedTargetType(null);
+                  if (value === "picklist") {
+                    setShowPicklistValues(true);
+                  } else {
+                    setShowPicklistValues(false);
                   }
                 }}
               >
@@ -232,7 +220,6 @@ export function ObjectFieldForm({ objectTypeId, onComplete }: ObjectFieldFormPro
                     value={field.value ?? ""}
                     onValueChange={(value) => {
                       field.onChange(value);
-                      setSelectedTargetType(value);
                     }}
                   >
                     <SelectTrigger>
@@ -250,34 +237,6 @@ export function ObjectFieldForm({ objectTypeId, onComplete }: ObjectFieldFormPro
                 </FormItem>
               )}
             />
-
-            {selectedTargetType && (
-              <FormField
-                control={form.control}
-                name="options.display_field_api_name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Display Field</FormLabel>
-                    <Select
-                      value={field.value ?? ""}
-                      onValueChange={field.onChange}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select display field" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {targetFields?.map((targetField) => (
-                          <SelectItem key={targetField.api_name} value={targetField.api_name}>
-                            {targetField.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
           </>
         )}
 
@@ -299,14 +258,33 @@ export function ObjectFieldForm({ objectTypeId, onComplete }: ObjectFieldFormPro
           )}
         />
 
-        <Button 
-          type="submit" 
-          disabled={isSubmitting}
-        >
-          {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          Create Field
-        </Button>
+        {!createdFieldId && (
+          <Button 
+            type="submit" 
+            disabled={isSubmitting}
+            className="w-full"
+          >
+            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Create Field
+          </Button>
+        )}
       </form>
+
+      {createdFieldId && (
+        <div className="mt-6">
+          <Separator className="my-4" />
+          <h3 className="text-lg font-medium mb-4">Add Picklist Values</h3>
+          <PicklistValuesManager 
+            fieldId={createdFieldId} 
+          />
+          <Button 
+            onClick={handlePicklistComplete}
+            className="mt-4 w-full"
+          >
+            Complete Setup
+          </Button>
+        </div>
+      )}
     </Form>
   );
 }

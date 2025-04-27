@@ -5,6 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { LookupField } from "./LookupField";
 import { LookupValueDisplay } from "./LookupValueDisplay";
+import { useFieldPicklistValues } from "@/hooks/useFieldPicklistValues";
 
 interface EditableCellProps {
   value: any;
