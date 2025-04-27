@@ -1,0 +1,149 @@
+
+import { ObjectField } from "@/hooks/useObjectTypes";
+import { ObjectRecord } from "@/hooks/useObjectRecords";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+
+interface RecordDetailFormProps {
+  record: ObjectRecord;
+  fields: ObjectField[];
+  onFieldChange: (fieldName: string, value: any) => void;
+  editedValues: Record<string, any>;
+}
+
+export function RecordDetailForm({ record, fields, onFieldChange, editedValues }: RecordDetailFormProps) {
+  // Get field value, prioritizing edited values
+  const getFieldValue = (fieldApiName: string) => {
+    if (fieldApiName in editedValues) {
+      return editedValues[fieldApiName];
+    }
+    return record.field_values?.[fieldApiName] || "";
+  };
+
+  const renderFieldInput = (field: ObjectField) => {
+    const value = getFieldValue(field.api_name);
+    
+    switch (field.data_type) {
+      case "textarea":
+        return (
+          <Textarea
+            id={field.api_name}
+            value={value}
+            onChange={(e) => onFieldChange(field.api_name, e.target.value)}
+            required={field.is_required}
+          />
+        );
+      case "picklist":
+        // Just a simple example for picklist, in real app you'd need to get options from field definition
+        return (
+          <Select 
+            value={value} 
+            onValueChange={(val) => onFieldChange(field.api_name, val)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select..." />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="option1">Option 1</SelectItem>
+              <SelectItem value="option2">Option 2</SelectItem>
+              <SelectItem value="option3">Option 3</SelectItem>
+            </SelectContent>
+          </Select>
+        );
+      case "boolean":
+        return (
+          <Select 
+            value={String(!!value)} 
+            onValueChange={(val) => onFieldChange(field.api_name, val === "true")}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select..." />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="true">Yes</SelectItem>
+              <SelectItem value="false">No</SelectItem>
+            </SelectContent>
+          </Select>
+        );
+      case "date":
+        return (
+          <Input
+            type="date"
+            id={field.api_name}
+            value={value}
+            onChange={(e) => onFieldChange(field.api_name, e.target.value)}
+            required={field.is_required}
+          />
+        );
+      case "datetime":
+        return (
+          <Input
+            type="datetime-local"
+            id={field.api_name}
+            value={value}
+            onChange={(e) => onFieldChange(field.api_name, e.target.value)}
+            required={field.is_required}
+          />
+        );
+      case "number":
+      case "currency":
+        return (
+          <Input
+            type="number"
+            id={field.api_name}
+            value={value}
+            onChange={(e) => onFieldChange(field.api_name, e.target.value ? Number(e.target.value) : null)}
+            required={field.is_required}
+            step={field.data_type === "currency" ? "0.01" : "1"}
+          />
+        );
+      case "email":
+        return (
+          <Input
+            type="email"
+            id={field.api_name}
+            value={value}
+            onChange={(e) => onFieldChange(field.api_name, e.target.value)}
+            required={field.is_required}
+          />
+        );
+      case "url":
+        return (
+          <Input
+            type="url"
+            id={field.api_name}
+            value={value}
+            onChange={(e) => onFieldChange(field.api_name, e.target.value)}
+            required={field.is_required}
+          />
+        );
+      case "text":
+      default:
+        return (
+          <Input
+            type="text"
+            id={field.api_name}
+            value={value}
+            onChange={(e) => onFieldChange(field.api_name, e.target.value)}
+            required={field.is_required}
+          />
+        );
+    }
+  };
+
+  return (
+    <div className="grid grid-cols-1 gap-6">
+      {fields.map(field => (
+        <div key={field.api_name} className="space-y-2">
+          <Label htmlFor={field.api_name}>
+            {field.name}
+            {field.is_required && <span className="text-red-500 ml-1">*</span>}
+          </Label>
+          {renderFieldInput(field)}
+        </div>
+      ))}
+    </div>
+  );
+}

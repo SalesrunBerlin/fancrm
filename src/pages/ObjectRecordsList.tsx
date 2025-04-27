@@ -1,24 +1,27 @@
 
 import { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
 import { useObjectRecords } from "@/hooks/useObjectRecords";
 import { useObjectFields } from "@/hooks/useObjectFields";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, Edit, Save, X } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import { CreateRecordDialog } from "@/components/records/CreateRecordDialog";
 import { FieldsConfigDialog } from "@/components/records/FieldsConfigDialog";
+import { EditableCell } from "@/components/records/EditableCell";
 
 export default function ObjectRecordsList() {
   const { objectTypeId } = useParams<{ objectTypeId: string }>();
   const { objectTypes } = useObjectTypes();
-  const { records, isLoading } = useObjectRecords(objectTypeId);
+  const { records, isLoading, updateRecord } = useObjectRecords(objectTypeId);
   const { fields } = useObjectFields(objectTypeId);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [visibleFields, setVisibleFields] = useState<string[]>([]);
+  const [editMode, setEditMode] = useState(false);
+  const [editedRecords, setEditedRecords] = useState<Record<string, Record<string, any>>>({});
   
   const objectType = objectTypes?.find(type => type.id === objectTypeId);
 
@@ -40,6 +43,57 @@ export default function ObjectRecordsList() {
     }
   };
 
+  // Handle field value change
+  const handleFieldChange = (recordId: string, fieldApiName: string, value: any) => {
+    setEditedRecords(prev => ({
+      ...prev,
+      [recordId]: {
+        ...(prev[recordId] || {}),
+        [fieldApiName]: value
+      }
+    }));
+  };
+
+  // Check if a record has been edited
+  const isRecordEdited = (recordId: string) => {
+    return editedRecords[recordId] && Object.keys(editedRecords[recordId]).length > 0;
+  };
+
+  // Save edited record
+  const saveRecord = async (recordId: string) => {
+    if (editedRecords[recordId]) {
+      await updateRecord.mutateAsync({
+        id: recordId,
+        field_values: editedRecords[recordId]
+      });
+      
+      // Clear edited values for this record after save
+      setEditedRecords(prev => {
+        const newState = { ...prev };
+        delete newState[recordId];
+        return newState;
+      });
+    }
+  };
+
+  // Cancel editing for a record
+  const cancelEditing = (recordId: string) => {
+    setEditedRecords(prev => {
+      const newState = { ...prev };
+      delete newState[recordId];
+      return newState;
+    });
+  };
+
+  // Toggle edit mode for all records
+  const toggleEditMode = () => {
+    if (editMode && Object.keys(editedRecords).length > 0) {
+      // If turning off edit mode with unsaved changes, clear them
+      setEditedRecords({});
+    }
+    setEditMode(!editMode);
+  };
+
   if (!objectType) {
     return <div>Object type not found</div>;
   }
@@ -47,7 +101,18 @@ export default function ObjectRecordsList() {
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">{objectType.name}</h1>
+        <div className="flex items-center gap-2">
+          <h1 className="text-3xl font-bold">{objectType.name}</h1>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={toggleEditMode}
+            className={editMode ? "bg-amber-100" : ""}
+          >
+            <Edit className="h-4 w-4 mr-1" />
+            {editMode ? "Exit Edit Mode" : "Edit Mode"}
+          </Button>
+        </div>
         <Button onClick={() => setShowCreateDialog(true)}>
           <Plus className="h-4 w-4 mr-2" />
           New {objectType.name}
@@ -74,20 +139,55 @@ export default function ObjectRecordsList() {
                   ))}
                 <TableHead>Created At</TableHead>
                 <TableHead>Last Modified</TableHead>
+                {editMode && <TableHead className="w-24">Actions</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
               {records?.map((record) => (
                 <TableRow key={record.id}>
-                  <TableCell />
+                  <TableCell className="p-0 w-10">
+                    {!editMode && (
+                      <Link
+                        to={`/objects/${objectTypeId}/${record.id}`}
+                        className="block w-full h-full p-4"
+                      />
+                    )}
+                  </TableCell>
                   {fields?.filter(field => visibleFields.includes(field.api_name))
                     .map(field => (
-                      <TableCell key={field.api_name}>
-                        {record.field_values?.[field.api_name] || "-"}
-                      </TableCell>
+                      <EditableCell
+                        key={`${record.id}-${field.api_name}`}
+                        value={record.field_values?.[field.api_name]}
+                        editMode={editMode}
+                        onChange={(value) => handleFieldChange(record.id, field.api_name, value)}
+                        fieldType={field.data_type}
+                        isRequired={field.is_required}
+                      />
                     ))}
                   <TableCell>{formatDate(record.created_at)}</TableCell>
                   <TableCell>{formatDate(record.updated_at)}</TableCell>
+                  {editMode && (
+                    <TableCell className="w-24">
+                      {isRecordEdited(record.id) ? (
+                        <div className="flex gap-1">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => saveRecord(record.id)}
+                          >
+                            <Save className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => cancelEditing(record.id)}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ) : null}
+                    </TableCell>
+                  )}
                 </TableRow>
               ))}
             </TableBody>

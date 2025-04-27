@@ -112,9 +112,117 @@ export function useObjectRecords(objectTypeId?: string) {
     },
   });
 
+  const updateRecord = useMutation({
+    mutationFn: async ({ id, field_values }: { id: string, field_values: Record<string, any> }) => {
+      // Update the object_field_values for each changed field
+      const updates = Object.entries(field_values).map(async ([fieldApiName, value]) => {
+        // Check if the field value exists
+        const { data: existingValue } = await supabase
+          .from("object_field_values")
+          .select("*")
+          .eq("record_id", id)
+          .eq("field_api_name", fieldApiName)
+          .single();
+
+        const stringValue = value !== null && value !== undefined ? String(value) : null;
+
+        if (existingValue) {
+          // Update existing field value
+          const { error } = await supabase
+            .from("object_field_values")
+            .update({ value: stringValue })
+            .eq("record_id", id)
+            .eq("field_api_name", fieldApiName);
+
+          if (error) throw error;
+        } else {
+          // Insert new field value
+          const { error } = await supabase
+            .from("object_field_values")
+            .insert({
+              record_id: id,
+              field_api_name: fieldApiName,
+              value: stringValue
+            });
+
+          if (error) throw error;
+        }
+      });
+
+      // Wait for all updates to complete
+      await Promise.all(updates);
+
+      // Update the last_modified timestamp on the record
+      const { error: recordUpdateError } = await supabase
+        .from("object_records")
+        .update({ 
+          updated_at: new Date().toISOString(),
+          last_modified_by: user?.id
+        })
+        .eq("id", id);
+
+      if (recordUpdateError) throw recordUpdateError;
+
+      return { id, field_values };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["object-records", objectTypeId] });
+      toast({
+        title: "Success",
+        description: "Record updated successfully",
+      });
+    },
+    onError: (error) => {
+      console.error("Error updating record:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update record",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const getRecord = async (recordId: string): Promise<ObjectRecord | null> => {
+    // Get the record
+    const { data: record, error: recordError } = await supabase
+      .from("object_records")
+      .select("*")
+      .eq("id", recordId)
+      .single();
+
+    if (recordError) {
+      console.error("Error fetching record:", recordError);
+      return null;
+    }
+
+    // Get field values
+    const { data: fieldValues, error: fieldValuesError } = await supabase
+      .from("object_field_values")
+      .select("field_api_name, value")
+      .eq("record_id", recordId);
+
+    if (fieldValuesError) {
+      console.error("Error fetching field values:", fieldValuesError);
+      return null;
+    }
+
+    // Convert field values array to object
+    const valuesObject = fieldValues.reduce((acc, curr) => {
+      acc[curr.field_api_name] = curr.value;
+      return acc;
+    }, {} as { [key: string]: string | null });
+
+    return {
+      ...record,
+      field_values: valuesObject
+    };
+  };
+
   return {
     records,
     isLoading,
     createRecord,
+    updateRecord,
+    getRecord
   };
 }
