@@ -40,7 +40,7 @@ export function useObjectTypes() {
 
   const { data: objectTypes, isLoading } = useQuery({
     queryKey: ["object-types"],
-    queryFn: async (): Promise<ObjectType[]> => {
+    queryFn: async () => {
       const { data, error } = await supabase
         .from("object_types")
         .select("*")

@@ -1,9 +1,7 @@
-
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import type { ObjectField } from "./useObjectTypes";
 
 export function useObjectFields(objectTypeId?: string) {
   const { user } = useAuth();
@@ -12,14 +10,17 @@ export function useObjectFields(objectTypeId?: string) {
 
   const { data: fields, isLoading } = useQuery({
     queryKey: ["object-fields", objectTypeId],
-    queryFn: async (): Promise<ObjectField[]> => {
+    queryFn: async () => {
       const { data, error } = await supabase
         .from("object_fields")
         .select("*")
         .eq("object_type_id", objectTypeId)
         .order("display_order");
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching fields:", error);
+        throw error;
+      }
       return data;
     },
     enabled: !!user && !!objectTypeId,

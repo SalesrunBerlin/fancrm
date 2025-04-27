@@ -32,7 +32,7 @@ export function useFieldPicklistValues(fieldId: string) {
       if (error) throw error;
       return data as PicklistValue[];
     },
-    enabled: !!fieldId,
+    enabled: !!user && !!fieldId,
   });
 
   const addValue = useMutation({
