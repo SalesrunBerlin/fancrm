@@ -7,7 +7,7 @@ import { ObjectType } from "@/hooks/useObjectTypes";
 
 export function ActiveObjectsMenu() {
   const { objectTypes } = useObjectTypes();
-  const activeObjects = objectTypes?.filter(obj => obj.is_active) || [];
+  const visibleObjects = objectTypes?.filter(obj => obj.is_active && obj.show_in_navigation) || [];
 
   const getIconComponent = (iconName: string | null) => {
     switch(iconName) {
@@ -19,7 +19,7 @@ export function ActiveObjectsMenu() {
     }
   };
 
-  if (!activeObjects.length) return null;
+  if (!visibleObjects.length) return null;
 
   return (
     <NavigationMenu>
@@ -31,7 +31,7 @@ export function ActiveObjectsMenu() {
           </NavigationMenuTrigger>
           <NavigationMenuContent>
             <div className="grid gap-1 p-2 w-[200px]">
-              {activeObjects.map((object: ObjectType) => (
+              {visibleObjects.map((object: ObjectType) => (
                 <Link
                   key={object.id}
                   to={`/objects/${object.id}`}

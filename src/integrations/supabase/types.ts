@@ -567,6 +567,7 @@ export type Database = {
           is_system: boolean
           name: string
           owner_id: string | null
+          show_in_navigation: boolean
           updated_at: string
         }
         Insert: {
@@ -580,6 +581,7 @@ export type Database = {
           is_system?: boolean
           name: string
           owner_id?: string | null
+          show_in_navigation?: boolean
           updated_at?: string
         }
         Update: {
@@ -593,6 +595,7 @@ export type Database = {
           is_system?: boolean
           name?: string
           owner_id?: string | null
+          show_in_navigation?: boolean
           updated_at?: string
         }
         Relationships: []

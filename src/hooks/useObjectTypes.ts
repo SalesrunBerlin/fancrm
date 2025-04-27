@@ -12,6 +12,7 @@ export interface ObjectType {
   owner_id: string;
   is_system: boolean;
   is_active: boolean;
+  show_in_navigation: boolean;
   created_at: string;
   updated_at: string;
 }

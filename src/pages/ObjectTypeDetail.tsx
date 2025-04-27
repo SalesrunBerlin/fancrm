@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
@@ -33,11 +32,6 @@ export default function ObjectTypeDetail() {
   const handleActiveToggle = async (checked: boolean) => {
     if (!objectType) return;
     
-    if (objectType.is_system && !checked) {
-      toast.error("Cannot deactivate system objects");
-      return;
-    }
-    
     try {
       await updateObjectType.mutateAsync({
         id: objectType.id,
@@ -48,6 +42,22 @@ export default function ObjectTypeDetail() {
     } catch (error) {
       console.error("Error updating object status:", error);
       toast.error("Failed to update object status");
+    }
+  };
+
+  const handleNavigationVisibilityToggle = async (checked: boolean) => {
+    if (!objectType) return;
+    
+    try {
+      await updateObjectType.mutateAsync({
+        id: objectType.id,
+        show_in_navigation: checked
+      });
+      
+      toast.success(checked ? "Object added to navigation" : "Object removed from navigation");
+    } catch (error) {
+      console.error("Error updating navigation visibility:", error);
+      toast.error("Failed to update navigation visibility");
     }
   };
 
@@ -92,14 +102,25 @@ export default function ObjectTypeDetail() {
             {objectType.name}
           </h1>
         </div>
-        <div className="flex items-center gap-2">
-          <Switch
-            id="active-toggle"
-            checked={objectType.is_active}
-            onCheckedChange={handleActiveToggle}
-            disabled={updateObjectType.isPending}
-          />
-          <Label htmlFor="active-toggle">Active</Label>
+        <div className="flex items-center gap-6">
+          <div className="flex items-center gap-2">
+            <Switch
+              id="navigation-toggle"
+              checked={objectType.show_in_navigation}
+              onCheckedChange={handleNavigationVisibilityToggle}
+              disabled={updateObjectType.isPending}
+            />
+            <Label htmlFor="navigation-toggle">Show in Navigation</Label>
+          </div>
+          <div className="flex items-center gap-2">
+            <Switch
+              id="active-toggle"
+              checked={objectType.is_active}
+              onCheckedChange={handleActiveToggle}
+              disabled={updateObjectType.isPending}
+            />
+            <Label htmlFor="active-toggle">Active</Label>
+          </div>
         </div>
       </div>
       
