@@ -37,6 +37,11 @@ export function useObjectRecords(objectTypeId?: string) {
 
   const createRecord = useMutation({
     mutationFn: async (newRecord: Partial<ObjectRecord>) => {
+      // Fix: Ensure object_type_id is provided as required by the database
+      if (!newRecord.object_type_id && objectTypeId) {
+        newRecord.object_type_id = objectTypeId;
+      }
+      
       const { data, error } = await supabase
         .from("object_records")
         .insert([{
