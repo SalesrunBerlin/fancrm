@@ -28,12 +28,12 @@ export function CreateRecordDialog({ objectTypeId, open, onOpenChange }: CreateR
   const onSubmit = async (data: RecordFormData) => {
     try {
       setIsSubmitting(true);
-      await createRecord.mutateAsync({
-        object_type_id: objectTypeId,
-        ...data
-      });
+      // Only pass the form data - the hook will handle adding the object_type_id
+      await createRecord.mutateAsync(data);
       form.reset();
       onOpenChange(false);
+    } catch (error) {
+      console.error("Error submitting form:", error);
     } finally {
       setIsSubmitting(false);
     }
