@@ -11,6 +11,7 @@ import { ObjectFieldsList } from "@/components/settings/ObjectFieldsList";
 import { ObjectFieldForm } from "@/components/settings/ObjectFieldForm";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { PicklistValuesManager } from "@/components/settings/PicklistValuesManager";
+import { toast } from "sonner";
 
 export default function ObjectTypeDetail() {
   const { objectTypeId } = useParams<{ objectTypeId: string }>();
@@ -108,19 +109,6 @@ export default function ObjectTypeDetail() {
           <Label htmlFor="active-toggle">Active</Label>
         </div>
       </div>
-      
-      {objectType.api_name === "account" && (
-        <div className="flex flex-wrap gap-2">
-          {accountTypeField && (
-            <Button 
-              variant="outline" 
-              onClick={() => handleManagePicklistValues(accountTypeField.id)}
-            >
-              Manage "Type" Picklist Values
-            </Button>
-          )}
-        </div>
-      )}
       
       <Card>
         <CardHeader className="flex flex-row items-center justify-between pb-4">
