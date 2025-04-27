@@ -34,7 +34,7 @@ export function ActiveObjectsMenu() {
               {activeObjects.map((object: ObjectType) => (
                 <Link
                   key={object.id}
-                  to={`/${object.api_name.toLowerCase()}`}
+                  to={`/objects/${object.id}`}
                   className="flex items-center gap-2 px-3 py-2 text-sm rounded-md hover:bg-accent"
                 >
                   {getIconComponent(object.icon)}

@@ -402,23 +402,32 @@ export type Database = {
       object_records: {
         Row: {
           created_at: string
+          created_by: string | null
           id: string
+          last_modified_by: string | null
           object_type_id: string
           owner_id: string | null
+          record_id: string | null
           updated_at: string
         }
         Insert: {
           created_at?: string
+          created_by?: string | null
           id?: string
+          last_modified_by?: string | null
           object_type_id: string
           owner_id?: string | null
+          record_id?: string | null
           updated_at?: string
         }
         Update: {
           created_at?: string
+          created_by?: string | null
           id?: string
+          last_modified_by?: string | null
           object_type_id?: string
           owner_id?: string | null
+          record_id?: string | null
           updated_at?: string
         }
         Relationships: [
