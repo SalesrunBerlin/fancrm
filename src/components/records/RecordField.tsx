@@ -1,68 +1,110 @@
-
-import { UseFormReturn } from "react-hook-form";
-import { FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
+import { useFormField } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import type { ObjectField } from "@/hooks/useObjectTypes";
-import type { RecordFormData } from "@/lib/types/records";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { FormItem, FormLabel, FormControl, FormDescription, FormMessage } from "@/components/ui/form";
+import { ControllerRenderProps, UseFormReturn } from "react-hook-form";
+import { ObjectField } from "@/hooks/useObjectTypes";
+import { LookupField } from "./LookupField";
 
 interface RecordFieldProps {
   field: ObjectField;
-  form: UseFormReturn<RecordFormData>;
+  form: UseFormReturn<any>;
 }
 
 export function RecordField({ field, form }: RecordFieldProps) {
-  const renderFieldInput = () => {
+  const { name } = useFormField();
+  const value = form.watch(field.api_name);
+
+  const renderField = () => {
     switch (field.data_type) {
-      case 'textarea':
-        return <Textarea {...form.register(field.api_name, { 
-          required: field.is_required ? `${field.name} is required` : false 
-        })} />;
-      case 'number':
-        return <Input type="number" {...form.register(field.api_name, { 
-          required: field.is_required ? `${field.name} is required` : false,
-          valueAsNumber: true 
-        })} />;
-      case 'email':
-        return <Input type="email" {...form.register(field.api_name, { 
-          required: field.is_required ? `${field.name} is required` : false,
-          pattern: {
-            value: /\S+@\S+\.\S+/,
-            message: "Invalid email address"
-          }
-        })} />;
-      case 'url':
-        return <Input type="url" {...form.register(field.api_name, { 
-          required: field.is_required ? `${field.name} is required` : false,
-          pattern: {
-            value: /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/,
-            message: "Invalid URL"
-          }
-        })} />;
-      case 'date':
-        return <Input type="date" {...form.register(field.api_name, { 
-          required: field.is_required ? `${field.name} is required` : false 
-        })} />;
+      case "text":
+        return (
+          <Input
+            type="text"
+            placeholder={field.name}
+            {...form.register(field.api_name, { required: field.is_required })}
+          />
+        );
+      case "textarea":
+        return (
+          <Textarea
+            placeholder={field.name}
+            {...form.register(field.api_name, { required: field.is_required })}
+          />
+        );
+      case "number":
+        return (
+          <Input
+            type="number"
+            placeholder={field.name}
+            {...form.register(field.api_name, { required: field.is_required })}
+          />
+        );
+      case "email":
+        return (
+          <Input
+            type="email"
+            placeholder={field.name}
+            {...form.register(field.api_name, { required: field.is_required })}
+          />
+        );
+      case "boolean":
+        return (
+          <Select
+            onValueChange={(value) => form.setValue(field.api_name, value === "true")}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder={field.name} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="true">True</SelectItem>
+              <SelectItem value="false">False</SelectItem>
+            </SelectContent>
+          </Select>
+        );
+      case "date":
+        return (
+          <Input
+            type="date"
+            placeholder={field.name}
+            {...form.register(field.api_name, { required: field.is_required })}
+          />
+        );
+      case "lookup":
+        const targetObjectTypeId = field.options?.target_object_type_id;
+        if (!targetObjectTypeId) return null;
+        
+        return (
+          <LookupField
+            value={value}
+            onChange={(newValue) => {
+              form.setValue(field.api_name, newValue);
+            }}
+            targetObjectTypeId={targetObjectTypeId}
+            disabled={form.formState.isSubmitting}
+          />
+        );
+        
       default:
-        return <Input {...form.register(field.api_name, { 
-          required: field.is_required ? `${field.name} is required` : false 
-        })} />;
+        return (
+          <Input
+            type="text"
+            placeholder={field.name}
+            {...form.register(field.api_name, { required: field.is_required })}
+          />
+        );
     }
   };
 
   return (
-    <FormField
-      control={form.control}
-      name={field.api_name}
-      render={({ field: formField }) => (
-        <FormItem>
-          <FormLabel>{field.name}{field.is_required && <span className="text-red-500 ml-1">*</span>}</FormLabel>
-          <FormControl>
-            {renderFieldInput()}
-          </FormControl>
-          <FormMessage />
-        </FormItem>
-      )}
-    />
+    <FormItem>
+      <FormLabel>{field.name}</FormLabel>
+      <FormControl>
+        {renderField()}
+      </FormControl>
+      <FormDescription>{field.description}</FormDescription>
+      <FormMessage />
+    </FormItem>
   );
 }

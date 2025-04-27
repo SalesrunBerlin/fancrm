@@ -1,159 +1,170 @@
-
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { useObjectFields } from "@/hooks/useObjectFields";
+import { useFormContext } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2 } from "lucide-react";
-import { ObjectField } from "@/hooks/useObjectTypes";
-import { Switch } from "@/components/ui/switch";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useObjectTypes } from "@/hooks/useObjectTypes";
+
+const fieldSchema = z.object({
+  name: z.string().min(2, {
+    message: "Field name must be at least 2 characters.",
+  }),
+  api_name: z.string().min(2, {
+    message: "API name must be at least 2 characters.",
+  }),
+  data_type: z.string().min(2, {
+    message: "Data type must be selected.",
+  }),
+  is_required: z.boolean().default(false),
+  options: z.record(z.any()).optional(),
+});
 
 interface ObjectFieldFormProps {
   objectTypeId: string;
-  field?: ObjectField;
-  onComplete: () => void;
+  onComplete?: () => void;
 }
 
-export function ObjectFieldForm({ objectTypeId, field, onComplete }: ObjectFieldFormProps) {
-  const { createField, updateField } = useObjectFields(objectTypeId);
+export function ObjectFieldForm({ objectTypeId, onComplete }: ObjectFieldFormProps) {
+  const { objectTypes } = useObjectTypes();
   const { toast } = useToast();
-  const [name, setName] = useState(field?.name || "");
-  const [apiName, setApiName] = useState(field?.api_name || "");
-  const [dataType, setDataType] = useState(field?.data_type || "text");
-  const [isRequired, setIsRequired] = useState(field?.is_required || false);
-  
-  const isEditing = !!field;
-  const isPending = createField.isPending || (updateField?.isPending || false);
+  const form = useFormContext();
 
-  const handleSubmit = async () => {
-    if (!name.trim() || !apiName.trim()) {
-      toast({
-        title: "Error",
-        description: "Name and API Name are required",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      const fieldData = {
-        name: name.trim(),
-        api_name: apiName.trim().toLowerCase(),
-        data_type: dataType,
-        is_required: isRequired,
-        object_type_id: objectTypeId,
-      };
-
-      if (isEditing && field) {
-        await updateField!.mutateAsync({
-          id: field.id,
-          ...fieldData,
-        });
-        toast({
-          title: "Success",
-          description: "Field updated successfully",
-        });
-      } else {
-        await createField.mutateAsync(fieldData);
-        toast({
-          title: "Success",
-          description: "Field created successfully",
-        });
-      }
-
-      setName("");
-      setApiName("");
-      setDataType("text");
-      setIsRequired(false);
-      onComplete();
-    } catch (error) {
-      console.error(`Error ${isEditing ? "updating" : "creating"} field:`, error);
-      toast({
-        title: "Error",
-        description: `Failed to ${isEditing ? "update" : "create"} field`,
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleNameChange = (value: string) => {
-    setName(value);
-    // Only auto-generate API name if it's a new field or if the API name hasn't been manually edited
-    if (!isEditing) {
-      setApiName(value.toLowerCase().replace(/\s+/g, '_'));
-    }
-  };
+  const dataTypeOptions = [
+    { label: "Text", value: "text" },
+    { label: "Text Area", value: "textarea" },
+    { label: "Number", value: "number" },
+    { label: "Email", value: "email" },
+    { label: "URL", value: "url" },
+    { label: "Date", value: "date" },
+    { label: "Date & Time", value: "datetime" },
+    { label: "Boolean", value: "boolean" },
+    { label: "Picklist", value: "picklist" },
+    { label: "Currency", value: "currency" },
+    { label: "Lookup", value: "lookup" }
+  ];
 
   return (
-    <div className="space-y-4">
-      <h3 className="text-lg font-medium">{isEditing ? "Edit Field" : "Add New Field"}</h3>
-      <div className="space-y-2">
-        <Label htmlFor="field-name">Field Name</Label>
-        <Input
-          id="field-name"
-          placeholder="Enter field name"
-          value={name}
-          onChange={(e) => handleNameChange(e.target.value)}
+    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+      <FormField
+        control={form.control}
+        name="name"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Field Name</FormLabel>
+            <FormControl>
+              <Input placeholder="Field Name" {...field} />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+      <FormField
+        control={form.control}
+        name="api_name"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>API Name</FormLabel>
+            <FormControl>
+              <Input placeholder="api_name" {...field} />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+
+      <FormField
+        control={form.control}
+        name="data_type"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Field Type</FormLabel>
+            <Select
+              value={field.value}
+              onValueChange={(value) => {
+                field.onChange(value);
+                if (value === "lookup") {
+                  form.setValue("options", { target_object_type_id: null });
+                }
+              }}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select field type" />
+              </SelectTrigger>
+              <SelectContent>
+                {dataTypeOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+
+      {form.watch("data_type") === "lookup" && (
+        <FormField
+          control={form.control}
+          name="options.target_object_type_id"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Target Object</FormLabel>
+              <Select
+                value={field.value || ""}
+                onValueChange={field.onChange}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select target object" />
+                </SelectTrigger>
+                <SelectContent>
+                  {objectTypes?.filter(t => t.id !== objectTypeId).map((type) => (
+                    <SelectItem key={type.id} value={type.id}>
+                      {type.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
         />
-      </div>
+      )}
 
-      <div className="space-y-2">
-        <Label htmlFor="api-name">API Name</Label>
-        <Input
-          id="api-name"
-          placeholder="Enter API name"
-          value={apiName}
-          onChange={(e) => setApiName(e.target.value)}
-        />
-      </div>
+      <FormField
+        control={form.control}
+        name="is_required"
+        render={({ field }) => (
+          <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+            <div className="space-y-0.5">
+              <FormLabel>Required</FormLabel>
+              <FormDescription>
+                Mark this field as required.
+              </FormDescription>
+            </div>
+            <FormControl>
+              <Switch
+                checked={field.value}
+                onCheckedChange={field.onChange}
+              />
+            </FormControl>
+          </FormItem>
+        )}
+      />
 
-      <div className="space-y-2">
-        <Label htmlFor="data-type">Data Type</Label>
-        <Select value={dataType} onValueChange={setDataType}>
-          <SelectTrigger id="data-type">
-            <SelectValue placeholder="Select a data type" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="text">Text</SelectItem>
-            <SelectItem value="number">Number</SelectItem>
-            <SelectItem value="date">Date</SelectItem>
-            <SelectItem value="datetime">Date & Time</SelectItem>
-            <SelectItem value="email">Email</SelectItem>
-            <SelectItem value="phone">Phone</SelectItem>
-            <SelectItem value="url">URL</SelectItem>
-            <SelectItem value="picklist">Picklist</SelectItem>
-            <SelectItem value="currency">Currency</SelectItem>
-            <SelectItem value="textarea">Text Area</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div className="flex items-center space-x-2 pt-2">
-        <Switch
-          id="is-required"
-          checked={isRequired}
-          onCheckedChange={setIsRequired}
-        />
-        <Label htmlFor="is-required">Required Field</Label>
-      </div>
-
-      <div className="flex gap-2 pt-2">
-        <Button onClick={handleSubmit} disabled={isPending} className="flex-1">
-          {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          {isEditing ? "Update Field" : "Create Field"}
-        </Button>
-        <Button variant="outline" onClick={onComplete} type="button">
-          Cancel
-        </Button>
-      </div>
-    </div>
+      <Button type="submit">Create Field</Button>
+    </form>
   );
 }
