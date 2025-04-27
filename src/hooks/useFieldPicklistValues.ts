@@ -27,18 +27,25 @@ export function useFieldPicklistValues(fieldId: string) {
       // First check if this is a system field
       const { data: fieldInfo, error: fieldError } = await supabase
         .from("object_fields")
-        .select("is_system, object_type_id")
+        .select("is_system, owner_id")
         .eq("id", fieldId)
         .maybeSingle();
       
       if (fieldError) throw fieldError;
       
       // Query picklist values with appropriate filtering
-      const { data, error } = await supabase
+      let query = supabase
         .from("field_picklist_values")
         .select("*")
-        .eq("field_id", fieldId)
-        .order("order_position");
+        .eq("field_id", fieldId);
+      
+      // If it's not a system field, or if the current user is not the owner,
+      // only show picklist values that the current user owns
+      if (!fieldInfo?.is_system && fieldInfo?.owner_id !== user?.id) {
+        query = query.eq("owner_id", user?.id);
+      }
+      
+      const { data, error } = await query.order("order_position");
 
       if (error) throw error;
       return data;
@@ -68,7 +75,8 @@ export function useFieldPicklistValues(fieldId: string) {
       const { error } = await supabase
         .from("field_picklist_values")
         .delete()
-        .eq("id", valueId);
+        .eq("id", valueId)
+        .eq("owner_id", user?.id); // Only the owner can delete their values
 
       if (error) throw error;
     },

@@ -50,6 +50,7 @@ export function useObjectTypes() {
       const { data, error } = await supabase
         .from("object_types")
         .select("*")
+        .or(`is_system.eq.true,owner_id.eq.${user?.id}`)
         .order("name");
 
       if (error) throw error;

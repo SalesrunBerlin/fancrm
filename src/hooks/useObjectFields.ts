@@ -17,6 +17,7 @@ export function useObjectFields(objectTypeId?: string) {
         .from("object_fields")
         .select("*")
         .eq("object_type_id", objectTypeId)
+        .or(`is_system.eq.true,owner_id.eq.${user?.id}`)
         .order("display_order");
 
       if (error) {
@@ -28,7 +29,7 @@ export function useObjectFields(objectTypeId?: string) {
       return data.map(field => ({
         ...field,
         options: field.options ? field.options : undefined
-      }));
+      })) as ObjectField[];
     },
     enabled: !!user && !!objectTypeId,
   });
