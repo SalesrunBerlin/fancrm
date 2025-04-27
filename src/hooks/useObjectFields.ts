@@ -1,7 +1,9 @@
+
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { type ObjectField } from "./useObjectTypes";
 
 export function useObjectFields(objectTypeId?: string) {
   const { user } = useAuth();
@@ -10,7 +12,7 @@ export function useObjectFields(objectTypeId?: string) {
 
   const { data: fields, isLoading } = useQuery({
     queryKey: ["object-fields", objectTypeId],
-    queryFn: async () => {
+    queryFn: async (): Promise<ObjectField[]> => {
       const { data, error } = await supabase
         .from("object_fields")
         .select("*")
@@ -30,15 +32,16 @@ export function useObjectFields(objectTypeId?: string) {
     mutationFn: async (newField: Omit<ObjectField, "id" | "created_at" | "updated_at" | "owner_id" | "is_system" | "display_order" | "options" | "default_value">) => {
       if (!user) throw new Error("User must be logged in to create fields");
 
-      // Ensure owner_id is set to the current user's ID
+      const fieldData = {
+        ...newField,
+        owner_id: user.id,
+        is_system: false,
+        display_order: fields?.length || 0,
+      };
+
       const { data, error } = await supabase
         .from("object_fields")
-        .insert([{
-          ...newField,
-          owner_id: user.id,
-          is_system: false,
-          display_order: fields?.length || 0,
-        }])
+        .insert([fieldData])
         .select()
         .single();
 

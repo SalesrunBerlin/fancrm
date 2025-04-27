@@ -9,6 +9,7 @@ interface PicklistValue {
   value: string;
   label: string;
   order_position: number;
+  owner_id?: string;
 }
 
 interface AddPicklistValueData {
@@ -22,7 +23,7 @@ export function useFieldPicklistValues(fieldId: string) {
 
   const { data: picklistValues, isLoading } = useQuery({
     queryKey: ["picklist-values", fieldId],
-    queryFn: async () => {
+    queryFn: async (): Promise<PicklistValue[]> => {
       const { data, error } = await supabase
         .from("field_picklist_values")
         .select("*")
@@ -30,7 +31,7 @@ export function useFieldPicklistValues(fieldId: string) {
         .order("order_position");
 
       if (error) throw error;
-      return data as PicklistValue[];
+      return data;
     },
     enabled: !!user && !!fieldId,
   });
