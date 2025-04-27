@@ -3,7 +3,15 @@ import { useObjectTypes } from "@/hooks/useObjectTypes";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { useInitializeObjects } from "@/hooks/useInitializeObjects";
-import { Loader2 } from "lucide-react";
+import { Loader2, Plus } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { ObjectTypeForm } from "./ObjectTypeForm";
 
 export function ObjectTypesList() {
   const { objectTypes, isLoading } = useObjectTypes();
@@ -27,17 +35,32 @@ export function ObjectTypesList() {
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
         <CardTitle className="text-xl">Object Types</CardTitle>
-        {!hasObjects && (
-          <Button 
-            onClick={handleInitialize}
-            disabled={initializeObjects.isPending}
-          >
-            {initializeObjects.isPending ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : null}
-            Initialize Standard Objects
-          </Button>
-        )}
+        <div className="flex space-x-2">
+          {!hasObjects && (
+            <Button 
+              onClick={handleInitialize}
+              disabled={initializeObjects.isPending}
+            >
+              {initializeObjects.isPending && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              Initialize Standard Objects
+            </Button>
+          )}
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="icon">
+                <Plus className="h-4 w-4" />
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Create New Object Type</DialogTitle>
+              </DialogHeader>
+              <ObjectTypeForm />
+            </DialogContent>
+          </Dialog>
+        </div>
       </CardHeader>
       <CardContent>
         {hasObjects ? (
