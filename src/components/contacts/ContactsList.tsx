@@ -14,10 +14,13 @@ export function ContactsList({ contacts, viewMode, onContactClick }: ContactsLis
   const navigate = useNavigate();
   
   const handleContactClick = (id: string) => {
+    // Ensure we navigate to the contact detail page
+    navigate(`/contacts/${id}`);
+    
+    // Also call provided callback if exists
     if (onContactClick) {
       onContactClick(id);
     }
-    navigate(`/contacts/${id}`);
   };
   
   return viewMode === "grid" ? (

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
@@ -180,7 +179,7 @@ export default function ObjectRecordsList() {
               {records?.map((record) => (
                 <TableRow 
                   key={record.id} 
-                  className={!editMode ? "cursor-pointer" : ""}
+                  className={!editMode ? "cursor-pointer hover:bg-muted/50" : ""}
                   onClick={!editMode ? () => handleRowClick(record.id) : undefined}
                 >
                   <TableCell className="p-0 w-10">

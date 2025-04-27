@@ -34,6 +34,13 @@ export function ContactsTable({ contacts, onContactClick }: ContactsTableProps) 
               <TableCell>{contact.accountName || "-"}</TableCell>
             </TableRow>
           ))}
+          {contacts.length === 0 && (
+            <TableRow>
+              <TableCell colSpan={4} className="text-center py-8">
+                Keine Kontakte gefunden
+              </TableCell>
+            </TableRow>
+          )}
         </TableBody>
       </Table>
     </div>

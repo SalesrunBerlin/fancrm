@@ -17,6 +17,10 @@ interface AccountsTableProps {
 export function AccountsTable({ accounts }: AccountsTableProps) {
   const navigate = useNavigate();
 
+  const handleAccountClick = (id: string) => {
+    navigate(`/accounts/${id}`);
+  };
+
   return (
     <div className="rounded-md border">
       <Table>
@@ -33,7 +37,7 @@ export function AccountsTable({ accounts }: AccountsTableProps) {
             <TableRow 
               key={account.id} 
               className="cursor-pointer hover:bg-muted/50" 
-              onClick={() => navigate(`/accounts/${account.id}`)}
+              onClick={() => handleAccountClick(account.id)}
             >
               <TableCell className="font-medium">{account.name}</TableCell>
               <TableCell>{account.type || "Business"}</TableCell>
@@ -49,6 +53,13 @@ export function AccountsTable({ accounts }: AccountsTableProps) {
               </TableCell>
             </TableRow>
           ))}
+          {accounts.length === 0 && (
+            <TableRow>
+              <TableCell colSpan={4} className="text-center py-8">
+                Keine Accounts gefunden
+              </TableCell>
+            </TableRow>
+          )}
         </TableBody>
       </Table>
     </div>
