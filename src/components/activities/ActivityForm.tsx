@@ -70,9 +70,9 @@ export function ActivityForm({
       scheduled_at: scheduledAt ? scheduledAt : null,
       outcome,
       status,
-      accountId,
-      contactId,
-      dealId,
+      account_id: accountId,
+      contact_id: contactId,
+      deal_id: dealId,
     };
 
     if (externalSubmit) {
@@ -82,40 +82,51 @@ export function ActivityForm({
 
     setLoading(true);
 
-    const { error } = await supabase.from("activities").insert({
-      owner_id: user.id,
-      type,
-      subject,
-      description,
-      scheduled_at: scheduledAt ? scheduledAt : null,
-      outcome,
-      status,
-      account_id: accountId,
-      contact_id: contactId,
-      deal_id: dealId,
-    });
+    try {
+      const { error } = await supabase
+        .from("activities")
+        .insert({
+          owner_id: user.id,
+          type,
+          subject,
+          description,
+          scheduled_at: scheduledAt ? scheduledAt : null,
+          outcome,
+          status,
+          account_id: accountId,
+          contact_id: contactId,
+          deal_id: dealId,
+        });
 
-    setLoading(false);
-    if (error) {
+      if (error) {
+        toast({
+          title: "Fehler",
+          description: error.message,
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      toast({ title: "Gespeichert", description: "Aktivität gespeichert." });
+      setSubject("");
+      setDescription("");
+      setScheduledAt("");
+      setOutcome("");
+      setStatus("open");
+      setType("call");
+      setAccountId(null);
+      setContactId(null);
+      setDealId(null);
+      onSuccess();
+    } catch (error: any) {
       toast({
         title: "Fehler",
         description: error.message,
         variant: "destructive",
       });
-      return;
+    } finally {
+      setLoading(false);
     }
-    
-    toast({ title: "Gespeichert", description: "Aktivität gespeichert." });
-    setSubject("");
-    setDescription("");
-    setScheduledAt("");
-    setOutcome("");
-    setStatus("open");
-    setType("call");
-    setAccountId(null);
-    setContactId(null);
-    setDealId(null);
-    onSuccess();
   };
 
   const handleCancel = () => {

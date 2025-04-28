@@ -10,11 +10,12 @@ interface Option {
 }
 
 interface ActivityContactSelectProps {
-  value: string;
+  value: string | null;
   onChange: (value: string) => void;
+  disabled?: boolean;
 }
 
-export function ActivityContactSelect({ value, onChange }: ActivityContactSelectProps) {
+export function ActivityContactSelect({ value, onChange, disabled = false }: ActivityContactSelectProps) {
   const [options, setOptions] = useState<Option[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -23,7 +24,12 @@ export function ActivityContactSelect({ value, onChange }: ActivityContactSelect
       setIsLoading(true);
       try {
         const contacts = await fetchData("contacts", "id, first_name, last_name");
-        setOptions(contacts as Option[]);
+        if (Array.isArray(contacts)) {
+          setOptions(contacts as Option[]);
+        } else {
+          console.error("Contacts data is not an array:", contacts);
+          setOptions([]);
+        }
       } catch (error) {
         console.error("Error loading contacts:", error);
         setOptions([]);
@@ -47,7 +53,7 @@ export function ActivityContactSelect({ value, onChange }: ActivityContactSelect
   };
 
   return (
-    <Select value={value} onValueChange={onChange}>
+    <Select value={value || ''} onValueChange={onChange} disabled={disabled}>
       <SelectTrigger className="w-full">
         <SelectValue placeholder="Kontakt auswählen" />
       </SelectTrigger>

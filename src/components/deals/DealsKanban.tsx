@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import { useDeals } from "@/hooks/useDeals";
 import { useToast } from "@/hooks/use-toast";
-import { useDealStatuses } from "@/hooks/useDealStatuses";
+import { useDealStatuses, DealStatus } from "@/hooks/useDealStatuses";
 
 interface DealsKanbanProps {
   deals: DealType[];
@@ -29,8 +29,8 @@ export function DealsKanban({ deals, isLoading, groupByField, onDealClick }: Dea
 
   // Create an object with all possible statuses initialized with empty arrays
   const emptyGroupedDeals = (dealStatuses || [])
-    .sort((a, b) => a.order_position - b.order_position)
-    .reduce((acc, status) => {
+    .sort((a: DealStatus, b: DealStatus) => a.order_position - b.order_position)
+    .reduce((acc, status: DealStatus) => {
       acc[status.name] = [];
       return acc;
     }, {} as Record<string, DealType[]>);
@@ -97,8 +97,8 @@ export function DealsKanban({ deals, isLoading, groupByField, onDealClick }: Dea
     <DragDropContext onDragEnd={handleDragEnd}>
       <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-2">
         {dealStatuses && dealStatuses
-          .sort((a, b) => a.order_position - b.order_position)
-          .map((statusObj) => (
+          .sort((a: DealStatus, b: DealStatus) => a.order_position - b.order_position)
+          .map((statusObj: DealStatus) => (
             <Droppable key={statusObj.name} droppableId={statusObj.name}>
               {(provided) => (
                 <Card 

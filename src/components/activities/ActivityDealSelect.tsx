@@ -9,11 +9,12 @@ interface Option {
 }
 
 interface ActivityDealSelectProps {
-  value: string;
+  value: string | null;
   onChange: (value: string) => void;
+  disabled?: boolean;
 }
 
-export function ActivityDealSelect({ value, onChange }: ActivityDealSelectProps) {
+export function ActivityDealSelect({ value, onChange, disabled = false }: ActivityDealSelectProps) {
   const [deals, setDeals] = useState<Option[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -22,7 +23,12 @@ export function ActivityDealSelect({ value, onChange }: ActivityDealSelectProps)
       setIsLoading(true);
       try {
         const fetchedDeals = await fetchData("deals", "id, name");
-        setDeals(fetchedDeals as Option[]);
+        if (Array.isArray(fetchedDeals)) {
+          setDeals(fetchedDeals as Option[]);
+        } else {
+          console.error("Deals data is not an array:", fetchedDeals);
+          setDeals([]);
+        }
       } catch (error) {
         console.error("Error loading deals:", error);
         setDeals([]);
@@ -35,7 +41,7 @@ export function ActivityDealSelect({ value, onChange }: ActivityDealSelectProps)
   }, []);
 
   return (
-    <Select value={value} onValueChange={onChange}>
+    <Select value={value || ''} onValueChange={onChange} disabled={disabled}>
       <SelectTrigger className="w-full">
         <SelectValue placeholder="Opportunity auswählen" />
       </SelectTrigger>

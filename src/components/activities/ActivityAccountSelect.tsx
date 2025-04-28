@@ -2,7 +2,6 @@
 import { useState, useEffect } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { fetchData } from "@/lib/mockData";
-import { Loader2 } from "lucide-react";
 
 interface Option {
   id: string;
@@ -10,28 +9,29 @@ interface Option {
 }
 
 interface ActivityAccountSelectProps {
-  value: string;
+  value: string | null;
   onChange: (value: string) => void;
   disabled?: boolean;
 }
 
 export function ActivityAccountSelect({ value, onChange, disabled = false }: ActivityAccountSelectProps) {
-  const [options, setOptions] = useState<Option[]>([]);
+  const [accounts, setAccounts] = useState<Option[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const loadAccounts = async () => {
       setIsLoading(true);
       try {
-        const accounts = await fetchData("object_records", "id, name");
-        const formattedAccounts: Option[] = accounts.map((account: any) => ({
-          id: account.id,
-          name: account.name || 'Unnamed Account'
-        }));
-        setOptions(formattedAccounts);
+        const fetchedAccounts = await fetchData("accounts", "id, name");
+        if (Array.isArray(fetchedAccounts)) {
+          setAccounts(fetchedAccounts as Option[]);
+        } else {
+          console.error("Accounts data is not an array:", fetchedAccounts);
+          setAccounts([]);
+        }
       } catch (error) {
         console.error("Error loading accounts:", error);
-        setOptions([]);
+        setAccounts([]);
       } finally {
         setIsLoading(false);
       }
@@ -41,26 +41,23 @@ export function ActivityAccountSelect({ value, onChange, disabled = false }: Act
   }, []);
 
   return (
-    <Select value={value} onValueChange={onChange} disabled={disabled}>
+    <Select value={value || ''} onValueChange={onChange} disabled={disabled}>
       <SelectTrigger className="w-full">
         <SelectValue placeholder="Account auswählen" />
       </SelectTrigger>
       <SelectContent>
         {isLoading ? (
           <SelectItem value="loading" disabled>
-            <div className="flex items-center">
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              Lädt...
-            </div>
+            Lädt...
           </SelectItem>
-        ) : options.length === 0 ? (
+        ) : accounts.length === 0 ? (
           <SelectItem value="none" disabled>
             Keine Accounts verfügbar
           </SelectItem>
         ) : (
-          options.map((option) => (
-            <SelectItem key={option.id} value={option.id}>
-              {option.name}
+          accounts.map((account) => (
+            <SelectItem key={account.id} value={account.id}>
+              {account.name}
             </SelectItem>
           ))
         )}
