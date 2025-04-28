@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
 import { Button } from "@/components/ui/button";
@@ -110,7 +109,6 @@ export default function Structures() {
     setShowPublishDialog(true);
   };
   
-  // Check if there are any system objects
   const hasSystemObjects = objectTypes?.some(obj => obj.is_system) || false;
 
   return (
@@ -259,7 +257,7 @@ export default function Structures() {
                     <Button 
                       variant="outline" 
                       className="flex gap-2 w-full"
-                      onClick={() => navigate(`/structures/published/${objectType.id}`)}
+                      onClick={() => navigate(`/settings/objects/${objectType.id}`)}
                     >
                       <Eye className="h-4 w-4" />
                       View
@@ -301,7 +299,6 @@ export default function Structures() {
         </TabsContent>
       </Tabs>
 
-      {/* Import Dialog */}
       <Dialog open={showImportDialog} onOpenChange={setShowImportDialog}>
         <DialogContent>
           <DialogHeader>
@@ -326,7 +323,6 @@ export default function Structures() {
         </DialogContent>
       </Dialog>
 
-      {/* Publishing Configuration Dialog */}
       {showPublishDialog && selectedObjectId && (
         <PublishingConfigDialog
           objectTypeId={selectedObjectId}
@@ -336,7 +332,6 @@ export default function Structures() {
         />
       )}
 
-      {/* Cleanup Dialog */}
       <DeleteDialog
         isOpen={showCleanupDialog}
         onClose={() => {
