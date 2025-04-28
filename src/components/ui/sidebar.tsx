@@ -1,6 +1,6 @@
 import * as React from "react"
 import { Slot } from "@radix-ui/react-slot"
-import { VariantProps, cva } from "class-variance-authority"
+import { cva, type VariantProps } from "class-variance-authority"
 import { PanelLeft } from "lucide-react"
 
 import { useIsMobile } from "@/hooks/use-mobile"
@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
-import { Sheet as SheetComponent, SheetContent } from "@/components/ui/sheet"
+import { Sheet, SheetContent, SheetOverlay } from "@/components/ui/sheet"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
   Tooltip,
@@ -44,21 +44,6 @@ function useSidebar() {
 
   return context
 }
-
-const SheetOverlay = React.forwardRef<
-  React.ElementRef<typeof SheetComponent.Overlay>,
-  React.ComponentPropsWithoutRef<typeof SheetComponent.Overlay>
->(({ className, ...props }, ref) => (
-  <SheetComponent.Overlay
-    className={cn(
-      "fixed inset-0 z-[100] bg-black/80 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
-      className
-    )}
-    {...props}
-    ref={ref}
-  />
-))
-SheetOverlay.displayName = SheetComponent.Overlay.displayName
 
 const sheetVariants = cva(
   "fixed z-[110] gap-4 bg-background p-6 shadow-lg transition ease-in-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:duration-300 data-[state=open]:duration-500",
@@ -204,7 +189,7 @@ const Sidebar = React.forwardRef<
 
     if (isMobile) {
       return (
-        <SheetComponent open={openMobile} onOpenChange={setOpenMobile} {...props}>
+        <Sheet open={openMobile} onOpenChange={setOpenMobile} {...props}>
           <SheetContent
             data-sidebar="sidebar"
             data-mobile="true"
@@ -222,7 +207,7 @@ const Sidebar = React.forwardRef<
           >
             <div className="flex h-full w-full flex-col">{children}</div>
           </SheetContent>
-        </SheetComponent>
+        </Sheet>
       )
     }
 
