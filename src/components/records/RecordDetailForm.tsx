@@ -1,4 +1,3 @@
-
 import { ObjectField } from "@/hooks/useObjectTypes";
 import { ObjectRecord } from "@/hooks/useObjectRecords";
 import { Input } from "@/components/ui/input";
@@ -8,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { LookupField } from "./LookupField";
 import { LookupValueDisplay } from "./LookupValueDisplay";
 import { useFieldPicklistValues } from "@/hooks/useFieldPicklistValues";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface RecordDetailFormProps {
   record: ObjectRecord;
@@ -15,9 +15,17 @@ interface RecordDetailFormProps {
   onFieldChange: (fieldName: string, value: any) => void;
   editedValues: Record<string, any>;
   isEditing?: boolean;
+  maxHeight?: string;
 }
 
-export function RecordDetailForm({ record, fields, onFieldChange, editedValues, isEditing = false }: RecordDetailFormProps) {
+export function RecordDetailForm({ 
+  record, 
+  fields, 
+  onFieldChange, 
+  editedValues, 
+  isEditing = false,
+  maxHeight
+}: RecordDetailFormProps) {
   const getFieldValue = (fieldApiName: string) => {
     if (fieldApiName in editedValues) {
       return editedValues[fieldApiName];
@@ -116,7 +124,6 @@ export function RecordDetailForm({ record, fields, onFieldChange, editedValues, 
             />
           );
         case "lookup":
-          // Only proceed if the field has options with a target_object_type_id
           if (field.options && 'target_object_type_id' in field.options && field.options.target_object_type_id) {
             return (
               <LookupField
@@ -140,7 +147,6 @@ export function RecordDetailForm({ record, fields, onFieldChange, editedValues, 
           );
       }
     } else {
-      // Non-edit mode
       if (field.data_type === 'lookup' && field.options && 'target_object_type_id' in field.options && field.options.target_object_type_id) {
         return (
           <div className="pt-1">
@@ -155,7 +161,7 @@ export function RecordDetailForm({ record, fields, onFieldChange, editedValues, 
     }
   };
 
-  return (
+  const content = (
     <div className="grid grid-cols-1 gap-6">
       {fields.map(field => (
         <div key={field.api_name} className="space-y-2">
@@ -168,4 +174,10 @@ export function RecordDetailForm({ record, fields, onFieldChange, editedValues, 
       ))}
     </div>
   );
+
+  return maxHeight ? (
+    <ScrollArea className="w-full" style={{ maxHeight }}>
+      {content}
+    </ScrollArea>
+  ) : content;
 }

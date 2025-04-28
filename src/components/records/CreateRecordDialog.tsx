@@ -10,6 +10,7 @@ import { useObjectTypes } from "@/hooks/useObjectTypes";
 import { useObjectRecords } from "@/hooks/useObjectRecords";
 import type { RecordFormData } from "@/lib/types/records";
 import { Loader2 } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface CreateRecordDialogProps {
   objectTypeId: string;
@@ -55,16 +56,18 @@ export function CreateRecordDialog({ objectTypeId, open, onOpenChange }: CreateR
                 <Loader2 className="h-6 w-6 animate-spin" />
               </div>
             ) : (
-              fields.map((field) => (
-                <RecordField
-                  key={field.id}
-                  field={field}
-                  form={form}
-                />
-              ))
+              <div className="space-y-4">
+                {fields.map((field) => (
+                  <RecordField
+                    key={field.id}
+                    field={field}
+                    form={form}
+                  />
+                ))}
+              </div>
             )}
             
-            <div className="flex justify-end gap-3">
+            <div className="flex justify-end gap-3 pt-2">
               <Button 
                 type="button" 
                 variant="outline" 
