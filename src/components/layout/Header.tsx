@@ -1,13 +1,11 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { Search, Menu, Moon, Sun } from "lucide-react";
+import { Search, Menu } from "lucide-react";
 import { UserProfileMenu } from "./UserProfileMenu";
 import { CommandSearch } from "@/components/search/CommandSearch";
 import { ActiveObjectsMenu } from "./ActiveObjectsMenu";
-import { useTheme } from "@/hooks/useTheme";
 
 interface HeaderProps extends React.HTMLAttributes<HTMLElement> {
   onMenuClick: () => void;
@@ -16,7 +14,6 @@ interface HeaderProps extends React.HTMLAttributes<HTMLElement> {
 
 export function Header({ onMenuClick, buttonRef, className }: HeaderProps) {
   const [searchDialogOpen, setSearchDialogOpen] = useState(false);
-  const { theme, toggleTheme } = useTheme();
   
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -48,14 +45,6 @@ export function Header({ onMenuClick, buttonRef, className }: HeaderProps) {
         </Button>
         <h1 className="font-semibold hidden md:block">CRMbeauty</h1>
         <ActiveObjectsMenu />
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={toggleTheme}
-          className="ml-2"
-        >
-          {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-        </Button>
       </div>
       
       <div className="flex items-center gap-4">

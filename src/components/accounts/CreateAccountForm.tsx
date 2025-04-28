@@ -8,9 +8,9 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
-import { insertData } from "@/lib/mockData";
 
 const accountFormSchema = z.object({
   name: z.string().min(1, "Name ist erforderlich"),
@@ -54,7 +54,7 @@ export function CreateAccountForm({ isOpen, onClose }: CreateAccountFormProps) {
 
     setIsLoading(true);
     try {
-      const success = await insertData("accounts", [{
+      const { error } = await supabase.from("accounts").insert([{
         name: data.name,
         type: data.type || null,
         website: data.website || null,
@@ -62,7 +62,7 @@ export function CreateAccountForm({ isOpen, onClose }: CreateAccountFormProps) {
         owner_id: user.id, // Set the owner_id to the current user's ID
       }]);
 
-      if (!success) throw new Error("Failed to create account");
+      if (error) throw error;
 
       toast({
         title: "Account erstellt",

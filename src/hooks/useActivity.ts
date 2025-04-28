@@ -3,7 +3,6 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import { fetchData } from "@/lib/mockData"; // Import mock data utility
 
 export function useActivity(id: string | undefined) {
   const [activity, setActivity] = useState<any>(null);
@@ -18,38 +17,22 @@ export function useActivity(id: string | undefined) {
 
       try {
         setLoading(true);
-        
-        // Try to fetch from Supabase first
-        try {
-          const { data, error } = await supabase
-            .from("activities")
-            .select("*")
-            .eq("id", id)
-            .eq("owner_id", user.id)
-            .single();
+        const { data, error } = await supabase
+          .from("activities")
+          .select("*")
+          .eq("id", id)
+          .eq("owner_id", user.id)
+          .single();
 
-          if (error) {
-            throw error;
-          } 
-          
+        if (error) {
+          console.error("Error fetching activity:", error);
+          toast({
+            title: "Fehler",
+            description: "Aktivität nicht gefunden",
+            variant: "destructive"
+          });
+        } else {
           setActivity(data);
-        } catch (dbError) {
-          console.warn("Failed to fetch from DB, using mock data:", dbError);
-          
-          // Fallback to mock data
-          const mockActivities = await fetchData("activities", "*") as any[];
-          const mockActivity = mockActivities.find(a => a.id === id) || {
-            id,
-            type: "call",
-            subject: "Mock Activity",
-            description: "This is a mock activity",
-            status: "open",
-            owner_id: user.id,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          };
-          
-          setActivity(mockActivity);
         }
       } catch (error) {
         console.error("Exception fetching activity:", error);
@@ -81,38 +64,38 @@ export function useActivity(id: string | undefined) {
 
     setSaving(true);
     try {
-      // Try to save to database first
-      try {
-        const { error } = await supabase
-          .from("activities")
-          .update({
-            type: activity.type,
-            subject: activity.subject,
-            description: activity.description,
-            scheduled_at: activity.scheduled_at,
-            end_time: activity.end_time,
-            outcome: activity.outcome,
-            status: activity.status,
-            account_id: activity.account_id,
-            contact_id: activity.contact_id,
-            deal_id: activity.deal_id,
-          })
-          .eq("id", id)
-          .eq("owner_id", user.id);
+      const { error } = await supabase
+        .from("activities")
+        .update({
+          type: activity.type,
+          subject: activity.subject,
+          description: activity.description,
+          scheduled_at: activity.scheduled_at,
+          end_time: activity.end_time,
+          outcome: activity.outcome,
+          status: activity.status,
+          account_id: activity.account_id,
+          contact_id: activity.contact_id,
+          deal_id: activity.deal_id,
+        })
+        .eq("id", id)
+        .eq("owner_id", user.id);
 
-        if (error) {
-          throw error;
-        }
-      } catch (dbError) {
-        console.warn("Failed to update in DB, using mock update:", dbError);
-        // No action needed for mock data - the state is already updated
+      if (error) {
+        console.error("Error saving activity:", error);
+        toast({
+          title: "Fehler",
+          description: error.message,
+          variant: "destructive"
+        });
+        return false;
+      } else {
+        toast({ 
+          title: "Erfolgreich", 
+          description: "Aktivität aktualisiert" 
+        });
+        return true;
       }
-      
-      toast({ 
-        title: "Erfolgreich", 
-        description: "Aktivität aktualisiert" 
-      });
-      return true;
     } catch (error: any) {
       console.error("Exception saving activity:", error);
       toast({

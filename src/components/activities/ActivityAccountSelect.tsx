@@ -1,66 +1,41 @@
 
-import { useState, useEffect } from "react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { fetchData } from "@/lib/mockData";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
+import { useAuth } from "@/contexts/AuthContext";
 
-interface Option {
-  id: string;
-  name: string;
-}
+type Option = { id: string; name: string };
 
-interface ActivityAccountSelectProps {
+export function ActivityAccountSelect({ value, onChange, disabled }: {
   value: string | null;
-  onChange: (value: string) => void;
+  onChange: (val: string | null) => void;
   disabled?: boolean;
-}
-
-export function ActivityAccountSelect({ value, onChange, disabled = false }: ActivityAccountSelectProps) {
+}) {
   const [accounts, setAccounts] = useState<Option[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
+  const { user } = useAuth();
+  
   useEffect(() => {
-    const loadAccounts = async () => {
-      setIsLoading(true);
-      try {
-        const fetchedAccounts = await fetchData("accounts", "id, name");
-        if (Array.isArray(fetchedAccounts)) {
-          setAccounts(fetchedAccounts as Option[]);
-        } else {
-          console.error("Accounts data is not an array:", fetchedAccounts);
-          setAccounts([]);
-        }
-      } catch (error) {
-        console.error("Error loading accounts:", error);
-        setAccounts([]);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadAccounts();
-  }, []);
+    if (user) {
+      // Filter accounts by owner_id to only show accounts owned by the current user
+      supabase.from("accounts")
+        .select("id,name")
+        .eq("owner_id", user.id)
+        .then(({ data }) => {
+          setAccounts(data || []);
+        });
+    }
+  }, [user]);
 
   return (
-    <Select value={value || ''} onValueChange={onChange} disabled={disabled}>
-      <SelectTrigger className="w-full">
-        <SelectValue placeholder="Account auswählen" />
+    <Select value={value || ""} onValueChange={v => onChange(v === "none" ? null : v)} disabled={disabled}>
+      <SelectTrigger>
+        <SelectValue placeholder="Account verbinden" />
       </SelectTrigger>
       <SelectContent>
-        {isLoading ? (
-          <SelectItem value="loading" disabled>
-            Lädt...
-          </SelectItem>
-        ) : accounts.length === 0 ? (
-          <SelectItem value="none" disabled>
-            Keine Accounts verfügbar
-          </SelectItem>
-        ) : (
-          accounts.map((account) => (
-            <SelectItem key={account.id} value={account.id}>
-              {account.name}
-            </SelectItem>
-          ))
-        )}
+        <SelectItem value="none">Kein Account</SelectItem>
+        {accounts.map(a => (
+          <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
+        ))}
       </SelectContent>
     </Select>
   );

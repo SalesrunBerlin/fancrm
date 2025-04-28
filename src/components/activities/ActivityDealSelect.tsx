@@ -1,66 +1,41 @@
 
-import { useState, useEffect } from "react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { fetchData } from "@/lib/mockData";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
+import { useAuth } from "@/contexts/AuthContext";
 
-interface Option {
-  id: string;
-  name: string;
-}
+type Option = { id: string; name: string };
 
-interface ActivityDealSelectProps {
+export function ActivityDealSelect({ value, onChange, disabled }: {
   value: string | null;
-  onChange: (value: string) => void;
+  onChange: (val: string | null) => void;
   disabled?: boolean;
-}
-
-export function ActivityDealSelect({ value, onChange, disabled = false }: ActivityDealSelectProps) {
+}) {
   const [deals, setDeals] = useState<Option[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
+  const { user } = useAuth();
+  
   useEffect(() => {
-    const loadDeals = async () => {
-      setIsLoading(true);
-      try {
-        const fetchedDeals = await fetchData("deals", "id, name");
-        if (Array.isArray(fetchedDeals)) {
-          setDeals(fetchedDeals as Option[]);
-        } else {
-          console.error("Deals data is not an array:", fetchedDeals);
-          setDeals([]);
-        }
-      } catch (error) {
-        console.error("Error loading deals:", error);
-        setDeals([]);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadDeals();
-  }, []);
-
+    if (user) {
+      // The Deals filter already works correctly, but I'm updating for consistency
+      supabase.from("deals")
+        .select("id,name")
+        .eq("owner_id", user.id)
+        .then(({ data }) => {
+          setDeals(data || []);
+        });
+    }
+  }, [user]);
+  
   return (
-    <Select value={value || ''} onValueChange={onChange} disabled={disabled}>
-      <SelectTrigger className="w-full">
-        <SelectValue placeholder="Opportunity auswählen" />
+    <Select value={value || ""} onValueChange={v => onChange(v === "none" ? null : v)} disabled={disabled}>
+      <SelectTrigger>
+        <SelectValue placeholder="Deal verbinden" />
       </SelectTrigger>
       <SelectContent>
-        {isLoading ? (
-          <SelectItem value="loading" disabled>
-            Lädt...
-          </SelectItem>
-        ) : deals.length === 0 ? (
-          <SelectItem value="none" disabled>
-            Keine Opportunities verfügbar
-          </SelectItem>
-        ) : (
-          deals.map((deal) => (
-            <SelectItem key={deal.id} value={deal.id}>
-              {deal.name}
-            </SelectItem>
-          ))
-        )}
+        <SelectItem value="none">Kein Deal</SelectItem>
+        {deals.map(d => (
+          <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+        ))}
       </SelectContent>
     </Select>
   );

@@ -46,72 +46,44 @@ export function CreateContactForm({ accountId, onContactCreated }: CreateContact
         phone
       });
       
-      // Try to use a table that exists in the database
-      try {
-        const { data, error } = await supabase
-          .from("contacts")
-          .insert({
-            first_name: firstName,
-            last_name: lastName,
-            email,
-            phone,
-            account_id: accountId,
-            owner_id: user.id
-          })
-          .select();
+      const { data, error } = await supabase
+        .from("contacts")
+        .insert({
+          first_name: firstName,
+          last_name: lastName,
+          email,
+          phone,
+          account_id: accountId,
+          owner_id: user.id // Explicitly setting the owner_id to the current user's ID
+        })
+        .select();
 
-        if (error) {
-          console.error("Error creating contact:", error);
-          setErrorMessage(`${error.message}${error.details ? ` - ${error.details}` : ''}`);
-          toast({
-            title: "Error",
-            description: "Contact could not be created",
-            variant: "destructive"
-          });
-          return;
-        }
-
-        console.log("Contact created successfully:", data);
-        
-        // Invalidate contacts cache to force a refresh
-        queryClient.invalidateQueries({ queryKey: ["contacts"] });
-        
+      if (error) {
+        console.error("Error creating contact:", error);
+        setErrorMessage(`${error.message}${error.details ? ` - ${error.details}` : ''}`);
         toast({
-          title: "Success",
-          description: "Contact created successfully"
+          title: "Error",
+          description: "Contact could not be created",
+          variant: "destructive"
         });
-
-        setFirstName("");
-        setLastName("");
-        setEmail("");
-        setPhone("");
-        onContactCreated();
-      } catch (err) {
-        console.error("Failed contact creation with contacts table, trying fallback");
-        
-        // Fallback to object_records if "contacts" table doesn't exist
-        const { error } = await supabase
-          .from("object_records")
-          .insert({
-            object_type_id: accountId, // This may not be correct, but trying as a fallback
-            owner_id: user.id
-          });
-          
-        if (error) {
-          throw error;
-        }
-        
-        toast({
-          title: "Success",
-          description: "Contact record created"
-        });
-        
-        setFirstName("");
-        setLastName("");
-        setEmail("");
-        setPhone("");
-        onContactCreated();
+        return;
       }
+
+      console.log("Contact created successfully:", data);
+      
+      // Invalidate contacts cache to force a refresh
+      queryClient.invalidateQueries({ queryKey: ["contacts"] });
+      
+      toast({
+        title: "Success",
+        description: "Contact created successfully"
+      });
+
+      setFirstName("");
+      setLastName("");
+      setEmail("");
+      setPhone("");
+      onContactCreated();
     } catch (err) {
       console.error("Unexpected error:", err);
       setErrorMessage("An unexpected error occurred");

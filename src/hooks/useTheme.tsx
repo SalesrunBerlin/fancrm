@@ -1,6 +1,5 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
-import { useColorPreferences } from "./useColorPreferences";
 
 type Theme = "light" | "dark";
 
@@ -19,27 +18,11 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     }
     return "light";
   });
-  
-  const { preferences, savePreferences } = useColorPreferences();
 
-  // Apply theme whenever it changes
   useEffect(() => {
     document.documentElement.classList.toggle("dark", theme === "dark");
     localStorage.setItem("theme", theme);
   }, [theme]);
-
-  // Save theme to database when it changes, but only if we have preferences loaded
-  useEffect(() => {
-    if (preferences && preferences.theme !== theme) {
-      console.log('Theme changed, saving to database:', theme);
-      savePreferences({
-        ...preferences,
-        theme: theme,
-      }).catch(err => {
-        console.error('Failed to save theme change to database:', err);
-      });
-    }
-  }, [theme, preferences, savePreferences]);
 
   const setTheme = (theme: Theme) => setThemeState(theme);
   const toggleTheme = () => setThemeState((prev) => (prev === "light" ? "dark" : "light"));
