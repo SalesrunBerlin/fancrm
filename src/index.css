@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -59,20 +60,30 @@
     font-family: var(--font-family, 'Inter'), sans-serif;
     color: var(--text-color, #000000);
   }
+}
 
-  /* Ensure buttons use primary color */
-  .button-primary, 
-  [data-variant="default"],
-  .bg-primary {
-    background-color: var(--primary-color, #6B8AFE) !important;
-    color: white !important;
-  }
+/* Improved button styling with more specificity */
+.button-primary, 
+button[data-variant="default"],
+.bg-primary {
+  background-color: var(--primary-color, #6B8AFE) !important;
+  color: white !important;
+}
 
-  .button-primary:hover,
-  [data-variant="default"]:hover,
-  .bg-primary:hover {
-    opacity: 0.9;
-  }
+.button-primary:hover,
+button[data-variant="default"]:hover,
+.bg-primary:hover {
+  opacity: 0.9;
+}
+
+/* Ensure shadcn Button component uses primary color */
+button[class*="inline-flex"][class*="bg-primary"] {
+  background-color: var(--primary-color, #6B8AFE) !important;
+}
+
+/* Override specific ui/button styles */
+[data-variant="default"] {
+  background-color: var(--primary-color, #6B8AFE) !important;
 }
 
 .crm-table-wrapper {
@@ -112,3 +123,10 @@
 .animate-fade-in {
   animation: fade-in 0.3s ease-out;
 }
+
+/* Font styles */
+.font-\['Inter\'\] { font-family: 'Inter', sans-serif; }
+.font-\['Roboto\'\] { font-family: 'Roboto', sans-serif; }
+.font-\['Open_Sans\'\] { font-family: 'Open Sans', sans-serif; }
+.font-\['Nunito\'\] { font-family: 'Nunito', sans-serif; }
+.font-\['Lato\'\] { font-family: 'Lato', sans-serif; }

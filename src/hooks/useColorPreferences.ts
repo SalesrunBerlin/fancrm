@@ -89,7 +89,7 @@ export function useColorPreferences() {
       
       document.documentElement.classList.add(`theme-${prefs.colors.font}`);
       
-      // Update button styles
+      // Create or update the style element
       const style = document.getElementById('theme-custom-styles') || document.createElement('style');
       style.id = 'theme-custom-styles';
       style.textContent = `
@@ -128,18 +128,24 @@ export function useColorPreferences() {
     if (!user) return false;
     
     try {
+      // First apply the theme immediately for instant feedback
+      applyThemePreferences(newPreferences);
+      
+      // Then save to database
       const { error } = await supabase
         .from('user_color_preferences')
         .upsert({
           user_id: user.id,
           theme: newPreferences.theme,
           colors: newPreferences.colors
+        }, { 
+          onConflict: 'user_id' 
         });
 
       if (error) throw error;
 
+      // Update state after successful save
       setPreferences(newPreferences);
-      applyThemePreferences(newPreferences);
       toast.success("Theme preferences saved successfully");
       return true;
     } catch (error) {

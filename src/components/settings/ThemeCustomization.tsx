@@ -52,7 +52,7 @@ export function ThemeCustomization() {
     
     setSaving(true);
     try {
-      const result = await savePreferences({
+      await savePreferences({
         ...preferences,
         colors: {
           primary: primaryColor,
@@ -60,10 +60,6 @@ export function ThemeCustomization() {
           font: font
         }
       });
-      
-      if (result) {
-        toast("Theme settings saved successfully");
-      }
     } finally {
       setSaving(false);
     }
@@ -152,8 +148,8 @@ export function ThemeCustomization() {
           <Button 
             onClick={handleSave} 
             disabled={saving}
+            className="text-white"
             style={{ backgroundColor: primaryColor }}
-            className="text-white hover:opacity-90"
           >
             {saving ? (
               <>

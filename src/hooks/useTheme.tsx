@@ -20,7 +20,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     return "light";
   });
   
-  const { preferences } = useColorPreferences();
+  const { preferences, savePreferences } = useColorPreferences();
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", theme === "dark");
@@ -28,9 +28,12 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     
     // Save theme preference to database if we have user preferences
     if (preferences) {
-      // This would be handled by the useColorPreferences hook
+      savePreferences({
+        ...preferences,
+        theme: theme,
+      });
     }
-  }, [theme]);
+  }, [theme, preferences]);
 
   const setTheme = (theme: Theme) => setThemeState(theme);
   const toggleTheme = () => setThemeState((prev) => (prev === "light" ? "dark" : "light"));

@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { fetchData } from "@/lib/mockData";
+import { Loader2 } from "lucide-react";
 
 interface Option {
   id: string;
@@ -14,7 +15,7 @@ interface ActivityAccountSelectProps {
   disabled?: boolean;
 }
 
-export function ActivityAccountSelect({ value, onChange, disabled }: ActivityAccountSelectProps) {
+export function ActivityAccountSelect({ value, onChange, disabled = false }: ActivityAccountSelectProps) {
   const [options, setOptions] = useState<Option[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -23,10 +24,11 @@ export function ActivityAccountSelect({ value, onChange, disabled }: ActivityAcc
       setIsLoading(true);
       try {
         const accounts = await fetchData("object_records", "id, name");
-        setOptions(accounts.map((account: any) => ({
+        const formattedAccounts: Option[] = accounts.map((account: any) => ({
           id: account.id,
           name: account.name || 'Unnamed Account'
-        })));
+        }));
+        setOptions(formattedAccounts);
       } catch (error) {
         console.error("Error loading accounts:", error);
         setOptions([]);
@@ -46,7 +48,10 @@ export function ActivityAccountSelect({ value, onChange, disabled }: ActivityAcc
       <SelectContent>
         {isLoading ? (
           <SelectItem value="loading" disabled>
-            Lädt...
+            <div className="flex items-center">
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              Lädt...
+            </div>
           </SelectItem>
         ) : options.length === 0 ? (
           <SelectItem value="none" disabled>
