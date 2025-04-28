@@ -21,7 +21,6 @@ import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { Separator } from "@/components/ui/separator";
 import { PicklistValuesManager } from "./PicklistValuesManager";
-import { ScrollArea } from "@/components/ui/scroll-area";
 
 const fieldSchema = z.object({
   name: z.string().min(2, {
@@ -66,6 +65,7 @@ export function ObjectFieldForm({ objectTypeId, onComplete }: ObjectFieldFormPro
     }
   });
 
+  // Watch for data_type changes
   const dataType = form.watch("data_type");
 
   useEffect(() => {
@@ -127,6 +127,7 @@ export function ObjectFieldForm({ objectTypeId, onComplete }: ObjectFieldFormPro
     { label: "Lookup", value: "lookup" }
   ];
 
+  // Auto-generate API name from field name
   useEffect(() => {
     const name = form.watch("name");
     if (name) {
@@ -135,6 +136,7 @@ export function ObjectFieldForm({ objectTypeId, onComplete }: ObjectFieldFormPro
         .replace(/[^a-z0-9 ]/g, "")
         .replace(/\s+/g, "_");
       
+      // Only update if the api_name hasn't been manually modified
       const currentApiName = form.watch("api_name");
       if (!currentApiName || currentApiName === "") {
         form.setValue("api_name", apiName);
@@ -144,61 +146,89 @@ export function ObjectFieldForm({ objectTypeId, onComplete }: ObjectFieldFormPro
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)}>
-        <ScrollArea className="h-[calc(100vh-16rem)] pr-4">
-          <div className="space-y-4">
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Field Name</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Field Name" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <FormField
+          control={form.control}
+          name="name"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Field Name</FormLabel>
+              <FormControl>
+                <Input placeholder="Field Name" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
-            <FormField
-              control={form.control}
-              name="api_name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>API Name</FormLabel>
-                  <FormControl>
-                    <Input placeholder="api_name" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+        <FormField
+          control={form.control}
+          name="api_name"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>API Name</FormLabel>
+              <FormControl>
+                <Input placeholder="api_name" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
+        <FormField
+          control={form.control}
+          name="data_type"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Field Type</FormLabel>
+              <Select
+                value={field.value}
+                onValueChange={(value) => {
+                  field.onChange(value);
+                  if (value === "picklist") {
+                    setShowPicklistValues(true);
+                  } else {
+                    setShowPicklistValues(false);
+                  }
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select field type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {dataTypeOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {form.watch("data_type") === "lookup" && (
+          <>
             <FormField
               control={form.control}
-              name="data_type"
+              name="options.target_object_type_id"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Field Type</FormLabel>
+                  <FormLabel>Target Object</FormLabel>
                   <Select
-                    value={field.value}
+                    value={field.value ?? ""}
                     onValueChange={(value) => {
                       field.onChange(value);
-                      if (value === "picklist") {
-                        setShowPicklistValues(true);
-                      } else {
-                        setShowPicklistValues(false);
-                      }
                     }}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Select field type" />
+                      <SelectValue placeholder="Select target object" />
                     </SelectTrigger>
                     <SelectContent>
-                      {dataTypeOptions.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
+                      {objectTypes?.filter(t => t.id !== objectTypeId).map((type) => (
+                        <SelectItem key={type.id} value={type.id}>
+                          {type.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -207,88 +237,54 @@ export function ObjectFieldForm({ objectTypeId, onComplete }: ObjectFieldFormPro
                 </FormItem>
               )}
             />
+          </>
+        )}
 
-            {form.watch("data_type") === "lookup" && (
-              <>
-                <FormField
-                  control={form.control}
-                  name="options.target_object_type_id"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Target Object</FormLabel>
-                      <Select
-                        value={field.value ?? ""}
-                        onValueChange={(value) => {
-                          field.onChange(value);
-                        }}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select target object" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {objectTypes?.filter(t => t.id !== objectTypeId).map((type) => (
-                            <SelectItem key={type.id} value={type.id}>
-                              {type.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+        <FormField
+          control={form.control}
+          name="is_required"
+          render={({ field }) => (
+            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+              <div className="space-y-0.5">
+                <FormLabel>Required</FormLabel>
+              </div>
+              <FormControl>
+                <Switch
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
                 />
-              </>
-            )}
-
-            <FormField
-              control={form.control}
-              name="is_required"
-              render={({ field }) => (
-                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                  <div className="space-y-0.5">
-                    <FormLabel>Required</FormLabel>
-                  </div>
-                  <FormControl>
-                    <Switch
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-          </div>
-        </ScrollArea>
+              </FormControl>
+            </FormItem>
+          )}
+        />
 
         {!createdFieldId && (
-          <div className="pt-4 mt-4 border-t">
-            <Button 
-              type="submit" 
-              disabled={isSubmitting}
-              className="w-full"
-            >
-              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Create Field
-            </Button>
-          </div>
-        )}
-
-        {createdFieldId && (
-          <div className="mt-6">
-            <Separator className="my-4" />
-            <h3 className="text-lg font-medium mb-4">Add Picklist Values</h3>
-            <PicklistValuesManager 
-              fieldId={createdFieldId} 
-            />
-            <Button 
-              onClick={handlePicklistComplete}
-              className="mt-4 w-full"
-            >
-              Complete Setup
-            </Button>
-          </div>
+          <Button 
+            type="submit" 
+            disabled={isSubmitting}
+            className="w-full"
+          >
+            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Create Field
+          </Button>
         )}
       </form>
+
+      {createdFieldId && (
+        <div className="mt-6">
+          <Separator className="my-4" />
+          <h3 className="text-lg font-medium mb-4">Add Picklist Values</h3>
+          <PicklistValuesManager 
+            fieldId={createdFieldId} 
+          />
+          <Button 
+            onClick={handlePicklistComplete}
+            className="mt-4 w-full"
+          >
+            Complete Setup
+          </Button>
+        </div>
+      )}
     </Form>
   );
 }

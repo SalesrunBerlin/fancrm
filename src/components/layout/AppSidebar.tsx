@@ -37,6 +37,7 @@ export function AppSidebar() {
   const { pathname } = useLocation();
   const { setOpenMobile } = useSidebar();
 
+  // Close sidebar on route change
   useEffect(() => {
     setOpenMobile(false);
   }, [pathname, setOpenMobile]);
@@ -66,14 +67,9 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        <SidebarGroup>
-          <SidebarGroupLabel>Objects</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              <ActiveObjectsMenu />
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        <div className="mt-2">
+          <ActiveObjectsMenu />
+        </div>
       </SidebarContent>
     </Sidebar>
   );
