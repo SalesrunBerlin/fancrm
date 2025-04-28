@@ -1,47 +1,62 @@
 
-import { Toaster } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { Toaster } from "@/components/ui/toaster";
 import { Layout } from "@/components/layout/Layout";
 import { AuthProvider } from "@/contexts/AuthContext";
-import Dashboard from "./pages/Dashboard";
-import Auth from "./pages/Auth";
-import NotFound from "./pages/NotFound";
-import { PrivateRoute } from "@/components/auth/PrivateRoute";
-import Settings from "./pages/Settings";
-import ObjectTypeDetail from "./pages/ObjectTypeDetail";
-import ObjectRecordsList from "./pages/ObjectRecordsList";
-import ObjectRecordDetail from "./pages/ObjectRecordDetail";
-import Structures from "./pages/Structures";
-import { PublishedObjectDetail } from "./components/structures/PublishedObjectDetail";
+import Auth from "@/pages/Auth";
+import Dashboard from "@/pages/Dashboard";
+import Settings from "@/pages/Settings";
+import Objects from "@/pages/Objects";
+import ObjectDetail from "@/pages/ObjectDetail";
+import ObjectTypeForm from "@/pages/ObjectTypeForm";
+import ObjectRecordDetail from "@/pages/ObjectRecordDetail";
+import ObjectRecords from "@/pages/ObjectRecords";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import PublishedObjects from "@/pages/PublishedObjects";
+import PublishedObjectDetail from "@/pages/PublishedObjectDetail";
 
-const queryClient = new QueryClient();
+// Create a client
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <BrowserRouter>
+function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <TooltipProvider>
+        <Router>
           <Routes>
             <Route path="/auth" element={<Auth />} />
-            <Route path="/" element={<PrivateRoute><Layout /></PrivateRoute>}>
-              <Route index element={<Navigate to="/dashboard" replace />} />
+
+            <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
+              <Route path="/" element={<Dashboard />} />
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/settings" element={<Settings />} />
-              <Route path="/settings/objects/:objectTypeId" element={<ObjectTypeDetail />} />
-              <Route path="/objects/:objectTypeId" element={<ObjectRecordsList />} />
-              <Route path="/objects/:objectTypeId/:recordId" element={<ObjectRecordDetail />} />
-              <Route path="/structures" element={<Structures />} />
-              <Route path="/structures/published/:objectId" element={<PublishedObjectDetail />} />
+              
+              {/* Object management routes */}
+              <Route path="/objects" element={<Objects />} />
+              <Route path="/objects/new" element={<ObjectTypeForm />} />
+              <Route path="/objects/:id" element={<ObjectDetail />} />
+              <Route path="/objects/:id/edit" element={<ObjectTypeForm />} />
+              <Route path="/objects/:objectId/records" element={<ObjectRecords />} />
+              <Route path="/objects/:objectId/records/:recordId" element={<ObjectRecordDetail />} />
+              
+              {/* Published objects routes */}
+              <Route path="/published" element={<PublishedObjects />} />
+              <Route path="/published/:id" element={<PublishedObjectDetail />} />
             </Route>
-            <Route path="*" element={<NotFound />} />
           </Routes>
           <Toaster />
-        </TooltipProvider>
+        </Router>
       </AuthProvider>
-    </BrowserRouter>
-  </QueryClientProvider>
-);
+    </QueryClientProvider>
+  );
+}
 
 export default App;
