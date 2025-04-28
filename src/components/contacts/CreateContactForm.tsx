@@ -1,13 +1,12 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQueryClient } from "@tanstack/react-query";
+import { useObjectRecords } from "@/hooks/useObjectRecords";
 
 interface CreateContactFormProps {
   accountId: string;
@@ -18,6 +17,7 @@ export function CreateContactForm({ accountId, onContactCreated }: CreateContact
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { createRecord } = useObjectRecords("contact_object_type_id");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
@@ -37,43 +37,14 @@ export function CreateContactForm({ accountId, onContactCreated }: CreateContact
     }
 
     try {
-      console.log("Creating contact with:", {
-        accountId,
-        ownerId: user.id,
-        firstName,
-        lastName,
-        email,
-        phone
+      await createRecord.mutateAsync({
+        first_name: firstName,
+        last_name: lastName,
+        email: email || null,
+        phone: phone || null,
+        account_id: accountId || null,
       });
-      
-      const { data, error } = await supabase
-        .from("contacts")
-        .insert({
-          first_name: firstName,
-          last_name: lastName,
-          email,
-          phone,
-          account_id: accountId,
-          owner_id: user.id // Explicitly setting the owner_id to the current user's ID
-        })
-        .select();
 
-      if (error) {
-        console.error("Error creating contact:", error);
-        setErrorMessage(`${error.message}${error.details ? ` - ${error.details}` : ''}`);
-        toast({
-          title: "Error",
-          description: "Contact could not be created",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      console.log("Contact created successfully:", data);
-      
-      // Invalidate contacts cache to force a refresh
-      queryClient.invalidateQueries({ queryKey: ["contacts"] });
-      
       toast({
         title: "Success",
         description: "Contact created successfully"

@@ -1,16 +1,12 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import { ActivityAccountSelect } from "./ActivityAccountSelect";
-import { ActivityContactSelect } from "./ActivityContactSelect";
-import { ActivityDealSelect } from "./ActivityDealSelect";
 import { ActivityTypeSelect } from "./ActivityTypeSelect";
-import { Activity } from "@/lib/types/database";
+import { useObjectRecords } from "@/hooks/useObjectRecords";
+import { LookupField } from "@/components/records/LookupField";
 
 export interface ActivityFormProps {
   onSuccess: () => void;
@@ -19,7 +15,7 @@ export interface ActivityFormProps {
     contactId?: string;
     dealId?: string;
   };
-  onSubmit?: (activityData: Partial<Activity>) => Promise<void>;
+  onSubmit?: (activityData: any) => Promise<void>;
   onCancel?: () => void;
   defaultValues?: {
     type?: string;
@@ -39,6 +35,7 @@ export function ActivityForm({
 }: ActivityFormProps) {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { createRecord } = useObjectRecords("activity_object_type_id");
 
   const [subject, setSubject] = useState("");
   const [description, setDescription] = useState("");
@@ -67,12 +64,12 @@ export function ActivityForm({
       type,
       subject,
       description,
-      scheduled_at: scheduledAt ? scheduledAt : null,
+      scheduled_at: scheduledAt || null,
       outcome,
       status,
-      accountId,
-      contactId,
-      dealId,
+      account_id: accountId,
+      contact_id: contactId,
+      deal_id: dealId,
     };
 
     if (externalSubmit) {
@@ -82,40 +79,34 @@ export function ActivityForm({
 
     setLoading(true);
 
-    const { error } = await supabase.from("activities").insert({
-      owner_id: user.id,
-      type,
-      subject,
-      description,
-      scheduled_at: scheduledAt ? scheduledAt : null,
-      outcome,
-      status,
-      account_id: accountId,
-      contact_id: contactId,
-      deal_id: dealId,
-    });
-
-    setLoading(false);
-    if (error) {
+    try {
+      await createRecord.mutateAsync(activityData);
+      
       toast({
-        title: "Fehler",
+        title: "Success",
+        description: "Activity created successfully"
+      });
+      onSuccess();
+      
+      // Reset form
+      setSubject("");
+      setDescription("");
+      setScheduledAt("");
+      setOutcome("");
+      setStatus("open");
+      setType("call");
+      setAccountId(null);
+      setContactId(null);
+      setDealId(null);
+    } catch (error: any) {
+      toast({
+        title: "Error",
         description: error.message,
         variant: "destructive",
       });
-      return;
+    } finally {
+      setLoading(false);
     }
-    
-    toast({ title: "Gespeichert", description: "Aktivität gespeichert." });
-    setSubject("");
-    setDescription("");
-    setScheduledAt("");
-    setOutcome("");
-    setStatus("open");
-    setType("call");
-    setAccountId(null);
-    setContactId(null);
-    setDealId(null);
-    onSuccess();
   };
 
   const handleCancel = () => {
@@ -160,9 +151,24 @@ export function ActivityForm({
         />
       </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <ActivityAccountSelect value={accountId} onChange={setAccountId} disabled={loading} />
-        <ActivityContactSelect value={contactId} onChange={setContactId} disabled={loading} />
-        <ActivityDealSelect value={dealId} onChange={setDealId} disabled={loading} />
+        <LookupField 
+          targetObjectTypeId="account_object_type_id"
+          value={accountId} 
+          onChange={setAccountId} 
+          disabled={loading} 
+        />
+        <LookupField
+          targetObjectTypeId="contact_object_type_id"
+          value={contactId}
+          onChange={setContactId}
+          disabled={loading}
+        />
+        <LookupField
+          targetObjectTypeId="deal_object_type_id"
+          value={dealId}
+          onChange={setDealId}
+          disabled={loading}
+        />
       </div>
       <div className="flex gap-4 items-center">
         <label>

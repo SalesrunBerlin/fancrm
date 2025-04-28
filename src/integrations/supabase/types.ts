@@ -9,6 +9,185 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      accounts: {
+        Row: {
+          city: string | null
+          country: string | null
+          created_at: string | null
+          id: string
+          industry: string | null
+          latitude: number | null
+          longitude: number | null
+          name: string
+          owner_id: string | null
+          postal_code: string | null
+          street: string | null
+          type: string | null
+          updated_at: string | null
+          website: string | null
+        }
+        Insert: {
+          city?: string | null
+          country?: string | null
+          created_at?: string | null
+          id?: string
+          industry?: string | null
+          latitude?: number | null
+          longitude?: number | null
+          name: string
+          owner_id?: string | null
+          postal_code?: string | null
+          street?: string | null
+          type?: string | null
+          updated_at?: string | null
+          website?: string | null
+        }
+        Update: {
+          city?: string | null
+          country?: string | null
+          created_at?: string | null
+          id?: string
+          industry?: string | null
+          latitude?: number | null
+          longitude?: number | null
+          name?: string
+          owner_id?: string | null
+          postal_code?: string | null
+          street?: string | null
+          type?: string | null
+          updated_at?: string | null
+          website?: string | null
+        }
+        Relationships: []
+      }
+      activities: {
+        Row: {
+          account_id: string | null
+          contact_id: string | null
+          created_at: string | null
+          deal_id: string | null
+          description: string | null
+          end_time: string | null
+          id: string
+          outcome: string | null
+          owner_id: string | null
+          scheduled_at: string | null
+          status: string
+          subject: string
+          type: string
+          updated_at: string | null
+        }
+        Insert: {
+          account_id?: string | null
+          contact_id?: string | null
+          created_at?: string | null
+          deal_id?: string | null
+          description?: string | null
+          end_time?: string | null
+          id?: string
+          outcome?: string | null
+          owner_id?: string | null
+          scheduled_at?: string | null
+          status: string
+          subject: string
+          type: string
+          updated_at?: string | null
+        }
+        Update: {
+          account_id?: string | null
+          contact_id?: string | null
+          created_at?: string | null
+          deal_id?: string | null
+          description?: string | null
+          end_time?: string | null
+          id?: string
+          outcome?: string | null
+          owner_id?: string | null
+          scheduled_at?: string | null
+          status?: string
+          subject?: string
+          type?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activities_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "activities_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contacts: {
+        Row: {
+          account_id: string | null
+          city: string | null
+          country: string | null
+          created_at: string | null
+          email: string | null
+          first_name: string
+          id: string
+          last_name: string
+          latitude: number | null
+          longitude: number | null
+          owner_id: string | null
+          phone: string | null
+          postal_code: string | null
+          street: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          account_id?: string | null
+          city?: string | null
+          country?: string | null
+          created_at?: string | null
+          email?: string | null
+          first_name: string
+          id?: string
+          last_name: string
+          latitude?: number | null
+          longitude?: number | null
+          owner_id?: string | null
+          phone?: string | null
+          postal_code?: string | null
+          street?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          account_id?: string | null
+          city?: string | null
+          country?: string | null
+          created_at?: string | null
+          email?: string | null
+          first_name?: string
+          id?: string
+          last_name?: string
+          latitude?: number | null
+          longitude?: number | null
+          owner_id?: string | null
+          phone?: string | null
+          postal_code?: string | null
+          street?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contacts_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       field_display_configs: {
         Row: {
           created_at: string
@@ -32,6 +211,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "field_display_configs_field_id_fkey"
+            columns: ["field_id"]
+            isOneToOne: false
+            referencedRelation: "object_field_relationships"
+            referencedColumns: ["field_id"]
+          },
           {
             foreignKeyName: "field_display_configs_field_id_fkey"
             columns: ["field_id"]
@@ -77,6 +263,13 @@ export type Database = {
             foreignKeyName: "field_picklist_values_field_id_fkey"
             columns: ["field_id"]
             isOneToOne: false
+            referencedRelation: "object_field_relationships"
+            referencedColumns: ["field_id"]
+          },
+          {
+            foreignKeyName: "field_picklist_values_field_id_fkey"
+            columns: ["field_id"]
+            isOneToOne: false
             referencedRelation: "object_fields"
             referencedColumns: ["id"]
           },
@@ -108,6 +301,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "object_field_publishing_field_id_fkey"
+            columns: ["field_id"]
+            isOneToOne: false
+            referencedRelation: "object_field_relationships"
+            referencedColumns: ["field_id"]
+          },
           {
             foreignKeyName: "object_field_publishing_field_id_fkey"
             columns: ["field_id"]
@@ -429,6 +629,13 @@ export type Database = {
             foreignKeyName: "record_field_values_field_id_fkey"
             columns: ["field_id"]
             isOneToOne: false
+            referencedRelation: "object_field_relationships"
+            referencedColumns: ["field_id"]
+          },
+          {
+            foreignKeyName: "record_field_values_field_id_fkey"
+            columns: ["field_id"]
+            isOneToOne: false
             referencedRelation: "object_fields"
             referencedColumns: ["id"]
           },
@@ -470,7 +677,24 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      object_field_relationships: {
+        Row: {
+          field_id: string | null
+          field_name: string | null
+          from_object_id: string | null
+          target_object_name: string | null
+          to_object_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "object_fields_object_type_id_fkey"
+            columns: ["from_object_id"]
+            isOneToOne: false
+            referencedRelation: "object_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       clone_object_structure: {

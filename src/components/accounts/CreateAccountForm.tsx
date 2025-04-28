@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -11,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
+import { useObjectRecords } from "@/hooks/useObjectRecords";
 
 const accountFormSchema = z.object({
   name: z.string().min(1, "Name ist erforderlich"),
@@ -31,6 +31,7 @@ export function CreateAccountForm({ isOpen, onClose }: CreateAccountFormProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const { createRecord } = useObjectRecords("account_object_type_id");
   
   const form = useForm<AccountFormValues>({
     resolver: zodResolver(accountFormSchema),
@@ -54,23 +55,17 @@ export function CreateAccountForm({ isOpen, onClose }: CreateAccountFormProps) {
 
     setIsLoading(true);
     try {
-      const { error } = await supabase.from("accounts").insert([{
+      await createRecord.mutateAsync({
         name: data.name,
         type: data.type || null,
         website: data.website || null,
         industry: data.industry || null,
-        owner_id: user.id, // Set the owner_id to the current user's ID
-      }]);
-
-      if (error) throw error;
+      });
 
       toast({
         title: "Account erstellt",
         description: `${data.name} wurde erfolgreich erstellt.`,
       });
-      
-      // Aktualisiere die Accounts-Liste
-      await queryClient.invalidateQueries({ queryKey: ["accounts"] });
       
       form.reset();
       onClose();
