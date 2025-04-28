@@ -11,9 +11,10 @@ interface Option {
 interface ActivityAccountSelectProps {
   value: string;
   onChange: (value: string) => void;
+  disabled?: boolean;
 }
 
-export function ActivityAccountSelect({ value, onChange }: ActivityAccountSelectProps) {
+export function ActivityAccountSelect({ value, onChange, disabled }: ActivityAccountSelectProps) {
   const [options, setOptions] = useState<Option[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -21,8 +22,11 @@ export function ActivityAccountSelect({ value, onChange }: ActivityAccountSelect
     const loadAccounts = async () => {
       setIsLoading(true);
       try {
-        const accounts = await fetchData("accounts", "id, name");
-        setOptions(accounts as Option[]);
+        const accounts = await fetchData("object_records", "id, name");
+        setOptions(accounts.map((account: any) => ({
+          id: account.id,
+          name: account.name || 'Unnamed Account'
+        })));
       } catch (error) {
         console.error("Error loading accounts:", error);
         setOptions([]);
@@ -35,7 +39,7 @@ export function ActivityAccountSelect({ value, onChange }: ActivityAccountSelect
   }, []);
 
   return (
-    <Select value={value} onValueChange={onChange}>
+    <Select value={value} onValueChange={onChange} disabled={disabled}>
       <SelectTrigger className="w-full">
         <SelectValue placeholder="Account auswählen" />
       </SelectTrigger>

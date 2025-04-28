@@ -1,4 +1,3 @@
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -56,18 +55,23 @@
   }
 
   body {
-    @apply bg-background;
+    @apply bg-background text-foreground;
+    font-family: var(--font-family, 'Inter'), sans-serif;
     color: var(--text-color, #000000);
   }
 
-  /* Custom button styles that use the primary color variable */
-  .btn-primary {
-    background-color: var(--primary-color, #6B8AFE);
-    color: white;
+  /* Ensure buttons use primary color */
+  .button-primary, 
+  [data-variant="default"],
+  .bg-primary {
+    background-color: var(--primary-color, #6B8AFE) !important;
+    color: white !important;
   }
-  
-  .btn-primary:hover {
-    background-color: color-mix(in srgb, var(--primary-color, #6B8AFE) 85%, black);
+
+  .button-primary:hover,
+  [data-variant="default"]:hover,
+  .bg-primary:hover {
+    opacity: 0.9;
   }
 }
 
