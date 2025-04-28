@@ -47,6 +47,12 @@ export function Sidebar() {
               label="Dashboard"
               active={pathname === "/dashboard"}
             />
+            <SidebarLink
+              to="/structures"
+              icon={<FileText className="h-4 w-4" />}
+              label="Structures"
+              active={pathname.startsWith("/structures")}
+            />
             <ActiveObjectsMenu />
             <SidebarLink
               to="/settings"

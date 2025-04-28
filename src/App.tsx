@@ -6,6 +6,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import Auth from "@/pages/Auth";
 import Dashboard from "@/pages/Dashboard";
 import Settings from "@/pages/Settings";
+import Structures from "@/pages/Structures";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 
@@ -26,11 +27,12 @@ function App() {
         <AuthProvider>
           <Routes>
             <Route path="/auth" element={<Auth />} />
-
+            
             <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
               <Route path="/" element={<Dashboard />} />
               <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/settings" element={<Settings />} />
+              <Route path="/settings/*" element={<Settings />} />
+              <Route path="/structures/*" element={<Structures />} />
             </Route>
           </Routes>
           <Toaster />
