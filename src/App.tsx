@@ -7,6 +7,8 @@ import Auth from "@/pages/Auth";
 import Dashboard from "@/pages/Dashboard";
 import Settings from "@/pages/Settings";
 import Structures from "@/pages/Structures";
+import ObjectRecordsList from "@/pages/ObjectRecordsList";
+import ObjectRecordDetail from "@/pages/ObjectRecordDetail";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 
@@ -33,6 +35,8 @@ function App() {
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/settings/*" element={<Settings />} />
               <Route path="/structures/*" element={<Structures />} />
+              <Route path="/objects/:objectTypeId" element={<ObjectRecordsList />} />
+              <Route path="/objects/:objectTypeId/:recordId" element={<ObjectRecordDetail />} />
             </Route>
           </Routes>
           <Toaster />
