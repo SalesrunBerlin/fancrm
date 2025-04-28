@@ -1,41 +1,72 @@
 
-import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
-import { useAuth } from "@/contexts/AuthContext";
+import { useState, useEffect } from "react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { fetchData } from "@/lib/mockData";
 
-type Option = { id: string; first_name: string; last_name: string };
+interface Option {
+  id: string;
+  first_name?: string;
+  last_name?: string;
+}
 
-export function ActivityContactSelect({ value, onChange, disabled }: {
-  value: string | null;
-  onChange: (val: string | null) => void;
-  disabled?: boolean;
-}) {
-  const [contacts, setContacts] = useState<Option[]>([]);
-  const { user } = useAuth();
+interface ActivityContactSelectProps {
+  value: string;
+  onChange: (value: string) => void;
+}
+
+export function ActivityContactSelect({ value, onChange }: ActivityContactSelectProps) {
+  const [options, setOptions] = useState<Option[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (user) {
-      // Filter contacts by owner_id to only show contacts owned by the current user
-      supabase.from("contacts")
-        .select("id,first_name,last_name")
-        .eq("owner_id", user.id)
-        .then(({ data }) => {
-          setContacts(data || []);
-        });
+    const loadContacts = async () => {
+      setIsLoading(true);
+      try {
+        const contacts = await fetchData("contacts", "id, first_name, last_name");
+        setOptions(contacts as Option[]);
+      } catch (error) {
+        console.error("Error loading contacts:", error);
+        setOptions([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadContacts();
+  }, []);
+
+  const getContactName = (contact: Option) => {
+    if (contact.first_name && contact.last_name) {
+      return `${contact.first_name} ${contact.last_name}`;
+    } else if (contact.first_name) {
+      return contact.first_name;
+    } else if (contact.last_name) {
+      return contact.last_name;
     }
-  }, [user]);
+    return "Unnamed Contact";
+  };
 
   return (
-    <Select value={value || ""} onValueChange={v => onChange(v === "none" ? null : v)} disabled={disabled}>
-      <SelectTrigger>
-        <SelectValue placeholder="Kontakt verbinden" />
+    <Select value={value} onValueChange={onChange}>
+      <SelectTrigger className="w-full">
+        <SelectValue placeholder="Kontakt auswählen" />
       </SelectTrigger>
       <SelectContent>
-        <SelectItem value="none">Kein Kontakt</SelectItem>
-        {contacts.map(c => (
-          <SelectItem key={c.id} value={c.id}>{c.first_name} {c.last_name}</SelectItem>
-        ))}
+        {isLoading ? (
+          <SelectItem value="loading" disabled>
+            Lädt...
+          </SelectItem>
+        ) : options.length === 0 ? (
+          <SelectItem value="none" disabled>
+            Keine Kontakte verfügbar
+          </SelectItem>
+        ) : (
+          options.map((option) => (
+            <SelectItem key={option.id} value={option.id}>
+              {getContactName(option)}
+            </SelectItem>
+          ))
+        )}
       </SelectContent>
     </Select>
   );

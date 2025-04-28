@@ -18,3 +18,17 @@ export const fetchData = async (table: string, select: string = '*') => {
     return [];
   }
 };
+
+// Helper function to insert data into tables that aren't in TypeScript definitions
+export const insertData = async (table: string, data: any) => {
+  try {
+    // @ts-ignore - Deliberately ignoring TypeScript errors here
+    const { error } = await supabase.from(table).insert(data);
+    
+    if (error) throw error;
+    return true;
+  } catch (error) {
+    console.error(`Error inserting into ${table}:`, error);
+    return false;
+  }
+};

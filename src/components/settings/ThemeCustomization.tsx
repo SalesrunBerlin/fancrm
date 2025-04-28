@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 const fonts = [
   { value: "inter", label: "Inter", className: "font-['Inter']" },
@@ -28,6 +29,7 @@ export function ThemeCustomization() {
   const [textColor, setTextColor] = useState('#000000');
   const [font, setFont] = useState('inter');
   const [saving, setSaving] = useState(false);
+  const [previewStyle, setPreviewStyle] = useState<React.CSSProperties>({});
 
   useEffect(() => {
     if (preferences) {
@@ -37,12 +39,20 @@ export function ThemeCustomization() {
     }
   }, [preferences]);
 
+  // Update preview whenever values change
+  useEffect(() => {
+    setPreviewStyle({
+      fontFamily: `${font}, sans-serif`,
+      color: textColor,
+    });
+  }, [primaryColor, textColor, font]);
+
   const handleSave = async () => {
     if (!preferences) return;
     
     setSaving(true);
     try {
-      await savePreferences({
+      const result = await savePreferences({
         ...preferences,
         colors: {
           primary: primaryColor,
@@ -50,6 +60,10 @@ export function ThemeCustomization() {
           font: font
         }
       });
+      
+      if (result) {
+        toast("Theme settings saved successfully");
+      }
     } finally {
       setSaving(false);
     }
@@ -127,7 +141,7 @@ export function ThemeCustomization() {
                   value={fontOption.value}
                   className={fontOption.className}
                 >
-                  {fontOption.label}
+                  <span className={fontOption.className}>{fontOption.label}</span>
                 </SelectItem>
               ))}
             </SelectContent>
@@ -138,7 +152,8 @@ export function ThemeCustomization() {
           <Button 
             onClick={handleSave} 
             disabled={saving}
-            className="bg-primary text-primary-foreground hover:bg-primary/90"
+            style={{ backgroundColor: primaryColor }}
+            className="text-white hover:opacity-90"
           >
             {saving ? (
               <>
@@ -155,8 +170,8 @@ export function ThemeCustomization() {
         {/* Preview section */}
         <div className="mt-6 p-4 border rounded-md">
           <h3 className="mb-2 font-medium">Preview:</h3>
-          <div className="space-y-2">
-            <p style={{ fontFamily: `${font}, sans-serif`, color: textColor }}>
+          <div className="space-y-4">
+            <p style={previewStyle}>
               This text shows your selected font and text color.
             </p>
             <Button 

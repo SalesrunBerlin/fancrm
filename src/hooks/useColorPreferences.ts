@@ -77,6 +77,18 @@ export function useColorPreferences() {
         description: "Failed to load theme preferences",
         variant: "destructive",
       });
+      
+      // Still set default preferences on error
+      const defaultPreferences = {
+        theme: 'light' as const,
+        colors: {
+          primary: '#6B8AFE',
+          text: '#000000',
+          font: 'inter'
+        }
+      };
+      setPreferences(defaultPreferences);
+      applyThemePreferences(defaultPreferences);
     } finally {
       setLoading(false);
     }
@@ -91,7 +103,7 @@ export function useColorPreferences() {
       document.documentElement.style.setProperty('--text-color', prefs.colors.text);
       
       // Set font family
-      document.documentElement.style.fontFamily = prefs.colors.font;
+      document.documentElement.style.fontFamily = prefs.colors.font + ', sans-serif';
       
       // Apply classes to dynamically update button colors
       document.documentElement.classList.forEach(className => {
@@ -111,6 +123,10 @@ export function useColorPreferences() {
       const style = document.createElement('style');
       style.id = 'theme-custom-styles';
       style.textContent = `
+        :root {
+          --primary: ${prefs.colors.primary};
+        }
+        
         .bg-primary {
           background-color: ${prefs.colors.primary} !important;
         }
@@ -126,6 +142,15 @@ export function useColorPreferences() {
         body {
           color: ${prefs.colors.text};
           font-family: ${prefs.colors.font}, sans-serif;
+        }
+        
+        /* Fix button color in shadcn components */
+        .button-primary, [data-variant="default"], button[data-variant="default"] {
+          background-color: ${prefs.colors.primary};
+          color: white;
+        }
+        .button-primary:hover, [data-variant="default"]:hover, button[data-variant="default"]:hover {
+          background-color: ${adjustBrightness(prefs.colors.primary, -15)};
         }
       `;
       document.head.appendChild(style);
@@ -151,11 +176,12 @@ export function useColorPreferences() {
   };
 
   const savePreferences = async (newPreferences: ColorPreferencesData) => {
-    if (!user) return;
+    if (!user) return false;
     
     try {
       console.log("Saving preferences:", newPreferences, "for user:", user.id);
       
+      // Use upsert for better reliability
       const { error } = await supabase
         .from('user_color_preferences')
         .upsert({
@@ -176,6 +202,7 @@ export function useColorPreferences() {
         title: "Success",
         description: "Theme preferences saved successfully",
       });
+      return true;
     } catch (error) {
       console.error('Error saving preferences:', error);
       toast({
@@ -183,6 +210,7 @@ export function useColorPreferences() {
         description: "Failed to save theme preferences",
         variant: "destructive",
       });
+      return false;
     }
   };
 
