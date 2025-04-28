@@ -34,10 +34,10 @@ export function DeleteDialog({
           <AlertDialogDescription>{description}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel onClick={onClose}>Abbrechen</AlertDialogCancel>
+          <AlertDialogCancel onClick={onClose}>Cancel</AlertDialogCancel>
           <AlertDialogAction onClick={onConfirm} className="bg-destructive hover:bg-destructive/90">
             <Trash2 className="mr-2 h-4 w-4" />
-            Löschen
+            Delete
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

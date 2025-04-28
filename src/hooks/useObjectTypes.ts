@@ -51,29 +51,55 @@ export function useObjectTypes() {
   const { data: objectTypes, isLoading } = useQuery({
     queryKey: ["object-types"],
     queryFn: async () => {
+      if (!user) {
+        console.log("No user, skipping object types fetch");
+        return [];
+      }
+      console.log("Fetching object types for user:", user.id);
+      
       const { data, error } = await supabase
         .from("object_types")
         .select("*")
-        .or(`is_system.eq.true,owner_id.eq.${user?.id}`)
+        .or(`is_system.eq.true,owner_id.eq.${user.id}`)
         .order("name");
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching object types:", error);
+        throw error;
+      }
+      
+      console.log(`Fetched ${data?.length || 0} object types`);
       return data;
     },
     enabled: !!user,
   });
 
-  const { data: publishedObjects, isLoading: isLoadingPublished } = useQuery({
+  const { 
+    data: publishedObjects, 
+    isLoading: isLoadingPublished,
+    refetch: refetchPublished
+  } = useQuery({
     queryKey: ["published-objects"],
     queryFn: async () => {
+      if (!user) {
+        console.log("No user, skipping published objects fetch");
+        return [];
+      }
+      console.log("Fetching published objects. Current user:", user.id);
+      
       const { data, error } = await supabase
         .from("object_types")
         .select("*")
         .eq("is_published", true)
-        .neq("owner_id", user?.id)
+        .neq("owner_id", user.id)
         .order("name");
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching published objects:", error);
+        throw error;
+      }
+      
+      console.log(`Fetched ${data?.length || 0} published objects`);
       return data;
     },
     enabled: !!user,
@@ -241,12 +267,22 @@ export function useObjectTypes() {
 
   const deleteSystemObjects = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.rpc('delete_system_objects');
-      if (error) throw error;
-      return true;
+      try {
+        console.log("Deleting system objects...");
+        const { error } = await supabase.rpc('delete_system_objects');
+        if (error) {
+          console.error("Error in delete_system_objects RPC:", error);
+          throw error;
+        }
+        return true;
+      } catch (error) {
+        console.error("Error in deleteSystemObjects mutation:", error);
+        throw error;
+      }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["object-types"] });
+      // Invalidate all queries to refresh all data
+      queryClient.invalidateQueries();
       toast({
         title: "Success",
         description: "System objects deleted successfully",
@@ -256,11 +292,16 @@ export function useObjectTypes() {
       console.error("Error deleting system objects:", error);
       toast({
         title: "Error",
-        description: "Failed to delete system objects",
+        description: "Failed to delete system objects: " + (error instanceof Error ? error.message : "Unknown error"),
         variant: "destructive",
       });
     }
   });
+
+  // Function to manually refresh published objects
+  const refreshPublishedObjects = () => {
+    return refetchPublished();
+  };
 
   return {
     objectTypes,
@@ -272,6 +313,7 @@ export function useObjectTypes() {
     publishObjectType,
     unpublishObjectType,
     importObjectType,
-    deleteSystemObjects
+    deleteSystemObjects,
+    refreshPublishedObjects
   };
 }
