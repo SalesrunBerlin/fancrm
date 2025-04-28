@@ -10,7 +10,7 @@ interface ColorPreferences {
   font: string;
 }
 
-interface ColorPreferencesData {
+export interface ColorPreferencesData {
   theme: 'light' | 'dark';
   colors: ColorPreferences;
 }
@@ -64,6 +64,8 @@ export function useColorPreferences() {
         };
         setPreferences(defaultPreferences);
         applyThemePreferences(defaultPreferences);
+        // Save default preferences for new user
+        await savePreferencesToDB(defaultPreferences);
       }
     } catch (error) {
       console.error('Error loading preferences:', error);
@@ -124,14 +126,12 @@ export function useColorPreferences() {
     }
   };
 
-  const savePreferences = async (newPreferences: ColorPreferencesData) => {
+  // Separate function to handle database operations
+  const savePreferencesToDB = async (newPreferences: ColorPreferencesData): Promise<boolean> => {
     if (!user) return false;
     
     try {
-      // First apply the theme immediately for instant feedback
-      applyThemePreferences(newPreferences);
-      
-      // Then save to database
+      // Save to database
       const { error } = await supabase
         .from('user_color_preferences')
         .upsert({
@@ -143,6 +143,20 @@ export function useColorPreferences() {
         });
 
       if (error) throw error;
+      return true;
+    } catch (error) {
+      console.error('Error saving preferences to database:', error);
+      throw error; // Re-throw to be handled by caller
+    }
+  };
+
+  const savePreferences = async (newPreferences: ColorPreferencesData): Promise<boolean> => {
+    try {
+      // First apply the theme immediately for instant feedback
+      applyThemePreferences(newPreferences);
+      
+      // Then save to database
+      await savePreferencesToDB(newPreferences);
 
       // Update state after successful save
       setPreferences(newPreferences);

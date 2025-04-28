@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/select";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { useTheme } from "@/hooks/useTheme";
 
 const fonts = [
   { value: "inter", label: "Inter", className: "font-['Inter']" },
@@ -25,6 +26,7 @@ const fonts = [
 
 export function ThemeCustomization() {
   const { preferences, savePreferences, loading } = useColorPreferences();
+  const { theme } = useTheme();
   const [primaryColor, setPrimaryColor] = useState('#6B8AFE');
   const [textColor, setTextColor] = useState('#000000');
   const [font, setFont] = useState('inter');
@@ -54,6 +56,7 @@ export function ThemeCustomization() {
     try {
       await savePreferences({
         ...preferences,
+        theme: theme, // Make sure we keep the current theme
         colors: {
           primary: primaryColor,
           text: textColor,
@@ -69,6 +72,7 @@ export function ThemeCustomization() {
     setPrimaryColor('#6B8AFE');
     setTextColor('#000000');
     setFont('inter');
+    toast.info("Values reset to default. Click Save Changes to apply.");
   };
 
   if (loading) {
