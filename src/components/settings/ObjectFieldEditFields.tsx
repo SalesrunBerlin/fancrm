@@ -19,6 +19,7 @@ import { UseFormReturn } from "react-hook-form";
 import { FieldEditFormData } from "./schemas/fieldEditSchema";
 import { PicklistValuesManager } from "./PicklistValuesManager";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
+import { useEffect } from "react";
 
 interface ObjectFieldEditFieldsProps {
   form: UseFormReturn<FieldEditFormData>;
@@ -28,6 +29,13 @@ interface ObjectFieldEditFieldsProps {
 
 export function ObjectFieldEditFields({ form, field, targetFields }: ObjectFieldEditFieldsProps) {
   const { objectTypes } = useObjectTypes();
+  
+  // Ensure target_object_type_id is set in form when editing a lookup field
+  useEffect(() => {
+    if (field.data_type === "lookup" && field.options?.target_object_type_id && !form.getValues("target_object_type_id")) {
+      form.setValue("target_object_type_id", field.options.target_object_type_id);
+    }
+  }, [field, form]);
   
   return (
     <div className="space-y-4">
@@ -74,24 +82,26 @@ export function ObjectFieldEditFields({ form, field, targetFields }: ObjectField
             render={({ field: targetField }) => (
               <FormItem>
                 <FormLabel>Target Object</FormLabel>
-                <Select
-                  value={targetField.value || ""}
-                  onValueChange={targetField.onChange}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select target object" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {objectTypes?.filter(t => t.id !== field.object_type_id).map((type) => (
-                      <SelectItem
-                        key={type.id}
-                        value={type.id}
-                      >
-                        {type.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <FormControl>
+                  <Select
+                    value={targetField.value || ""}
+                    onValueChange={targetField.onChange}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select target object" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {objectTypes?.filter(t => t.id !== field.object_type_id).map((type) => (
+                        <SelectItem
+                          key={type.id}
+                          value={type.id}
+                        >
+                          {type.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </FormControl>
                 <FormMessage />
               </FormItem>
             )}
@@ -103,24 +113,27 @@ export function ObjectFieldEditFields({ form, field, targetFields }: ObjectField
             render={({ field: displayField }) => (
               <FormItem>
                 <FormLabel>Display Field</FormLabel>
-                <Select
-                  value={displayField.value || ""}
-                  onValueChange={displayField.onChange}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select display field" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {targetFields?.map((targetField) => (
-                      <SelectItem
-                        key={targetField.api_name}
-                        value={targetField.api_name}
-                      >
-                        {targetField.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <FormControl>
+                  <Select
+                    value={displayField.value || ""}
+                    onValueChange={displayField.onChange}
+                    disabled={!form.getValues("target_object_type_id")}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select display field" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {targetFields?.map((targetField) => (
+                        <SelectItem
+                          key={targetField.api_name}
+                          value={targetField.api_name}
+                        >
+                          {targetField.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </FormControl>
                 <FormMessage />
               </FormItem>
             )}

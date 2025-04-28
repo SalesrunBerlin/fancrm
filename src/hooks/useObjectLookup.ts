@@ -11,9 +11,13 @@ export interface LookupRecord {
 export function useObjectLookup(objectTypeId: string) {
   const { user } = useAuth();
 
-  const { data: records = [], isLoading } = useQuery({
+  const { data: records = [], isLoading, error } = useQuery({
     queryKey: ["object-records", objectTypeId],
     queryFn: async () => {
+      if (!objectTypeId) {
+        throw new Error("Missing target object ID");
+      }
+      
       const { data: records, error } = await supabase
         .from("object_records")
         .select(`
@@ -32,6 +36,7 @@ export function useObjectLookup(objectTypeId: string) {
                         record.field_values.find((f: any) => f.field_api_name === "first_name")?.value,
                         record.field_values.find((f: any) => f.field_api_name === "last_name")?.value
                       ].filter(Boolean).join(" ") || 
+                      record.id.substring(0, 8) || 
                       "Unnamed Record"
       })) as LookupRecord[];
     },
@@ -40,6 +45,7 @@ export function useObjectLookup(objectTypeId: string) {
 
   return {
     records,
-    isLoading
+    isLoading,
+    error
   };
 }

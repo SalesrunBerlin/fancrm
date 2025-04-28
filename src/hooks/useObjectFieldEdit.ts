@@ -6,6 +6,7 @@ import { ObjectField } from "@/hooks/useObjectTypes";
 import { fieldEditSchema, FieldEditFormData } from "@/components/settings/schemas/fieldEditSchema";
 import { useObjectFields } from "@/hooks/useObjectFields";
 import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 interface UseObjectFieldEditProps {
   field: ObjectField;
@@ -38,6 +39,8 @@ export function useObjectFieldEdit({ field, onClose }: UseObjectFieldEditProps) 
         target_object_type_id: values.target_object_type_id,
       };
 
+      console.log('Updated options:', updatedOptions);
+
       await updateField.mutateAsync({
         id: field.id,
         name: values.name,
@@ -50,7 +53,11 @@ export function useObjectFieldEdit({ field, onClose }: UseObjectFieldEditProps) 
       queryClient.invalidateQueries({ queryKey: ["object-record"] });
       queryClient.invalidateQueries({ queryKey: ["object-types"] });
       
+      toast.success("Field updated successfully");
       onClose();
+    } catch (error) {
+      console.error("Error updating field:", error);
+      toast.error("Failed to update field");
     } finally {
       setIsSubmitting(false);
     }
