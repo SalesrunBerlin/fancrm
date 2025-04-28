@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -123,19 +124,19 @@ button[class*="inline-flex"][class*="bg-primary"] {
   animation: fade-in 0.3s ease-out;
 }
 
-/* Font styles */
+/* Font styles - fixed syntax */
 .font-\['Inter'\] { 
-  font-family: 'Inter', sans-serif; 
+  font-family: "Inter", sans-serif; 
 }
 .font-\['Roboto'\] { 
-  font-family: 'Roboto', sans-serif; 
+  font-family: "Roboto", sans-serif; 
 }
 .font-\['Open_Sans'\] { 
-  font-family: 'Open Sans', sans-serif; 
+  font-family: "Open Sans", sans-serif; 
 }
 .font-\['Nunito'\] { 
-  font-family: 'Nunito', sans-serif; 
+  font-family: "Nunito", sans-serif; 
 }
 .font-\['Lato'\] { 
-  font-family: 'Lato', sans-serif; 
+  font-family: "Lato", sans-serif; 
 }

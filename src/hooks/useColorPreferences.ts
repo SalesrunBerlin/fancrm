@@ -126,11 +126,13 @@ export function useColorPreferences() {
     }
   };
 
-  // Separate function to handle database operations
+  // Function to save preferences to database
   const savePreferencesToDB = async (newPreferences: ColorPreferencesData): Promise<boolean> => {
     if (!user) return false;
     
     try {
+      console.log('Saving preferences to DB:', newPreferences);
+      
       // Save to database
       const { error } = await supabase
         .from('user_color_preferences')
@@ -142,7 +144,12 @@ export function useColorPreferences() {
           onConflict: 'user_id' 
         });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Database error when saving preferences:', error);
+        throw error;
+      }
+      
+      console.log('Successfully saved preferences to DB');
       return true;
     } catch (error) {
       console.error('Error saving preferences to database:', error);
@@ -152,16 +159,26 @@ export function useColorPreferences() {
 
   const savePreferences = async (newPreferences: ColorPreferencesData): Promise<boolean> => {
     try {
+      if (!newPreferences) {
+        console.error('Attempted to save null preferences');
+        return false;
+      }
+      
+      console.log('Saving preferences:', newPreferences);
+      
       // First apply the theme immediately for instant feedback
       applyThemePreferences(newPreferences);
       
       // Then save to database
-      await savePreferencesToDB(newPreferences);
-
-      // Update state after successful save
-      setPreferences(newPreferences);
-      toast.success("Theme preferences saved successfully");
-      return true;
+      const success = await savePreferencesToDB(newPreferences);
+      
+      if (success) {
+        // Update state after successful save
+        setPreferences(newPreferences);
+        toast.success("Theme preferences saved successfully");
+      }
+      
+      return success;
     } catch (error) {
       console.error('Error saving preferences:', error);
       toast.error("Failed to save theme preferences");

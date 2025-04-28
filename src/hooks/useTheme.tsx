@@ -31,9 +31,12 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   // Save theme to database when it changes, but only if we have preferences loaded
   useEffect(() => {
     if (preferences && preferences.theme !== theme) {
+      console.log('Theme changed, saving to database:', theme);
       savePreferences({
         ...preferences,
         theme: theme,
+      }).catch(err => {
+        console.error('Failed to save theme change to database:', err);
       });
     }
   }, [theme, preferences, savePreferences]);

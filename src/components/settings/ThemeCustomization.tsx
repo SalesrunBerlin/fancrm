@@ -50,11 +50,15 @@ export function ThemeCustomization() {
   }, [primaryColor, textColor, font]);
 
   const handleSave = async () => {
-    if (!preferences) return;
+    if (!preferences) {
+      toast.error("Unable to save preferences: preferences not loaded");
+      return;
+    }
     
     setSaving(true);
     try {
-      await savePreferences({
+      console.log('Saving theme preferences from ThemeCustomization component');
+      const success = await savePreferences({
         ...preferences,
         theme: theme, // Make sure we keep the current theme
         colors: {
@@ -63,6 +67,15 @@ export function ThemeCustomization() {
           font: font
         }
       });
+      
+      if (success) {
+        toast.success("Theme preferences saved successfully");
+      } else {
+        toast.error("Failed to save theme preferences");
+      }
+    } catch (error) {
+      console.error('Error in handleSave:', error);
+      toast.error("Failed to save theme preferences");
     } finally {
       setSaving(false);
     }
@@ -141,7 +154,7 @@ export function ThemeCustomization() {
                   value={fontOption.value}
                   className={fontOption.className}
                 >
-                  <span className={fontOption.className}>{fontOption.label}</span>
+                  {fontOption.label}
                 </SelectItem>
               ))}
             </SelectContent>
