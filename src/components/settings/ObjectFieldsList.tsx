@@ -21,7 +21,7 @@ import { ObjectFieldEdit } from "./ObjectFieldEdit";
 import { useObjectFields } from "@/hooks/useObjectFields";
 import { Loader2, MoreHorizontal, Pencil, Trash2, ListChecks } from "lucide-react";
 import { toast } from "sonner";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "../ui/alert-dialog";
+import { DeleteDialog } from "../common/DeleteDialog";
 
 interface ObjectFieldsListProps {
   fields: ObjectField[];
@@ -33,6 +33,7 @@ interface ObjectFieldsListProps {
 export function ObjectFieldsList({ fields, isLoading, objectTypeId, onManagePicklistValues }: ObjectFieldsListProps) {
   const [editingField, setEditingField] = useState<ObjectField | null>(null);
   const [deletingField, setDeletingField] = useState<ObjectField | null>(null);
+  const [dropdownOpen, setDropdownOpen] = useState<string | null>(null);
   const { deleteField } = useObjectFields(objectTypeId);
 
   const handleDeleteField = async () => {
@@ -107,15 +108,28 @@ export function ObjectFieldsList({ fields, isLoading, objectTypeId, onManagePick
                 )}
               </TableCell>
               <TableCell>
-                <DropdownMenu>
+                <DropdownMenu 
+                  open={dropdownOpen === field.id}
+                  onOpenChange={(open) => {
+                    setDropdownOpen(open ? field.id : null);
+                  }}
+                >
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="sm">
                       <MoreHorizontal className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
+                  <DropdownMenuContent 
+                    align="end" 
+                    className="z-50"
+                    onInteractOutside={() => setDropdownOpen(null)}
+                    onEscapeKeyDown={() => setDropdownOpen(null)}
+                  >
                     <DropdownMenuItem 
-                      onClick={() => setEditingField(field)}
+                      onClick={() => {
+                        setDropdownOpen(null);
+                        setEditingField(field);
+                      }}
                       disabled={field.is_system}
                     >
                       <Pencil className="mr-2 h-4 w-4" /> Edit
@@ -123,14 +137,20 @@ export function ObjectFieldsList({ fields, isLoading, objectTypeId, onManagePick
                     
                     {field.data_type === "picklist" && onManagePicklistValues && (
                       <DropdownMenuItem 
-                        onClick={() => onManagePicklistValues(field.id)}
+                        onClick={() => {
+                          setDropdownOpen(null);
+                          onManagePicklistValues(field.id);
+                        }}
                       >
                         <ListChecks className="mr-2 h-4 w-4" /> Manage Values
                       </DropdownMenuItem>
                     )}
                     
                     <DropdownMenuItem 
-                      onClick={() => setDeletingField(field)}
+                      onClick={() => {
+                        setDropdownOpen(null);
+                        setDeletingField(field);
+                      }}
                       disabled={field.is_system}
                       className="text-red-600"
                     >
@@ -154,31 +174,14 @@ export function ObjectFieldsList({ fields, isLoading, objectTypeId, onManagePick
       )}
 
       {/* Delete Confirmation Dialog */}
-      <AlertDialog open={!!deletingField} onOpenChange={(open) => {
-        if (!open) setDeletingField(null);
-      }}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Confirm Deletion</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete the field "{deletingField?.name}"? 
-              This action cannot be undone and may result in data loss.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={handleDeleteField}
-              className="bg-red-600 hover:bg-red-700"
-            >
-              {deleteField.isPending ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : null}
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DeleteDialog
+        isOpen={!!deletingField}
+        onClose={() => setDeletingField(null)}
+        onConfirm={handleDeleteField}
+        title="Confirm Deletion"
+        description={`Are you sure you want to delete the field "${deletingField?.name}"? This action cannot be undone and may result in data loss.`}
+        deleteButtonText={deleteField.isPending ? "Deleting..." : "Delete"}
+      />
     </>
   );
 }
