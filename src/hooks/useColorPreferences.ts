@@ -32,16 +32,18 @@ export function useColorPreferences() {
       const { data, error } = await supabase
         .from('user_color_preferences')
         .select('*')
+        .eq('user_id', user?.id)
         .single();
 
-      if (error) throw error;
+      if (error && error.code !== 'PGRST116') throw error;
       
       if (data) {
         setPreferences(data);
+        applyThemePreferences(data);
       } else {
         // Set default preferences
         const defaultPreferences = {
-          theme: 'light',
+          theme: 'light' as const,
           colors: {
             primary: '#6B8AFE',
             text: '#000000',
@@ -49,20 +51,34 @@ export function useColorPreferences() {
           }
         };
         setPreferences(defaultPreferences);
+        applyThemePreferences(defaultPreferences);
       }
     } catch (error) {
       console.error('Error loading preferences:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load theme preferences",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
   };
 
+  const applyThemePreferences = (prefs: ColorPreferencesData) => {
+    document.documentElement.style.setProperty('--primary-color', prefs.colors.primary);
+    document.documentElement.style.setProperty('--text-color', prefs.colors.text);
+    document.documentElement.style.fontFamily = prefs.colors.font;
+  };
+
   const savePreferences = async (newPreferences: ColorPreferencesData) => {
+    if (!user) return;
+    
     try {
       const { error } = await supabase
         .from('user_color_preferences')
         .upsert({
-          user_id: user?.id,
+          user_id: user.id,
           theme: newPreferences.theme,
           colors: newPreferences.colors
         });
@@ -70,6 +86,8 @@ export function useColorPreferences() {
       if (error) throw error;
 
       setPreferences(newPreferences);
+      applyThemePreferences(newPreferences);
+      
       toast({
         title: "Success",
         description: "Theme preferences saved successfully",

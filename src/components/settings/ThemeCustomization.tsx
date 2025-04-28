@@ -14,11 +14,11 @@ import {
 } from "@/components/ui/select";
 
 const fonts = [
-  { value: "inter", label: "Inter" },
-  { value: "roboto", label: "Roboto" },
-  { value: "open_sans", label: "Open Sans" },
-  { value: "nunito", label: "Nunito" },
-  { value: "lato", label: "Lato" },
+  { value: "inter", label: "Inter", className: "font-['Inter']" },
+  { value: "roboto", label: "Roboto", className: "font-['Roboto']" },
+  { value: "open_sans", label: "Open Sans", className: "font-['Open_Sans']" },
+  { value: "nunito", label: "Nunito", className: "font-['Nunito']" },
+  { value: "lato", label: "Lato", className: "font-['Lato']" },
 ];
 
 export function ThemeCustomization() {
@@ -100,7 +100,11 @@ export function ThemeCustomization() {
             </SelectTrigger>
             <SelectContent>
               {fonts.map((font) => (
-                <SelectItem key={font.value} value={font.value}>
+                <SelectItem 
+                  key={font.value} 
+                  value={font.value}
+                  className={font.className}
+                >
                   {font.label}
                 </SelectItem>
               ))}
