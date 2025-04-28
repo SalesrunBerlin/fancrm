@@ -3,8 +3,7 @@ import { StatusList } from "@/components/settings/StatusList";
 import { StatusForm } from "@/components/settings/StatusForm";
 import { ObjectTypesList } from "@/components/settings/ObjectTypesList";
 import { useDealStatuses } from "@/hooks/useDealStatuses";
-import { useObjectTypes } from "@/hooks/useObjectTypes";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function Settings() {
   const { dealStatuses, isLoading, createStatus, updateStatus, deleteStatus } = useDealStatuses();

@@ -2,8 +2,7 @@
 import { useObjectTypes } from "@/hooks/useObjectTypes";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { useInitializeObjects } from "@/hooks/useInitializeObjects";
-import { Loader2, Plus, Building, User, Briefcase, Calendar } from "lucide-react";
+import { Loader2, Plus, Building, User, Briefcase, Calendar, Box } from "lucide-react";
 import { Link } from "react-router-dom";
 import {
   Dialog,
@@ -13,14 +12,11 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { ObjectTypeForm } from "./ObjectTypeForm";
+import { Badge } from "@/components/ui/badge";
+import { ObjectType } from "@/hooks/useObjectTypes";
 
 export function ObjectTypesList() {
   const { objectTypes, isLoading } = useObjectTypes();
-  const { initializeObjects } = useInitializeObjects();
-
-  const handleInitialize = async () => {
-    await initializeObjects.mutateAsync();
-  };
 
   const getIconComponent = (iconName: string | null) => {
     switch(iconName) {
@@ -28,7 +24,7 @@ export function ObjectTypesList() {
       case 'building': return <Building className="h-5 w-5" />;
       case 'briefcase': return <Briefcase className="h-5 w-5" />;
       case 'calendar': return <Calendar className="h-5 w-5" />;
-      default: return <Building className="h-5 w-5" />;
+      default: return <Box className="h-5 w-5" />;
     }
   };
 
@@ -47,21 +43,11 @@ export function ObjectTypesList() {
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
         <CardTitle className="text-xl">Object Types</CardTitle>
         <div className="flex space-x-2">
-          {!hasObjects && (
-            <Button 
-              onClick={handleInitialize}
-              disabled={initializeObjects.isPending}
-            >
-              {initializeObjects.isPending && (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              )}
-              Initialize Standard Objects
-            </Button>
-          )}
           <Dialog>
             <DialogTrigger asChild>
-              <Button variant="outline" size="icon">
-                <Plus className="h-4 w-4" />
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                Create Object
               </Button>
             </DialogTrigger>
             <DialogContent>
@@ -76,7 +62,7 @@ export function ObjectTypesList() {
       <CardContent>
         {hasObjects ? (
           <div className="space-y-4">
-            {objectTypes.map((objectType) => (
+            {objectTypes.map((objectType: ObjectType) => (
               <Link 
                 to={`/settings/objects/${objectType.id}`} 
                 key={objectType.id}
@@ -94,19 +80,41 @@ export function ObjectTypesList() {
                       </p>
                     </div>
                   </div>
-                  {objectType.is_system && (
-                    <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded">
-                      System
-                    </span>
-                  )}
+                  <div className="flex gap-2">
+                    {objectType.is_system && (
+                      <Badge variant="secondary">System</Badge>
+                    )}
+                    {objectType.is_published && (
+                      <Badge variant="outline">Published</Badge>
+                    )}
+                    {objectType.is_template && (
+                      <Badge variant="outline" className="bg-purple-100">Imported</Badge>
+                    )}
+                  </div>
                 </div>
               </Link>
             ))}
           </div>
         ) : (
-          <p className="text-muted-foreground text-center py-4">
-            No object types found. Initialize standard objects to get started.
-          </p>
+          <div className="text-center py-8">
+            <p className="text-muted-foreground mb-4">
+              No object types found. Create your first custom object to get started.
+            </p>
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Create Object
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Create New Object Type</DialogTitle>
+                </DialogHeader>
+                <ObjectTypeForm />
+              </DialogContent>
+            </Dialog>
+          </div>
         )}
       </CardContent>
     </Card>

@@ -7,10 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Loader2, User, Building, Briefcase, Calendar } from "lucide-react";
+import { ArrowLeft, Loader2, User, Building, Briefcase, Calendar, Box } from "lucide-react";
 import { ObjectFieldsList } from "@/components/settings/ObjectFieldsList";
 import { ObjectFieldForm } from "@/components/settings/ObjectFieldForm";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { PicklistValuesManager } from "@/components/settings/PicklistValuesManager";
 import { toast } from "sonner";
 import {
@@ -23,18 +23,16 @@ import {
 
 export default function ObjectTypeDetail() {
   const { objectTypeId } = useParams<{ objectTypeId: string }>();
-  const { objectTypes, isLoading: isLoadingTypes, updateObjectType } = useObjectTypes();
+  const { objectTypes, isLoading: isLoadingTypes, updateObjectType, publishObjectType, unpublishObjectType } = useObjectTypes();
   const { fields, isLoading: isLoadingFields } = useObjectFields(objectTypeId);
   const [showFieldForm, setShowFieldForm] = useState(false);
   const [showPicklistDialog, setShowPicklistDialog] = useState(false);
   const [selectedField, setSelectedField] = useState<string | null>(null);
   const [defaultFieldApiName, setDefaultFieldApiName] = useState<string>("name");
+  const [showPublishDialog, setShowPublishDialog] = useState(false);
+  const [showUnpublishDialog, setShowUnpublishDialog] = useState(false);
 
   const objectType = objectTypes?.find(type => type.id === objectTypeId);
-  
-  const accountTypeField = objectType?.api_name === "account" 
-    ? fields?.find(f => f.api_name === "type" && f.data_type === "picklist")
-    : null;
 
   // Initialize default field value from object type
   useEffect(() => {
@@ -51,7 +49,7 @@ export default function ObjectTypeDetail() {
       case 'building': return <Building className="h-5 w-5" />;
       case 'briefcase': return <Briefcase className="h-5 w-5" />;
       case 'calendar': return <Calendar className="h-5 w-5" />;
-      default: return <Building className="h-5 w-5" />;
+      default: return <Box className="h-5 w-5" />;
     }
   };
 
@@ -94,6 +92,28 @@ export default function ObjectTypeDetail() {
     setShowPicklistDialog(true);
   };
 
+  const handlePublish = async () => {
+    if (!objectType) return;
+    
+    try {
+      await publishObjectType.mutateAsync(objectType.id);
+      setShowPublishDialog(false);
+    } catch (error) {
+      console.error("Error publishing object:", error);
+    }
+  };
+
+  const handleUnpublish = async () => {
+    if (!objectType) return;
+    
+    try {
+      await unpublishObjectType.mutateAsync(objectType.id);
+      setShowUnpublishDialog(false);
+    } catch (error) {
+      console.error("Error unpublishing object:", error);
+    }
+  };
+
   if (isLoadingTypes) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -134,6 +154,11 @@ export default function ObjectTypeDetail() {
             {getIconComponent(objectType.icon)}
             {objectType.name}
           </h1>
+          {objectType.is_template && (
+            <span className="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded">
+              Imported Template
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-2">
           <Switch
@@ -147,8 +172,25 @@ export default function ObjectTypeDetail() {
       </div>
       
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between pb-4">
           <CardTitle>Object Settings</CardTitle>
+          <div>
+            {objectType.is_published ? (
+              <Button 
+                variant="outline" 
+                onClick={() => setShowUnpublishDialog(true)}
+              >
+                Unpublish
+              </Button>
+            ) : (
+              <Button 
+                variant="outline" 
+                onClick={() => setShowPublishDialog(true)}
+              >
+                Publish
+              </Button>
+            )}
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -172,6 +214,14 @@ export default function ObjectTypeDetail() {
                 This field will be used as the title when viewing records
               </p>
             </div>
+            {objectType.is_template && objectType.source_object_id && (
+              <div>
+                <p className="text-sm font-medium">Source Information</p>
+                <p className="text-xs text-muted-foreground">
+                  This object was imported from another user's published template.
+                </p>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -213,20 +263,11 @@ export default function ObjectTypeDetail() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Manage Picklist Values</DialogTitle>
-            <DialogDescription>
-              {accountTypeField && selectedField === accountTypeField.id && 
-                "Add or remove values for the Account Type field."}
-            </DialogDescription>
           </DialogHeader>
           
           {selectedField && (
             <PicklistValuesManager 
               fieldId={selectedField} 
-              initialValues={
-                accountTypeField && selectedField === accountTypeField.id 
-                  ? ["Kunde", "Potenzial"] 
-                  : undefined
-              }
               onComplete={() => {
                 setShowPicklistDialog(false);
                 setSelectedField(null);
@@ -242,6 +283,46 @@ export default function ObjectTypeDetail() {
               Close
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Publish Dialog */}
+      <Dialog open={showPublishDialog} onOpenChange={setShowPublishDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Publish Object Structure</DialogTitle>
+            <DialogDescription>
+              Publishing this object structure will make it available for other users to import into their account.
+              All fields and picklist values will be included.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowPublishDialog(false)}>Cancel</Button>
+            <Button onClick={handlePublish} disabled={publishObjectType.isPending}>
+              {publishObjectType.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Publish
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Unpublish Dialog */}
+      <Dialog open={showUnpublishDialog} onOpenChange={setShowUnpublishDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Unpublish Object Structure</DialogTitle>
+            <DialogDescription>
+              Unpublishing this object structure will make it no longer available for other users to import.
+              Users who have already imported it will keep their copy.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowUnpublishDialog(false)}>Cancel</Button>
+            <Button onClick={handleUnpublish} disabled={unpublishObjectType.isPending}>
+              {unpublishObjectType.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Unpublish
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

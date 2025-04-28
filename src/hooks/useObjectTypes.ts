@@ -37,6 +37,9 @@ export interface ObjectType {
   default_field_api_name?: string;
   created_at: string;
   updated_at: string;
+  is_published: boolean;
+  is_template: boolean;
+  source_object_id: string | null;
 }
 
 export function useObjectTypes() {
@@ -51,6 +54,22 @@ export function useObjectTypes() {
         .from("object_types")
         .select("*")
         .or(`is_system.eq.true,owner_id.eq.${user?.id}`)
+        .order("name");
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user,
+  });
+
+  const { data: publishedObjects, isLoading: isLoadingPublished } = useQuery({
+    queryKey: ["published-objects"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("object_types")
+        .select("*")
+        .eq("is_published", true)
+        .neq("owner_id", user?.id)
         .order("name");
 
       if (error) throw error;
@@ -108,16 +127,150 @@ export function useObjectTypes() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["object-types"] });
+      queryClient.invalidateQueries({ queryKey: ["published-objects"] });
+      toast({
+        title: "Success",
+        description: "Object type updated successfully",
+      });
     },
     onError: (error) => {
       console.error("Error updating object type:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update object type",
+        variant: "destructive",
+      });
+    }
+  });
+
+  const publishObjectType = useMutation({
+    mutationFn: async (objectTypeId: string) => {
+      const { data, error } = await supabase
+        .from("object_types")
+        .update({ is_published: true })
+        .eq("id", objectTypeId)
+        .select();
+
+      if (error) throw error;
+      if (!data || data.length === 0) {
+        throw new Error("No rows updated");
+      }
+      return data[0];
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["object-types"] });
+      queryClient.invalidateQueries({ queryKey: ["published-objects"] });
+      toast({
+        title: "Success",
+        description: "Object type published successfully",
+      });
+    },
+    onError: (error) => {
+      console.error("Error publishing object type:", error);
+      toast({
+        title: "Error",
+        description: "Failed to publish object type",
+        variant: "destructive",
+      });
+    }
+  });
+
+  const unpublishObjectType = useMutation({
+    mutationFn: async (objectTypeId: string) => {
+      const { data, error } = await supabase
+        .from("object_types")
+        .update({ is_published: false })
+        .eq("id", objectTypeId)
+        .select();
+
+      if (error) throw error;
+      if (!data || data.length === 0) {
+        throw new Error("No rows updated");
+      }
+      return data[0];
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["object-types"] });
+      queryClient.invalidateQueries({ queryKey: ["published-objects"] });
+      toast({
+        title: "Success",
+        description: "Object type unpublished successfully",
+      });
+    },
+    onError: (error) => {
+      console.error("Error unpublishing object type:", error);
+      toast({
+        title: "Error",
+        description: "Failed to unpublish object type",
+        variant: "destructive",
+      });
+    }
+  });
+
+  const importObjectType = useMutation({
+    mutationFn: async (sourceObjectId: string) => {
+      if (!user) throw new Error("User must be logged in to import object types");
+
+      const { data: functionResult, error: functionError } = await supabase
+        .rpc('clone_object_structure', {
+          source_object_id: sourceObjectId,
+          new_owner_id: user.id
+        });
+
+      if (functionError) throw functionError;
+      
+      return functionResult;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["object-types"] });
+      toast({
+        title: "Success",
+        description: "Object structure imported successfully",
+      });
+    },
+    onError: (error) => {
+      console.error("Error importing object structure:", error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to import object structure",
+        variant: "destructive",
+      });
+    }
+  });
+
+  const deleteSystemObjects = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.rpc('delete_system_objects');
+      if (error) throw error;
+      return true;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["object-types"] });
+      toast({
+        title: "Success",
+        description: "System objects deleted successfully",
+      });
+    },
+    onError: (error) => {
+      console.error("Error deleting system objects:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete system objects",
+        variant: "destructive",
+      });
     }
   });
 
   return {
     objectTypes,
     isLoading,
+    publishedObjects,
+    isLoadingPublished,
     createObjectType,
     updateObjectType,
+    publishObjectType,
+    unpublishObjectType,
+    importObjectType,
+    deleteSystemObjects
   };
 }

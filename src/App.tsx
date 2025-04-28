@@ -10,11 +10,10 @@ import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import { PrivateRoute } from "@/components/auth/PrivateRoute";
 import Settings from "./pages/Settings";
-import Products from "./pages/Products";
-import ProductDetail from "./pages/ProductDetail";
 import ObjectTypeDetail from "./pages/ObjectTypeDetail";
 import ObjectRecordsList from "./pages/ObjectRecordsList";
 import ObjectRecordDetail from "./pages/ObjectRecordDetail";
+import Structures from "./pages/Structures";
 
 const queryClient = new QueryClient();
 
@@ -30,10 +29,9 @@ const App = () => (
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/settings/objects/:objectTypeId" element={<ObjectTypeDetail />} />
-              <Route path="/products" element={<Products />} />
-              <Route path="/products/:id" element={<ProductDetail />} />
               <Route path="/objects/:objectTypeId" element={<ObjectRecordsList />} />
               <Route path="/objects/:objectTypeId/:recordId" element={<ObjectRecordDetail />} />
+              <Route path="/structures" element={<Structures />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>

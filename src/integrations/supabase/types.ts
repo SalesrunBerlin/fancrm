@@ -605,10 +605,13 @@ export type Database = {
           icon: string | null
           id: string
           is_active: boolean
+          is_published: boolean
           is_system: boolean
+          is_template: boolean
           name: string
           owner_id: string | null
           show_in_navigation: boolean
+          source_object_id: string | null
           updated_at: string
         }
         Insert: {
@@ -619,10 +622,13 @@ export type Database = {
           icon?: string | null
           id?: string
           is_active?: boolean
+          is_published?: boolean
           is_system?: boolean
+          is_template?: boolean
           name: string
           owner_id?: string | null
           show_in_navigation?: boolean
+          source_object_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -633,13 +639,24 @@ export type Database = {
           icon?: string | null
           id?: string
           is_active?: boolean
+          is_published?: boolean
           is_system?: boolean
+          is_template?: boolean
           name?: string
           owner_id?: string | null
           show_in_navigation?: boolean
+          source_object_id?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "object_types_source_object_id_fkey"
+            columns: ["source_object_id"]
+            isOneToOne: false
+            referencedRelation: "object_types"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       product_families: {
         Row: {
@@ -816,6 +833,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      clone_object_structure: {
+        Args: { source_object_id: string; new_owner_id: string }
+        Returns: string
+      }
+      delete_system_objects: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       initialize_deal_statuses: {
         Args: Record<PropertyKey, never>
         Returns: undefined
