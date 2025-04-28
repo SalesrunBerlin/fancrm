@@ -1,18 +1,17 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { Search, Menu } from "lucide-react";
+import { Search } from "lucide-react";
 import { UserProfileMenu } from "./UserProfileMenu";
 import { CommandSearch } from "@/components/search/CommandSearch";
 import { ActiveObjectsMenu } from "./ActiveObjectsMenu";
+import { SidebarTrigger } from "@/components/ui/sidebar";
 
-interface HeaderProps extends React.HTMLAttributes<HTMLElement> {
-  onMenuClick: () => void;
-  buttonRef?: React.RefObject<HTMLButtonElement>;
-}
+interface HeaderProps extends React.HTMLAttributes<HTMLElement> {}
 
-export function Header({ onMenuClick, buttonRef, className }: HeaderProps) {
+export function Header({ className }: HeaderProps) {
   const [searchDialogOpen, setSearchDialogOpen] = useState(false);
   
   useEffect(() => {
@@ -33,16 +32,7 @@ export function Header({ onMenuClick, buttonRef, className }: HeaderProps) {
       className
     )}>
       <div className="flex items-center gap-4">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={onMenuClick}
-          className="mr-2"
-          aria-label="Toggle menu"
-          ref={buttonRef}
-        >
-          <Menu className="h-5 w-5" />
-        </Button>
+        <SidebarTrigger className="mr-2" />
         <h1 className="font-semibold hidden md:block">CRMbeauty</h1>
         <ActiveObjectsMenu />
       </div>
