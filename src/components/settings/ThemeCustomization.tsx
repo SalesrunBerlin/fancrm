@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useColorPreferences } from "@/hooks/useColorPreferences";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -12,6 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Loader2 } from "lucide-react";
 
 const fonts = [
   { value: "inter", label: "Inter", className: "font-['Inter']" },
@@ -23,13 +24,25 @@ const fonts = [
 
 export function ThemeCustomization() {
   const { preferences, savePreferences, loading } = useColorPreferences();
-  const [primaryColor, setPrimaryColor] = useState(preferences?.colors.primary || '#6B8AFE');
-  const [textColor, setTextColor] = useState(preferences?.colors.text || '#000000');
-  const [font, setFont] = useState(preferences?.colors.font || 'inter');
+  const [primaryColor, setPrimaryColor] = useState('#6B8AFE');
+  const [textColor, setTextColor] = useState('#000000');
+  const [font, setFont] = useState('inter');
+  const [saving, setSaving] = useState(false);
 
-  const handleSave = () => {
+  useEffect(() => {
     if (preferences) {
-      savePreferences({
+      setPrimaryColor(preferences.colors.primary);
+      setTextColor(preferences.colors.text);
+      setFont(preferences.colors.font);
+    }
+  }, [preferences]);
+
+  const handleSave = async () => {
+    if (!preferences) return;
+    
+    setSaving(true);
+    try {
+      await savePreferences({
         ...preferences,
         colors: {
           primary: primaryColor,
@@ -37,6 +50,8 @@ export function ThemeCustomization() {
           font: font
         }
       });
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -47,7 +62,14 @@ export function ThemeCustomization() {
   };
 
   if (loading) {
-    return <div>Loading...</div>;
+    return (
+      <Card>
+        <CardContent className="flex items-center justify-center p-6">
+          <Loader2 className="h-6 w-6 animate-spin text-primary" />
+          <span className="ml-2">Loading theme settings...</span>
+        </CardContent>
+      </Card>
+    );
   }
 
   return (
@@ -99,13 +121,13 @@ export function ThemeCustomization() {
               <SelectValue placeholder="Select a font" />
             </SelectTrigger>
             <SelectContent>
-              {fonts.map((font) => (
+              {fonts.map((fontOption) => (
                 <SelectItem 
-                  key={font.value} 
-                  value={font.value}
-                  className={font.className}
+                  key={fontOption.value} 
+                  value={fontOption.value}
+                  className={fontOption.className}
                 >
-                  {font.label}
+                  {fontOption.label}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -113,8 +135,40 @@ export function ThemeCustomization() {
         </div>
 
         <div className="flex gap-2 pt-4">
-          <Button onClick={handleSave}>Save Changes</Button>
+          <Button 
+            onClick={handleSave} 
+            disabled={saving}
+            className="bg-primary text-primary-foreground hover:bg-primary/90"
+          >
+            {saving ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              'Save Changes'
+            )}
+          </Button>
           <Button variant="outline" onClick={handleReset}>Reset to Default</Button>
+        </div>
+        
+        {/* Preview section */}
+        <div className="mt-6 p-4 border rounded-md">
+          <h3 className="mb-2 font-medium">Preview:</h3>
+          <div className="space-y-2">
+            <p style={{ fontFamily: `${font}, sans-serif`, color: textColor }}>
+              This text shows your selected font and text color.
+            </p>
+            <Button 
+              style={{ 
+                backgroundColor: primaryColor,
+                color: '#ffffff',
+              }}
+              className="hover:opacity-90"
+            >
+              Sample Button
+            </Button>
+          </div>
         </div>
       </CardContent>
     </Card>

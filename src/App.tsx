@@ -15,6 +15,7 @@ import ObjectRecordsList from "./pages/ObjectRecordsList";
 import ObjectRecordDetail from "./pages/ObjectRecordDetail";
 import Structures from "./pages/Structures";
 import { PublishedObjectDetail } from "./components/structures/PublishedObjectDetail";
+import { ThemeProvider } from "./hooks/useTheme";
 
 const queryClient = new QueryClient();
 
@@ -22,23 +23,25 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <BrowserRouter>
       <AuthProvider>
-        <TooltipProvider>
-          <Routes>
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/" element={<PrivateRoute><Layout /></PrivateRoute>}>
-              <Route index element={<Navigate to="/dashboard" replace />} />
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/settings" element={<Settings />} />
-              <Route path="/settings/objects/:objectTypeId" element={<ObjectTypeDetail />} />
-              <Route path="/objects/:objectTypeId" element={<ObjectRecordsList />} />
-              <Route path="/objects/:objectTypeId/:recordId" element={<ObjectRecordDetail />} />
-              <Route path="/structures" element={<Structures />} />
-              <Route path="/structures/published/:objectId" element={<PublishedObjectDetail />} />
-            </Route>
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-          <Toaster />
-        </TooltipProvider>
+        <ThemeProvider>
+          <TooltipProvider>
+            <Routes>
+              <Route path="/auth" element={<Auth />} />
+              <Route path="/" element={<PrivateRoute><Layout /></PrivateRoute>}>
+                <Route index element={<Navigate to="/dashboard" replace />} />
+                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/settings" element={<Settings />} />
+                <Route path="/settings/objects/:objectTypeId" element={<ObjectTypeDetail />} />
+                <Route path="/objects/:objectTypeId" element={<ObjectRecordsList />} />
+                <Route path="/objects/:objectTypeId/:recordId" element={<ObjectRecordDetail />} />
+                <Route path="/structures" element={<Structures />} />
+                <Route path="/structures/published/:objectId" element={<PublishedObjectDetail />} />
+              </Route>
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+            <Toaster />
+          </TooltipProvider>
+        </ThemeProvider>
       </AuthProvider>
     </BrowserRouter>
   </QueryClientProvider>

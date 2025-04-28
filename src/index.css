@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -55,8 +56,18 @@
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background;
     color: var(--text-color, #000000);
+  }
+
+  /* Custom button styles that use the primary color variable */
+  .btn-primary {
+    background-color: var(--primary-color, #6B8AFE);
+    color: white;
+  }
+  
+  .btn-primary:hover {
+    background-color: color-mix(in srgb, var(--primary-color, #6B8AFE) 85%, black);
   }
 }
 

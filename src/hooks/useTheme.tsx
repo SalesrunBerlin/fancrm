@@ -1,5 +1,6 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { useColorPreferences } from "./useColorPreferences";
 
 type Theme = "light" | "dark";
 
@@ -18,10 +19,17 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     }
     return "light";
   });
+  
+  const { preferences } = useColorPreferences();
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", theme === "dark");
     localStorage.setItem("theme", theme);
+    
+    // Save theme preference to database if we have user preferences
+    if (preferences) {
+      // This would be handled by the useColorPreferences hook
+    }
   }, [theme]);
 
   const setTheme = (theme: Theme) => setThemeState(theme);
