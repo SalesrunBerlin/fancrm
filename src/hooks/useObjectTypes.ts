@@ -46,7 +46,7 @@ export interface ObjectType {
 export function useObjectTypes() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const queryClient = new QueryClient();
+  const queryClient = useQueryClient();
 
   const { data: objectTypes, isLoading } = useQuery({
     queryKey: ["object-types"],

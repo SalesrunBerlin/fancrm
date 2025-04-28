@@ -25,7 +25,7 @@ export function ObjectTypeForm() {
   const [icon, setIcon] = useState("building");
   const [defaultFieldApiName, setDefaultFieldApiName] = useState("name");
   const [objectTypeId, setObjectTypeId] = useState<string | null>(null);
-  const { fields } = useObjectFields(objectTypeId);
+  const { fields, isLoading: isLoadingFields } = useObjectFields(objectTypeId);
 
   // Auto-generate API name from name
   useEffect(() => {
@@ -87,7 +87,7 @@ export function ObjectTypeForm() {
   ];
 
   // Determine which fields to show in the dropdown
-  const availableFields = objectTypeId && fields?.length 
+  const availableFields = objectTypeId && fields && fields.length > 0
     ? fields.map(field => ({ api_name: field.api_name, label: field.name })) 
     : defaultFields;
 
@@ -135,11 +135,17 @@ export function ObjectTypeForm() {
             <SelectValue placeholder="Select default display field" />
           </SelectTrigger>
           <SelectContent>
-            {availableFields.map(field => (
-              <SelectItem key={field.api_name} value={field.api_name}>
-                {field.label}
+            {isLoadingFields ? (
+              <SelectItem value="loading" disabled>
+                Loading fields...
               </SelectItem>
-            ))}
+            ) : (
+              availableFields.map(field => (
+                <SelectItem key={field.api_name} value={field.api_name}>
+                  {field.label}
+                </SelectItem>
+              ))
+            )}
           </SelectContent>
         </Select>
         <p className="text-xs text-muted-foreground">
