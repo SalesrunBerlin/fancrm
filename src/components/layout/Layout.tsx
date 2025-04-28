@@ -1,14 +1,13 @@
 
-import { useState, useEffect, useRef } from "react";
 import { Header } from "./Header";
-import { Outlet, useLocation } from "react-router-dom";
+import { Outlet } from "react-router-dom";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "./AppSidebar";
 
 export function Layout() {
   return (
     <SidebarProvider>
-      <div className="flex h-screen w-full overflow-hidden relative">
+      <div className="flex h-screen w-full overflow-hidden relative bg-background">
         <AppSidebar />
         <div className="flex flex-col flex-1 overflow-hidden">
           <Header />

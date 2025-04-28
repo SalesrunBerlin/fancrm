@@ -4,9 +4,11 @@ import { NavigationMenu, NavigationMenuContent, NavigationMenuItem, NavigationMe
 import { Building, User, Briefcase, Calendar, Box } from "lucide-react";
 import { Link } from "react-router-dom";
 import { ObjectType } from "@/hooks/useObjectTypes";
+import { useSidebar } from "@/components/ui/sidebar";
 
 export function ActiveObjectsMenu() {
   const { objectTypes } = useObjectTypes();
+  const { setOpenMobile } = useSidebar();
   const visibleObjects = objectTypes?.filter(obj => obj.is_active) || [];
 
   const getIconComponent = (iconName: string | null) => {
@@ -36,6 +38,7 @@ export function ActiveObjectsMenu() {
                   key={object.id}
                   to={`/objects/${object.id}`}
                   className="flex items-center gap-2 px-3 py-2 text-sm rounded-md hover:bg-accent"
+                  onClick={() => setOpenMobile(false)}
                 >
                   {getIconComponent(object.icon)}
                   {object.name}

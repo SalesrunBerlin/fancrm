@@ -8,10 +8,12 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import { LayoutDashboard, Settings, FileText } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { ActiveObjectsMenu } from "./ActiveObjectsMenu";
+import { useEffect } from "react";
 
 const navigationItems = [
   {
@@ -33,6 +35,12 @@ const navigationItems = [
 
 export function AppSidebar() {
   const { pathname } = useLocation();
+  const { setOpenMobile } = useSidebar();
+
+  // Close sidebar on route change
+  useEffect(() => {
+    setOpenMobile(false);
+  }, [pathname, setOpenMobile]);
 
   return (
     <Sidebar>
@@ -48,7 +56,7 @@ export function AppSidebar() {
                     isActive={pathname === item.path || pathname.startsWith(item.path + "/")}
                     tooltip={item.title}
                   >
-                    <Link to={item.path}>
+                    <Link to={item.path} onClick={() => setOpenMobile(false)}>
                       <item.icon className="h-4 w-4" />
                       <span>{item.title}</span>
                     </Link>
