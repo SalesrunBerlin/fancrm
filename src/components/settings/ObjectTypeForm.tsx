@@ -5,7 +5,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
-import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 import {
   Select,
@@ -14,31 +13,32 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useObjectFields } from "@/hooks/useObjectFields";
 
 export function ObjectTypeForm() {
   const { createObjectType } = useObjectTypes();
-  const { toast } = useToast();
   const [name, setName] = useState("");
   const [apiName, setApiName] = useState("");
   const [description, setDescription] = useState("");
   const [icon, setIcon] = useState("building");
   const [defaultFieldApiName, setDefaultFieldApiName] = useState("name");
-  const [objectTypeId, setObjectTypeId] = useState<string | null>(null);
-  const { fields, isLoading: isLoadingFields } = useObjectFields(objectTypeId);
 
-  // Auto-generate API name from name
-  useEffect(() => {
-    if (name && !apiName) {
-      setApiName(name.toLowerCase().replace(/[^a-z0-9]/g, "_"));
+  // Function to generate API name from name
+  const generateApiName = () => {
+    if (!apiName && name) {
+      const generatedApiName = name
+        .toLowerCase()
+        .replace(/\s+/g, '_')      // Replace spaces with underscores
+        .replace(/[^a-z0-9_]/g, '') // Remove special characters
+        .replace(/^[0-9]/, 'x$&');  // Prefix with 'x' if starts with number
+      setApiName(generatedApiName);
     }
-  }, [name, apiName]);
+  };
 
   const handleCreateObjectType = async () => {
-    if (!name.trim() || !apiName.trim()) {
+    if (!name.trim() || !apiName.trim() || !defaultFieldApiName.trim()) {
       toast({
-        title: "Error",
-        description: "Name and API Name are required",
+        title: "Fehler",
+        description: "Name, API-Name und Bezeichnungsfeld sind erforderlich",
         variant: "destructive",
       });
       return;
@@ -50,7 +50,7 @@ export function ObjectTypeForm() {
         api_name: apiName.trim().toLowerCase(),
         description: description.trim() || null,
         icon: icon,
-        default_field_api_name: defaultFieldApiName,
+        default_field_api_name: defaultFieldApiName.trim(),
         is_system: false,
         is_active: false,
         show_in_navigation: false,
@@ -59,7 +59,6 @@ export function ObjectTypeForm() {
         source_object_id: null
       });
 
-      setObjectTypeId(result.id);
       setName("");
       setApiName("");
       setDescription("");
@@ -67,49 +66,39 @@ export function ObjectTypeForm() {
       setDefaultFieldApiName("name");
 
       toast({
-        title: "Success",
-        description: "Object type created successfully",
+        title: "Erfolg",
+        description: "Objekttyp wurde erfolgreich erstellt",
       });
     } catch (error) {
       console.error("Error creating object type:", error);
       toast({
-        title: "Error",
-        description: "Failed to create object type",
+        title: "Fehler",
+        description: "Objekttyp konnte nicht erstellt werden",
         variant: "destructive",
       });
     }
   };
 
-  // Default fields for new object types
-  const defaultFields = [
-    { api_name: "name", label: "Name" },
-    { api_name: "record_id", label: "Record ID" },
-  ];
-
-  // Determine which fields to show in the dropdown
-  const availableFields = objectTypeId && fields && fields.length > 0
-    ? fields.map(field => ({ api_name: field.api_name, label: field.name })) 
-    : defaultFields;
-
   return (
     <div className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="object-name">Name</Label>
+        <Label htmlFor="object-name">Name*</Label>
         <Input
           id="object-name"
-          placeholder="Enter object name"
+          placeholder="Geben Sie den Objektnamen ein"
           value={name}
           onChange={(e) => setName(e.target.value)}
         />
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="api-name">API Name</Label>
+        <Label htmlFor="api-name">API Name*</Label>
         <Input
           id="api-name"
-          placeholder="Enter API name"
+          placeholder="Klicken Sie hier um den API-Namen zu generieren"
           value={apiName}
           onChange={(e) => setApiName(e.target.value)}
+          onClick={generateApiName}
         />
       </div>
 
@@ -117,7 +106,7 @@ export function ObjectTypeForm() {
         <Label htmlFor="icon">Icon</Label>
         <Select value={icon} onValueChange={setIcon}>
           <SelectTrigger id="icon">
-            <SelectValue placeholder="Select an icon" />
+            <SelectValue placeholder="Wählen Sie ein Icon" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="building">Building</SelectItem>
@@ -129,35 +118,23 @@ export function ObjectTypeForm() {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="default-field">Default Display Field</Label>
-        <Select value={defaultFieldApiName} onValueChange={setDefaultFieldApiName}>
-          <SelectTrigger id="default-field">
-            <SelectValue placeholder="Select default display field" />
-          </SelectTrigger>
-          <SelectContent>
-            {isLoadingFields ? (
-              <SelectItem value="loading" disabled>
-                Loading fields...
-              </SelectItem>
-            ) : (
-              availableFields.map(field => (
-                <SelectItem key={field.api_name} value={field.api_name}>
-                  {field.label}
-                </SelectItem>
-              ))
-            )}
-          </SelectContent>
-        </Select>
+        <Label htmlFor="default-field">Bezeichnungsfeld*</Label>
+        <Input
+          id="default-field"
+          placeholder="Name des Bezeichnungsfeldes"
+          value={defaultFieldApiName}
+          onChange={(e) => setDefaultFieldApiName(e.target.value)}
+        />
         <p className="text-xs text-muted-foreground">
-          Field to use as the record title in detail views
+          Dieses Feld wird als Titel in der Detailansicht verwendet
         </p>
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="description">Description</Label>
+        <Label htmlFor="description">Beschreibung</Label>
         <Textarea
           id="description"
-          placeholder="Enter description"
+          placeholder="Geben Sie eine Beschreibung ein"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
         />
@@ -171,7 +148,7 @@ export function ObjectTypeForm() {
         {createObjectType.isPending && (
           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
         )}
-        Create Object Type
+        Objekttyp erstellen
       </Button>
     </div>
   );
