@@ -5,7 +5,6 @@ import {
   LayoutDashboard,
   Settings,
   FileText,
-  Package2,
 } from "lucide-react";
 import { ActiveObjectsMenu } from "./ActiveObjectsMenu";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -49,12 +48,6 @@ export function Sidebar() {
               active={pathname === "/dashboard"}
             />
             <ActiveObjectsMenu />
-            <SidebarLink
-              to="/structures"
-              icon={<FileText className="h-4 w-4" />}
-              label="Structures"
-              active={pathname === "/structures" || pathname.startsWith("/structures/")}
-            />
             <SidebarLink
               to="/settings"
               icon={<Settings className="h-4 w-4" />}

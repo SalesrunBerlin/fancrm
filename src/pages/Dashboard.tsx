@@ -14,7 +14,7 @@ export default function Dashboard() {
           <CardContent>
             <p className="text-muted-foreground">
               Your custom CRM solution is ready. You can create and manage your own
-              object types and records.
+              object types and records in the Settings section.
             </p>
           </CardContent>
         </Card>
