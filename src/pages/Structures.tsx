@@ -3,8 +3,8 @@ import { useEffect, useState } from "react";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter } from "@/components/ui/card";
-import { FileText, Download, Loader2, Box, User, Building, Briefcase, Calendar } from "lucide-react";
-import { Link } from "react-router-dom";
+import { FileText, Download, Loader2, Box, User, Building, Briefcase, Calendar, Eye } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
 import { 
   Dialog, 
   DialogContent, 
@@ -16,6 +16,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ObjectType } from "@/hooks/useObjectTypes";
 import { Badge } from "@/components/ui/badge";
+import { PublishingConfigDialog } from "@/components/settings/PublishingConfigDialog";
 
 export default function Structures() {
   const { 
@@ -27,8 +28,10 @@ export default function Structures() {
     deleteSystemObjects 
   } = useObjectTypes();
   const [showImportDialog, setShowImportDialog] = useState(false);
+  const [showPublishDialog, setShowPublishDialog] = useState(false);
   const [selectedObjectId, setSelectedObjectId] = useState<string | null>(null);
   const [showCleanupDialog, setShowCleanupDialog] = useState(false);
+  const navigate = useNavigate();
 
   const getIconComponent = (iconName: string | null) => {
     switch(iconName) {
@@ -59,6 +62,11 @@ export default function Structures() {
     } catch (error) {
       console.error("Error cleaning up system objects:", error);
     }
+  };
+
+  const handlePublish = (objectId: string) => {
+    setSelectedObjectId(objectId);
+    setShowPublishDialog(true);
   };
   
   // Check if there are any system objects
@@ -120,12 +128,23 @@ export default function Structures() {
                       {objectType.is_active ? "Active" : "Inactive"}
                     </p>
                   </CardContent>
-                  <CardFooter className="pt-2 mt-auto">
-                    <Link to={`/settings/objects/${objectType.id}`} className="w-full">
-                      <Button variant="outline" className="w-full">
-                        Manage
-                      </Button>
-                    </Link>
+                  <CardFooter className="pt-2 mt-auto flex flex-col gap-2">
+                    <div className="flex w-full gap-2">
+                      <Link to={`/settings/objects/${objectType.id}`} className="flex-1">
+                        <Button variant="outline" className="w-full">
+                          Manage
+                        </Button>
+                      </Link>
+                      {!objectType.is_published && !objectType.is_template && (
+                        <Button 
+                          variant="outline" 
+                          className="flex-1"
+                          onClick={() => handlePublish(objectType.id)}
+                        >
+                          Publish
+                        </Button>
+                      )}
+                    </div>
                   </CardFooter>
                 </Card>
               ))
@@ -169,10 +188,18 @@ export default function Structures() {
                       Published by another user
                     </p>
                   </CardContent>
-                  <CardFooter className="pt-2 mt-auto">
+                  <CardFooter className="pt-2 mt-auto flex gap-2">
                     <Button 
                       variant="outline" 
-                      className="w-full flex gap-2"
+                      className="flex gap-2 w-full"
+                      onClick={() => navigate(`/structures/published/${objectType.id}`)}
+                    >
+                      <Eye className="h-4 w-4" />
+                      View
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      className="flex gap-2 w-full"
                       onClick={() => {
                         setSelectedObjectId(objectType.id);
                         setShowImportDialog(true);
@@ -204,7 +231,7 @@ export default function Structures() {
             <DialogTitle>Import Object Structure</DialogTitle>
             <DialogDescription>
               This will create a copy of the object structure in your account.
-              All fields and picklist values will be included.
+              All included fields and picklist values will be imported.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -221,6 +248,16 @@ export default function Structures() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Publishing Configuration Dialog */}
+      {showPublishDialog && selectedObjectId && (
+        <PublishingConfigDialog
+          objectTypeId={selectedObjectId}
+          open={showPublishDialog}
+          onOpenChange={setShowPublishDialog}
+          onComplete={() => setSelectedObjectId(null)}
+        />
+      )}
 
       {/* Cleanup Dialog */}
       <Dialog open={showCleanupDialog} onOpenChange={setShowCleanupDialog}>

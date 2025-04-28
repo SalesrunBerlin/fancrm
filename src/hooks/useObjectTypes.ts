@@ -22,6 +22,7 @@ export interface ObjectField {
   owner_id: string;
   created_at: string;
   updated_at: string;
+  isPublished?: boolean; // Used for publishing configuration
 }
 
 export interface ObjectType {
@@ -45,7 +46,7 @@ export interface ObjectType {
 export function useObjectTypes() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const queryClient = useQueryClient();
+  const queryClient = new QueryClient();
 
   const { data: objectTypes, isLoading } = useQuery({
     queryKey: ["object-types"],

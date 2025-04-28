@@ -416,6 +416,48 @@ export type Database = {
           },
         ]
       }
+      object_field_publishing: {
+        Row: {
+          created_at: string
+          field_id: string
+          id: string
+          is_included: boolean
+          object_type_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          field_id: string
+          id?: string
+          is_included?: boolean
+          object_type_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          field_id?: string
+          id?: string
+          is_included?: boolean
+          object_type_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "object_field_publishing_field_id_fkey"
+            columns: ["field_id"]
+            isOneToOne: false
+            referencedRelation: "object_fields"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "object_field_publishing_object_type_id_fkey"
+            columns: ["object_type_id"]
+            isOneToOne: false
+            referencedRelation: "object_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       object_field_values: {
         Row: {
           created_at: string | null

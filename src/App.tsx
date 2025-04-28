@@ -14,6 +14,7 @@ import ObjectTypeDetail from "./pages/ObjectTypeDetail";
 import ObjectRecordsList from "./pages/ObjectRecordsList";
 import ObjectRecordDetail from "./pages/ObjectRecordDetail";
 import Structures from "./pages/Structures";
+import { PublishedObjectDetail } from "./components/structures/PublishedObjectDetail";
 
 const queryClient = new QueryClient();
 
@@ -32,6 +33,7 @@ const App = () => (
               <Route path="/objects/:objectTypeId" element={<ObjectRecordsList />} />
               <Route path="/objects/:objectTypeId/:recordId" element={<ObjectRecordDetail />} />
               <Route path="/structures" element={<Structures />} />
+              <Route path="/structures/published/:objectId" element={<PublishedObjectDetail />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>

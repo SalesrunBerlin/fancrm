@@ -14,6 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useObjectFields } from "@/hooks/useObjectFields";
 
 export function ObjectTypeForm() {
   const { createObjectType } = useObjectTypes();
@@ -23,6 +24,8 @@ export function ObjectTypeForm() {
   const [description, setDescription] = useState("");
   const [icon, setIcon] = useState("building");
   const [defaultFieldApiName, setDefaultFieldApiName] = useState("name");
+  const [objectTypeId, setObjectTypeId] = useState<string | null>(null);
+  const { fields } = useObjectFields(objectTypeId);
 
   // Auto-generate API name from name
   useEffect(() => {
@@ -42,7 +45,7 @@ export function ObjectTypeForm() {
     }
 
     try {
-      await createObjectType.mutateAsync({
+      const result = await createObjectType.mutateAsync({
         name: name.trim(),
         api_name: apiName.trim().toLowerCase(),
         description: description.trim() || null,
@@ -56,6 +59,7 @@ export function ObjectTypeForm() {
         source_object_id: null
       });
 
+      setObjectTypeId(result.id);
       setName("");
       setApiName("");
       setDescription("");
@@ -75,6 +79,17 @@ export function ObjectTypeForm() {
       });
     }
   };
+
+  // Default fields for new object types
+  const defaultFields = [
+    { api_name: "name", label: "Name" },
+    { api_name: "record_id", label: "Record ID" },
+  ];
+
+  // Determine which fields to show in the dropdown
+  const availableFields = objectTypeId && fields?.length 
+    ? fields.map(field => ({ api_name: field.api_name, label: field.name })) 
+    : defaultFields;
 
   return (
     <div className="space-y-4">
@@ -120,8 +135,11 @@ export function ObjectTypeForm() {
             <SelectValue placeholder="Select default display field" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="name">Name</SelectItem>
-            <SelectItem value="record_id">Record ID</SelectItem>
+            {availableFields.map(field => (
+              <SelectItem key={field.api_name} value={field.api_name}>
+                {field.label}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
         <p className="text-xs text-muted-foreground">
