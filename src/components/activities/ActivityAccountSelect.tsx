@@ -6,7 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 
 type Option = { id: string; name: string };
 
-export function ActivityAccountSelect({ value, onChange, disabled }: {
+export function ActivityAccountSelect({ value, onChange, disabled = false }: {
   value: string | null;
   onChange: (val: string | null) => void;
   disabled?: boolean;
@@ -16,12 +16,28 @@ export function ActivityAccountSelect({ value, onChange, disabled }: {
   
   useEffect(() => {
     if (user) {
-      // Filter accounts by owner_id to only show accounts owned by the current user
-      supabase.from("accounts")
-        .select("id,name")
+      // Load accounts from object_records table using the account object type
+      supabase
+        .from("object_records")
+        .select(`
+          id,
+          field_values:object_field_values(field_api_name, value)
+        `)
+        .eq("object_type_id", "account_object_type_id") // Replace with actual account object type ID
         .eq("owner_id", user.id)
-        .then(({ data }) => {
-          setAccounts(data || []);
+        .then(({ data, error }) => {
+          if (error) {
+            console.error("Error loading accounts:", error);
+            return;
+          }
+          
+          // Transform the data into Option format
+          const transformedAccounts = data?.map(record => ({
+            id: record.id,
+            name: record.field_values.find((f: any) => f.field_api_name === "name")?.value || "Unnamed Account"
+          })) || [];
+          
+          setAccounts(transformedAccounts);
         });
     }
   }, [user]);

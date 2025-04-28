@@ -4,24 +4,43 @@ import { supabase } from "@/integrations/supabase/client";
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/contexts/AuthContext";
 
-type Option = { id: string; first_name: string; last_name: string };
+type Option = { id: string; name: string };
 
-export function ActivityContactSelect({ value, onChange, disabled }: {
+export function ActivityContactSelect({ value, onChange, disabled = false }: {
   value: string | null;
   onChange: (val: string | null) => void;
   disabled?: boolean;
 }) {
   const [contacts, setContacts] = useState<Option[]>([]);
   const { user } = useAuth();
-
+  
   useEffect(() => {
     if (user) {
-      // Filter contacts by owner_id to only show contacts owned by the current user
-      supabase.from("contacts")
-        .select("id,first_name,last_name")
+      // Load contacts from object_records table using the contact object type
+      supabase
+        .from("object_records")
+        .select(`
+          id,
+          field_values:object_field_values(field_api_name, value)
+        `)
+        .eq("object_type_id", "contact_object_type_id") // Replace with actual contact object type ID
         .eq("owner_id", user.id)
-        .then(({ data }) => {
-          setContacts(data || []);
+        .then(({ data, error }) => {
+          if (error) {
+            console.error("Error loading contacts:", error);
+            return;
+          }
+          
+          // Transform the data into Option format
+          const transformedContacts = data?.map(record => ({
+            id: record.id,
+            name: [
+              record.field_values.find((f: any) => f.field_api_name === "first_name")?.value,
+              record.field_values.find((f: any) => f.field_api_name === "last_name")?.value
+            ].filter(Boolean).join(" ") || "Unnamed Contact"
+          })) || [];
+          
+          setContacts(transformedContacts);
         });
     }
   }, [user]);
@@ -29,12 +48,12 @@ export function ActivityContactSelect({ value, onChange, disabled }: {
   return (
     <Select value={value || ""} onValueChange={v => onChange(v === "none" ? null : v)} disabled={disabled}>
       <SelectTrigger>
-        <SelectValue placeholder="Kontakt verbinden" />
+        <SelectValue placeholder="Contact verbinden" />
       </SelectTrigger>
       <SelectContent>
-        <SelectItem value="none">Kein Kontakt</SelectItem>
+        <SelectItem value="none">Kein Contact</SelectItem>
         {contacts.map(c => (
-          <SelectItem key={c.id} value={c.id}>{c.first_name} {c.last_name}</SelectItem>
+          <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
         ))}
       </SelectContent>
     </Select>
