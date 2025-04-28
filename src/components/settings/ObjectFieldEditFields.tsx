@@ -1,3 +1,4 @@
+
 import { ObjectField } from "@/hooks/useObjectTypes";
 import { Input } from "@/components/ui/input";
 import {
@@ -17,6 +18,7 @@ import {
 import { UseFormReturn } from "react-hook-form";
 import { FieldEditFormData } from "./schemas/fieldEditSchema";
 import { PicklistValuesManager } from "./PicklistValuesManager";
+import { useObjectTypes } from "@/hooks/useObjectTypes";
 
 interface ObjectFieldEditFieldsProps {
   form: UseFormReturn<FieldEditFormData>;
@@ -25,6 +27,8 @@ interface ObjectFieldEditFieldsProps {
 }
 
 export function ObjectFieldEditFields({ form, field, targetFields }: ObjectFieldEditFieldsProps) {
+  const { objectTypes } = useObjectTypes();
+  
   return (
     <div className="space-y-4">
       <FormField
@@ -62,35 +66,66 @@ export function ObjectFieldEditFields({ form, field, targetFields }: ObjectField
         </div>
       )}
 
-      {field.data_type === "lookup" && targetFields && (
-        <FormField
-          control={form.control}
-          name="display_field_api_name"
-          render={({ field: displayField }) => (
-            <FormItem>
-              <FormLabel>Display Field</FormLabel>
-              <Select
-                value={displayField.value || ""}
-                onValueChange={displayField.onChange}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select display field" />
-                </SelectTrigger>
-                <SelectContent>
-                  {targetFields.map((targetField) => (
-                    <SelectItem
-                      key={targetField.api_name}
-                      value={targetField.api_name}
-                    >
-                      {targetField.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+      {field.data_type === "lookup" && (
+        <>
+          <FormField
+            control={form.control}
+            name="target_object_type_id"
+            render={({ field: targetField }) => (
+              <FormItem>
+                <FormLabel>Target Object</FormLabel>
+                <Select
+                  value={targetField.value || ""}
+                  onValueChange={targetField.onChange}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select target object" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {objectTypes?.filter(t => t.id !== field.object_type_id).map((type) => (
+                      <SelectItem
+                        key={type.id}
+                        value={type.id}
+                      >
+                        {type.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="display_field_api_name"
+            render={({ field: displayField }) => (
+              <FormItem>
+                <FormLabel>Display Field</FormLabel>
+                <Select
+                  value={displayField.value || ""}
+                  onValueChange={displayField.onChange}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select display field" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {targetFields?.map((targetField) => (
+                      <SelectItem
+                        key={targetField.api_name}
+                        value={targetField.api_name}
+                      >
+                        {targetField.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </>
       )}
     </div>
   );

@@ -23,6 +23,7 @@ export function useObjectFieldEdit({ field, onClose }: UseObjectFieldEditProps) 
       name: field.name,
       api_name: field.api_name,
       display_field_api_name: field.options?.display_field_api_name,
+      target_object_type_id: field.options?.target_object_type_id,
     },
   });
 
@@ -34,6 +35,7 @@ export function useObjectFieldEdit({ field, onClose }: UseObjectFieldEditProps) 
       const updatedOptions = {
         ...field.options,
         display_field_api_name: values.display_field_api_name,
+        target_object_type_id: values.target_object_type_id,
       };
 
       await updateField.mutateAsync({
