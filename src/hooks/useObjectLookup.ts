@@ -3,6 +3,11 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 
+export interface LookupRecord {
+  id: string;
+  display_value: string;
+}
+
 export function useObjectLookup(objectTypeId: string) {
   const { user } = useAuth();
 
@@ -28,7 +33,7 @@ export function useObjectLookup(objectTypeId: string) {
                         record.field_values.find((f: any) => f.field_api_name === "last_name")?.value
                       ].filter(Boolean).join(" ") || 
                       "Unnamed Record"
-      }));
+      })) as LookupRecord[];
     },
     enabled: !!user && !!objectTypeId
   });

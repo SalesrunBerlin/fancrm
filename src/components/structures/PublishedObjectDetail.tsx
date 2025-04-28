@@ -15,16 +15,20 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Box, Download, Loader2 } from "lucide-react";
+import { AlertCircle, ArrowLeft, Box, Download, Loader2 } from "lucide-react";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
 import { ObjectField } from "@/hooks/useObjectTypes";
+import { useToast } from "@/hooks/use-toast";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export function PublishedObjectDetail() {
   const { objectId } = useParams();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("details");
   const { importObjectType } = useObjectTypes();
   const [isImporting, setIsImporting] = useState(false);
+  const [importError, setImportError] = useState<string | null>(null);
 
   // Fetch object type details
   const { 
@@ -89,11 +93,18 @@ export function PublishedObjectDetail() {
     if (!objectId) return;
     
     setIsImporting(true);
+    setImportError(null);
+    
     try {
       await importObjectType.mutateAsync(objectId);
+      toast({
+        title: "Objekt importiert",
+        description: "Das Objekt wurde erfolgreich importiert."
+      });
       navigate("/structures", { replace: true });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error importing object:", error);
+      setImportError(error.message || "Fehler beim Importieren des Objekts");
     } finally {
       setIsImporting(false);
     }
@@ -119,12 +130,12 @@ export function PublishedObjectDetail() {
       <div className="space-y-4">
         <Button variant="ghost" onClick={() => navigate("/structures")}>
           <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Structures
+          Zurück zur Übersicht
         </Button>
         <Card>
           <CardContent className="pt-6 text-center">
             <p className="text-muted-foreground">
-              Published object not found or you don't have access to it.
+              Veröffentlichtes Objekt nicht gefunden oder Sie haben keinen Zugriff darauf.
             </p>
           </CardContent>
         </Card>
@@ -137,7 +148,7 @@ export function PublishedObjectDetail() {
       <div className="flex items-center justify-between">
         <Button variant="ghost" onClick={() => navigate("/structures")}>
           <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Structures
+          Zurück zur Übersicht
         </Button>
         <Button 
           className="flex items-center gap-2" 
@@ -149,42 +160,49 @@ export function PublishedObjectDetail() {
           ) : (
             <Download className="h-4 w-4" />
           )}
-          Import Object
+          Objekt importieren
         </Button>
       </div>
 
       <div className="flex items-center gap-3">
         {getIconComponent(objectType.icon)}
         <h1 className="text-3xl font-bold tracking-tight">{objectType.name}</h1>
-        <Badge variant="outline" className="ml-2">Published</Badge>
+        <Badge variant="outline" className="ml-2">Veröffentlicht</Badge>
       </div>
 
       {objectType.description && (
         <p className="text-muted-foreground">{objectType.description}</p>
       )}
 
+      {importError && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{importError}</AlertDescription>
+        </Alert>
+      )}
+
       <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-6">
         <TabsList>
           <TabsTrigger value="details">Details</TabsTrigger>
-          <TabsTrigger value="fields">Fields</TabsTrigger>
+          <TabsTrigger value="fields">Felder</TabsTrigger>
         </TabsList>
 
         <TabsContent value="details" className="mt-4">
           <Card>
             <CardHeader>
-              <CardTitle>Object Type Details</CardTitle>
-              <CardDescription>Basic information about this object type</CardDescription>
+              <CardTitle>Objekt-Details</CardTitle>
+              <CardDescription>Grundlegende Informationen zu diesem Objekttyp</CardDescription>
             </CardHeader>
             <CardContent>
               <dl className="space-y-4 divide-y">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 first:pt-0">
                   <div>
-                    <dt className="text-sm font-medium text-muted-foreground">API Name</dt>
+                    <dt className="text-sm font-medium text-muted-foreground">API-Name</dt>
                     <dd className="mt-1 text-sm">{objectType.api_name}</dd>
                   </div>
                   <div>
-                    <dt className="text-sm font-medium text-muted-foreground">Default Display Field</dt>
-                    <dd className="mt-1 text-sm">{objectType.default_field_api_name || 'Not set'}</dd>
+                    <dt className="text-sm font-medium text-muted-foreground">Standard-Anzeigefeld</dt>
+                    <dd className="mt-1 text-sm">{objectType.default_field_api_name || 'Nicht festgelegt'}</dd>
                   </div>
                 </div>
               </dl>
@@ -195,9 +213,9 @@ export function PublishedObjectDetail() {
         <TabsContent value="fields" className="mt-4">
           <Card>
             <CardHeader>
-              <CardTitle>Fields</CardTitle>
+              <CardTitle>Felder</CardTitle>
               <CardDescription>
-                Fields that will be imported with this object type
+                Felder, die mit diesem Objekttyp importiert werden
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -209,10 +227,10 @@ export function PublishedObjectDetail() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Field Name</TableHead>
-                      <TableHead>API Name</TableHead>
-                      <TableHead>Data Type</TableHead>
-                      <TableHead>Required</TableHead>
+                      <TableHead>Feldname</TableHead>
+                      <TableHead>API-Name</TableHead>
+                      <TableHead>Datentyp</TableHead>
+                      <TableHead>Erforderlich</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -222,13 +240,13 @@ export function PublishedObjectDetail() {
                           <TableCell>{field.name}</TableCell>
                           <TableCell>{field.api_name}</TableCell>
                           <TableCell>{field.data_type}</TableCell>
-                          <TableCell>{field.is_required ? 'Yes' : 'No'}</TableCell>
+                          <TableCell>{field.is_required ? 'Ja' : 'Nein'}</TableCell>
                         </TableRow>
                       ))
                     ) : (
                       <TableRow>
                         <TableCell colSpan={4} className="text-center py-6 text-muted-foreground">
-                          No fields available for this object
+                          Keine Felder für dieses Objekt verfügbar
                         </TableCell>
                       </TableRow>
                     )}

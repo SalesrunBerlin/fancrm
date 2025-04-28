@@ -1,145 +1,123 @@
 
-import { DealType } from "@/types";
-import { DealCard } from "./DealCard";
-import { Card } from "@/components/ui/card";
-import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
-import { useDeals } from "@/hooks/useDeals";
-import { useToast } from "@/hooks/use-toast";
-import { useDealStatuses } from "@/hooks/useDealStatuses";
+// Import the necessary components and hooks
+import React, { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DragDropContext, Draggable, Droppable } from '@hello-pangea/dnd';
+import { Link } from 'react-router-dom';
+import { Badge } from "@/components/ui/badge";
+import { Loader2 } from "lucide-react";
+import { Deal } from "@/types";
 
 interface DealsKanbanProps {
-  deals: DealType[];
+  deals: Deal[];
   isLoading: boolean;
-  groupByField: "status";
+  groupByField: string;
   onDealClick: (id: string) => void;
 }
 
 export function DealsKanban({ deals, isLoading, groupByField, onDealClick }: DealsKanbanProps) {
-  const { updateDeal } = useDeals();
-  const { toast } = useToast();
-  const { dealStatuses, isLoading: isLoadingStatuses } = useDealStatuses();
+  // Group deals by the specified field (e.g. status)
+  const [grouped, setGrouped] = useState<Record<string, Deal[]>>(() => {
+    return deals.reduce((acc: Record<string, Deal[]>, deal) => {
+      const groupKey = deal[groupByField as keyof Deal]?.toString() || 'Unknown';
+      
+      if (!acc[groupKey]) {
+        acc[groupKey] = [];
+      }
+      
+      acc[groupKey].push(deal);
+      return acc;
+    }, {});
+  });
 
-  if (isLoading || isLoadingStatuses) {
+  // Function to handle the end of a drag operation
+  const onDragEnd = (result: any) => {
+    // Implement drag-and-drop logic here if needed
+    console.log('Drag ended', result);
+  };
+
+  if (isLoading) {
     return (
-      <div className="flex justify-center items-center h-32">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-beauty" />
+      <div className="flex items-center justify-center p-8">
+        <Loader2 className="h-8 w-8 animate-spin" />
       </div>
     );
   }
 
-  // Create an object with all possible statuses initialized with empty arrays
-  const emptyGroupedDeals = (dealStatuses || [])
-    .sort((a, b) => a.order_position - b.order_position)
-    .reduce((acc, status) => {
-      acc[status.name] = [];
-      return acc;
-    }, {} as Record<string, DealType[]>);
+  // If there are no deals, show a message
+  if (deals.length === 0) {
+    return (
+      <Card className="col-span-full">
+        <CardContent className="pt-6 text-center">
+          <p className="text-muted-foreground">Keine Deals gefunden.</p>
+        </CardContent>
+      </Card>
+    );
+  }
 
-  // Fill in the deals where they exist
-  const groupedDeals = deals.reduce((acc, deal) => {
-    const key = deal[groupByField];
-    if (!acc[key]) {
-      acc[key] = [];
-    }
-    acc[key].push(deal);
-    return acc;
-  }, { ...emptyGroupedDeals });
-
-  const handleDragEnd = async (result: any) => {
-    const { destination, source, draggableId } = result;
-
-    // Drop outside a valid area
-    if (!destination) return;
-
-    // Drop in the same position
-    if (
-      destination.droppableId === source.droppableId &&
-      destination.index === source.index
-    ) {
-      return;
-    }
-
-    // Find the deal we're moving
-    const dealToUpdate = deals.find(d => d.id === draggableId);
-    if (!dealToUpdate) {
-      console.error("Deal not found:", draggableId);
-      return;
-    }
-
-    try {
-      // Log what we're trying to update
-      console.log("Updating deal:", {
-        ...dealToUpdate,
-        status: destination.droppableId
-      });
-      
-      // Update the deal with the new status
-      await updateDeal.mutateAsync({
-        ...dealToUpdate,
-        status: destination.droppableId
-      });
-
-      toast({
-        title: "Status aktualisiert",
-        description: `Deal wurde nach ${destination.droppableId} verschoben`,
-      });
-    } catch (error) {
-      console.error('Error updating deal status:', error);
-      toast({
-        title: "Fehler",
-        description: "Status konnte nicht aktualisiert werden",
-        variant: "destructive"
-      });
-    }
-  };
+  // Get all unique group values and sort them
+  const groupKeys = Object.keys(grouped).sort((a, b) => {
+    // Add custom sorting logic if needed
+    return a.localeCompare(b);
+  });
 
   return (
-    <DragDropContext onDragEnd={handleDragEnd}>
-      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-2">
-        {dealStatuses && dealStatuses
-          .sort((a, b) => a.order_position - b.order_position)
-          .map((statusObj) => (
-            <Droppable key={statusObj.name} droppableId={statusObj.name}>
-              {(provided) => (
-                <Card 
-                  className="p-3"
-                  {...provided.droppableProps} 
-                  ref={provided.innerRef}
-                >
-                  <div className="font-semibold mb-2 flex justify-between items-center text-sm">
-                    <span>{statusObj.name}</span>
-                    <span className="text-xs text-muted-foreground">
-                      {(groupedDeals[statusObj.name] || []).length}
-                    </span>
-                  </div>
-                  <div className="space-y-2">
-                    {(groupedDeals[statusObj.name] || []).map((deal, index) => (
-                      <Draggable 
-                        key={deal.id} 
-                        draggableId={deal.id} 
-                        index={index}
-                      >
-                        {(provided, snapshot) => (
-                          <div
-                            ref={provided.innerRef}
-                            {...provided.draggableProps}
-                            {...provided.dragHandleProps}
-                            className={snapshot.isDragging ? "opacity-50" : ""}
-                          >
-                            <DealCard 
-                              deal={deal} 
-                              onClick={onDealClick}
-                            />
-                          </div>
-                        )}
-                      </Draggable>
-                    ))}
+    <DragDropContext onDragEnd={onDragEnd}>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        {groupKeys.map((groupKey) => (
+          <Card key={groupKey} className="flex flex-col">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg flex items-center justify-between">
+                {groupKey}
+                <Badge variant="outline">{grouped[groupKey].length}</Badge>
+              </CardTitle>
+            </CardHeader>
+            
+            <CardContent className="pt-0 flex-grow">
+              <Droppable droppableId={groupKey}>
+                {(provided) => (
+                  <div 
+                    ref={provided.innerRef}
+                    {...provided.droppableProps}
+                    className="space-y-2 min-h-[100px]"
+                  >
+                    {grouped[groupKey]
+                      .sort((a, b) => {
+                        return a.name.localeCompare(b.name);
+                      })
+                      .map((deal, index) => (
+                        <Draggable key={deal.id} draggableId={deal.id} index={index}>
+                          {(provided) => (
+                            <div
+                              ref={provided.innerRef}
+                              {...provided.draggableProps}
+                              {...provided.dragHandleProps}
+                              onClick={() => onDealClick(deal.id)}
+                              className="p-3 bg-card border rounded-md cursor-pointer hover:border-primary transition-colors"
+                            >
+                              <h3 className="font-medium">{deal.name}</h3>
+                              {deal.accountName && (
+                                <p className="text-sm text-muted-foreground mt-1">{deal.accountName}</p>
+                              )}
+                              <div className="flex items-center justify-between mt-2">
+                                <div className="text-sm font-medium">
+                                  {deal.amount ? `${deal.amount} €` : 'Kein Betrag'}
+                                </div>
+                                <Link to={`/deals/${deal.id}`} className="text-xs text-blue-500 hover:underline" onClick={(e) => e.stopPropagation()}>
+                                  Details
+                                </Link>
+                              </div>
+                            </div>
+                          )}
+                        </Draggable>
+                      ))}
                     {provided.placeholder}
                   </div>
-                </Card>
-              )}
-            </Droppable>
-          ))}
+                )}
+              </Droppable>
+            </CardContent>
+          </Card>
+        ))}
       </div>
     </DragDropContext>
   );

@@ -3,9 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ActivityTypeSelect } from "./ActivityTypeSelect";
-import { ActivityAccountSelect } from "./ActivityAccountSelect";
-import { ActivityContactSelect } from "./ActivityContactSelect";
-import { ActivityDealSelect } from "./ActivityDealSelect";
+import { LookupField } from "@/components/records/LookupField";
 import { Save } from "lucide-react";
 
 interface Activity {
@@ -75,17 +73,20 @@ export function ActivityDetailForm({
         />
       </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <ActivityAccountSelect
+        <LookupField
+          targetObjectTypeId="account_object_type_id"
           value={activity.account_id}
           onChange={(val) => onFieldChange('account_id', val)}
           disabled={saving}
         />
-        <ActivityContactSelect
+        <LookupField
+          targetObjectTypeId="contact_object_type_id"
           value={activity.contact_id}
           onChange={(val) => onFieldChange('contact_id', val)}
           disabled={saving}
         />
-        <ActivityDealSelect
+        <LookupField
+          targetObjectTypeId="deal_object_type_id"
           value={activity.deal_id}
           onChange={(val) => onFieldChange('deal_id', val)}
           disabled={saving}
