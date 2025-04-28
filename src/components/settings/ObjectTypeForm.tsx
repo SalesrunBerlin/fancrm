@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
 import { Loader2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 import {
   Select,
   SelectContent,
@@ -16,6 +17,7 @@ import {
 
 export function ObjectTypeForm() {
   const { createObjectType } = useObjectTypes();
+  const { toast } = useToast();
   const [name, setName] = useState("");
   const [apiName, setApiName] = useState("");
   const [description, setDescription] = useState("");
