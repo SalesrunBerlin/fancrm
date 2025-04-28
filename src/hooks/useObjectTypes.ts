@@ -1,8 +1,8 @@
-
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { useState, useEffect } from "react";
 
 export interface ObjectField {
   id: string;
@@ -44,9 +44,16 @@ export interface ObjectType {
 }
 
 export function useObjectTypes() {
+  const queryClient = useQueryClient();
   const { user } = useAuth();
   const { toast } = useToast();
-  const queryClient = useQueryClient();
+  const [authReady, setAuthReady] = useState(false);
+  
+  useEffect(() => {
+    if (user) {
+      setAuthReady(true);
+    }
+  }, [user]);
 
   const { data: objectTypes, isLoading } = useQuery({
     queryKey: ["object-types"],
@@ -87,22 +94,29 @@ export function useObjectTypes() {
       }
       console.log("Fetching published objects. Current user:", user.id);
       
-      const { data, error } = await supabase
-        .from("object_types")
-        .select("*")
-        .eq("is_published", true)
-        .neq("owner_id", user.id)
-        .order("name");
-
-      if (error) {
-        console.error("Error fetching published objects:", error);
-        throw error;
+      try {
+        const { data, error } = await supabase
+          .from("object_types")
+          .select("*")
+          .eq("is_published", true)
+          .neq("owner_id", user.id)
+          .order("name");
+  
+        if (error) {
+          console.error("Error fetching published objects:", error);
+          throw error;
+        }
+        
+        console.log(`Fetched ${data?.length || 0} published objects:`, data);
+        return data;
+      } catch (err) {
+        console.error("Exception in published objects fetch:", err);
+        throw err;
       }
-      
-      console.log(`Fetched ${data?.length || 0} published objects`);
-      return data;
     },
-    enabled: !!user,
+    enabled: !!user && authReady,
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
   });
 
   const createObjectType = useMutation({
@@ -269,19 +283,24 @@ export function useObjectTypes() {
     mutationFn: async () => {
       try {
         console.log("Deleting system objects...");
-        const { error } = await supabase.rpc('delete_system_objects');
+        const { data, error } = await supabase.rpc('delete_system_objects');
         if (error) {
           console.error("Error in delete_system_objects RPC:", error);
           throw error;
         }
-        return true;
+        
+        const { error: refreshError } = await supabase.rpc('refresh_published_objects_view');
+        if (refreshError) {
+          console.warn("Error refreshing published objects view:", refreshError);
+        }
+        
+        return data;
       } catch (error) {
         console.error("Error in deleteSystemObjects mutation:", error);
         throw error;
       }
     },
     onSuccess: () => {
-      // Invalidate all queries to refresh all data
       queryClient.invalidateQueries();
       toast({
         title: "Success",
@@ -298,9 +317,18 @@ export function useObjectTypes() {
     }
   });
 
-  // Function to manually refresh published objects
-  const refreshPublishedObjects = () => {
-    return refetchPublished();
+  const refreshPublishedObjects = async () => {
+    console.log("Manually refreshing published objects...");
+    try {
+      const { error: refreshError } = await supabase.rpc('refresh_published_objects_view');
+      if (refreshError) {
+        console.warn("Error refreshing published objects view:", refreshError);
+      }
+      return await refetchPublished();
+    } catch (error) {
+      console.error("Error during manual refresh:", error);
+      throw error;
+    }
   };
 
   return {

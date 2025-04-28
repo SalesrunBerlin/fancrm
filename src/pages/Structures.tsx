@@ -31,6 +31,7 @@ import { Badge } from "@/components/ui/badge";
 import { PublishingConfigDialog } from "@/components/settings/PublishingConfigDialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useAuth } from "@/contexts/AuthContext";
+import { DeleteDialog } from "@/components/common/DeleteDialog";
 
 export default function Structures() {
   const { user } = useAuth();
@@ -70,6 +71,8 @@ export default function Structures() {
     setIsRefreshing(true);
     try {
       await refreshPublishedObjects();
+    } catch (error) {
+      console.error("Error refreshing published objects:", error);
     } finally {
       setIsRefreshing(false);
     }
@@ -334,34 +337,18 @@ export default function Structures() {
       )}
 
       {/* Cleanup Dialog */}
-      <Dialog open={showCleanupDialog} onOpenChange={(open) => {
-        if (!cleanupStatus) {
-          setShowCleanupDialog(open);
-        }
-      }}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Remove System Objects</DialogTitle>
-            <DialogDescription>
-              This will delete all system objects (Accounts, Contacts, Deals, Activities) and their related data.
-              This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowCleanupDialog(false)} disabled={!!cleanupStatus}>
-              Cancel
-            </Button>
-            <Button 
-              variant="destructive" 
-              onClick={handleCleanup} 
-              disabled={deleteSystemObjects.isPending || !!cleanupStatus}
-            >
-              {deleteSystemObjects.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Remove System Objects
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <DeleteDialog
+        isOpen={showCleanupDialog}
+        onClose={() => {
+          if (!cleanupStatus) {
+            setShowCleanupDialog(false);
+          }
+        }}
+        onConfirm={handleCleanup}
+        title="Remove System Objects"
+        description="This will delete all system objects (Accounts, Contacts, Deals, Activities) and their related data. This action cannot be undone."
+        deleteButtonText="Remove System Objects"
+      />
     </div>
   );
 }
