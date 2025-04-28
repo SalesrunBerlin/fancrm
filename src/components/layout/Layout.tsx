@@ -41,7 +41,9 @@ export function Layout() {
   
   return (
     <div className="flex h-screen overflow-hidden relative">
-      <Sidebar isOpen={sidebarOpen} ref={sidebarRef} onClose={() => setSidebarOpen(false)} />
+      <div ref={sidebarRef}>
+        <Sidebar />
+      </div>
       
       <div className="flex flex-col flex-1 overflow-hidden">
         <Header onMenuClick={toggleSidebar} buttonRef={buttonRef} />

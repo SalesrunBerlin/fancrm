@@ -8,7 +8,7 @@ import {
   Package2,
 } from "lucide-react";
 import { ActiveObjectsMenu } from "./ActiveObjectsMenu";
-import { useMobile } from "@/hooks/use-mobile";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface SidebarLinkProps {
   to: string;
@@ -32,7 +32,7 @@ const SidebarLink = ({ to, icon, label, active }: SidebarLinkProps) => (
 
 export function Sidebar() {
   const { pathname } = useLocation();
-  const { isMobile } = useMobile();
+  const isMobile = useIsMobile();
 
   if (isMobile) return null;
 

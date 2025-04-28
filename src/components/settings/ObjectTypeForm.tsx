@@ -51,6 +51,9 @@ export function ObjectTypeForm() {
         is_system: false,
         is_active: false,
         show_in_navigation: false,
+        is_published: false,
+        is_template: false,
+        source_object_id: null
       });
 
       setName("");
