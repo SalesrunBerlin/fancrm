@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { ObjectField } from "@/hooks/useObjectTypes";
 import { ObjectRecord } from "@/hooks/useObjectRecords";
 import { Edit, Trash2, Eye } from "lucide-react";
+import { LookupValueDisplay } from "./LookupValueDisplay";
 
 interface RecordsTableProps {
   records: ObjectRecord[];
@@ -30,7 +31,7 @@ export function RecordsTable({ records, fields, objectTypeId }: RecordsTableProp
   }
 
   return (
-    <div className="rounded-md border overflow-hidden">
+    <div className="rounded-md border overflow-hidden overflow-x-auto -webkit-overflow-scrolling-touch">
       <Table>
         <TableHeader>
           <TableRow>
@@ -45,9 +46,16 @@ export function RecordsTable({ records, fields, objectTypeId }: RecordsTableProp
             <TableRow key={record.id}>
               {fields.map((field) => (
                 <TableCell key={`${record.id}-${field.id}`}>
-                  {record.field_values && record.field_values[field.api_name] !== null 
+                  {field.data_type === "lookup" && field.options && record.field_values && record.field_values[field.api_name] ? (
+                    <LookupValueDisplay
+                      value={record.field_values[field.api_name]}
+                      fieldOptions={field.options}
+                    />
+                  ) : (
+                    record.field_values && record.field_values[field.api_name] !== null 
                     ? String(record.field_values[field.api_name]) 
-                    : "—"}
+                    : "—"
+                  )}
                 </TableCell>
               ))}
               <TableCell className="text-right">

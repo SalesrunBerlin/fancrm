@@ -14,11 +14,12 @@ import { Settings2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { useUserFieldSettings } from "@/hooks/useUserFieldSettings";
 
 interface FieldsConfigDialogProps {
   objectTypeId: string;
-  onVisibilityChange: (visibleFields: string[]) => void;
-  defaultVisibleFields: string[];
+  onVisibilityChange?: (visibleFields: string[]) => void;
+  defaultVisibleFields?: string[];
 }
 
 const systemFields = [
@@ -33,29 +34,52 @@ export function FieldsConfigDialog({
   defaultVisibleFields,
 }: FieldsConfigDialogProps) {
   const { fields } = useObjectFields(objectTypeId);
-  const [visibleFields, setVisibleFields] = useState<string[]>(defaultVisibleFields);
+  const { visibleFields, updateVisibleFields } = useUserFieldSettings(objectTypeId);
+  const [localVisibleFields, setLocalVisibleFields] = useState<string[]>([]);
   const allFields = [...(fields || []), ...systemFields];
   const [selectAll, setSelectAll] = useState(false);
 
+  // Initialize local state either from passed defaultVisibleFields or from stored visibleFields
   useEffect(() => {
-    setVisibleFields(defaultVisibleFields);
-    setSelectAll(defaultVisibleFields.length === allFields.length);
-  }, [defaultVisibleFields, allFields.length]);
+    if (defaultVisibleFields && defaultVisibleFields.length > 0) {
+      setLocalVisibleFields(defaultVisibleFields);
+      setSelectAll(defaultVisibleFields.length === allFields.length);
+    } else if (visibleFields && visibleFields.length > 0) {
+      setLocalVisibleFields(visibleFields);
+      setSelectAll(visibleFields.length === allFields.length);
+    } else if (fields) {
+      // Default to first 5 fields if nothing is set
+      const initialFields = fields.slice(0, 5).map(f => f.api_name);
+      setLocalVisibleFields(initialFields);
+      setSelectAll(initialFields.length === allFields.length);
+    }
+  }, [defaultVisibleFields, visibleFields, fields, allFields.length]);
 
   const handleSelectAll = (checked: boolean) => {
     const newVisibleFields = checked ? allFields.map(f => f.api_name) : [];
     setSelectAll(checked);
-    setVisibleFields(newVisibleFields);
-    onVisibilityChange(newVisibleFields);
+    setLocalVisibleFields(newVisibleFields);
+    
+    // Update both local settings and callback
+    updateVisibleFields(newVisibleFields);
+    if (onVisibilityChange) {
+      onVisibilityChange(newVisibleFields);
+    }
   };
 
   const handleFieldToggle = (fieldApiName: string, checked: boolean) => {
-    setVisibleFields(prev => {
+    setLocalVisibleFields(prev => {
       const newVisibleFields = checked
         ? [...prev, fieldApiName]
         : prev.filter(f => f !== fieldApiName);
       setSelectAll(newVisibleFields.length === allFields.length);
-      onVisibilityChange(newVisibleFields);
+      
+      // Update both local settings and callback
+      updateVisibleFields(newVisibleFields);
+      if (onVisibilityChange) {
+        onVisibilityChange(newVisibleFields);
+      }
+      
       return newVisibleFields;
     });
   };
@@ -91,7 +115,7 @@ export function FieldsConfigDialog({
                 <div key={field.api_name} className="flex items-center space-x-2 pl-2">
                   <Checkbox
                     id={field.api_name}
-                    checked={visibleFields.includes(field.api_name)}
+                    checked={localVisibleFields.includes(field.api_name)}
                     onCheckedChange={(checked) => 
                       handleFieldToggle(field.api_name, checked as boolean)
                     }
@@ -110,7 +134,7 @@ export function FieldsConfigDialog({
                 <div key={field.api_name} className="flex items-center space-x-2 pl-2">
                   <Checkbox
                     id={field.api_name}
-                    checked={visibleFields.includes(field.api_name)}
+                    checked={localVisibleFields.includes(field.api_name)}
                     onCheckedChange={(checked) => 
                       handleFieldToggle(field.api_name, checked as boolean)
                     }

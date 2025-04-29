@@ -11,6 +11,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { DeleteDialog } from "@/components/common/DeleteDialog";
 import { toast } from "sonner";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { RelatedRecordsList } from "@/components/records/RelatedRecordsList";
+import { LookupValueDisplay } from "@/components/records/LookupValueDisplay";
 
 export default function ObjectRecordDetail() {
   const navigate = useNavigate();
@@ -20,6 +23,7 @@ export default function ObjectRecordDetail() {
   const { fields } = useRecordFields(objectTypeId);
   const { updateRecord } = useObjectRecords(objectTypeId);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("details");
 
   const objectType = objectTypes?.find(type => type.id === objectTypeId);
   
@@ -98,25 +102,50 @@ export default function ObjectRecordDetail() {
         }
       />
 
-      <Card>
-        <CardContent className="pt-6 divide-y">
-          {fields
-            .sort((a, b) => (a.display_order || 0) - (b.display_order || 0))
-            .map((field) => {
-              const value = record.fieldValues[field.api_name];
-              return (
-                <div key={field.id} className="py-3 grid grid-cols-3">
-                  <div className="font-medium text-muted-foreground">
-                    {field.name}
-                  </div>
-                  <div className="col-span-2">
-                    {value !== null && value !== undefined ? String(value) : "—"}
-                  </div>
-                </div>
-              );
-            })}
-        </CardContent>
-      </Card>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList>
+          <TabsTrigger value="details">Details</TabsTrigger>
+          <TabsTrigger value="related">Related Objects</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="details" className="mt-4">
+          <Card>
+            <CardContent className="pt-6 divide-y">
+              {fields
+                .sort((a, b) => (a.display_order || 0) - (b.display_order || 0))
+                .map((field) => {
+                  const value = record.fieldValues[field.api_name];
+                  return (
+                    <div key={field.id} className="py-3 grid grid-cols-3">
+                      <div className="font-medium text-muted-foreground">
+                        {field.name}
+                      </div>
+                      <div className="col-span-2">
+                        {field.data_type === "lookup" && field.options && value ? (
+                          <LookupValueDisplay
+                            value={value}
+                            fieldOptions={field.options}
+                          />
+                        ) : (
+                          value !== null && value !== undefined ? String(value) : "—"
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="related" className="mt-4">
+          {objectTypeId && recordId && (
+            <RelatedRecordsList 
+              objectTypeId={objectTypeId} 
+              recordId={recordId} 
+            />
+          )}
+        </TabsContent>
+      </Tabs>
 
       <DeleteDialog
         isOpen={deleteDialogOpen}

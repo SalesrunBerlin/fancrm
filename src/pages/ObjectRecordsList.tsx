@@ -10,7 +10,7 @@ import { Loader2, Plus } from "lucide-react";
 import { RecordsTable } from "@/components/records/RecordsTable";
 import { Card } from "@/components/ui/card";
 import { FieldsConfigDialog } from "@/components/records/FieldsConfigDialog";
-import { useLocalStorage } from "@/hooks/useLocalStorage";
+import { useUserFieldSettings } from "@/hooks/useUserFieldSettings";
 
 export default function ObjectRecordsList() {
   const { objectTypeId } = useParams<{ objectTypeId: string }>();
@@ -19,20 +19,14 @@ export default function ObjectRecordsList() {
   const { fields, isLoading: isLoadingFields } = useRecordFields(objectTypeId);
   const objectType = objectTypes?.find(type => type.id === objectTypeId);
   const [allRecords, setAllRecords] = useState<any[]>([]);
+  const { visibleFields, updateVisibleFields } = useUserFieldSettings(objectTypeId);
   
-  // Add column visibility management
-  const storageKey = objectTypeId ? `visible-fields-${objectTypeId}` : '';
-  const [visibleFields, setVisibleFields] = useLocalStorage<string[]>(
-    storageKey,
-    fields ? fields.slice(0, 5).map(field => field.api_name) : []
-  );
-
-  // Update visible fields when fields are loaded
+  // Initialize visible fields if none are saved yet
   useEffect(() => {
     if (fields && fields.length > 0 && (!visibleFields || visibleFields.length === 0)) {
-      setVisibleFields(fields.slice(0, 5).map(field => field.api_name));
+      updateVisibleFields(fields.slice(0, 5).map(field => field.api_name));
     }
-  }, [fields]);
+  }, [fields, visibleFields, updateVisibleFields]);
 
   useEffect(() => {
     if (records) {
@@ -40,13 +34,8 @@ export default function ObjectRecordsList() {
     }
   }, [records]);
 
-  const handleLoadMore = () => {
-    // Functionality removed since pagination is not implemented in the useObjectRecords hook
-    console.log("Load more functionality would go here");
-  };
-
   const handleVisibilityChange = (fieldApiNames: string[]) => {
-    setVisibleFields(fieldApiNames);
+    updateVisibleFields(fieldApiNames);
   };
 
   if (!objectType) {
@@ -67,7 +56,6 @@ export default function ObjectRecordsList() {
             <FieldsConfigDialog
               objectTypeId={objectTypeId!}
               onVisibilityChange={handleVisibilityChange}
-              defaultVisibleFields={visibleFields}
             />
             <Button asChild>
               <Link to={`/objects/${objectTypeId}/new`}>
