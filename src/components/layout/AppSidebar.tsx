@@ -10,9 +10,9 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { LayoutDashboard, Settings, FileText } from "lucide-react";
+import { LayoutDashboard, Settings, FileText, Box } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
-import { ActiveObjectsMenu } from "./ActiveObjectsMenu";
+import { useObjectTypes } from "@/hooks/useObjectTypes";
 import { useEffect } from "react";
 
 const navigationItems = [
@@ -35,15 +35,21 @@ const navigationItems = [
 
 export function AppSidebar() {
   const { pathname } = useLocation();
-  const { setOpenMobile } = useSidebar();
-
+  const { openMobile, setOpenMobile } = useSidebar();
+  const { objectTypes } = useObjectTypes();
+  const isAuthPage = pathname.startsWith("/auth");
+  
   // Close sidebar on route change
   useEffect(() => {
     setOpenMobile(false);
   }, [pathname, setOpenMobile]);
+  
+  if (isAuthPage) return null;
+  
+  const activeObjects = objectTypes?.filter(obj => obj.is_active) || [];
 
   return (
-    <Sidebar>
+    <Sidebar variant="floating">
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel>Navigation</SidebarGroupLabel>
@@ -67,9 +73,29 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        <div className="mt-2">
-          <ActiveObjectsMenu />
-        </div>
+        {activeObjects.length > 0 && (
+          <SidebarGroup>
+            <SidebarGroupLabel>Objects</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {activeObjects.map((object) => (
+                  <SidebarMenuItem key={object.id}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={pathname.includes(`/objects/${object.id}`)}
+                      tooltip={object.name}
+                    >
+                      <Link to={`/objects/${object.id}`} onClick={() => setOpenMobile(false)}>
+                        <Box className="h-4 w-4" />
+                        <span>{object.name}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
       </SidebarContent>
     </Sidebar>
   );
