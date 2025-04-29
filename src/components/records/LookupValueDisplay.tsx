@@ -6,11 +6,19 @@ import { useObjectLookup } from "@/hooks/useObjectLookup";
 interface LookupValueDisplayProps {
   value: string | null;
   fieldOptions: {
-    target_object_type_id: string;
+    target_object_type_id?: string;
   };
 }
 
 export function LookupValueDisplay({ value, fieldOptions }: LookupValueDisplayProps) {
+  // Handle missing target object type ID
+  if (!fieldOptions?.target_object_type_id) {
+    return <div className="text-amber-500 flex items-center gap-1">
+      <AlertCircle className="h-4 w-4" />
+      <span>Missing target object configuration</span>
+    </div>;
+  }
+
   const { records, isLoading, error } = useObjectLookup(fieldOptions.target_object_type_id);
   
   if (isLoading) {

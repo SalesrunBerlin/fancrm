@@ -8,14 +8,15 @@ export interface LookupRecord {
   display_value: string;
 }
 
-export function useObjectLookup(objectTypeId: string) {
+export function useObjectLookup(objectTypeId: string | undefined) {
   const { user } = useAuth();
 
   const { data: records = [], isLoading, error } = useQuery({
     queryKey: ["object-records", objectTypeId],
     queryFn: async () => {
       if (!objectTypeId) {
-        throw new Error("Missing target object ID");
+        console.warn("No target object ID provided to useObjectLookup");
+        return [];
       }
       
       console.log("Fetching lookup records for object type:", objectTypeId);
@@ -52,7 +53,7 @@ export function useObjectLookup(objectTypeId: string) {
         };
       }) as LookupRecord[];
     },
-    enabled: !!objectTypeId
+    enabled: !!objectTypeId // Only run query when objectTypeId is provided
   });
 
   return {

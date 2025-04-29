@@ -25,6 +25,7 @@ export function RecordField({ field, form }: RecordFieldProps) {
             type="text"
             placeholder={field.name}
             {...form.register(field.api_name, { required: field.is_required })}
+            className="w-full"
           />
         );
       case "textarea":
@@ -32,6 +33,7 @@ export function RecordField({ field, form }: RecordFieldProps) {
           <Textarea
             placeholder={field.name}
             {...form.register(field.api_name, { required: field.is_required })}
+            className="w-full min-h-[100px]"
           />
         );
       case "number":
@@ -40,6 +42,7 @@ export function RecordField({ field, form }: RecordFieldProps) {
             type="number"
             placeholder={field.name}
             {...form.register(field.api_name, { required: field.is_required })}
+            className="w-full"
           />
         );
       case "email":
@@ -48,14 +51,16 @@ export function RecordField({ field, form }: RecordFieldProps) {
             type="email"
             placeholder={field.name}
             {...form.register(field.api_name, { required: field.is_required })}
+            className="w-full"
           />
         );
       case "boolean":
         return (
           <Select
             onValueChange={(value) => form.setValue(field.api_name, value === "true")}
+            defaultValue={value ? "true" : "false"}
           >
-            <SelectTrigger>
+            <SelectTrigger className="w-full">
               <SelectValue placeholder={field.name} />
             </SelectTrigger>
             <SelectContent>
@@ -70,11 +75,11 @@ export function RecordField({ field, form }: RecordFieldProps) {
             type="date"
             placeholder={field.name}
             {...form.register(field.api_name, { required: field.is_required })}
+            className="w-full"
           />
         );
       case "lookup":
         const targetObjectTypeId = field.options?.target_object_type_id;
-        if (!targetObjectTypeId) return null;
         
         return (
           <LookupField
@@ -93,20 +98,20 @@ export function RecordField({ field, form }: RecordFieldProps) {
             type="text"
             placeholder={field.name}
             {...form.register(field.api_name, { required: field.is_required })}
+            className="w-full"
           />
         );
     }
   };
 
   return (
-    <FormItem>
+    <FormItem className="w-full">
       <FormLabel>{field.name}</FormLabel>
       <FormControl>
         {renderField()}
       </FormControl>
-      {/* Entferne die Beschreibung, wenn sie nicht existiert oder leer ist */}
       {field.options?.description && (
-        <FormDescription>{field.options.description}</FormDescription>
+        <FormDescription className="text-xs sm:text-sm">{field.options.description}</FormDescription>
       )}
       <FormMessage />
     </FormItem>

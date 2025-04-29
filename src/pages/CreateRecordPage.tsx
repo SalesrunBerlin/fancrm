@@ -11,6 +11,7 @@ import { useObjectRecords } from "@/hooks/useObjectRecords";
 import type { RecordFormData } from "@/lib/types/records";
 import { Loader2, ArrowLeft } from "lucide-react";
 import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/card";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export default function CreateRecordPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -21,6 +22,7 @@ export default function CreateRecordPage() {
   const { createRecord } = useObjectRecords(objectTypeId);
   const objectType = objectTypes?.find(type => type.id === objectTypeId);
   const form = useForm<RecordFormData>();
+  const isMobile = useIsMobile();
 
   const onSubmit = async (data: RecordFormData) => {
     try {
@@ -39,21 +41,23 @@ export default function CreateRecordPage() {
   if (!objectType) return null;
 
   return (
-    <div className="space-y-4 max-w-2xl mx-auto">
-      <Button variant="outline" asChild>
-        <Link to={`/objects/${objectTypeId}`}>
+    <div className="space-y-4 w-full max-w-2xl mx-auto px-4 sm:px-6">
+      <Button variant="outline" asChild className="mb-4">
+        <Link to={`/objects/${objectTypeId}`} className="flex items-center">
           <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to {objectType.name} List
+          <span className="whitespace-nowrap overflow-hidden text-ellipsis">
+            Back to {objectType.name} List
+          </span>
         </Link>
       </Button>
       
       <Card>
         <CardHeader>
-          <h1 className="text-2xl font-bold">New {objectType.name}</h1>
+          <h1 className="text-xl sm:text-2xl font-bold">{isMobile ? "New" : `New ${objectType.name}`}</h1>
         </CardHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)}>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 px-4 sm:px-6">
               {isLoadingFields ? (
                 <div className="flex justify-center py-4">
                   <Loader2 className="h-6 w-6 animate-spin" />
@@ -70,17 +74,19 @@ export default function CreateRecordPage() {
                 </div>
               )}
             </CardContent>
-            <CardFooter className="flex justify-end gap-3 border-t p-4">
+            <CardFooter className="flex flex-col sm:flex-row justify-end gap-3 border-t p-4">
               <Button 
                 type="button" 
                 variant="outline" 
                 onClick={() => navigate(`/objects/${objectTypeId}`)}
+                className="w-full sm:w-auto"
               >
                 Cancel
               </Button>
               <Button 
                 type="submit" 
                 disabled={isSubmitting}
+                className="w-full sm:w-auto"
               >
                 {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Create
