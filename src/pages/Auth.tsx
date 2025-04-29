@@ -9,11 +9,13 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { Loader2 } from "lucide-react";
 
 export default function Auth() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [registrationSuccess, setRegistrationSuccess] = useState(false);
   const navigate = useNavigate();
   const { user } = useAuth();
   
@@ -50,16 +52,31 @@ export default function Auth() {
     setLoading(true);
     
     try {
-      const { error } = await supabase.auth.signUp({
+      // First step: Create the user account
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
       });
       
       if (error) throw error;
       
-      toast.success("Registrierung erfolgreich. Bitte überprüfen Sie Ihre E-Mail.");
+      if (data?.user) {
+        // Show success message
+        setRegistrationSuccess(true);
+        toast.success("Registrierung erfolgreich. Bitte überprüfen Sie Ihre E-Mail zur Bestätigung.");
+        
+        // We won't auto-login the user here, as they need to verify their email first
+        // Instead, we'll show them a message about checking their email
+      }
     } catch (error: any) {
-      toast.error(error.message || "Fehler bei der Registrierung");
+      const errorMessage = error.message || "Fehler bei der Registrierung";
+      
+      // Handle specific errors with more user-friendly messages
+      if (errorMessage.includes("User already registered")) {
+        toast.error("Diese E-Mail-Adresse ist bereits registriert. Bitte melden Sie sich an.");
+      } else {
+        toast.error(errorMessage);
+      }
     } finally {
       setLoading(false);
     }
@@ -95,6 +112,7 @@ export default function Auth() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
+                    disabled={loading}
                   />
                 </div>
                 <div className="space-y-2">
@@ -105,47 +123,86 @@ export default function Auth() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
+                    disabled={loading}
                   />
                 </div>
               </CardContent>
               <CardFooter>
                 <Button type="submit" className="w-full bg-beauty hover:bg-beauty-dark" disabled={loading}>
-                  {loading ? "Anmeldung..." : "Anmelden"}
+                  {loading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Anmeldung...
+                    </>
+                  ) : "Anmelden"}
                 </Button>
               </CardFooter>
             </form>
           </TabsContent>
           <TabsContent value="signup">
-            <form onSubmit={handleSignup}>
-              <CardContent className="space-y-4 pt-4">
-                <div className="space-y-2">
-                  <Label htmlFor="signup-email">E-Mail</Label>
-                  <Input 
-                    id="signup-email" 
-                    type="email" 
-                    placeholder="name@beispiel.de" 
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signup-password">Passwort</Label>
-                  <Input 
-                    id="signup-password" 
-                    type="password" 
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                  />
+            {registrationSuccess ? (
+              <CardContent className="pt-6">
+                <div className="text-center space-y-4">
+                  <div className="rounded-full bg-green-100 w-12 h-12 mx-auto flex items-center justify-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6 text-green-600">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <h3 className="text-lg font-medium">Registrierung erfolgreich!</h3>
+                  <p className="text-muted-foreground">
+                    Bitte überprüfen Sie Ihr E-Mail-Postfach, um Ihr Konto zu bestätigen.
+                  </p>
+                  <Button 
+                    variant="outline" 
+                    className="mt-4" 
+                    onClick={() => setRegistrationSuccess(false)}
+                  >
+                    Zurück zur Registrierung
+                  </Button>
                 </div>
               </CardContent>
-              <CardFooter>
-                <Button type="submit" className="w-full bg-beauty hover:bg-beauty-dark" disabled={loading}>
-                  {loading ? "Registrierung..." : "Registrieren"}
-                </Button>
-              </CardFooter>
-            </form>
+            ) : (
+              <form onSubmit={handleSignup}>
+                <CardContent className="space-y-4 pt-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-email">E-Mail</Label>
+                    <Input 
+                      id="signup-email" 
+                      type="email" 
+                      placeholder="name@beispiel.de" 
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                      disabled={loading}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-password">Passwort</Label>
+                    <Input 
+                      id="signup-password" 
+                      type="password" 
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      disabled={loading}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Passwort muss mindestens 6 Zeichen lang sein.
+                    </p>
+                  </div>
+                </CardContent>
+                <CardFooter>
+                  <Button type="submit" className="w-full bg-beauty hover:bg-beauty-dark" disabled={loading}>
+                    {loading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Registrierung...
+                      </>
+                    ) : "Registrieren"}
+                  </Button>
+                </CardFooter>
+              </form>
+            )}
           </TabsContent>
         </Tabs>
       </Card>

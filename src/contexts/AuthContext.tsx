@@ -24,16 +24,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Set up auth state listener
+    // Set up auth state listener first
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_, session) => {
+      (event, session) => {
+        // Handle auth state changes
         setSession(session);
         setUser(session?.user ?? null);
         setIsLoading(false);
+        
+        // Show appropriate toast messages
+        if (event === 'SIGNED_IN' && session?.user) {
+          toast.success('Sie wurden erfolgreich angemeldet');
+        } else if (event === 'SIGNED_OUT') {
+          toast.success('Sie wurden abgemeldet');
+        }
       }
     );
 
-    // Check for existing session
+    // Then check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
@@ -45,12 +53,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = async () => {
     try {
+      setIsLoading(true);
       await supabase.auth.signOut();
-      // We don't use navigate here, we'll handle navigation after logout in the component
-      toast.success('Sie wurden abgemeldet');
+      // We don't need to update state here as it will be handled by the onAuthStateChange listener
     } catch (error) {
       console.error('Fehler beim Abmelden:', error);
       toast.error('Fehler beim Abmelden');
+    } finally {
+      setIsLoading(false);
     }
   };
 
