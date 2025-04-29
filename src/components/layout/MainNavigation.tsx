@@ -28,6 +28,10 @@ const navigationItems = [
 
 export function MainNavigation() {
   const { pathname } = useLocation();
+  const isAuthPage = pathname.startsWith("/auth");
+  
+  // Don't render the navigation on auth page
+  if (isAuthPage) return null;
   
   return (
     <div className="bg-background border-b border-border flex items-center h-14 px-4">

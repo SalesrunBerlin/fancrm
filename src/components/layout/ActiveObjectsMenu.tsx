@@ -2,13 +2,25 @@
 import { useObjectTypes } from "@/hooks/useObjectTypes";
 import { NavigationMenu, NavigationMenuContent, NavigationMenuItem, NavigationMenuList, NavigationMenuTrigger } from "@/components/ui/navigation-menu";
 import { Building, User, Briefcase, Calendar, Box } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { ObjectType } from "@/hooks/useObjectTypes";
 import { useSidebar } from "@/components/ui/sidebar";
 
 export function ActiveObjectsMenu() {
   const { objectTypes } = useObjectTypes();
-  const { setOpenMobile } = useSidebar();
+  const location = useLocation();
+  const isAuthPage = location.pathname.startsWith("/auth");
+  
+  // Only use the sidebar hook if we're not on the auth page
+  // This prevents the error when the component is rendered without the SidebarProvider
+  const sidebarContext = !isAuthPage ? useSidebar() : null;
+  
+  const handleCloseSidebar = () => {
+    if (sidebarContext) {
+      sidebarContext.setOpenMobile(false);
+    }
+  };
+  
   const visibleObjects = objectTypes?.filter(obj => obj.is_active) || [];
 
   const getIconComponent = (iconName: string | null) => {
@@ -21,7 +33,7 @@ export function ActiveObjectsMenu() {
     }
   };
 
-  if (!visibleObjects.length) return null;
+  if (!visibleObjects.length || isAuthPage) return null;
 
   return (
     <NavigationMenu>
@@ -38,7 +50,7 @@ export function ActiveObjectsMenu() {
                   key={object.id}
                   to={`/objects/${object.id}`}
                   className="flex items-center gap-2 px-3 py-2 text-sm rounded-md hover:bg-accent"
-                  onClick={() => setOpenMobile(false)}
+                  onClick={handleCloseSidebar}
                 >
                   {getIconComponent(object.icon)}
                   {object.name}
