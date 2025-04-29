@@ -153,27 +153,27 @@ export function ObjectTypeForm({ onComplete }: ObjectTypeFormProps) {
 
       console.log(`Successfully created default field: ${fieldName}`, field);
       
-      // Create an additional text field with the same name but with _text suffix
+      // Create a description field instead of an additional text field with the same name
       try {
-        const additionalFieldApiName = `${fieldApiName}_text`;
+        const descriptionApiName = "description";
         
-        // Check if the additional field already exists
-        const additionalFieldExists = await checkFieldExists(objectTypeId, additionalFieldApiName);
-        if (additionalFieldExists) {
-          console.log(`Additional field ${additionalFieldApiName} already exists, skipping creation`);
+        // Check if the description field already exists
+        const descriptionFieldExists = await checkFieldExists(objectTypeId, descriptionApiName);
+        if (descriptionFieldExists) {
+          console.log(`Description field already exists, skipping creation`);
           return field;
         }
         
-        const additionalFieldName = `${fieldName} Text`;
+        const descriptionName = "Description";
         
-        console.log(`Creating additional text field: ${additionalFieldName}`);
+        console.log(`Creating description field: ${descriptionName}`);
 
-        const { data: additionalField, error: additionalFieldError } = await supabase
+        const { data: descriptionField, error: descriptionError } = await supabase
           .from("object_fields")
           .insert({
             object_type_id: objectTypeId,
-            name: additionalFieldName,
-            api_name: additionalFieldApiName,
+            name: descriptionName,
+            api_name: descriptionApiName,
             data_type: "textarea",
             is_required: false,
             is_system: false,
@@ -182,22 +182,22 @@ export function ObjectTypeForm({ onComplete }: ObjectTypeFormProps) {
           })
           .select();
 
-        if (additionalFieldError) {
-          console.error("Error creating additional text field:", additionalFieldError);
+        if (descriptionError) {
+          console.error("Error creating description field:", descriptionError);
           // Don't throw here, as we already created the default field
           toast({
             title: "Warning",
-            description: `Default field created, but failed to create the additional text field: ${additionalFieldError.message}`,
+            description: `Default field created, but failed to create the description field: ${descriptionError.message}`,
             variant: "destructive",
           });
         } else {
-          console.log(`Successfully created additional text field: ${additionalFieldName}`, additionalField);
+          console.log(`Successfully created description field: ${descriptionName}`, descriptionField);
         }
-      } catch (additionalFieldError) {
-        console.error("Exception creating additional field:", additionalFieldError);
+      } catch (descriptionError) {
+        console.error("Exception creating description field:", descriptionError);
         toast({
           title: "Warning",
-          description: "Default field was created, but there was an error creating the additional text field",
+          description: "Default field was created, but there was an error creating the description field",
           variant: "destructive",
         });
       }

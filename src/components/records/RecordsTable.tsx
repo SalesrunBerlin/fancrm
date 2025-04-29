@@ -14,6 +14,7 @@ import { ObjectField } from "@/hooks/useObjectTypes";
 import { ObjectRecord } from "@/hooks/useObjectRecords";
 import { Edit, Trash2, Eye } from "lucide-react";
 import { LookupValueDisplay } from "./LookupValueDisplay";
+import { format } from "date-fns";
 
 interface RecordsTableProps {
   records: ObjectRecord[];
@@ -29,6 +30,40 @@ export function RecordsTable({ records, fields, objectTypeId }: RecordsTableProp
       </div>
     );
   }
+  
+  // Function to get field value, handling both system and custom fields
+  const getFieldValue = (record: ObjectRecord, field: ObjectField) => {
+    if (field.is_system) {
+      // Handle system fields
+      switch (field.api_name) {
+        case "created_at":
+          return record.created_at ? format(new Date(record.created_at), "yyyy-MM-dd HH:mm") : "—";
+        case "updated_at":
+          return record.updated_at ? format(new Date(record.updated_at), "yyyy-MM-dd HH:mm") : "—";
+        case "record_id":
+          return record.record_id || "—";
+        default:
+          return "—";
+      }
+    }
+    
+    // Handle lookup fields
+    if (field.data_type === "lookup" && field.options && record.field_values && record.field_values[field.api_name]) {
+      return (
+        <LookupValueDisplay
+          value={record.field_values[field.api_name]}
+          fieldOptions={field.options as { target_object_type_id: string }}
+        />
+      );
+    }
+    
+    // Handle regular fields
+    if (record.field_values && record.field_values[field.api_name] !== null) {
+      return String(record.field_values[field.api_name]);
+    }
+    
+    return "—";
+  };
 
   return (
     <div className="rounded-md border overflow-hidden overflow-x-auto">
@@ -46,16 +81,7 @@ export function RecordsTable({ records, fields, objectTypeId }: RecordsTableProp
             <TableRow key={record.id}>
               {fields.map((field) => (
                 <TableCell key={`${record.id}-${field.id}`}>
-                  {field.data_type === "lookup" && field.options && record.field_values && record.field_values[field.api_name] ? (
-                    <LookupValueDisplay
-                      value={record.field_values[field.api_name]}
-                      fieldOptions={field.options as { target_object_type_id: string }}
-                    />
-                  ) : (
-                    record.field_values && record.field_values[field.api_name] !== null 
-                    ? String(record.field_values[field.api_name]) 
-                    : "—"
-                  )}
+                  {getFieldValue(record, field)}
                 </TableCell>
               ))}
               <TableCell className="text-right">

@@ -11,6 +11,7 @@ import { RecordsTable } from "@/components/records/RecordsTable";
 import { Card } from "@/components/ui/card";
 import { FieldsConfigDialog } from "@/components/records/FieldsConfigDialog";
 import { useUserFieldSettings } from "@/hooks/useUserFieldSettings";
+import { ObjectField } from "@/hooks/useObjectTypes";
 
 export default function ObjectRecordsList() {
   const { objectTypeId } = useParams<{ objectTypeId: string }>();
@@ -20,6 +21,43 @@ export default function ObjectRecordsList() {
   const objectType = objectTypes?.find(type => type.id === objectTypeId);
   const [allRecords, setAllRecords] = useState<any[]>([]);
   const { visibleFields, updateVisibleFields } = useUserFieldSettings(objectTypeId);
+  
+  // System fields definition
+  const systemFields: ObjectField[] = [
+    { 
+      id: "sys_created_at", 
+      api_name: "created_at", 
+      name: "Created At", 
+      is_required: true, 
+      is_system: true,
+      data_type: "datetime",
+      object_type_id: objectTypeId || "",
+      display_order: 1000,
+      owner_id: ""
+    },
+    { 
+      id: "sys_updated_at", 
+      api_name: "updated_at", 
+      name: "Last Modified", 
+      is_required: true, 
+      is_system: true,
+      data_type: "datetime",
+      object_type_id: objectTypeId || "",
+      display_order: 1001,
+      owner_id: ""
+    },
+    { 
+      id: "sys_record_id", 
+      api_name: "record_id", 
+      name: "Record ID", 
+      is_required: true, 
+      is_system: true,
+      data_type: "text",
+      object_type_id: objectTypeId || "",
+      display_order: 1002,
+      owner_id: ""
+    }
+  ];
   
   // Initialize visible fields if none are saved yet
   useEffect(() => {
@@ -45,6 +83,19 @@ export default function ObjectRecordsList() {
       </div>
     );
   }
+  
+  // Generate fields to display including system fields if selected
+  const getFieldsToDisplay = () => {
+    // Start with regular fields
+    const displayFields = fields?.filter(field => visibleFields.includes(field.api_name)) || [];
+    
+    // Add selected system fields
+    const selectedSystemFields = systemFields.filter(
+      field => visibleFields.includes(field.api_name)
+    );
+    
+    return [...displayFields, ...selectedSystemFields];
+  };
 
   return (
     <div className="space-y-6">
@@ -84,7 +135,7 @@ export default function ObjectRecordsList() {
         ) : (
           <RecordsTable 
             records={allRecords} 
-            fields={fields?.filter(field => visibleFields.includes(field.api_name)) || []} 
+            fields={getFieldsToDisplay()} 
             objectTypeId={objectTypeId!}
           />
         )}
