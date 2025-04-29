@@ -19,6 +19,7 @@ import EditRecordPage from "@/pages/EditRecordPage";
 import CreateObjectPage from "@/pages/CreateObjectPage";
 import ImportRecordsPage from "@/pages/ImportRecordsPage";
 import CreateFieldPage from "@/pages/CreateFieldPage";
+import ImportCreateFieldPage from "@/pages/ImportCreateFieldPage";
 
 // Create a client
 const queryClient = new QueryClient({
@@ -50,6 +51,7 @@ function App() {
               <Route path="/structures/*" element={<Structures />} />
               <Route path="/objects/:objectTypeId" element={<ObjectRecordsList />} />
               <Route path="/objects/:objectTypeId/import" element={<ImportRecordsPage />} />
+              <Route path="/objects/:objectTypeId/import/create-field/:columnName" element={<ImportCreateFieldPage />} />
               <Route path="/objects/:objectTypeId/new" element={<CreateRecordPage />} />
               <Route path="/objects/:objectTypeId/:recordId" element={<ObjectRecordDetail />} />
               <Route path="/objects/:objectTypeId/:recordId/edit" element={<EditRecordPage />} />

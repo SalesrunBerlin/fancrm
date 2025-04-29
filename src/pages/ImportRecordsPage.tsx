@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { PageHeader } from "@/components/ui/page-header";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
 import { useRecordFields } from "@/hooks/useRecordFields";
@@ -26,17 +26,15 @@ import {
 } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CreateFieldDialog } from "@/components/records/CreateFieldDialog";
 import { ObjectField } from "@/hooks/useObjectTypes";
 
 export default function ImportRecordsPage() {
   const { objectTypeId } = useParams<{ objectTypeId: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [pastedText, setPastedText] = useState("");
   const [step, setStep] = useState<"paste" | "mapping" | "importing">("paste");
   const [activeTab, setActiveTab] = useState<"paste" | "example">("paste");
-  const [createFieldDialogOpen, setCreateFieldDialogOpen] = useState(false);
-  const [selectedColumnIndex, setSelectedColumnIndex] = useState<number | null>(null);
   
   const { objectTypes } = useObjectTypes();
   const { fields, isLoading: isLoadingFields } = useRecordFields(objectTypeId);
@@ -50,6 +48,27 @@ export default function ImportRecordsPage() {
     updateColumnMapping, 
     importRecords 
   } = useImportRecords(objectTypeId!, fields || []);
+
+  // Check for newly created field from URL parameters
+  useEffect(() => {
+    const newFieldId = searchParams.get('newFieldId');
+    const columnName = searchParams.get('columnName');
+    
+    if (newFieldId && columnName && fields) {
+      // Find the column index that matches the column name
+      const columnIndex = columnMappings.findIndex(
+        mapping => mapping.sourceColumnName === columnName
+      );
+      
+      // Find the newly created field
+      const newField = fields.find(field => field.id === newFieldId);
+      
+      if (columnIndex >= 0 && newField) {
+        // Update the mapping with the new field
+        updateColumnMapping(columnIndex, newFieldId);
+      }
+    }
+  }, [searchParams, fields, columnMappings, updateColumnMapping]);
 
   const handleTextPaste = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setPastedText(e.target.value);
@@ -89,16 +108,9 @@ export default function ImportRecordsPage() {
   };
 
   const handleCreateNewField = (columnIndex: number) => {
-    setSelectedColumnIndex(columnIndex);
-    setCreateFieldDialogOpen(true);
-  };
-
-  const handleFieldCreated = (newField: ObjectField) => {
-    if (selectedColumnIndex !== null) {
-      // Update the column mapping to use the newly created field
-      updateColumnMapping(selectedColumnIndex, newField.id);
-    }
-    setSelectedColumnIndex(null);
+    const columnName = columnMappings[columnIndex]?.sourceColumnName || "";
+    // Navigate to the field creation page, passing the column name as a URL parameter
+    navigate(`/objects/${objectTypeId}/import/create-field/${encodeURIComponent(columnName)}`);
   };
 
   if (!objectType || isLoadingFields) {
@@ -279,14 +291,6 @@ export default function ImportRecordsPage() {
           )}
         </CardContent>
       </Card>
-
-      <CreateFieldDialog
-        open={createFieldDialogOpen}
-        onOpenChange={setCreateFieldDialogOpen}
-        objectTypeId={objectTypeId!}
-        columnName={selectedColumnIndex !== null ? columnMappings[selectedColumnIndex]?.sourceColumnName || "" : ""}
-        onFieldCreated={handleFieldCreated}
-      />
     </div>
   );
 }
