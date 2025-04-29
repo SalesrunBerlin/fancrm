@@ -4,15 +4,15 @@ import { useObjectFields } from "@/hooks/useObjectFields";
 import { ObjectField } from "@/hooks/useObjectTypes";
 
 export function useRecordFields(objectTypeId: string) {
-  const { fields, isLoading } = useObjectFields(objectTypeId);
+  const { fields: originalFields, isLoading } = useObjectFields(objectTypeId);
   const [sortedFields, setSortedFields] = useState<ObjectField[]>([]);
 
   useEffect(() => {
-    if (fields) {
-      const sorted = [...fields].sort((a, b) => a.display_order - b.display_order);
+    if (originalFields) {
+      const sorted = [...originalFields].sort((a, b) => a.display_order - b.display_order);
       setSortedFields(sorted);
     }
-  }, [fields]);
+  }, [originalFields]);
 
   return {
     fields: sortedFields,

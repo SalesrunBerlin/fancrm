@@ -2,16 +2,18 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
+import { useObjectFields } from "@/hooks/useObjectFields";
 import { ObjectFieldsList } from "@/components/settings/ObjectFieldsList";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, List } from "lucide-react";
 import { Link } from "react-router-dom";
 
 export default function ObjectTypeDetail() {
   const { objectTypeId } = useParams<{ objectTypeId: string }>();
   const navigate = useNavigate();
   const { objectTypes, updateObjectType, publishObjectType, unpublishObjectType } = useObjectTypes();
+  const { fields, isLoading, createField, updateField, deleteField } = useObjectFields(objectTypeId);
   const [isPublishing, setIsPublishing] = useState(false);
   
   // Find the current object type
@@ -51,6 +53,12 @@ export default function ObjectTypeDetail() {
     }
   };
 
+  const handleManagePicklistValues = (fieldId: string) => {
+    // This would be implemented to handle managing picklist values
+    console.log("Managing picklist values for field:", fieldId);
+    // You could navigate to another page or open a dialog here
+  };
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -77,7 +85,12 @@ export default function ObjectTypeDetail() {
         }
       />
       
-      <ObjectFieldsList objectTypeId={objectTypeId as string} />
+      <ObjectFieldsList 
+        fields={fields || []} 
+        objectTypeId={objectTypeId as string} 
+        isLoading={isLoading}
+        onManagePicklistValues={handleManagePicklistValues}
+      />
     </div>
   );
 }

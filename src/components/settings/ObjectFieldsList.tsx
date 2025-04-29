@@ -5,7 +5,7 @@ import { Loader2, Edit, List } from "lucide-react";
 import { ObjectField } from "@/hooks/useObjectTypes";
 import { Link } from "react-router-dom";
 
-interface ObjectFieldsListProps {
+export interface ObjectFieldsListProps {
   fields: ObjectField[];
   objectTypeId: string;
   isLoading: boolean;
