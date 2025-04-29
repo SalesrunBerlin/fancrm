@@ -165,6 +165,26 @@ export function useImportRecords(objectTypeId: string, fields: ObjectField[]) {
     }
   }, [importData, objectTypeId, columnMappings, queryClient, user]);
 
+  // Reset the import state when fields change (e.g., after a new field is created)
+  useEffect(() => {
+    if (importData && columnMappings.length > 0) {
+      // Update mappings with the latest fields
+      setColumnMappings(prev => {
+        return prev.map(mapping => {
+          // If there was a targetField, try to find it in the updated fields list
+          if (mapping.targetField) {
+            const updatedField = fields.find(f => f.id === mapping.targetField?.id);
+            return {
+              ...mapping,
+              targetField: updatedField || mapping.targetField
+            };
+          }
+          return mapping;
+        });
+      });
+    }
+  }, [fields, importData]);
+
   return {
     importData,
     columnMappings,

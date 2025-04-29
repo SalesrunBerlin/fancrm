@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -21,6 +22,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { Separator } from "@/components/ui/separator";
 import { PicklistValuesManager } from "./PicklistValuesManager";
+import { ObjectField } from "@/hooks/useObjectTypes";
 
 const fieldSchema = z.object({
   name: z.string().min(2, {
@@ -43,21 +45,23 @@ const fieldSchema = z.object({
 
 interface ObjectFieldFormProps {
   objectTypeId: string;
-  onComplete?: () => void;
+  onComplete?: (field?: ObjectField) => void;
+  initialName?: string;
 }
 
-export function ObjectFieldForm({ objectTypeId, onComplete }: ObjectFieldFormProps) {
+export function ObjectFieldForm({ objectTypeId, onComplete, initialName }: ObjectFieldFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPicklistValues, setShowPicklistValues] = useState(false);
   const [createdFieldId, setCreatedFieldId] = useState<string | null>(null);
+  const [createdField, setCreatedField] = useState<ObjectField | null>(null);
   const { objectTypes } = useObjectTypes();
-  const { createField } = useObjectFields(objectTypeId);
+  const { createField, fields } = useObjectFields(objectTypeId);
   const { user } = useAuth();
   
   const form = useForm<z.infer<typeof fieldSchema>>({
     resolver: zodResolver(fieldSchema),
     defaultValues: {
-      name: "",
+      name: initialName || "",
       api_name: "",
       data_type: "",
       is_required: false,
@@ -89,13 +93,15 @@ export function ObjectFieldForm({ objectTypeId, onComplete }: ObjectFieldFormPro
         object_type_id: objectTypeId,
       });
 
+      setCreatedField(fieldData);
+
       if (values.data_type === "picklist") {
         setCreatedFieldId(fieldData.id);
         toast.success("Field created! You can now add picklist values.");
       } else {
         toast.success("Field created successfully");
         if (onComplete) {
-          onComplete();
+          onComplete(fieldData);
         }
       }
     } catch (error) {
@@ -108,8 +114,8 @@ export function ObjectFieldForm({ objectTypeId, onComplete }: ObjectFieldFormPro
 
   const handlePicklistComplete = () => {
     toast.success("Field and picklist values created successfully");
-    if (onComplete) {
-      onComplete();
+    if (onComplete && createdField) {
+      onComplete(createdField);
     }
   };
 

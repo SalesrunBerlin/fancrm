@@ -6,7 +6,7 @@ import { useObjectTypes } from "@/hooks/useObjectTypes";
 import { useRecordFields } from "@/hooks/useRecordFields";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, AlertCircle, CheckCircle, ArrowLeft } from "lucide-react";
+import { Loader2, AlertCircle, CheckCircle, ArrowLeft, Plus } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { useImportRecords } from "@/hooks/useImportRecords";
 import {
@@ -26,6 +26,8 @@ import {
 } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { CreateFieldDialog } from "@/components/records/CreateFieldDialog";
+import { ObjectField } from "@/hooks/useObjectTypes";
 
 export default function ImportRecordsPage() {
   const { objectTypeId } = useParams<{ objectTypeId: string }>();
@@ -33,6 +35,9 @@ export default function ImportRecordsPage() {
   const [pastedText, setPastedText] = useState("");
   const [step, setStep] = useState<"paste" | "mapping" | "importing">("paste");
   const [activeTab, setActiveTab] = useState<"paste" | "example">("paste");
+  const [createFieldDialogOpen, setCreateFieldDialogOpen] = useState(false);
+  const [selectedColumnIndex, setSelectedColumnIndex] = useState<number | null>(null);
+  
   const { objectTypes } = useObjectTypes();
   const { fields, isLoading: isLoadingFields } = useRecordFields(objectTypeId);
   const objectType = objectTypes?.find(type => type.id === objectTypeId);
@@ -81,6 +86,19 @@ export default function ImportRecordsPage() {
     ];
     
     return `${headers}\n${rows.join("\n")}`;
+  };
+
+  const handleCreateNewField = (columnIndex: number) => {
+    setSelectedColumnIndex(columnIndex);
+    setCreateFieldDialogOpen(true);
+  };
+
+  const handleFieldCreated = (newField: ObjectField) => {
+    if (selectedColumnIndex !== null) {
+      // Update the column mapping to use the newly created field
+      updateColumnMapping(selectedColumnIndex, newField.id);
+    }
+    setSelectedColumnIndex(null);
   };
 
   if (!objectType || isLoadingFields) {
@@ -157,7 +175,7 @@ export default function ImportRecordsPage() {
                   <Alert variant="destructive" className="py-2">
                     <AlertCircle className="h-4 w-4" />
                     <AlertDescription>
-                      Some columns couldn't be matched automatically. Please map them manually.
+                      Some columns couldn't be matched automatically. Please map them manually or create new fields.
                     </AlertDescription>
                   </Alert>
                 )}
@@ -188,13 +206,28 @@ export default function ImportRecordsPage() {
                         <TableCell>
                           <Select
                             value={mapping.targetField?.id || "none"}
-                            onValueChange={(value) => updateColumnMapping(index, value === "none" ? null : value)}
+                            onValueChange={(value) => {
+                              if (value === "create_new") {
+                                handleCreateNewField(index);
+                              } else {
+                                updateColumnMapping(index, value === "none" ? null : value);
+                              }
+                            }}
                           >
                             <SelectTrigger className="w-full">
                               <SelectValue placeholder="Select a field" />
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="none">-- Not mapped --</SelectItem>
+                              <SelectItem value="create_new" className="font-medium text-primary">
+                                <div className="flex items-center">
+                                  <Plus className="mr-2 h-4 w-4" />
+                                  Create New Field
+                                </div>
+                              </SelectItem>
+                              <SelectItem value="divider" disabled>
+                                ───────────────────
+                              </SelectItem>
                               {fields.map((field) => (
                                 <SelectItem key={field.id} value={field.id}>
                                   {field.name}
@@ -246,6 +279,14 @@ export default function ImportRecordsPage() {
           )}
         </CardContent>
       </Card>
+
+      <CreateFieldDialog
+        open={createFieldDialogOpen}
+        onOpenChange={setCreateFieldDialogOpen}
+        objectTypeId={objectTypeId!}
+        columnName={selectedColumnIndex !== null ? columnMappings[selectedColumnIndex]?.sourceColumnName || "" : ""}
+        onFieldCreated={handleFieldCreated}
+      />
     </div>
   );
 }
