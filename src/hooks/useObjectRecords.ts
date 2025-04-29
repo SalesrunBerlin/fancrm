@@ -182,6 +182,39 @@ export function useObjectRecords(objectTypeId?: string) {
     },
   });
 
+  const deleteRecord = useMutation({
+    mutationFn: async (recordId: string) => {
+      // First delete the field values
+      const { error: fieldValuesError } = await supabase
+        .from("object_field_values")
+        .delete()
+        .eq("record_id", recordId);
+
+      if (fieldValuesError) throw fieldValuesError;
+
+      // Then delete the record itself
+      const { error: recordError } = await supabase
+        .from("object_records")
+        .delete()
+        .eq("id", recordId);
+
+      if (recordError) throw recordError;
+
+      return { id: recordId };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["object-records", objectTypeId] });
+    },
+    onError: (error) => {
+      console.error("Error deleting record:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete record",
+        variant: "destructive",
+      });
+    }
+  });
+
   const getRecord = async (recordId: string): Promise<ObjectRecord | null> => {
     // Get the record
     const { data: record, error: recordError } = await supabase
@@ -223,6 +256,7 @@ export function useObjectRecords(objectTypeId?: string) {
     isLoading,
     createRecord,
     updateRecord,
+    deleteRecord,
     getRecord
   };
 }

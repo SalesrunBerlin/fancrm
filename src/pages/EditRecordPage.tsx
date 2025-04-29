@@ -42,7 +42,7 @@ export default function EditRecordPage() {
       setIsSubmitting(true);
       await updateRecord.mutateAsync({
         id: recordId,
-        ...data
+        field_values: data
       });
       navigate(`/objects/${objectTypeId}/${recordId}`);
     } catch (error) {

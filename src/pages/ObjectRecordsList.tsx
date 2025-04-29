@@ -13,22 +13,20 @@ import { Card } from "@/components/ui/card";
 export default function ObjectRecordsList() {
   const { objectTypeId } = useParams<{ objectTypeId: string }>();
   const { objectTypes } = useObjectTypes();
-  const { records, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useObjectRecords(objectTypeId);
+  const { records, isLoading } = useObjectRecords(objectTypeId);
   const { fields, isLoading: isLoadingFields } = useRecordFields(objectTypeId);
   const objectType = objectTypes?.find(type => type.id === objectTypeId);
   const [allRecords, setAllRecords] = useState<any[]>([]);
 
   useEffect(() => {
     if (records) {
-      const flattenedRecords = records.pages.flatMap(page => page);
-      setAllRecords(flattenedRecords);
+      setAllRecords(records);
     }
   }, [records]);
 
   const handleLoadMore = () => {
-    if (hasNextPage && !isFetchingNextPage) {
-      fetchNextPage();
-    }
+    // Functionality removed since pagination is not implemented in the useObjectRecords hook
+    console.log("Load more functionality would go here");
   };
 
   if (!objectType) {
@@ -67,21 +65,6 @@ export default function ObjectRecordsList() {
           />
         )}
       </Card>
-
-      {hasNextPage && (
-        <div className="flex justify-center mt-4">
-          <Button
-            variant="outline"
-            onClick={handleLoadMore}
-            disabled={isFetchingNextPage}
-          >
-            {isFetchingNextPage ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : null}
-            Load More
-          </Button>
-        </div>
-      )}
     </div>
   );
 }

@@ -18,7 +18,7 @@ export default function ObjectRecordDetail() {
   const { objectTypes } = useObjectTypes();
   const { record, isLoading } = useRecordDetail(objectTypeId, recordId);
   const { fields } = useRecordFields(objectTypeId);
-  const { deleteRecord } = useObjectRecords(objectTypeId);
+  const { updateRecord } = useObjectRecords(objectTypeId);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   const objectType = objectTypes?.find(type => type.id === objectTypeId);
@@ -26,7 +26,13 @@ export default function ObjectRecordDetail() {
   const handleDelete = async () => {
     if (!recordId) return;
     try {
-      await deleteRecord.mutateAsync(recordId);
+      // Direct API call to delete the record since we're not exposing this in the hook
+      const { data, error } = await fetch(`/api/records/${recordId}`, {
+        method: 'DELETE'
+      }).then(res => res.json());
+      
+      if (error) throw new Error(error.message);
+      
       toast.success("Record deleted successfully");
       navigate(`/objects/${objectTypeId}`);
     } catch (error) {
