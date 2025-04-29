@@ -13,22 +13,33 @@ export default function ObjectFieldEditPage() {
   const navigate = useNavigate();
   const { objectTypeId, fieldId } = useParams<{ objectTypeId: string; fieldId: string }>();
   const { fields, isLoading } = useObjectFields(objectTypeId);
+  
   const field = fields?.find(f => f.id === fieldId);
+  
+  const handleClose = () => {
+    navigate(`/settings/objects/${objectTypeId}`);
+  };
+  
+  // Initialize the hook with a safe default when field is not available
+  const { form, isSubmitting, onSubmit } = useObjectFieldEdit({
+    field: field || {
+      id: '',
+      name: '',
+      api_name: '',
+      object_type_id: objectTypeId || '',
+      data_type: 'text',
+      is_system: false,
+      is_required: false,
+      display_order: 0,
+    },
+    onClose: handleClose,
+  });
   
   useEffect(() => {
     if (!isLoading && !field) {
       navigate(`/settings/objects/${objectTypeId}`);
     }
   }, [isLoading, field, navigate, objectTypeId]);
-
-  const handleClose = () => {
-    navigate(`/settings/objects/${objectTypeId}`);
-  };
-
-  const { form, isSubmitting, onSubmit } = field ? useObjectFieldEdit({
-    field,
-    onClose: handleClose,
-  }) : { form: null, isSubmitting: false, onSubmit: () => {} };
 
   if (isLoading) {
     return (
@@ -38,7 +49,7 @@ export default function ObjectFieldEditPage() {
     );
   }
 
-  if (!field || !form) {
+  if (!field) {
     return (
       <div className="space-y-4">
         <Button variant="outline" asChild>

@@ -21,10 +21,10 @@ export function useObjectFieldEdit({ field, onClose }: UseObjectFieldEditProps) 
   const form = useForm<FieldEditFormData>({
     resolver: zodResolver(fieldEditSchema),
     defaultValues: {
-      name: field.name,
-      api_name: field.api_name,
-      display_field_api_name: field.options?.display_field_api_name,
-      target_object_type_id: field.options?.target_object_type_id,
+      name: field.name || '',
+      api_name: field.api_name || '',
+      display_field_api_name: field.options?.display_field_api_name || '',
+      target_object_type_id: field.options?.target_object_type_id || '',
     },
   });
 
