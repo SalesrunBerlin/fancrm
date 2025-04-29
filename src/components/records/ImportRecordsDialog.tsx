@@ -126,7 +126,7 @@ export function ImportRecordsDialog({
                   placeholder="Paste your data here..." 
                   className="h-[200px] font-mono"
                   value={pastedText} 
-                  onChange={handleTextParse}
+                  onChange={handleTextPaste}
                 />
               </TabsContent>
               <TabsContent value="example">
@@ -158,7 +158,7 @@ export function ImportRecordsDialog({
                 {getMappedCount()} of {columnMappings.length} columns mapped
               </p>
               {getMappedCount() < columnMappings.length && (
-                <Alert variant="warning" className="py-2">
+                <Alert variant="destructive" className="py-2">
                   <AlertCircle className="h-4 w-4" />
                   <AlertDescription>
                     Some columns couldn't be matched automatically. Please map them manually.
