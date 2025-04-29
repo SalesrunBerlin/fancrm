@@ -10,7 +10,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { LayoutDashboard, Settings, FileText, Box } from "lucide-react";
+import { LayoutDashboard, Settings, FileText, Box, Database } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
 import { useEffect } from "react";
@@ -20,6 +20,11 @@ const navigationItems = [
     title: "Dashboard",
     icon: LayoutDashboard,
     path: "/dashboard"
+  },
+  {
+    title: "Object Manager",
+    icon: Database,
+    path: "/settings/object-manager"
   },
   {
     title: "Structures",

@@ -13,6 +13,7 @@ import { ObjectFieldForm } from "@/components/settings/ObjectFieldForm";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { PicklistValuesManager } from "@/components/settings/PicklistValuesManager";
 import { toast } from "sonner";
+import { PageHeader } from "@/components/ui/page-header";
 import {
   Select,
   SelectContent,
@@ -126,9 +127,9 @@ export default function ObjectTypeDetail() {
     return (
       <div className="space-y-4">
         <Button variant="outline" asChild>
-          <Link to="/settings">
+          <Link to="/settings/object-manager">
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Settings
+            Back to Object Manager
           </Link>
         </Button>
         <Card>
@@ -140,57 +141,63 @@ export default function ObjectTypeDetail() {
     );
   }
 
+  const headerActions = (
+    <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 mr-4">
+        <Switch
+          id="active-toggle"
+          checked={objectType.is_active}
+          onCheckedChange={handleActiveToggle}
+          disabled={updateObjectType.isPending}
+        />
+        <Label htmlFor="active-toggle">Active</Label>
+      </div>
+      {objectType.is_published ? (
+        <Button 
+          variant="outline" 
+          onClick={() => setShowUnpublishDialog(true)}
+        >
+          Unpublish
+        </Button>
+      ) : (
+        <Button 
+          variant="outline" 
+          onClick={() => setShowPublishDialog(true)}
+        >
+          Publish
+        </Button>
+      )}
+    </div>
+  );
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="outline" asChild>
-            <Link to="/settings">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Settings
-            </Link>
-          </Button>
-          <h1 className="text-3xl font-bold flex items-center gap-2">
+      <PageHeader 
+        title={
+          <div className="flex items-center gap-2">
             {getIconComponent(objectType.icon)}
-            {objectType.name}
-          </h1>
-          {objectType.is_template && (
-            <span className="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded">
-              Imported Template
-            </span>
-          )}
-        </div>
-        <div className="flex items-center gap-2">
-          <Switch
-            id="active-toggle"
-            checked={objectType.is_active}
-            onCheckedChange={handleActiveToggle}
-            disabled={updateObjectType.isPending}
-          />
-          <Label htmlFor="active-toggle">Active</Label>
-        </div>
-      </div>
-      
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between pb-4">
-          <CardTitle>Object Settings</CardTitle>
-          <div>
-            {objectType.is_published ? (
-              <Button 
-                variant="outline" 
-                onClick={() => setShowUnpublishDialog(true)}
-              >
-                Unpublish
-              </Button>
-            ) : (
-              <Button 
-                variant="outline" 
-                onClick={() => setShowPublishDialog(true)}
-              >
-                Publish
-              </Button>
+            <span>{objectType.name}</span>
+            {objectType.is_template && (
+              <span className="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded">
+                Imported Template
+              </span>
             )}
           </div>
+        }
+        description={objectType.description || `API Name: ${objectType.api_name}`}
+        actions={headerActions}
+      >
+        <Button variant="outline" asChild size="sm" className="mt-2">
+          <Link to="/settings/object-manager">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Object Manager
+          </Link>
+        </Button>
+      </PageHeader>
+      
+      <Card>
+        <CardHeader>
+          <CardTitle>Object Settings</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -251,6 +258,7 @@ export default function ObjectTypeDetail() {
         </CardContent>
       </Card>
       
+      {/* Picklist Values Dialog */}
       <Dialog 
         open={showPicklistDialog && !!selectedField} 
         onOpenChange={(open) => {

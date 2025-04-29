@@ -6,6 +6,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import Auth from "@/pages/Auth";
 import Dashboard from "@/pages/Dashboard";
 import Settings from "@/pages/Settings";
+import ObjectManager from "@/pages/ObjectManager";
 import Structures from "@/pages/Structures";
 import ObjectRecordsList from "@/pages/ObjectRecordsList";
 import ObjectRecordDetail from "@/pages/ObjectRecordDetail";
@@ -37,7 +38,8 @@ function App() {
             <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
               <Route path="/" element={<Dashboard />} />
               <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/settings/*" element={<Settings />} />
+              <Route path="/settings" element={<Settings />} />
+              <Route path="/settings/object-manager" element={<ObjectManager />} />
               <Route path="/settings/objects/:objectTypeId" element={<ObjectTypeDetail />} />
               <Route path="/settings/objects/:objectTypeId/fields/:fieldId/edit" element={<ObjectFieldEditPage />} />
               <Route path="/structures/*" element={<Structures />} />

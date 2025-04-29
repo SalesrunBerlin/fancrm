@@ -1,4 +1,3 @@
-
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -46,7 +45,11 @@ const objectTypeSchema = z.object({
 
 type ObjectTypeFormValues = z.infer<typeof objectTypeSchema>;
 
-export function ObjectTypeForm() {
+interface ObjectTypeFormProps {
+  onComplete?: () => void;
+}
+
+export function ObjectTypeForm({ onComplete }: ObjectTypeFormProps) {
   const { createObjectType } = useObjectTypes();
   const { toast } = useToast();
 
@@ -125,6 +128,10 @@ export function ObjectTypeForm() {
       }
 
       form.reset();
+      
+      if (onComplete) {
+        onComplete();
+      }
 
       toast({
         title: "Success",
