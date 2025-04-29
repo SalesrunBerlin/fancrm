@@ -13,7 +13,6 @@ import { ObjectFieldForm } from "@/components/settings/ObjectFieldForm";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { PicklistValuesManager } from "@/components/settings/PicklistValuesManager";
 import { toast } from "sonner";
-import { PageHeader } from "@/components/ui/page-header";
 import {
   Select,
   SelectContent,
@@ -117,68 +116,60 @@ export default function ObjectTypeDetail() {
 
   if (isLoadingTypes) {
     return (
-      <div className="container mx-auto max-w-7xl">
-        <div className="flex items-center justify-center h-64">
-          <Loader2 className="h-8 w-8 animate-spin" />
-        </div>
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin" />
       </div>
     );
   }
 
   if (!objectType) {
     return (
-      <div className="container mx-auto max-w-7xl space-y-4">
-        <PageHeader
-          title="Object Not Found"
-          description="The requested object type could not be found"
-          actions={
-            <Button variant="outline" asChild>
-              <Link to="/settings">
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Back to Settings
-              </Link>
-            </Button>
-          }
-        />
+      <div className="space-y-4">
+        <Button variant="outline" asChild>
+          <Link to="/settings">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Settings
+          </Link>
+        </Button>
+        <Card>
+          <CardContent className="pt-6">
+            <p className="text-center text-muted-foreground">Object type not found</p>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto max-w-7xl space-y-6">
-      <PageHeader
-        title={
-          <div className="flex items-center gap-2">
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Button variant="outline" asChild>
+            <Link to="/settings">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to Settings
+            </Link>
+          </Button>
+          <h1 className="text-3xl font-bold flex items-center gap-2">
             {getIconComponent(objectType.icon)}
             {objectType.name}
-            {objectType.is_template && (
-              <span className="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded">
-                Imported Template
-              </span>
-            )}
-          </div>
-        }
-        description={objectType.description || `Configure settings and fields for the ${objectType.name} object`}
-        actions={
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <Switch
-                id="active-toggle"
-                checked={objectType.is_active}
-                onCheckedChange={handleActiveToggle}
-                disabled={updateObjectType.isPending}
-              />
-              <Label htmlFor="active-toggle">Active</Label>
-            </div>
-            <Button variant="outline" asChild>
-              <Link to="/settings">
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Back
-              </Link>
-            </Button>
-          </div>
-        }
-      />
+          </h1>
+          {objectType.is_template && (
+            <span className="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded">
+              Imported Template
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          <Switch
+            id="active-toggle"
+            checked={objectType.is_active}
+            onCheckedChange={handleActiveToggle}
+            disabled={updateObjectType.isPending}
+          />
+          <Label htmlFor="active-toggle">Active</Label>
+        </div>
+      </div>
       
       <Card>
         <CardHeader className="flex flex-row items-center justify-between pb-4">
