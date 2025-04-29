@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -91,17 +90,22 @@ export function ObjectFieldForm({ objectTypeId, onComplete, initialName }: Objec
         data_type: values.data_type,
         is_required: values.is_required,
         object_type_id: objectTypeId,
+        options: values.options || {},
       });
 
-      setCreatedField(fieldData);
-
-      if (values.data_type === "picklist") {
-        setCreatedFieldId(fieldData.id);
-        toast.success("Field created! You can now add picklist values.");
-      } else {
-        toast.success("Field created successfully");
-        if (onComplete) {
-          onComplete(fieldData);
+      // Ensure we're using the correct type for the created field
+      if (fieldData) {
+        // Store the created field properly typed for later use
+        setCreatedField(fieldData as ObjectField);
+        
+        if (values.data_type === "picklist") {
+          setCreatedFieldId(fieldData.id);
+          toast.success("Field created! You can now add picklist values.");
+        } else {
+          toast.success("Field created successfully");
+          if (onComplete) {
+            onComplete(fieldData as ObjectField);
+          }
         }
       }
     } catch (error) {

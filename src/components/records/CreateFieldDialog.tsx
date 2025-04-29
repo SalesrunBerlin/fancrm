@@ -1,17 +1,14 @@
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ObjectFieldForm } from "@/components/settings/ObjectFieldForm";
 import { ObjectField } from "@/hooks/useObjectTypes";
-import { Loader2 } from "lucide-react";
 
 interface CreateFieldDialogProps {
   open: boolean;
@@ -28,13 +25,6 @@ export function CreateFieldDialog({
   columnName,
   onFieldCreated,
 }: CreateFieldDialogProps) {
-  const [isCreating, setIsCreating] = useState(false);
-
-  const handleFieldCreated = (field: ObjectField) => {
-    onFieldCreated(field);
-    onOpenChange(false);
-  };
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px]">
@@ -48,7 +38,7 @@ export function CreateFieldDialog({
           <ObjectFieldForm 
             objectTypeId={objectTypeId} 
             initialName={columnName}
-            onComplete={handleFieldCreated}
+            onComplete={onFieldCreated}
           />
         </div>
       </DialogContent>
