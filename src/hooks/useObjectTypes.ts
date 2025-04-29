@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -253,27 +254,144 @@ export function useObjectTypes() {
       if (!user) throw new Error("User must be logged in to import object types");
 
       console.log("Starting import of object structure:", sourceObjectId);
+      
+      // First, let's manually create a copy of the source object
       try {
-        // Call the database function to clone the object structure
-        const { data: functionResult, error: functionError } = await supabase
-          .rpc('clone_object_structure', {
-            source_object_id: sourceObjectId,
-            new_owner_id: user.id
-          });
+        // 1. Get the source object data
+        const { data: sourceObject, error: sourceObjectError } = await supabase
+          .from("object_types")
+          .select("*")
+          .eq("id", sourceObjectId)
+          .single();
 
-        if (functionError) {
-          console.error("Error from clone_object_structure RPC:", functionError);
-          throw functionError;
+        if (sourceObjectError) {
+          console.error("Error fetching source object:", sourceObjectError);
+          throw sourceObjectError;
         }
-        
-        console.log("Import object structure result:", functionResult);
-        
-        if (!functionResult) {
-          throw new Error("No result returned from object import function");
+
+        if (!sourceObject) {
+          throw new Error("Source object not found");
         }
-        
-        // Return the new object ID
-        return functionResult;
+
+        // 2. Create the new object (clone)
+        const newObjectData = {
+          name: sourceObject.name,
+          api_name: sourceObject.api_name.toLowerCase(),
+          description: sourceObject.description,
+          icon: sourceObject.icon,
+          is_active: true,
+          show_in_navigation: true,
+          default_field_api_name: sourceObject.default_field_api_name,
+          is_system: false,
+          is_published: false,
+          is_template: true,
+          source_object_id: sourceObjectId,
+          owner_id: user.id
+        };
+
+        const { data: newObject, error: newObjectError } = await supabase
+          .from("object_types")
+          .insert([newObjectData])
+          .select()
+          .single();
+
+        if (newObjectError) {
+          console.error("Error creating new object:", newObjectError);
+          throw newObjectError;
+        }
+
+        // 3. Get all fields from the source object
+        const { data: sourceFields, error: sourceFieldsError } = await supabase
+          .from("object_fields")
+          .select("*")
+          .eq("object_type_id", sourceObjectId)
+          .order("display_order");
+
+        if (sourceFieldsError) {
+          console.error("Error fetching source fields:", sourceFieldsError);
+          throw sourceFieldsError;
+        }
+
+        // 4. Create new fields in the target object
+        if (sourceFields && sourceFields.length > 0) {
+          const newFields = sourceFields.map(field => ({
+            object_type_id: newObject.id,
+            name: field.name,
+            api_name: field.api_name,
+            data_type: field.data_type,
+            is_required: field.is_required,
+            is_system: false,
+            display_order: field.display_order,
+            options: field.options,
+            default_value: field.default_value,
+            owner_id: user.id
+          }));
+
+          const { error: newFieldsError } = await supabase
+            .from("object_fields")
+            .insert(newFields);
+
+          if (newFieldsError) {
+            console.error("Error creating new fields:", newFieldsError);
+            // We continue even if some fields failed, to maintain the object
+            console.warn("Some fields may not have been copied correctly");
+          }
+
+          // 5. Get the newly created fields to copy picklist values
+          const { data: createdFields, error: createdFieldsError } = await supabase
+            .from("object_fields")
+            .select("id, api_name, data_type")
+            .eq("object_type_id", newObject.id);
+
+          if (createdFieldsError) {
+            console.error("Error fetching created fields:", createdFieldsError);
+            // Continue with what we have
+          }
+
+          // 6. Copy picklist values for picklist fields
+          if (createdFields && createdFields.length > 0) {
+            for (const sourceField of sourceFields) {
+              if (sourceField.data_type === "picklist") {
+                const matchingNewField = createdFields.find(f => f.api_name === sourceField.api_name);
+                
+                if (matchingNewField) {
+                  // Get picklist values for the source field
+                  const { data: picklistValues, error: picklistError } = await supabase
+                    .from("field_picklist_values")
+                    .select("*")
+                    .eq("field_id", sourceField.id)
+                    .order("order_position");
+
+                  if (picklistError) {
+                    console.error(`Error fetching picklist values for field ${sourceField.name}:`, picklistError);
+                    continue; // Continue with next field
+                  }
+
+                  if (picklistValues && picklistValues.length > 0) {
+                    const newPicklistValues = picklistValues.map(value => ({
+                      field_id: matchingNewField.id,
+                      label: value.label,
+                      value: value.value,
+                      order_position: value.order_position,
+                      owner_id: user.id
+                    }));
+
+                    const { error: newPicklistError } = await supabase
+                      .from("field_picklist_values")
+                      .insert(newPicklistValues);
+
+                    if (newPicklistError) {
+                      console.error(`Error creating picklist values for field ${matchingNewField.name}:`, newPicklistError);
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+
+        console.log("Object import completed successfully:", newObject.id);
+        return newObject.id;
       } catch (error) {
         console.error("Exception during object import:", error);
         throw error;

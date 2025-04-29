@@ -15,7 +15,8 @@ import {
   Eye,
   RefreshCw,
   AlertTriangle,
-  Check
+  Check,
+  Info
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { 
@@ -54,6 +55,8 @@ export default function Structures() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [cleanupStatus, setCleanupStatus] = useState<string | null>(null);
   const [importSuccess, setImportSuccess] = useState(false);
+  const [importError, setImportError] = useState<string | null>(null);
+  const [importInProgress, setImportInProgress] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -87,8 +90,10 @@ export default function Structures() {
   const handleImport = async () => {
     if (!selectedObjectId) return;
     
-    // Reset import success state
+    // Reset import states
     setImportSuccess(false);
+    setImportError(null);
+    setImportInProgress(true);
     
     try {
       const newObjectId = await importObjectType.mutateAsync(selectedObjectId);
@@ -102,6 +107,7 @@ export default function Structures() {
         setShowImportDialog(false);
         setSelectedObjectId(null);
         setSelectedObjectName(null);
+        setImportInProgress(false);
         
         // Navigate to the newly imported object
         if (newObjectId) {
@@ -110,7 +116,9 @@ export default function Structures() {
       }, 2000);
     } catch (error) {
       console.error("Error importing object:", error);
-      toast.error("Failed to import object structure");
+      setImportError(error instanceof Error ? error.message : "Failed to import object structure");
+      setImportInProgress(false);
+      // Don't close dialog on error so user can see the error
     }
   };
 
@@ -298,6 +306,8 @@ export default function Structures() {
                       onClick={() => {
                         setSelectedObjectId(objectType.id);
                         setSelectedObjectName(objectType.name);
+                        setImportError(null);
+                        setImportSuccess(false);
                         setShowImportDialog(true);
                       }}
                     >
@@ -330,7 +340,12 @@ export default function Structures() {
         </TabsContent>
       </Tabs>
 
-      <Dialog open={showImportDialog} onOpenChange={setShowImportDialog}>
+      <Dialog open={showImportDialog} onOpenChange={(open) => {
+        // Only allow closing if not currently importing
+        if (!importInProgress) {
+          setShowImportDialog(open);
+        }
+      }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Import Object Structure</DialogTitle>
@@ -340,6 +355,11 @@ export default function Structures() {
                   <Check className="h-4 w-4 mr-2" />
                   Object structure imported successfully!
                 </div>
+              ) : importError ? (
+                <div className="flex items-center text-destructive mt-2">
+                  <AlertTriangle className="h-4 w-4 mr-2" />
+                  {importError}
+                </div>
               ) : (
                 <>
                   This will create a copy of {selectedObjectName ? <strong>{selectedObjectName}</strong> : 'the object structure'} in your account.
@@ -348,20 +368,35 @@ export default function Structures() {
               )}
             </DialogDescription>
           </DialogHeader>
+          
+          {importError && (
+            <Alert variant="destructive" className="my-2">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription className="flex items-center gap-2">
+                <Info className="h-4 w-4" /> Please try refreshing the page and try again.
+              </AlertDescription>
+            </Alert>
+          )}
+          
           <DialogFooter>
-            <Button variant="outline" onClick={() => {
-              setShowImportDialog(false);
-              setSelectedObjectId(null);
-              setSelectedObjectName(null);
-              setImportSuccess(false);
-            }} disabled={importObjectType.isPending}>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setShowImportDialog(false);
+                setSelectedObjectId(null);
+                setSelectedObjectName(null);
+                setImportSuccess(false);
+                setImportError(null);
+              }} 
+              disabled={importInProgress}
+            >
               Cancel
             </Button>
             <Button 
               onClick={handleImport} 
-              disabled={importObjectType.isPending || importSuccess}
+              disabled={importInProgress || importSuccess}
             >
-              {importObjectType.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {importInProgress ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               Import
             </Button>
           </DialogFooter>
