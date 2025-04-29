@@ -11,7 +11,6 @@ import { RecordsTable } from "@/components/records/RecordsTable";
 import { Card } from "@/components/ui/card";
 import { FieldsConfigDialog } from "@/components/records/FieldsConfigDialog";
 import { useUserFieldSettings } from "@/hooks/useUserFieldSettings";
-import { ImportRecordsDialog } from "@/components/records/ImportRecordsDialog";
 
 export default function ObjectRecordsList() {
   const { objectTypeId } = useParams<{ objectTypeId: string }>();
@@ -21,7 +20,6 @@ export default function ObjectRecordsList() {
   const objectType = objectTypes?.find(type => type.id === objectTypeId);
   const [allRecords, setAllRecords] = useState<any[]>([]);
   const { visibleFields, updateVisibleFields } = useUserFieldSettings(objectTypeId);
-  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   
   // Initialize visible fields if none are saved yet
   useEffect(() => {
@@ -61,10 +59,12 @@ export default function ObjectRecordsList() {
             />
             <Button 
               variant="outline"
-              onClick={() => setIsImportDialogOpen(true)}
+              asChild
             >
-              <Upload className="mr-1.5 h-4 w-4" />
-              Import
+              <Link to={`/objects/${objectTypeId}/import`}>
+                <Upload className="mr-1.5 h-4 w-4" />
+                Import
+              </Link>
             </Button>
             <Button asChild>
               <Link to={`/objects/${objectTypeId}/new`}>
@@ -89,15 +89,6 @@ export default function ObjectRecordsList() {
           />
         )}
       </Card>
-
-      {fields && (
-        <ImportRecordsDialog
-          objectTypeId={objectTypeId!}
-          fields={fields}
-          isOpen={isImportDialogOpen}
-          onClose={() => setIsImportDialogOpen(false)}
-        />
-      )}
     </div>
   );
 }
