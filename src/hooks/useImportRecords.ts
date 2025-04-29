@@ -2,7 +2,7 @@
 import { useState, useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { ObjectField } from "@/hooks/useObjectTypes";
-import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -22,6 +22,7 @@ export function useImportRecords(objectTypeId: string, fields: ObjectField[]) {
   const [columnMappings, setColumnMappings] = useState<ColumnMapping[]>([]);
   const [isImporting, setIsImporting] = useState(false);
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   // Parse pasted text into a structured format
   const parseImportText = useCallback((text: string) => {
@@ -80,7 +81,10 @@ export function useImportRecords(objectTypeId: string, fields: ObjectField[]) {
 
   // Import the records to the database
   const importRecords = useCallback(async () => {
-    if (!importData || !objectTypeId) return;
+    if (!importData || !objectTypeId || !user) {
+      console.error("Missing required data for import:", { importData, objectTypeId, user });
+      return;
+    }
 
     setIsImporting(true);
     let successCount = 0;
@@ -90,17 +94,25 @@ export function useImportRecords(objectTypeId: string, fields: ObjectField[]) {
       // Process each row of data
       for (const row of importData.rows) {
         try {
+          console.log("Importing row with owner_id:", user.id);
+          
           // Create a new record in object_records
           const { data: recordData, error: recordError } = await supabase
             .from('object_records')
             .insert({
-              object_type_id: objectTypeId
+              object_type_id: objectTypeId,
+              owner_id: user.id  // Explicitly set the owner_id to the current user's ID
             })
             .select('id')
             .single();
 
-          if (recordError) throw recordError;
+          if (recordError) {
+            console.error("Error creating record:", recordError);
+            throw recordError;
+          }
+          
           const recordId = recordData.id;
+          console.log("Created record with ID:", recordId);
 
           // Create field values for each mapped column
           const fieldValues = [];
@@ -117,11 +129,15 @@ export function useImportRecords(objectTypeId: string, fields: ObjectField[]) {
 
           // Insert field values
           if (fieldValues.length > 0) {
+            console.log("Inserting field values:", fieldValues);
             const { error: valuesError } = await supabase
               .from('object_field_values')
               .insert(fieldValues);
 
-            if (valuesError) throw valuesError;
+            if (valuesError) {
+              console.error("Error inserting field values:", valuesError);
+              throw valuesError;
+            }
           }
           
           successCount++;
@@ -147,7 +163,7 @@ export function useImportRecords(objectTypeId: string, fields: ObjectField[]) {
     } finally {
       setIsImporting(false);
     }
-  }, [importData, objectTypeId, columnMappings, queryClient]);
+  }, [importData, objectTypeId, columnMappings, queryClient, user]);
 
   return {
     importData,
