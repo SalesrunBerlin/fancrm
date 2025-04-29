@@ -1,18 +1,8 @@
 
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { useForm } from "react-hook-form";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-  FormDescription,
-} from "@/components/ui/form";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
 import { Loader2 } from "lucide-react";
@@ -26,51 +16,24 @@ import {
 } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 
-const objectTypeSchema = z.object({
-  name: z.string().min(2, {
-    message: "Name must be at least 2 characters.",
-  }),
-  api_name: z.string().min(2, {
-    message: "API name must be at least 2 characters.",
-  }).refine(value => /^[a-z0-9_]+$/.test(value), {
-    message: "API name must contain only lowercase letters, numbers, and underscores."
-  }),
-  description: z.string().optional(),
-  icon: z.string().min(1, {
-    message: "Please select an icon.",
-  }),
-  default_field_api_name: z.string().min(1, {
-    message: "Default field is required.",
-  }),
-});
-
-type ObjectTypeFormValues = z.infer<typeof objectTypeSchema>;
-
 export function ObjectTypeForm() {
   const { createObjectType } = useObjectTypes();
   const { toast } = useToast();
+  const [name, setName] = useState("");
+  const [apiName, setApiName] = useState("");
+  const [description, setDescription] = useState("");
+  const [icon, setIcon] = useState("building");
+  const [defaultFieldApiName, setDefaultFieldApiName] = useState("name");
 
-  const form = useForm<ObjectTypeFormValues>({
-    resolver: zodResolver(objectTypeSchema),
-    defaultValues: {
-      name: "",
-      api_name: "",
-      description: "",
-      icon: "building",
-      default_field_api_name: "name",
-    },
-  });
-
-  // Generate API name from name
+  // Function to generate API name from name
   const generateApiName = () => {
-    const name = form.getValues("name");
-    if (name && !form.getValues("api_name")) {
+    if (!apiName && name) {
       const generatedApiName = name
         .toLowerCase()
         .replace(/\s+/g, '_')      // Replace spaces with underscores
         .replace(/[^a-z0-9_]/g, '') // Remove special characters
         .replace(/^[0-9]/, 'x$&');  // Prefix with 'x' if starts with number
-      form.setValue("api_name", generatedApiName);
+      setApiName(generatedApiName);
     }
   };
 
@@ -102,15 +65,24 @@ export function ObjectTypeForm() {
     }
   };
 
-  const onSubmit = async (values: ObjectTypeFormValues) => {
+  const handleCreateObjectType = async () => {
+    if (!name.trim() || !apiName.trim() || !defaultFieldApiName.trim()) {
+      toast({
+        title: "Error",
+        description: "Name, API Name and Default Field are required",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       // First create the object type
       const result = await createObjectType.mutateAsync({
-        name: values.name.trim(),
-        api_name: values.api_name.trim().toLowerCase(),
-        description: values.description?.trim() || null,
-        icon: values.icon,
-        default_field_api_name: values.default_field_api_name.trim(),
+        name: name.trim(),
+        api_name: apiName.trim().toLowerCase(),
+        description: description.trim() || null,
+        icon: icon,
+        default_field_api_name: defaultFieldApiName.trim(),
         is_system: false,
         is_active: true,
         show_in_navigation: true,
@@ -121,10 +93,14 @@ export function ObjectTypeForm() {
       
       if (result && result.id) {
         // Then create the default field
-        await createDefaultField(result.id, values.default_field_api_name.trim());
+        await createDefaultField(result.id, defaultFieldApiName.trim());
       }
 
-      form.reset();
+      setName("");
+      setApiName("");
+      setDescription("");
+      setIcon("building");
+      setDefaultFieldApiName("name");
 
       toast({
         title: "Success",
@@ -141,109 +117,76 @@ export function ObjectTypeForm() {
   };
 
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-        <FormField
-          control={form.control}
-          name="name"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Name</FormLabel>
-              <FormControl>
-                <Input placeholder="Enter object name" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
+    <div className="space-y-4">
+      <div className="space-y-2">
+        <Label htmlFor="object-name">Name*</Label>
+        <Input
+          id="object-name"
+          placeholder="Enter object name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
         />
+      </div>
 
-        <FormField
-          control={form.control}
-          name="api_name"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>API Name</FormLabel>
-              <FormControl>
-                <Input 
-                  placeholder="Click here to generate API name" 
-                  {...field} 
-                  onClick={generateApiName}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
+      <div className="space-y-2">
+        <Label htmlFor="api-name">API Name*</Label>
+        <Input
+          id="api-name"
+          placeholder="Click here to generate API name"
+          value={apiName}
+          onChange={(e) => setApiName(e.target.value)}
+          onClick={generateApiName}
         />
+      </div>
 
-        <FormField
-          control={form.control}
-          name="icon"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Icon</FormLabel>
-              <Select 
-                value={field.value}
-                onValueChange={field.onChange}
-              >
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select an icon" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  <SelectItem value="building">Building</SelectItem>
-                  <SelectItem value="user">User</SelectItem>
-                  <SelectItem value="briefcase">Briefcase</SelectItem>
-                  <SelectItem value="calendar">Calendar</SelectItem>
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
+      <div className="space-y-2">
+        <Label htmlFor="icon">Icon</Label>
+        <Select value={icon} onValueChange={setIcon}>
+          <SelectTrigger id="icon">
+            <SelectValue placeholder="Select an icon" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="building">Building</SelectItem>
+            <SelectItem value="user">User</SelectItem>
+            <SelectItem value="briefcase">Briefcase</SelectItem>
+            <SelectItem value="calendar">Calendar</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="default-field">Default Field*</Label>
+        <Input
+          id="default-field"
+          placeholder="Name of default field"
+          value={defaultFieldApiName}
+          onChange={(e) => setDefaultFieldApiName(e.target.value)}
         />
+        <p className="text-xs text-muted-foreground">
+          This field will be used as title in the detail view and will be created automatically
+        </p>
+      </div>
 
-        <FormField
-          control={form.control}
-          name="default_field_api_name"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Default Field</FormLabel>
-              <FormControl>
-                <Input placeholder="Name of default field" {...field} />
-              </FormControl>
-              <FormDescription>
-                This field will be used as title in the detail view and will be created automatically
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
+      <div className="space-y-2">
+        <Label htmlFor="description">Description</Label>
+        <Textarea
+          id="description"
+          placeholder="Enter a description"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
         />
+      </div>
 
-        <FormField
-          control={form.control}
-          name="description"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Description</FormLabel>
-              <FormControl>
-                <Textarea placeholder="Enter a description" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <Button 
-          type="submit" 
-          disabled={createObjectType.isPending}
-          className="w-full"
-        >
-          {createObjectType.isPending && (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          )}
-          Create Object Type
-        </Button>
-      </form>
-    </Form>
+      <Button 
+        onClick={handleCreateObjectType} 
+        disabled={createObjectType.isPending}
+        className="w-full"
+      >
+        {createObjectType.isPending && (
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+        )}
+        Create Object Type
+      </Button>
+    </div>
   );
 }
