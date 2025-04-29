@@ -53,7 +53,7 @@ export function AppSidebar() {
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel>Navigation</SidebarGroupLabel>
-          <SidebarGroupContent>
+          <SidebarGroupContent className="space-y-0.5">
             <SidebarMenu>
               {navigationItems.map((item) => (
                 <SidebarMenuItem key={item.path}>
@@ -76,7 +76,7 @@ export function AppSidebar() {
         {activeObjects.length > 0 && (
           <SidebarGroup>
             <SidebarGroupLabel>Objects</SidebarGroupLabel>
-            <SidebarGroupContent>
+            <SidebarGroupContent className="space-y-0.5">
               <SidebarMenu>
                 {activeObjects.map((object) => (
                   <SidebarMenuItem key={object.id}>

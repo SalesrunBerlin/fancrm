@@ -6,7 +6,6 @@ import {
   Settings,
   FileText,
 } from "lucide-react";
-import { ActiveObjectsMenu } from "./ActiveObjectsMenu";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 interface SidebarLinkProps {
@@ -53,7 +52,6 @@ export function Sidebar() {
               label="Structures"
               active={pathname.startsWith("/structures")}
             />
-            <ActiveObjectsMenu />
             <SidebarLink
               to="/settings"
               icon={<Settings className="h-4 w-4" />}

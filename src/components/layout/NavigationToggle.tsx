@@ -1,3 +1,4 @@
+
 import { Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSidebar } from "@/components/ui/sidebar";
@@ -9,7 +10,7 @@ export function NavigationToggle() {
   const { toggleSidebar } = useSidebar();
   const location = useLocation();
   const isAuthPage = location.pathname.startsWith("/auth");
-  const [position, setPosition] = useState({ x: 20, y: 80 });
+  const [position, setPosition] = useState({ x: 15, y: 80 });
   const [isDragging, setIsDragging] = useState(false);
   
   // Don't show on auth pages
@@ -52,7 +53,7 @@ export function NavigationToggle() {
       variant="secondary"
       size="icon"
       className={cn(
-        "fixed rounded-full z-50 shadow-lg w-10 h-10",
+        "fixed rounded-full z-50 shadow-lg w-8 h-8",
         isDragging ? "cursor-grabbing" : "cursor-grab"
       )}
       style={{ 
@@ -64,7 +65,7 @@ export function NavigationToggle() {
       onMouseDown={handleMouseDown}
       onTouchStart={() => {}} // Add touch support later if needed
     >
-      <Menu className="h-5 w-5" />
+      <Menu className="h-4 w-4" />
     </Button>
   );
 }
