@@ -168,6 +168,13 @@ html, body {
   .card-content {
     padding: 0.75rem !important;
   }
+  
+  /* Fixed position for mobile navigation toggle */
+  .fixed.rounded-full.z-50 {
+    position: fixed !important;
+    top: 70px !important;
+    left: 10px !important;
+  }
 }
 
 /* Ensure proper layout in portrait orientation */
@@ -197,6 +204,13 @@ html, body {
   /* Fix sidebar position in portrait mode */
   [data-sidebar="sidebar"] {
     width: 85vw !important;
+  }
+  
+  /* Fixed position for mobile navigation toggle in portrait */
+  .fixed.rounded-full.z-50 {
+    position: fixed !important;
+    top: 70px !important;
+    left: 10px !important;
   }
 }
 

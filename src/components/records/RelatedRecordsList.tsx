@@ -54,7 +54,7 @@ export function RelatedRecordsList({ objectTypeId, recordId }: RelatedRecordsLis
 
       console.log("Found relationships:", relationships);
       
-      // Create a map to track processed relationship + object type combinations
+      // Create a map to track processed relationship + object type combinations to prevent duplicates
       const processedRelationships = new Map();
       
       const sectionsPromises = relationships.map(async (relationship) => {
@@ -261,7 +261,7 @@ export function RelatedRecordsList({ objectTypeId, recordId }: RelatedRecordsLis
   if (!relatedSections || relatedSections.length === 0) {
     return (
       <div className="text-center text-muted-foreground py-8">
-        No related records found
+        Keine verknüpften Datensätze gefunden
       </div>
     );
   }
@@ -285,8 +285,8 @@ export function RelatedRecordsList({ objectTypeId, recordId }: RelatedRecordsLis
                     {section.fields.map((field) => (
                       <TableHead key={field.api_name}>{field.name}</TableHead>
                     ))}
-                    <TableHead>Created At</TableHead>
-                    <TableHead>Last Modified</TableHead>
+                    <TableHead>Erstellt am</TableHead>
+                    <TableHead>Zuletzt geändert</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
