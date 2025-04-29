@@ -74,7 +74,7 @@ export default function ObjectRecordDetail() {
   const recordName = record.displayName || `${objectType.name} Record`;
 
   return (
-    <div className="space-y-6">
+    <div className="container mx-auto px-2 md:px-0 space-y-6 max-w-5xl">
       <PageHeader
         title={recordName}
         actions={
@@ -129,7 +129,6 @@ export default function ObjectRecordDetail() {
                             }}
                           />
                         ) : field.data_type === "picklist" && value ? (
-                          // Special picklist display
                           <span>{value}</span>
                         ) : (
                           value !== null && value !== undefined ? String(value) : "—"

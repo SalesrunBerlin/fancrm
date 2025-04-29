@@ -1,4 +1,3 @@
-
 import { useQuery } from "@tanstack/react-query";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -283,10 +282,10 @@ export function RelatedRecordsList({ objectTypeId, recordId }: RelatedRecordsLis
                 <TableHeader>
                   <TableRow>
                     {section.fields.map((field) => (
-                      <TableHead key={field.api_name}>{field.name}</TableHead>
+                      <TableHead key={field.api_name} className="whitespace-nowrap">{field.name}</TableHead>
                     ))}
-                    <TableHead>Erstellt am</TableHead>
-                    <TableHead>Zuletzt geändert</TableHead>
+                    <TableHead className="whitespace-nowrap">Erstellt am</TableHead>
+                    <TableHead className="whitespace-nowrap">Zuletzt geändert</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -297,7 +296,7 @@ export function RelatedRecordsList({ objectTypeId, recordId }: RelatedRecordsLis
                       onClick={() => window.location.href = `/objects/${section.objectType.id}/${record.id}`}
                     >
                       {section.fields.map((field) => (
-                        <TableCell key={`${record.id}-${field.api_name}`}>
+                        <TableCell key={`${record.id}-${field.api_name}`} className="whitespace-nowrap">
                           {field.data_type === "lookup" && field.options ? (
                             <LookupValueDisplay
                               value={record.field_values?.[field.api_name]}
@@ -313,8 +312,8 @@ export function RelatedRecordsList({ objectTypeId, recordId }: RelatedRecordsLis
                           )}
                         </TableCell>
                       ))}
-                      <TableCell>{new Date(record.created_at).toLocaleDateString()}</TableCell>
-                      <TableCell>{new Date(record.updated_at).toLocaleDateString()}</TableCell>
+                      <TableCell className="whitespace-nowrap">{new Date(record.created_at).toLocaleDateString()}</TableCell>
+                      <TableCell className="whitespace-nowrap">{new Date(record.updated_at).toLocaleDateString()}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
