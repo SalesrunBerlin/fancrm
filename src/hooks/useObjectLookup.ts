@@ -24,8 +24,7 @@ export function useObjectLookup(objectTypeId: string) {
           id,
           field_values:object_field_values(field_api_name, value)
         `)
-        .eq("object_type_id", objectTypeId)
-        .eq("owner_id", user?.id);
+        .eq("object_type_id", objectTypeId);
 
       if (error) throw error;
 

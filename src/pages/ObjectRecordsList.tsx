@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Loader2, Plus } from "lucide-react";
 import { RecordsTable } from "@/components/records/RecordsTable";
 import { Card } from "@/components/ui/card";
+import { FieldsConfigDialog } from "@/components/records/FieldsConfigDialog";
+import { useLocalStorage } from "@/hooks/useLocalStorage";
 
 export default function ObjectRecordsList() {
   const { objectTypeId } = useParams<{ objectTypeId: string }>();
@@ -17,6 +19,20 @@ export default function ObjectRecordsList() {
   const { fields, isLoading: isLoadingFields } = useRecordFields(objectTypeId);
   const objectType = objectTypes?.find(type => type.id === objectTypeId);
   const [allRecords, setAllRecords] = useState<any[]>([]);
+  
+  // Add column visibility management
+  const storageKey = objectTypeId ? `visible-fields-${objectTypeId}` : '';
+  const [visibleFields, setVisibleFields] = useLocalStorage<string[]>(
+    storageKey,
+    fields ? fields.slice(0, 5).map(field => field.api_name) : []
+  );
+
+  // Update visible fields when fields are loaded
+  useEffect(() => {
+    if (fields && fields.length > 0 && (!visibleFields || visibleFields.length === 0)) {
+      setVisibleFields(fields.slice(0, 5).map(field => field.api_name));
+    }
+  }, [fields]);
 
   useEffect(() => {
     if (records) {
@@ -27,6 +43,10 @@ export default function ObjectRecordsList() {
   const handleLoadMore = () => {
     // Functionality removed since pagination is not implemented in the useObjectRecords hook
     console.log("Load more functionality would go here");
+  };
+
+  const handleVisibilityChange = (fieldApiNames: string[]) => {
+    setVisibleFields(fieldApiNames);
   };
 
   if (!objectType) {
@@ -43,12 +63,19 @@ export default function ObjectRecordsList() {
         title={objectType.name}
         description={objectType.description || `Manage your ${objectType.name.toLowerCase()}`}
         actions={
-          <Button asChild>
-            <Link to={`/objects/${objectTypeId}/new`}>
-              <Plus className="mr-1.5 h-4 w-4" />
-              New {objectType.name}
-            </Link>
-          </Button>
+          <>
+            <FieldsConfigDialog
+              objectTypeId={objectTypeId!}
+              onVisibilityChange={handleVisibilityChange}
+              defaultVisibleFields={visibleFields}
+            />
+            <Button asChild>
+              <Link to={`/objects/${objectTypeId}/new`}>
+                <Plus className="mr-1.5 h-4 w-4" />
+                New {objectType.name}
+              </Link>
+            </Button>
+          </>
         }
       />
 
@@ -60,7 +87,7 @@ export default function ObjectRecordsList() {
         ) : (
           <RecordsTable 
             records={allRecords} 
-            fields={fields} 
+            fields={fields?.filter(field => visibleFields.includes(field.api_name)) || []} 
             objectTypeId={objectTypeId!}
           />
         )}

@@ -21,14 +21,6 @@ interface RecordsTableProps {
 }
 
 export function RecordsTable({ records, fields, objectTypeId }: RecordsTableProps) {
-  // Sort fields by display_order
-  const sortedFields = [...fields].sort((a, b) => 
-    (a.display_order || 0) - (b.display_order || 0)
-  );
-  
-  // Limit the number of columns to display
-  const displayFields = sortedFields.slice(0, 5);
-
   if (records.length === 0) {
     return (
       <div className="py-8 text-center text-muted-foreground">
@@ -42,7 +34,7 @@ export function RecordsTable({ records, fields, objectTypeId }: RecordsTableProp
       <Table>
         <TableHeader>
           <TableRow>
-            {displayFields.map((field) => (
+            {fields.map((field) => (
               <TableHead key={field.id}>{field.name}</TableHead>
             ))}
             <TableHead className="text-right">Actions</TableHead>
@@ -51,7 +43,7 @@ export function RecordsTable({ records, fields, objectTypeId }: RecordsTableProp
         <TableBody>
           {records.map((record) => (
             <TableRow key={record.id}>
-              {displayFields.map((field) => (
+              {fields.map((field) => (
                 <TableCell key={`${record.id}-${field.id}`}>
                   {record.field_values && record.field_values[field.api_name] !== null 
                     ? String(record.field_values[field.api_name]) 
