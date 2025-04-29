@@ -78,7 +78,7 @@ export function RelatedRecordsList({ objectTypeId, recordId }: RelatedRecordsLis
           .eq("object_type_id", relatedObjectTypeId)
           .order("display_order");
 
-        if (!fields) return null;
+        if (!fields || fields.length === 0) return null;
 
         console.log(`Found ${fields.length} fields for object type ${relatedObjectTypeId}`);
 
@@ -88,65 +88,93 @@ export function RelatedRecordsList({ objectTypeId, recordId }: RelatedRecordsLis
         }
 
         // Get records that reference this record
-        let records;
-        const lookupField = fields.find(f => 
-          f.data_type === "lookup" && 
-          f.options && 
-          typeof f.options === 'object' &&
-          'target_object_type_id' in f.options &&
-          f.options.target_object_type_id === objectTypeId
-        );
+        let records = [];
 
-        console.log("Lookup field found:", lookupField);
+        if (isForward) {
+          // For forward relationships, find a lookup field in the target object that points back
+          const lookupField = fields.find(f => {
+            if (f.data_type === "lookup" && f.options) {
+              // Safely access target_object_type_id
+              const options = f.options as { target_object_type_id?: string };
+              return options.target_object_type_id === objectTypeId;
+            }
+            return false;
+          });
 
-        if (isForward && lookupField) {
-          // For forward relationships, get records from field values
-          const { data: fieldValues } = await supabase
-            .from("object_field_values")
-            .select("record_id")
-            .eq("field_api_name", lookupField.api_name)
-            .eq("value", recordId);
-
-          if (!fieldValues || fieldValues.length === 0) {
-            console.log("No field values found for forward relationship");
-            return null;
-          }
-
-          const recordIds = fieldValues.map(fv => fv.record_id);
-          console.log("Forward relationship record IDs:", recordIds);
-
-          const { data: relatedRecords } = await supabase
-            .from("object_records")
-            .select("*")
-            .in("id", recordIds);
-
-          records = relatedRecords;
-          console.log("Forward related records:", records);
-        } else if (!isForward && lookupField) {
-          // For reverse relationships, find records that this record references
-          const { data: fieldValues } = await supabase
-            .from("object_field_values")
-            .select("value")
-            .eq("record_id", recordId)
-            .eq("field_api_name", lookupField.api_name);
-
-          if (!fieldValues || fieldValues.length === 0) {
-            console.log("No field values found for reverse relationship");
-            return null;
-          }
-
-          const relatedRecordIds = fieldValues.map(fv => fv.value).filter(Boolean);
-          console.log("Reverse relationship record IDs:", relatedRecordIds);
+          console.log("Lookup field found:", lookupField);
           
-          if (relatedRecordIds.length === 0) return null;
+          if (lookupField) {
+            // Find records where the lookup field points to our current record
+            const { data: fieldValues } = await supabase
+              .from("object_field_values")
+              .select("record_id")
+              .eq("field_api_name", lookupField.api_name)
+              .eq("value", recordId);
 
-          const { data: relatedRecords } = await supabase
-            .from("object_records")
-            .select("*")
-            .in("id", relatedRecordIds);
+            if (fieldValues && fieldValues.length > 0) {
+              const recordIds = fieldValues.map(fv => fv.record_id);
+              console.log("Forward relationship record IDs:", recordIds);
 
-          records = relatedRecords;
-          console.log("Reverse related records:", records);
+              const { data: relatedRecords } = await supabase
+                .from("object_records")
+                .select("*")
+                .in("id", recordIds);
+
+              records = relatedRecords || [];
+              console.log("Forward related records:", records);
+            } else {
+              console.log("No field values found for forward relationship");
+            }
+          }
+        } else {
+          // For reverse relationships, find records that our record references via a lookup field
+          const lookupFields = fields.filter(f => {
+            if (f.data_type === "lookup" && f.options) {
+              // Type guard to check if options has target_object_type_id
+              const options = f.options as { target_object_type_id?: string };
+              return options.target_object_type_id === objectTypeId;
+            }
+            return false;
+          });
+          
+          if (lookupFields.length > 0) {
+            console.log("Reverse lookup fields found:", lookupFields);
+            
+            // Find all records from the target object type
+            const { data: allTargetRecords } = await supabase
+              .from("object_records")
+              .select("*")
+              .eq("object_type_id", relatedObjectTypeId);
+              
+            if (allTargetRecords && allTargetRecords.length > 0) {
+              console.log(`Found ${allTargetRecords.length} potential related records`);
+              
+              // Get all field values for these records
+              const { data: allFieldValues } = await supabase
+                .from("object_field_values")
+                .select("*")
+                .in("record_id", allTargetRecords.map(r => r.id));
+                
+              if (allFieldValues) {
+                // Filter records that have a lookup field referencing our current record
+                const relatedRecordIds = allFieldValues
+                  .filter(fv => {
+                    const matchingField = lookupFields.find(f => f.api_name === fv.field_api_name);
+                    return matchingField && fv.value === recordId;
+                  })
+                  .map(fv => fv.record_id);
+                  
+                console.log("Found related record IDs:", relatedRecordIds);
+                
+                if (relatedRecordIds.length > 0) {
+                  records = allTargetRecords.filter(r => relatedRecordIds.includes(r.id));
+                  console.log("Filtered related records:", records);
+                }
+              }
+            }
+          } else {
+            console.log("No lookup fields found in the related object type that reference this object type");
+          }
         }
 
         if (!records || records.length === 0) {
@@ -243,11 +271,11 @@ export function RelatedRecordsList({ objectTypeId, recordId }: RelatedRecordsLis
                     >
                       {section.fields.map((field) => (
                         <TableCell key={`${record.id}-${field.api_name}`}>
-                          {field.data_type === "lookup" && field.options && field.options.target_object_type_id && record.field_values?.[field.api_name] ? (
+                          {field.data_type === "lookup" && field.options ? (
                             <LookupValueDisplay
-                              value={record.field_values[field.api_name]}
+                              value={record.field_values?.[field.api_name]}
                               fieldOptions={{
-                                target_object_type_id: field.options.target_object_type_id
+                                target_object_type_id: (field.options as { target_object_type_id?: string })?.target_object_type_id || ''
                               }}
                             />
                           ) : (

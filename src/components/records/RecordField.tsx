@@ -56,6 +56,7 @@ export function RecordField({ field, form }: RecordFieldProps) {
       case "boolean":
         return (
           <Select
+            value={value === true ? "true" : value === false ? "false" : ""}
             onValueChange={(value) => form.setValue(field.api_name, value === "true")}
           >
             <SelectTrigger>
@@ -94,7 +95,7 @@ export function RecordField({ field, form }: RecordFieldProps) {
         return (
           <Select
             value={value || ""}
-            onValueChange={(val) => form.setValue(field.api_name, val)}
+            onValueChange={(val) => form.setValue(field.api_name, val, { shouldValidate: true })}
           >
             <SelectTrigger>
               <SelectValue placeholder={`Select ${field.name.toLowerCase()}`} />
@@ -109,14 +110,15 @@ export function RecordField({ field, form }: RecordFieldProps) {
           </Select>
         );
       case "lookup":
-        const targetObjectTypeId = field.options?.target_object_type_id;
+        const options = field.options as { target_object_type_id?: string };
+        const targetObjectTypeId = options?.target_object_type_id;
         if (!targetObjectTypeId) return null;
         
         return (
           <LookupField
             value={value}
             onChange={(newValue) => {
-              form.setValue(field.api_name, newValue);
+              form.setValue(field.api_name, newValue, { shouldValidate: true });
             }}
             targetObjectTypeId={targetObjectTypeId}
             disabled={form.formState.isSubmitting}

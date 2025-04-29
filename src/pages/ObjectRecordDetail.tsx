@@ -121,11 +121,11 @@ export default function ObjectRecordDetail() {
                         {field.name}
                       </div>
                       <div className="col-span-2">
-                        {field.data_type === "lookup" && field.options && field.options.target_object_type_id && value ? (
+                        {field.data_type === "lookup" && field.options ? (
                           <LookupValueDisplay
                             value={value}
                             fieldOptions={{
-                              target_object_type_id: field.options.target_object_type_id
+                              target_object_type_id: (field.options as { target_object_type_id?: string })?.target_object_type_id || ''
                             }}
                           />
                         ) : field.data_type === "picklist" && value ? (
