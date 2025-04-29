@@ -9,13 +9,17 @@ interface AuthContextType {
   session: Session | null;
   isLoading: boolean;
   logout: () => Promise<void>;
+  login: (email: string, password: string) => Promise<void>;
+  signup: (email: string, password: string) => Promise<{success: boolean, error?: string}>;
 }
 
 const AuthContext = createContext<AuthContextType>({ 
   user: null, 
   session: null,
   isLoading: true,
-  logout: async () => {} 
+  logout: async () => {},
+  login: async () => {},
+  signup: async () => ({ success: false })
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -51,6 +55,45 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
+  const login = async (email: string, password: string) => {
+    try {
+      setIsLoading(true);
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      
+      if (error) throw error;
+      // Auth state change listener will handle the session update
+    } catch (error: any) {
+      console.error('Fehler bei der Anmeldung:', error);
+      toast.error(error.message || 'Fehler bei der Anmeldung');
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const signup = async (email: string, password: string) => {
+    try {
+      setIsLoading(true);
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+      });
+      
+      if (error) throw error;
+      
+      return { success: !!data.user };
+    } catch (error: any) {
+      console.error('Fehler bei der Registrierung:', error);
+      toast.error(error.message || 'Fehler bei der Registrierung');
+      return { success: false, error: error.message };
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
   const logout = async () => {
     try {
       setIsLoading(true);
@@ -65,7 +108,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, isLoading, logout }}>
+    <AuthContext.Provider value={{ user, session, isLoading, logout, login, signup }}>
       {children}
     </AuthContext.Provider>
   );

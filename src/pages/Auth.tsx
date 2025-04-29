@@ -8,7 +8,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
 
 export default function Auth() {
@@ -17,7 +16,7 @@ export default function Auth() {
   const [loading, setLoading] = useState(false);
   const [registrationSuccess, setRegistrationSuccess] = useState(false);
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, login, signup } = useAuth();
   
   // Redirect if already logged in
   useEffect(() => {
@@ -31,17 +30,11 @@ export default function Auth() {
     setLoading(true);
     
     try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-      
-      if (error) throw error;
-      
+      await login(email, password);
       navigate("/dashboard");
-      toast.success("Erfolgreich angemeldet");
-    } catch (error: any) {
-      toast.error(error.message || "Fehler bei der Anmeldung");
+    } catch (error) {
+      // Error is already handled in login method
+      // Just reset loading state
     } finally {
       setLoading(false);
     }
@@ -52,30 +45,19 @@ export default function Auth() {
     setLoading(true);
     
     try {
-      // First step: Create the user account
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-      });
+      const { success, error } = await signup(email, password);
       
-      if (error) throw error;
-      
-      if (data?.user) {
+      if (success) {
         // Show success message
         setRegistrationSuccess(true);
         toast.success("Registrierung erfolgreich. Bitte überprüfen Sie Ihre E-Mail zur Bestätigung.");
-        
-        // We won't auto-login the user here, as they need to verify their email first
-        // Instead, we'll show them a message about checking their email
-      }
-    } catch (error: any) {
-      const errorMessage = error.message || "Fehler bei der Registrierung";
-      
-      // Handle specific errors with more user-friendly messages
-      if (errorMessage.includes("User already registered")) {
-        toast.error("Diese E-Mail-Adresse ist bereits registriert. Bitte melden Sie sich an.");
-      } else {
-        toast.error(errorMessage);
+      } else if (error) {
+        // Handle specific errors with more user-friendly messages
+        if (error.includes("User already registered")) {
+          toast.error("Diese E-Mail-Adresse ist bereits registriert. Bitte melden Sie sich an.");
+        } else {
+          toast.error(error);
+        }
       }
     } finally {
       setLoading(false);
