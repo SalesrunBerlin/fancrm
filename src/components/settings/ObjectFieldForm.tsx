@@ -25,6 +25,21 @@ import { PicklistValuesManager } from "./PicklistValuesManager";
 import { ObjectField } from "@/hooks/useObjectTypes";
 import type { CreateFieldInput } from "@/hooks/useObjectFields";
 
+// Define data type options constant here to ensure it's available throughout the component
+const dataTypeOptions = [
+  { label: "Text", value: "text" },
+  { label: "Text Area", value: "textarea" },
+  { label: "Number", value: "number" },
+  { label: "Email", value: "email" },
+  { label: "URL", value: "url" },
+  { label: "Date", value: "date" },
+  { label: "Date & Time", value: "datetime" },
+  { label: "Boolean", value: "boolean" },
+  { label: "Picklist", value: "picklist" },
+  { label: "Currency", value: "currency" },
+  { label: "Lookup", value: "lookup" }
+];
+
 const fieldSchema = z.object({
   name: z.string().min(2, {
     message: "Field name must be at least 2 characters.",
@@ -128,20 +143,6 @@ export function ObjectFieldForm({ objectTypeId, onComplete, initialName }: Objec
     }
   };
 
-  const dataTypeOptions = [
-    { label: "Text", value: "text" },
-    { label: "Text Area", value: "textarea" },
-    { label: "Number", value: "number" },
-    { label: "Email", value: "email" },
-    { label: "URL", value: "url" },
-    { label: "Date", value: "date" },
-    { label: "Date & Time", value: "datetime" },
-    { label: "Boolean", value: "boolean" },
-    { label: "Picklist", value: "picklist" },
-    { label: "Currency", value: "currency" },
-    { label: "Lookup", value: "lookup" }
-  ];
-
   // Auto-generate API name from field name
   useEffect(() => {
     const name = form.watch("name");
@@ -198,14 +199,7 @@ export function ObjectFieldForm({ objectTypeId, onComplete, initialName }: Objec
               <FormLabel>Field Type</FormLabel>
               <Select
                 value={field.value}
-                onValueChange={(value) => {
-                  field.onChange(value);
-                  if (value === "picklist") {
-                    setShowPicklistValues(true);
-                  } else {
-                    setShowPicklistValues(false);
-                  }
-                }}
+                onValueChange={field.onChange}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select field type" />
@@ -303,18 +297,3 @@ export function ObjectFieldForm({ objectTypeId, onComplete, initialName }: Objec
     </Form>
   );
 }
-
-// Data type options definition
-const dataTypeOptions = [
-  { label: "Text", value: "text" },
-  { label: "Text Area", value: "textarea" },
-  { label: "Number", value: "number" },
-  { label: "Email", value: "email" },
-  { label: "URL", value: "url" },
-  { label: "Date", value: "date" },
-  { label: "Date & Time", value: "datetime" },
-  { label: "Boolean", value: "boolean" },
-  { label: "Picklist", value: "picklist" },
-  { label: "Currency", value: "currency" },
-  { label: "Lookup", value: "lookup" }
-];

@@ -12,7 +12,11 @@ export interface CreateFieldInput {
   data_type: string;
   is_required: boolean;
   object_type_id: string;
-  options?: Record<string, any>;
+  options?: {
+    target_object_type_id?: string;
+    display_field_api_name?: string;
+    [key: string]: any;
+  };
 }
 
 export function useObjectFields(objectTypeId?: string) {
