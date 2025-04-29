@@ -57,7 +57,7 @@ export function RecordField({ field, form }: RecordFieldProps) {
         return (
           <Select
             value={value === true ? "true" : value === false ? "false" : ""}
-            onValueChange={(value) => form.setValue(field.api_name, value === "true")}
+            onValueChange={(value) => form.setValue(field.api_name, value === "true", { shouldValidate: true })}
           >
             <SelectTrigger>
               <SelectValue placeholder={field.name} />
@@ -110,9 +110,13 @@ export function RecordField({ field, form }: RecordFieldProps) {
           </Select>
         );
       case "lookup":
-        const options = field.options as { target_object_type_id?: string };
-        const targetObjectTypeId = options?.target_object_type_id;
-        if (!targetObjectTypeId) return null;
+        const fieldOptions = field.options as { target_object_type_id?: string } | undefined;
+        const targetObjectTypeId = fieldOptions?.target_object_type_id;
+        
+        if (!targetObjectTypeId) {
+          console.error(`Lookup field ${field.name} missing target object type id`);
+          return null;
+        }
         
         return (
           <LookupField
@@ -142,8 +146,8 @@ export function RecordField({ field, form }: RecordFieldProps) {
       <FormControl>
         {renderField()}
       </FormControl>
-      {field.options?.description && (
-        <FormDescription>{field.options.description}</FormDescription>
+      {field.options && typeof field.options === 'object' && 'description' in field.options && (
+        <FormDescription>{String(field.options.description)}</FormDescription>
       )}
       <FormMessage />
     </FormItem>

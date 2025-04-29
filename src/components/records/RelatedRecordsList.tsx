@@ -22,6 +22,7 @@ interface RelatedSection {
     name: string;
   };
   relationship: {
+    id: string;
     name: string;
     relationship_type: string;
   };
@@ -34,6 +35,8 @@ export function RelatedRecordsList({ objectTypeId, recordId }: RelatedRecordsLis
   const { data: relatedSections, isLoading } = useQuery({
     queryKey: ["related-records", objectTypeId, recordId],
     queryFn: async () => {
+      console.log(`Fetching related records for objectTypeId: ${objectTypeId}, recordId: ${recordId}`);
+      
       // Get all relationships where this object type is involved
       const { data: relationships, error: relError } = await supabase
         .from("object_relationships")
@@ -50,14 +53,43 @@ export function RelatedRecordsList({ objectTypeId, recordId }: RelatedRecordsLis
       if (!relationships) return [];
 
       console.log("Found relationships:", relationships);
-
-      const sections = await Promise.all(relationships.map(async (relationship) => {
+      
+      // Create a map to track processed relationship + object type combinations
+      const processedRelationships = new Map();
+      
+      const sectionsPromises = relationships.map(async (relationship) => {
         // Determine if this is a forward or reverse relationship
         const isForward = relationship.from_object_id === objectTypeId;
         const relatedObjectTypeId = isForward ? relationship.to_object_id : relationship.from_object_id;
         
+        // Create a unique key for this relationship + object type combination
+        const relationshipKey = `${relationship.id}-${relatedObjectTypeId}`;
+        
+        // Skip if we've already processed this combination
+        if (processedRelationships.has(relationshipKey)) {
+          console.log(`Skipping duplicate relationship: ${relationshipKey}`);
+          return null;
+        }
+        
+        // Mark this combination as processed
+        processedRelationships.set(relationshipKey, true);
+        
         console.log(`Processing relationship: ${relationship.name}, isForward: ${isForward}`);
         console.log(`Related object type ID: ${relatedObjectTypeId}`);
+        
+        // Get the object type info early so we can use it for logging and later
+        const { data: objectType } = await supabase
+          .from("object_types")
+          .select("*")
+          .eq("id", relatedObjectTypeId)
+          .single();
+          
+        if (!objectType) {
+          console.log(`No object type found for ID: ${relatedObjectTypeId}`);
+          return null;
+        }
+          
+        console.log(`Related object type: ${objectType.name}`);
         
         // Get the stored field settings for this object type
         const storedFieldsString = localStorage.getItem(`visible-fields-${relatedObjectTypeId}`);
@@ -78,9 +110,12 @@ export function RelatedRecordsList({ objectTypeId, recordId }: RelatedRecordsLis
           .eq("object_type_id", relatedObjectTypeId)
           .order("display_order");
 
-        if (!fields || fields.length === 0) return null;
+        if (!fields || fields.length === 0) {
+          console.log(`No fields found for object type: ${objectType.name}`);
+          return null;
+        }
 
-        console.log(`Found ${fields.length} fields for object type ${relatedObjectTypeId}`);
+        console.log(`Found ${fields.length} fields for object type ${objectType.name}`);
 
         // If we don't have visible fields stored, default to the first 5 fields
         if (visibleFieldsApiNames.length === 0 && fields.length > 0) {
@@ -95,13 +130,13 @@ export function RelatedRecordsList({ objectTypeId, recordId }: RelatedRecordsLis
           const lookupField = fields.find(f => {
             if (f.data_type === "lookup" && f.options) {
               // Safely access target_object_type_id
-              const options = f.options as { target_object_type_id?: string };
-              return options.target_object_type_id === objectTypeId;
+              const options = typeof f.options === 'object' ? f.options as { target_object_type_id?: string } : null;
+              return options?.target_object_type_id === objectTypeId;
             }
             return false;
           });
 
-          console.log("Lookup field found:", lookupField);
+          console.log(`Lookup field found for ${objectType.name}:`, lookupField);
           
           if (lookupField) {
             // Find records where the lookup field points to our current record
@@ -113,7 +148,7 @@ export function RelatedRecordsList({ objectTypeId, recordId }: RelatedRecordsLis
 
             if (fieldValues && fieldValues.length > 0) {
               const recordIds = fieldValues.map(fv => fv.record_id);
-              console.log("Forward relationship record IDs:", recordIds);
+              console.log(`Found ${recordIds.length} forward relationship record IDs for ${objectType.name}`);
 
               const { data: relatedRecords } = await supabase
                 .from("object_records")
@@ -121,9 +156,9 @@ export function RelatedRecordsList({ objectTypeId, recordId }: RelatedRecordsLis
                 .in("id", recordIds);
 
               records = relatedRecords || [];
-              console.log("Forward related records:", records);
+              console.log(`Found ${records.length} forward related records for ${objectType.name}`);
             } else {
-              console.log("No field values found for forward relationship");
+              console.log(`No field values found for forward relationship to ${objectType.name}`);
             }
           }
         } else {
@@ -131,14 +166,14 @@ export function RelatedRecordsList({ objectTypeId, recordId }: RelatedRecordsLis
           const lookupFields = fields.filter(f => {
             if (f.data_type === "lookup" && f.options) {
               // Type guard to check if options has target_object_type_id
-              const options = f.options as { target_object_type_id?: string };
-              return options.target_object_type_id === objectTypeId;
+              const options = typeof f.options === 'object' ? f.options as { target_object_type_id?: string } : null;
+              return options?.target_object_type_id === objectTypeId;
             }
             return false;
           });
           
           if (lookupFields.length > 0) {
-            console.log("Reverse lookup fields found:", lookupFields);
+            console.log(`Found ${lookupFields.length} reverse lookup fields in ${objectType.name}`);
             
             // Find all records from the target object type
             const { data: allTargetRecords } = await supabase
@@ -147,7 +182,7 @@ export function RelatedRecordsList({ objectTypeId, recordId }: RelatedRecordsLis
               .eq("object_type_id", relatedObjectTypeId);
               
             if (allTargetRecords && allTargetRecords.length > 0) {
-              console.log(`Found ${allTargetRecords.length} potential related records`);
+              console.log(`Found ${allTargetRecords.length} potential related records for ${objectType.name}`);
               
               // Get all field values for these records
               const { data: allFieldValues } = await supabase
@@ -164,21 +199,21 @@ export function RelatedRecordsList({ objectTypeId, recordId }: RelatedRecordsLis
                   })
                   .map(fv => fv.record_id);
                   
-                console.log("Found related record IDs:", relatedRecordIds);
+                console.log(`Found ${relatedRecordIds.length} related record IDs for ${objectType.name}`);
                 
                 if (relatedRecordIds.length > 0) {
                   records = allTargetRecords.filter(r => relatedRecordIds.includes(r.id));
-                  console.log("Filtered related records:", records);
+                  console.log(`Found ${records.length} filtered related records for ${objectType.name}`);
                 }
               }
             }
           } else {
-            console.log("No lookup fields found in the related object type that reference this object type");
+            console.log(`No lookup fields found in ${objectType.name} that reference this object type`);
           }
         }
 
         if (!records || records.length === 0) {
-          console.log("No related records found");
+          console.log(`No related records found for ${objectType.name}`);
           return null;
         }
 
@@ -198,15 +233,6 @@ export function RelatedRecordsList({ objectTypeId, recordId }: RelatedRecordsLis
             }), {})
         }));
 
-        // Get the object type info
-        const { data: objectType } = await supabase
-          .from("object_types")
-          .select("*")
-          .eq("id", relatedObjectTypeId)
-          .single();
-
-        if (!objectType) return null;
-
         // Filter fields based on visible fields settings
         const visibleFields = fields.filter(f => visibleFieldsApiNames.includes(f.api_name));
 
@@ -217,8 +243,9 @@ export function RelatedRecordsList({ objectTypeId, recordId }: RelatedRecordsLis
           fields: visibleFields,
           displayField: fields.find(f => f.api_name === objectType.default_field_api_name) || fields[0]
         };
-      }));
+      });
 
+      const sections = await Promise.all(sectionsPromises);
       return sections.filter(Boolean);
     }
   });
@@ -244,7 +271,7 @@ export function RelatedRecordsList({ objectTypeId, recordId }: RelatedRecordsLis
       {relatedSections.map((section) => (
         <Card key={section.relationship.id}>
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>{section.relationship.name}</CardTitle>
+            <CardTitle>{section.relationship.name} - {section.objectType.name}</CardTitle>
             <FieldsConfigDialog
               objectTypeId={section.objectType.id}
               defaultVisibleFields={section.fields.map(f => f.api_name)}
@@ -275,7 +302,8 @@ export function RelatedRecordsList({ objectTypeId, recordId }: RelatedRecordsLis
                             <LookupValueDisplay
                               value={record.field_values?.[field.api_name]}
                               fieldOptions={{
-                                target_object_type_id: (field.options as { target_object_type_id?: string })?.target_object_type_id || ''
+                                target_object_type_id: (typeof field.options === 'object' ? 
+                                  (field.options as { target_object_type_id?: string })?.target_object_type_id : '') || ''
                               }}
                             />
                           ) : (
