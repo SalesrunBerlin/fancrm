@@ -1,3 +1,4 @@
+
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -80,11 +81,15 @@ export function ObjectTypeForm({ onComplete }: ObjectTypeFormProps) {
   const createDefaultField = async (objectTypeId: string, fieldApiName: string) => {
     try {
       // Create the default field (text field)
+      const fieldName = fieldApiName === "name" 
+        ? "Name" 
+        : fieldApiName.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+        
       const { data: field, error: fieldError } = await supabase
         .from("object_fields")
         .insert({
           object_type_id: objectTypeId,
-          name: fieldApiName === "name" ? "Name" : fieldApiName.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
+          name: fieldName,
           api_name: fieldApiName,
           data_type: "text",
           is_required: true,
@@ -96,6 +101,24 @@ export function ObjectTypeForm({ onComplete }: ObjectTypeFormProps) {
       if (fieldError) {
         console.error("Error creating default field:", fieldError);
         throw fieldError;
+      }
+      
+      // Create an additional text field with the same name
+      const { error: additionalFieldError } = await supabase
+        .from("object_fields")
+        .insert({
+          object_type_id: objectTypeId,
+          name: fieldName + " Text",
+          api_name: fieldApiName + "_text",
+          data_type: "textarea",
+          is_required: false,
+          is_system: false,
+          display_order: 2,
+        });
+
+      if (additionalFieldError) {
+        console.error("Error creating additional text field:", additionalFieldError);
+        throw additionalFieldError;
       }
       
       return field;
@@ -123,7 +146,7 @@ export function ObjectTypeForm({ onComplete }: ObjectTypeFormProps) {
       });
       
       if (result && result.id) {
-        // Then create the default field
+        // Then create the default field and the additional text field
         await createDefaultField(result.id, values.default_field_api_name.trim());
       }
 
@@ -135,7 +158,7 @@ export function ObjectTypeForm({ onComplete }: ObjectTypeFormProps) {
 
       toast({
         title: "Success",
-        description: "Object type and default field were created successfully",
+        description: "Object type, default field, and additional text field were created successfully",
       });
     } catch (error) {
       console.error("Error creating object type:", error);

@@ -3,7 +3,6 @@ import { Header } from "./Header";
 import { Outlet } from "react-router-dom";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "./AppSidebar";
-import { NavigationToggle } from "./NavigationToggle";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 export function Layout() {
@@ -12,7 +11,6 @@ export function Layout() {
   return (
     <SidebarProvider>
       <div className="flex min-h-screen w-full overflow-hidden relative bg-background">
-        <NavigationToggle />
         <AppSidebar />
         <div className="flex flex-col flex-1">
           <Header />
