@@ -6,8 +6,11 @@ import { useObjectFields } from "@/hooks/useObjectFields";
 import { ObjectFieldsList } from "@/components/settings/ObjectFieldsList";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
-import { ArrowLeft, List } from "lucide-react";
+import { ArrowLeft, List, Plus } from "lucide-react";
 import { Link } from "react-router-dom";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ObjectFieldForm } from "@/components/settings/ObjectFieldForm";
+import { ObjectField } from "@/hooks/useObjectTypes";
 
 export default function ObjectTypeDetail() {
   const { objectTypeId } = useParams<{ objectTypeId: string }>();
@@ -15,6 +18,7 @@ export default function ObjectTypeDetail() {
   const { objectTypes, updateObjectType, publishObjectType, unpublishObjectType } = useObjectTypes();
   const { fields, isLoading, createField, updateField, deleteField } = useObjectFields(objectTypeId);
   const [isPublishing, setIsPublishing] = useState(false);
+  const [isCreateFieldDialogOpen, setIsCreateFieldDialogOpen] = useState(false);
   
   // Find the current object type
   const currentObjectType = objectTypes?.find(obj => obj.id === objectTypeId);
@@ -59,6 +63,12 @@ export default function ObjectTypeDetail() {
     // You could navigate to another page or open a dialog here
   };
 
+  const handleFieldCreated = (field?: ObjectField) => {
+    if (field) {
+      setIsCreateFieldDialogOpen(false);
+    }
+  };
+
   return (
     <div className="container mx-auto px-2 md:px-0 space-y-6 max-w-5xl">
       <PageHeader
@@ -71,6 +81,13 @@ export default function ObjectTypeDetail() {
                 <ArrowLeft className="mr-2 h-4 w-4" />
                 Back to Object Manager
               </Link>
+            </Button>
+            <Button 
+              onClick={() => setIsCreateFieldDialogOpen(true)}
+              variant="default"
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              New Field
             </Button>
             {!currentObjectType.is_system && (
               <Button 
@@ -91,6 +108,21 @@ export default function ObjectTypeDetail() {
         isLoading={isLoading}
         onManagePicklistValues={handleManagePicklistValues}
       />
+
+      {/* Create Field Dialog */}
+      <Dialog open={isCreateFieldDialogOpen} onOpenChange={setIsCreateFieldDialogOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Create New Field</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <ObjectFieldForm 
+              objectTypeId={objectTypeId as string} 
+              onComplete={handleFieldCreated}
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

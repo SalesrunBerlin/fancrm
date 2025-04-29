@@ -5,6 +5,16 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { type ObjectField } from "./useObjectTypes";
 
+// Define the CreateFieldInput type for better type safety
+export interface CreateFieldInput {
+  name: string;
+  api_name: string;
+  data_type: string;
+  is_required: boolean;
+  object_type_id: string;
+  options?: Record<string, any>;
+}
+
 export function useObjectFields(objectTypeId?: string) {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -35,7 +45,7 @@ export function useObjectFields(objectTypeId?: string) {
   });
 
   const createField = useMutation({
-    mutationFn: async (newField: Omit<ObjectField, "id" | "created_at" | "updated_at" | "owner_id" | "is_system" | "display_order" | "options" | "default_value">) => {
+    mutationFn: async (newField: CreateFieldInput) => {
       if (!user) throw new Error("User must be logged in to create fields");
 
       const fieldData = {

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -22,6 +23,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Separator } from "@/components/ui/separator";
 import { PicklistValuesManager } from "./PicklistValuesManager";
 import { ObjectField } from "@/hooks/useObjectTypes";
+import type { CreateFieldInput } from "@/hooks/useObjectFields";
 
 const fieldSchema = z.object({
   name: z.string().min(2, {
@@ -44,7 +46,7 @@ const fieldSchema = z.object({
 
 interface ObjectFieldFormProps {
   objectTypeId: string;
-  onComplete?: (field?: ObjectField) => void;
+  onComplete?: (field: ObjectField) => void;
   initialName?: string;
 }
 
@@ -84,14 +86,17 @@ export function ObjectFieldForm({ objectTypeId, onComplete, initialName }: Objec
     try {
       setIsSubmitting(true);
       
-      const fieldData = await createField.mutateAsync({
+      // Create the field using our properly typed input
+      const fieldInput: CreateFieldInput = {
         name: values.name,
         api_name: values.api_name,
         data_type: values.data_type,
         is_required: values.is_required,
         object_type_id: objectTypeId,
-        options: values.options || {},
-      });
+        options: values.options,
+      };
+      
+      const fieldData = await createField.mutateAsync(fieldInput);
 
       // Ensure we're using the correct type for the created field
       if (fieldData) {
@@ -298,3 +303,18 @@ export function ObjectFieldForm({ objectTypeId, onComplete, initialName }: Objec
     </Form>
   );
 }
+
+// Data type options definition
+const dataTypeOptions = [
+  { label: "Text", value: "text" },
+  { label: "Text Area", value: "textarea" },
+  { label: "Number", value: "number" },
+  { label: "Email", value: "email" },
+  { label: "URL", value: "url" },
+  { label: "Date", value: "date" },
+  { label: "Date & Time", value: "datetime" },
+  { label: "Boolean", value: "boolean" },
+  { label: "Picklist", value: "picklist" },
+  { label: "Currency", value: "currency" },
+  { label: "Lookup", value: "lookup" }
+];
