@@ -1,25 +1,15 @@
 
-import { useState } from "react";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { Plus, Loader2, Building, User, Briefcase, Calendar, Box } from "lucide-react";
 import { Link } from "react-router-dom";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { ObjectTypeForm } from "@/components/settings/ObjectTypeForm";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { ObjectType } from "@/hooks/useObjectTypes";
 
 export default function ObjectManager() {
   const { objectTypes, isLoading } = useObjectTypes();
-  const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
   const getIconComponent = (iconName: string | null) => {
     switch(iconName) {
@@ -37,20 +27,12 @@ export default function ObjectManager() {
         title="Object Manager"
         description="Manage all your custom and standard objects"
         actions={
-          <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="mr-2 h-4 w-4" />
-                Create Object
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Create New Object Type</DialogTitle>
-              </DialogHeader>
-              <ObjectTypeForm onComplete={() => setCreateDialogOpen(false)} />
-            </DialogContent>
-          </Dialog>
+          <Button asChild>
+            <Link to="/settings/object-manager/new">
+              <Plus className="mr-2 h-4 w-4" />
+              Create Object
+            </Link>
+          </Button>
         }
       />
 
@@ -104,20 +86,12 @@ export default function ObjectManager() {
               <p className="text-muted-foreground mb-4">
                 No object types found. Create your first custom object to get started.
               </p>
-              <Dialog>
-                <DialogTrigger asChild>
-                  <Button>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Create Object
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Create New Object Type</DialogTitle>
-                  </DialogHeader>
-                  <ObjectTypeForm onComplete={() => setCreateDialogOpen(false)} />
-                </DialogContent>
-              </Dialog>
+              <Button asChild>
+                <Link to="/settings/object-manager/new">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Create Object
+                </Link>
+              </Button>
             </div>
           )}
         </CardContent>

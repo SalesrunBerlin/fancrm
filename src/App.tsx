@@ -16,6 +16,7 @@ import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import ObjectFieldEditPage from "@/pages/ObjectFieldEditPage";
 import CreateRecordPage from "@/pages/CreateRecordPage";
 import EditRecordPage from "@/pages/EditRecordPage";
+import CreateObjectPage from "@/pages/CreateObjectPage";
 
 // Create a client
 const queryClient = new QueryClient({
@@ -40,6 +41,7 @@ function App() {
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/settings/object-manager" element={<ObjectManager />} />
+              <Route path="/settings/object-manager/new" element={<CreateObjectPage />} />
               <Route path="/settings/objects/:objectTypeId" element={<ObjectTypeDetail />} />
               <Route path="/settings/objects/:objectTypeId/fields/:fieldId/edit" element={<ObjectFieldEditPage />} />
               <Route path="/structures/*" element={<Structures />} />
