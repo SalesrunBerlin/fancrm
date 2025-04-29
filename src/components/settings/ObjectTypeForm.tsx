@@ -80,6 +80,8 @@ export function ObjectTypeForm({ onComplete }: ObjectTypeFormProps) {
 
   const createDefaultField = async (objectTypeId: string, fieldApiName: string) => {
     try {
+      console.log(`Creating default field ${fieldApiName} for object type ${objectTypeId}`);
+      
       // Create the default field (text field)
       const fieldName = fieldApiName === "name" 
         ? "Name" 
@@ -103,27 +105,48 @@ export function ObjectTypeForm({ onComplete }: ObjectTypeFormProps) {
         throw fieldError;
       }
       
-      // Create an additional text field with the same name
-      const { error: additionalFieldError } = await supabase
+      if (!field || field.length === 0) {
+        console.error("No default field returned after creation");
+        throw new Error("Failed to create default field, no data returned");
+      }
+
+      console.log(`Successfully created default field: ${fieldName}`, field);
+      
+      // Create an additional text field with the same name but with _text suffix
+      const additionalFieldApiName = `${fieldApiName}_text`;
+      const additionalFieldName = `${fieldName} Text`;
+      
+      console.log(`Creating additional text field: ${additionalFieldName}`);
+
+      const { data: additionalField, error: additionalFieldError } = await supabase
         .from("object_fields")
         .insert({
           object_type_id: objectTypeId,
-          name: fieldName + " Text",
-          api_name: fieldApiName + "_text",
+          name: additionalFieldName,
+          api_name: additionalFieldApiName,
           data_type: "textarea",
           is_required: false,
           is_system: false,
           display_order: 2,
-        });
+          owner_id: (await supabase.auth.getUser()).data.user?.id
+        })
+        .select();
 
       if (additionalFieldError) {
         console.error("Error creating additional text field:", additionalFieldError);
-        throw additionalFieldError;
+        // Don't throw here, as we already created the default field
+        toast({
+          title: "Warning",
+          description: `Default field created, but failed to create the additional text field: ${additionalFieldError.message}`,
+          variant: "destructive",
+        });
+      } else {
+        console.log(`Successfully created additional text field: ${additionalFieldName}`, additionalField);
       }
       
       return field;
     } catch (error) {
-      console.error("Failed to create default field:", error);
+      console.error("Failed to create fields:", error);
       throw error;
     }
   };
@@ -146,8 +169,22 @@ export function ObjectTypeForm({ onComplete }: ObjectTypeFormProps) {
       });
       
       if (result && result.id) {
-        // Then create the default field and the additional text field
-        await createDefaultField(result.id, values.default_field_api_name.trim());
+        try {
+          // Then create the default field and the additional text field
+          await createDefaultField(result.id, values.default_field_api_name.trim());
+          
+          toast({
+            title: "Success",
+            description: "Object type and fields created successfully",
+          });
+        } catch (fieldError) {
+          console.error("Error creating fields:", fieldError);
+          toast({
+            title: "Warning",
+            description: "Object type was created, but there was an issue creating the fields",
+            variant: "destructive",
+          });
+        }
       }
 
       form.reset();
@@ -155,11 +192,6 @@ export function ObjectTypeForm({ onComplete }: ObjectTypeFormProps) {
       if (onComplete) {
         onComplete();
       }
-
-      toast({
-        title: "Success",
-        description: "Object type, default field, and additional text field were created successfully",
-      });
     } catch (error) {
       console.error("Error creating object type:", error);
       toast({

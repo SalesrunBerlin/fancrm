@@ -1,7 +1,6 @@
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { Search } from "lucide-react";
 import { UserProfileMenu } from "./UserProfileMenu";
@@ -30,7 +29,9 @@ export function Header({ className }: HeaderProps) {
       "sticky top-0 z-30 flex h-14 items-center w-full bg-background border-b px-4",
       className
     )}>
-      <NavigationToggle />
+      <div className="flex items-center gap-2">
+        <NavigationToggle />
+      </div>
       
       <div className="flex-1 flex justify-end items-center">
         <Button 
