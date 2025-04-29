@@ -1,5 +1,6 @@
 
 import { LookupValueDisplay } from "./LookupValueDisplay";
+import { Fragment } from "react";
 
 interface RelatedFieldValueProps {
   field: {
@@ -24,6 +25,6 @@ export function RelatedFieldValue({ field, value }: RelatedFieldValueProps) {
   }
   
   return (
-    <>{value !== null && value !== undefined ? String(value) : "—"}</>
+    <Fragment>{value !== null && value !== undefined ? String(value) : "—"}</Fragment>
   );
 }
