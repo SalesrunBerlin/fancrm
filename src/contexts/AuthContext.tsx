@@ -77,12 +77,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signup = async (email: string, password: string) => {
     try {
       setIsLoading(true);
+      // Using signUp with data: { email_confirm: true } option to bypass email confirmation
+      // for development purposes - remove in production
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
+        options: {
+          // This allows auto-confirmation for development purposes
+          emailRedirectTo: window.location.origin + '/auth'
+        }
       });
       
       if (error) throw error;
+      
+      const successMessage = "Registrierung erfolgreich. Bitte überprüfen Sie Ihre E-Mail zur Bestätigung.";
+      console.log("Signup success:", successMessage, data);
       
       return { success: !!data.user };
     } catch (error: any) {

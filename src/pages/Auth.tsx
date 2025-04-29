@@ -45,6 +45,13 @@ export default function Auth() {
     setLoading(true);
     
     try {
+      // Improved error handling
+      if (password.length < 6) {
+        toast.error("Das Passwort muss mindestens 6 Zeichen lang sein.");
+        setLoading(false);
+        return;
+      }
+      
       const { success, error } = await signup(email, password);
       
       if (success) {
@@ -59,6 +66,10 @@ export default function Auth() {
           toast.error(error);
         }
       }
+    } catch (error: any) {
+      // This is a fallback error handler
+      console.error("Unhandled signup error:", error);
+      toast.error("Es ist ein unerwarteter Fehler aufgetreten. Bitte versuchen Sie es später erneut.");
     } finally {
       setLoading(false);
     }
