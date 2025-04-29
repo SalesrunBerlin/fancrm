@@ -7,6 +7,7 @@ import { ArrowLeft } from "lucide-react";
 import { ObjectFieldForm } from "@/components/settings/ObjectFieldForm";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
 import { ObjectField } from "@/hooks/useObjectTypes";
+import { toast } from "sonner";
 
 export default function ImportCreateFieldPage() {
   const navigate = useNavigate();
@@ -19,6 +20,9 @@ export default function ImportCreateFieldPage() {
   
   // Handle completion of field creation
   const handleComplete = (field: ObjectField) => {
+    console.log("Field created successfully:", field);
+    toast.success(`Field '${field.name}' created successfully`);
+    
     // Redirect back to the import page with the field information
     // We encode the field ID to be used for mapping
     navigate(`/objects/${objectTypeId}/import?newFieldId=${field.id}&columnName=${encodeURIComponent(columnName || '')}`);

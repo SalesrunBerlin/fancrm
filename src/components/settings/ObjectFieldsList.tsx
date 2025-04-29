@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/card";
 import { useState } from "react";
 import { DeleteDialog } from "@/components/common/DeleteDialog";
 import { Checkbox } from "@/components/ui/checkbox";
+import { toast } from "sonner";
 
 export interface ObjectFieldsListProps {
   fields: ObjectField[];
@@ -37,8 +38,15 @@ export function ObjectFieldsList({
 
   const handleDeleteField = async () => {
     if (deleteFieldId && onDeleteField) {
-      await onDeleteField(deleteFieldId);
-      setDeleteFieldId(null);
+      try {
+        await onDeleteField(deleteFieldId);
+        toast.success(`Field "${fieldToDelete?.name}" deleted successfully`);
+        setDeleteFieldId(null);
+        setIsDeleteDialogOpen(false);
+      } catch (error) {
+        console.error("Error deleting field:", error);
+        toast.error("Failed to delete field");
+      }
     }
   };
 

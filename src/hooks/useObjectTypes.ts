@@ -252,18 +252,40 @@ export function useObjectTypes() {
     mutationFn: async (sourceObjectId: string) => {
       if (!user) throw new Error("User must be logged in to import object types");
 
-      const { data: functionResult, error: functionError } = await supabase
-        .rpc('clone_object_structure', {
-          source_object_id: sourceObjectId,
-          new_owner_id: user.id
-        });
+      console.log("Starting import of object structure:", sourceObjectId);
+      try {
+        // Call the database function to clone the object structure
+        const { data: functionResult, error: functionError } = await supabase
+          .rpc('clone_object_structure', {
+            source_object_id: sourceObjectId,
+            new_owner_id: user.id
+          });
 
-      if (functionError) throw functionError;
-      
-      return functionResult;
+        if (functionError) {
+          console.error("Error from clone_object_structure RPC:", functionError);
+          throw functionError;
+        }
+        
+        console.log("Import object structure result:", functionResult);
+        
+        if (!functionResult) {
+          throw new Error("No result returned from object import function");
+        }
+        
+        // Return the new object ID
+        return functionResult;
+      } catch (error) {
+        console.error("Exception during object import:", error);
+        throw error;
+      }
     },
-    onSuccess: () => {
+    onSuccess: (newObjectId) => {
+      console.log("Successfully imported object with new ID:", newObjectId);
+      // Invalidate all relevant queries to ensure fresh data
       queryClient.invalidateQueries({ queryKey: ["object-types"] });
+      queryClient.invalidateQueries({ queryKey: ["object-fields"] });
+      queryClient.invalidateQueries({ queryKey: ["published-objects"] });
+      
       toast({
         title: "Success",
         description: "Object structure imported successfully",
@@ -273,7 +295,7 @@ export function useObjectTypes() {
       console.error("Error importing object structure:", error);
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to import object structure",
+        description: error instanceof Error ? error.message : "Failed to import object structure. Check console for details.",
         variant: "destructive",
       });
     }
@@ -320,11 +342,19 @@ export function useObjectTypes() {
   const refreshPublishedObjects = async () => {
     console.log("Manually refreshing published objects...");
     try {
+      // Force refresh the published objects view
       const { error: refreshError } = await supabase.rpc('refresh_published_objects_view');
       if (refreshError) {
         console.warn("Error refreshing published objects view:", refreshError);
       }
-      return await refetchPublished();
+      
+      // Refetch the published objects
+      const result = await refetchPublished();
+      
+      // Also invalidate object types to ensure everything is in sync
+      queryClient.invalidateQueries({ queryKey: ["object-types"] });
+      
+      return result;
     } catch (error) {
       console.error("Error during manual refresh:", error);
       throw error;

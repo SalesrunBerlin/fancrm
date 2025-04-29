@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
 import { Button } from "@/components/ui/button";
@@ -13,7 +14,8 @@ import {
   Calendar, 
   Eye,
   RefreshCw,
-  AlertTriangle
+  AlertTriangle,
+  Check
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { 
@@ -31,6 +33,7 @@ import { PublishingConfigDialog } from "@/components/settings/PublishingConfigDi
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useAuth } from "@/contexts/AuthContext";
 import { DeleteDialog } from "@/components/common/DeleteDialog";
+import { toast } from "sonner";
 
 export default function Structures() {
   const { user } = useAuth();
@@ -46,9 +49,11 @@ export default function Structures() {
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [showPublishDialog, setShowPublishDialog] = useState(false);
   const [selectedObjectId, setSelectedObjectId] = useState<string | null>(null);
+  const [selectedObjectName, setSelectedObjectName] = useState<string | null>(null);
   const [showCleanupDialog, setShowCleanupDialog] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [cleanupStatus, setCleanupStatus] = useState<string | null>(null);
+  const [importSuccess, setImportSuccess] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -70,8 +75,10 @@ export default function Structures() {
     setIsRefreshing(true);
     try {
       await refreshPublishedObjects();
+      toast.success("Published objects refreshed successfully");
     } catch (error) {
       console.error("Error refreshing published objects:", error);
+      toast.error("Failed to refresh published objects");
     } finally {
       setIsRefreshing(false);
     }
@@ -80,12 +87,30 @@ export default function Structures() {
   const handleImport = async () => {
     if (!selectedObjectId) return;
     
+    // Reset import success state
+    setImportSuccess(false);
+    
     try {
-      await importObjectType.mutateAsync(selectedObjectId);
-      setShowImportDialog(false);
-      setSelectedObjectId(null);
+      const newObjectId = await importObjectType.mutateAsync(selectedObjectId);
+      console.log("Import successful, new object ID:", newObjectId);
+      
+      // Set success state to show success message
+      setImportSuccess(true);
+      
+      // Navigate to the new object after a short delay
+      setTimeout(() => {
+        setShowImportDialog(false);
+        setSelectedObjectId(null);
+        setSelectedObjectName(null);
+        
+        // Navigate to the newly imported object
+        if (newObjectId) {
+          navigate(`/settings/objects/${newObjectId}`);
+        }
+      }, 2000);
     } catch (error) {
       console.error("Error importing object:", error);
+      toast.error("Failed to import object structure");
     }
   };
 
@@ -175,6 +200,11 @@ export default function Structures() {
                     <p className="text-sm text-muted-foreground">
                       {objectType.is_active ? "Active" : "Inactive"}
                     </p>
+                    {objectType.source_object_id && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Imported from another object
+                      </p>
+                    )}
                   </CardContent>
                   <CardFooter className="pt-2 mt-auto flex flex-col gap-2">
                     <div className="flex w-full gap-2">
@@ -267,6 +297,7 @@ export default function Structures() {
                       className="flex gap-2 w-full"
                       onClick={() => {
                         setSelectedObjectId(objectType.id);
+                        setSelectedObjectName(objectType.name);
                         setShowImportDialog(true);
                       }}
                     >
@@ -304,18 +335,32 @@ export default function Structures() {
           <DialogHeader>
             <DialogTitle>Import Object Structure</DialogTitle>
             <DialogDescription>
-              This will create a copy of the object structure in your account.
-              All included fields and picklist values will be imported.
+              {importSuccess ? (
+                <div className="flex items-center text-green-600 mt-2">
+                  <Check className="h-4 w-4 mr-2" />
+                  Object structure imported successfully!
+                </div>
+              ) : (
+                <>
+                  This will create a copy of {selectedObjectName ? <strong>{selectedObjectName}</strong> : 'the object structure'} in your account.
+                  All included fields and picklist values will be imported.
+                </>
+              )}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => {
               setShowImportDialog(false);
               setSelectedObjectId(null);
-            }}>
+              setSelectedObjectName(null);
+              setImportSuccess(false);
+            }} disabled={importObjectType.isPending}>
               Cancel
             </Button>
-            <Button onClick={handleImport} disabled={importObjectType.isPending}>
+            <Button 
+              onClick={handleImport} 
+              disabled={importObjectType.isPending || importSuccess}
+            >
               {importObjectType.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Import
             </Button>
