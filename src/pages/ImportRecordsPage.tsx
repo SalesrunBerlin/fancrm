@@ -49,6 +49,13 @@ export default function ImportRecordsPage() {
     importRecords 
   } = useImportRecords(objectTypeId!, fields || []);
 
+  // Check if we have import data and move to mapping step
+  useEffect(() => {
+    if (importData && step === "paste") {
+      setStep("mapping");
+    }
+  }, [importData]);
+
   // Check for newly created field from URL parameters
   useEffect(() => {
     const newFieldId = searchParams.get('newFieldId');
@@ -57,15 +64,24 @@ export default function ImportRecordsPage() {
     if (newFieldId && columnName && fields) {
       // Find the column index that matches the column name
       const columnIndex = columnMappings.findIndex(
-        mapping => mapping.sourceColumnName === columnName
+        mapping => mapping.sourceColumnName === decodeURIComponent(columnName)
       );
       
       // Find the newly created field
       const newField = fields.find(field => field.id === newFieldId);
       
       if (columnIndex >= 0 && newField) {
+        console.log("Updating mapping for new field:", newField.name, "at index", columnIndex);
         // Update the mapping with the new field
         updateColumnMapping(columnIndex, newFieldId);
+      } else {
+        console.warn("Could not map new field:", { 
+          newFieldId, columnName, 
+          columnFound: columnIndex >= 0, 
+          fieldFound: !!newField,
+          mappingsLength: columnMappings.length,
+          fieldsLength: fields.length
+        });
       }
     }
   }, [searchParams, fields, columnMappings, updateColumnMapping]);

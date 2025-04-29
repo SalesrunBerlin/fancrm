@@ -7,6 +7,7 @@ import { Link } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { useState } from "react";
 import { DeleteDialog } from "@/components/common/DeleteDialog";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export interface ObjectFieldsListProps {
   fields: ObjectField[];
@@ -14,9 +15,21 @@ export interface ObjectFieldsListProps {
   isLoading: boolean;
   onManagePicklistValues: (fieldId: string) => void;
   onDeleteField?: (fieldId: string) => Promise<void>;
+  selectable?: boolean;
+  selectedFields?: string[];
+  onSelectionChange?: (selectedFieldIds: string[]) => void;
 }
 
-export function ObjectFieldsList({ fields, objectTypeId, isLoading, onManagePicklistValues, onDeleteField }: ObjectFieldsListProps) {
+export function ObjectFieldsList({ 
+  fields, 
+  objectTypeId, 
+  isLoading, 
+  onManagePicklistValues, 
+  onDeleteField,
+  selectable = false,
+  selectedFields = [],
+  onSelectionChange
+}: ObjectFieldsListProps) {
   const [deleteFieldId, setDeleteFieldId] = useState<string | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   
@@ -26,6 +39,29 @@ export function ObjectFieldsList({ fields, objectTypeId, isLoading, onManagePick
     if (deleteFieldId && onDeleteField) {
       await onDeleteField(deleteFieldId);
       setDeleteFieldId(null);
+    }
+  };
+
+  const handleToggleSelectField = (fieldId: string) => {
+    if (!onSelectionChange) return;
+
+    const isSelected = selectedFields.includes(fieldId);
+    const newSelection = isSelected
+      ? selectedFields.filter(id => id !== fieldId)
+      : [...selectedFields, fieldId];
+    
+    onSelectionChange(newSelection);
+  };
+
+  const handleToggleSelectAll = () => {
+    if (!onSelectionChange) return;
+
+    if (selectedFields.length === fields.length) {
+      // Deselect all
+      onSelectionChange([]);
+    } else {
+      // Select all
+      onSelectionChange(fields.map(field => field.id));
     }
   };
 
@@ -43,6 +79,15 @@ export function ObjectFieldsList({ fields, objectTypeId, isLoading, onManagePick
         <Table>
           <TableHeader>
             <TableRow>
+              {selectable && (
+                <TableHead className="w-[50px]">
+                  <Checkbox 
+                    checked={selectedFields.length === fields.length && fields.length > 0}
+                    onCheckedChange={handleToggleSelectAll}
+                    aria-label="Select all fields"
+                  />
+                </TableHead>
+              )}
               <TableHead>Name</TableHead>
               <TableHead>API Name</TableHead>
               <TableHead>Type</TableHead>
@@ -53,13 +98,22 @@ export function ObjectFieldsList({ fields, objectTypeId, isLoading, onManagePick
           <TableBody>
             {fields.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center text-muted-foreground">
+                <TableCell colSpan={selectable ? 6 : 5} className="text-center text-muted-foreground">
                   No fields found
                 </TableCell>
               </TableRow>
             ) : (
               fields.map((field) => (
                 <TableRow key={field.id}>
+                  {selectable && (
+                    <TableCell>
+                      <Checkbox 
+                        checked={selectedFields.includes(field.id)}
+                        onCheckedChange={() => handleToggleSelectField(field.id)}
+                        aria-label={`Select ${field.name}`}
+                      />
+                    </TableCell>
+                  )}
                   <TableCell className="font-medium whitespace-nowrap">{field.name}</TableCell>
                   <TableCell className="text-muted-foreground whitespace-nowrap">{field.api_name}</TableCell>
                   <TableCell className="whitespace-nowrap">{field.data_type}</TableCell>

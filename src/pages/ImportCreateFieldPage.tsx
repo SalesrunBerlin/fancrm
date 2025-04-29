@@ -21,7 +21,7 @@ export default function ImportCreateFieldPage() {
   const handleComplete = (field: ObjectField) => {
     // Redirect back to the import page with the field information
     // We encode the field ID to be used for mapping
-    navigate(`/objects/${objectTypeId}/import?newFieldId=${field.id}&columnName=${columnName}`);
+    navigate(`/objects/${objectTypeId}/import?newFieldId=${field.id}&columnName=${encodeURIComponent(columnName || '')}`);
   };
 
   if (!objectTypeId) {

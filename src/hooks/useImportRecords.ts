@@ -17,12 +17,57 @@ interface ColumnMapping {
   targetField: ObjectField | null;
 }
 
+const STORAGE_KEY_PREFIX = 'import_data_';
+
 export function useImportRecords(objectTypeId: string, fields: ObjectField[]) {
   const [importData, setImportData] = useState<ImportData | null>(null);
   const [columnMappings, setColumnMappings] = useState<ColumnMapping[]>([]);
   const [isImporting, setIsImporting] = useState(false);
   const queryClient = useQueryClient();
   const { user } = useAuth();
+
+  // Load cached import data when component mounts
+  useEffect(() => {
+    if (objectTypeId) {
+      const cachedDataStr = localStorage.getItem(`${STORAGE_KEY_PREFIX}${objectTypeId}`);
+      if (cachedDataStr) {
+        try {
+          const cachedData = JSON.parse(cachedDataStr);
+          setImportData(cachedData.importData);
+          
+          // If fields are available, restore mappings with the latest field data
+          if (fields && fields.length > 0 && cachedData.columnMappings) {
+            const restoredMappings = cachedData.columnMappings.map((mapping: ColumnMapping) => {
+              if (mapping.targetField && mapping.targetField.id) {
+                // Find the current field by ID
+                const updatedField = fields.find(f => f.id === mapping.targetField?.id);
+                return {
+                  ...mapping,
+                  targetField: updatedField || mapping.targetField
+                };
+              }
+              return mapping;
+            });
+            setColumnMappings(restoredMappings);
+          } else {
+            setColumnMappings(cachedData.columnMappings || []);
+          }
+        } catch (error) {
+          console.error("Error restoring cached import data:", error);
+        }
+      }
+    }
+  }, [objectTypeId, fields]);
+
+  // Save import data to localStorage whenever it changes
+  useEffect(() => {
+    if (objectTypeId && importData) {
+      localStorage.setItem(`${STORAGE_KEY_PREFIX}${objectTypeId}`, JSON.stringify({
+        importData,
+        columnMappings
+      }));
+    }
+  }, [objectTypeId, importData, columnMappings]);
 
   // Parse pasted text into a structured format
   const parseImportText = useCallback((text: string) => {
@@ -61,13 +106,19 @@ export function useImportRecords(objectTypeId: string, fields: ObjectField[]) {
     setImportData({ headers, rows });
     setColumnMappings(mappings);
     
+    // Cache the import data
+    localStorage.setItem(`${STORAGE_KEY_PREFIX}${objectTypeId}`, JSON.stringify({
+      importData: { headers, rows },
+      columnMappings: mappings
+    }));
+    
     return { headers, rows, mappings };
-  }, [fields]);
+  }, [fields, objectTypeId]);
 
   // Update a column mapping
   const updateColumnMapping = useCallback((columnIndex: number, fieldId: string | null) => {
     setColumnMappings(prev => {
-      return prev.map((mapping, idx) => {
+      const updatedMappings = prev.map((mapping, idx) => {
         if (idx === columnIndex) {
           return {
             ...mapping,
@@ -76,8 +127,25 @@ export function useImportRecords(objectTypeId: string, fields: ObjectField[]) {
         }
         return mapping;
       });
+      
+      // Cache the updated mappings
+      if (importData) {
+        localStorage.setItem(`${STORAGE_KEY_PREFIX}${objectTypeId}`, JSON.stringify({
+          importData,
+          columnMappings: updatedMappings
+        }));
+      }
+      
+      return updatedMappings;
     });
-  }, [fields]);
+  }, [fields, objectTypeId, importData]);
+
+  // Clear the cached import data
+  const clearImportData = useCallback(() => {
+    localStorage.removeItem(`${STORAGE_KEY_PREFIX}${objectTypeId}`);
+    setImportData(null);
+    setColumnMappings([]);
+  }, [objectTypeId]);
 
   // Import the records to the database
   const importRecords = useCallback(async () => {
@@ -155,6 +223,9 @@ export function useImportRecords(objectTypeId: string, fields: ObjectField[]) {
         `Import completed: ${successCount} records imported${errorCount > 0 ? `, ${errorCount} failed` : ''}`
       );
       
+      // Clear cached import data after successful import
+      clearImportData();
+      
       return { success: successCount, errors: errorCount };
     } catch (error) {
       console.error("Import error:", error);
@@ -163,27 +234,7 @@ export function useImportRecords(objectTypeId: string, fields: ObjectField[]) {
     } finally {
       setIsImporting(false);
     }
-  }, [importData, objectTypeId, columnMappings, queryClient, user]);
-
-  // Reset the import state when fields change (e.g., after a new field is created)
-  useEffect(() => {
-    if (importData && columnMappings.length > 0) {
-      // Update mappings with the latest fields
-      setColumnMappings(prev => {
-        return prev.map(mapping => {
-          // If there was a targetField, try to find it in the updated fields list
-          if (mapping.targetField) {
-            const updatedField = fields.find(f => f.id === mapping.targetField?.id);
-            return {
-              ...mapping,
-              targetField: updatedField || mapping.targetField
-            };
-          }
-          return mapping;
-        });
-      });
-    }
-  }, [fields, importData]);
+  }, [importData, objectTypeId, columnMappings, queryClient, user, clearImportData]);
 
   return {
     importData,
@@ -191,6 +242,7 @@ export function useImportRecords(objectTypeId: string, fields: ObjectField[]) {
     isImporting,
     parseImportText,
     updateColumnMapping,
-    importRecords
+    importRecords,
+    clearImportData
   };
 }
