@@ -201,7 +201,7 @@ export function RelatedRecordsList({ objectTypeId, recordId }: RelatedRecordsLis
             />
           </CardHeader>
           <CardContent>
-            <div className="overflow-x-auto -webkit-overflow-scrolling-touch">
+            <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -224,7 +224,9 @@ export function RelatedRecordsList({ objectTypeId, recordId }: RelatedRecordsLis
                           {field.data_type === "lookup" && field.options && record.field_values?.[field.api_name] ? (
                             <LookupValueDisplay
                               value={record.field_values[field.api_name]}
-                              fieldOptions={field.options}
+                              fieldOptions={{
+                                target_object_type_id: field.options.target_object_type_id as string
+                              }}
                             />
                           ) : (
                             record.field_values?.[field.api_name] !== null && 

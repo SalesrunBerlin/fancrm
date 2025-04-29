@@ -124,7 +124,9 @@ export default function ObjectRecordDetail() {
                         {field.data_type === "lookup" && field.options && value ? (
                           <LookupValueDisplay
                             value={value}
-                            fieldOptions={field.options}
+                            fieldOptions={{
+                              target_object_type_id: field.options.target_object_type_id as string
+                            }}
                           />
                         ) : (
                           value !== null && value !== undefined ? String(value) : "—"

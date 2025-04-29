@@ -7,11 +7,21 @@ interface LookupValueDisplayProps {
   value: string | null;
   fieldOptions: {
     target_object_type_id: string;
+    display_field_api_name?: string;
+    description?: string;
   };
 }
 
 export function LookupValueDisplay({ value, fieldOptions }: LookupValueDisplayProps) {
-  const { records, isLoading, error } = useObjectLookup(fieldOptions.target_object_type_id);
+  const targetObjectTypeId = fieldOptions.target_object_type_id;
+  
+  // Ensure we have a valid target object type ID
+  if (!targetObjectTypeId) {
+    console.error("Missing target object type ID in field options");
+    return <span>Invalid configuration</span>;
+  }
+  
+  const { records, isLoading, error } = useObjectLookup(targetObjectTypeId);
   
   if (isLoading) {
     return <Loader2 className="h-4 w-4 animate-spin" />;
@@ -36,7 +46,7 @@ export function LookupValueDisplay({ value, fieldOptions }: LookupValueDisplayPr
 
   return (
     <Link 
-      to={`/objects/${fieldOptions.target_object_type_id}/${value}`}
+      to={`/objects/${targetObjectTypeId}/${value}`}
       className="text-blue-600 hover:underline"
     >
       {record.display_value}

@@ -31,7 +31,7 @@ export function RecordsTable({ records, fields, objectTypeId }: RecordsTableProp
   }
 
   return (
-    <div className="rounded-md border overflow-hidden overflow-x-auto -webkit-overflow-scrolling-touch">
+    <div className="rounded-md border overflow-hidden overflow-x-auto">
       <Table>
         <TableHeader>
           <TableRow>
@@ -49,7 +49,7 @@ export function RecordsTable({ records, fields, objectTypeId }: RecordsTableProp
                   {field.data_type === "lookup" && field.options && record.field_values && record.field_values[field.api_name] ? (
                     <LookupValueDisplay
                       value={record.field_values[field.api_name]}
-                      fieldOptions={field.options}
+                      fieldOptions={field.options as { target_object_type_id: string }}
                     />
                   ) : (
                     record.field_values && record.field_values[field.api_name] !== null 

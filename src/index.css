@@ -91,7 +91,8 @@
 
 /* Table styling fixes */
 .crm-table-wrapper {
-  @apply w-full overflow-auto rounded-md border -webkit-overflow-scrolling-touch;
+  @apply w-full overflow-auto rounded-md border;
+  -webkit-overflow-scrolling: touch;
 }
 
 .crm-table {
@@ -145,4 +146,3 @@
     -webkit-overflow-scrolling: touch;
   }
 }
-
