@@ -1,233 +1,87 @@
+
 import { useState, useEffect } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
 import { useObjectRecords } from "@/hooks/useObjectRecords";
-import { useObjectFields } from "@/hooks/useObjectFields";
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
-import { Card, CardContent } from "@/components/ui/card";
+import { useRecordFields } from "@/hooks/useRecordFields";
+import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
-import { Plus, Edit, Save, X, Filter } from "lucide-react";
-import { formatDate } from "@/lib/utils";
-import { CreateRecordDialog } from "@/components/records/CreateRecordDialog";
-import { FieldsConfigDialog } from "@/components/records/FieldsConfigDialog";
-import { EditableCell } from "@/components/records/EditableCell";
-import { ObjectRecordsFilter } from "@/components/records/ObjectRecordsFilter";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Loader2, Plus } from "lucide-react";
+import { RecordsTable } from "@/components/records/RecordsTable";
+import { Card } from "@/components/ui/card";
 
 export default function ObjectRecordsList() {
   const { objectTypeId } = useParams<{ objectTypeId: string }>();
-  const navigate = useNavigate();
   const { objectTypes } = useObjectTypes();
-  const { records, isLoading, updateRecord } = useObjectRecords(objectTypeId);
-  const { fields } = useObjectFields(objectTypeId);
-  const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [visibleFields, setVisibleFields] = useState<string[]>([]);
-  const [editMode, setEditMode] = useState(false);
-  const [editedRecords, setEditedRecords] = useState<Record<string, Record<string, any>>>({});
-  const [showFilters, setShowFilters] = useState(false);
-  
+  const { records, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useObjectRecords(objectTypeId);
+  const { fields, isLoading: isLoadingFields } = useRecordFields(objectTypeId);
   const objectType = objectTypes?.find(type => type.id === objectTypeId);
+  const [allRecords, setAllRecords] = useState<any[]>([]);
 
   useEffect(() => {
-    if (fields && objectTypeId) {
-      const storedFields = localStorage.getItem(`visible-fields-${objectTypeId}`);
-      const defaultFields = fields.map(f => f.api_name);
-      const initialFields = storedFields ? JSON.parse(storedFields) : defaultFields;
-      setVisibleFields(initialFields);
+    if (records) {
+      const flattenedRecords = records.pages.flatMap(page => page);
+      setAllRecords(flattenedRecords);
     }
-  }, [fields, objectTypeId]);
+  }, [records]);
 
-  const handleVisibilityChange = (newVisibleFields: string[]) => {
-    setVisibleFields(newVisibleFields);
-    if (objectTypeId) {
-      localStorage.setItem(`visible-fields-${objectTypeId}`, JSON.stringify(newVisibleFields));
-    }
-  };
-
-  const handleFieldChange = (recordId: string, fieldApiName: string, value: any) => {
-    setEditedRecords(prev => ({
-      ...prev,
-      [recordId]: {
-        ...(prev[recordId] || {}),
-        [fieldApiName]: value
-      }
-    }));
-  };
-
-  const isRecordEdited = (recordId: string) => {
-    return editedRecords[recordId] && Object.keys(editedRecords[recordId]).length > 0;
-  };
-
-  const saveRecord = async (recordId: string) => {
-    if (editedRecords[recordId]) {
-      await updateRecord.mutateAsync({
-        id: recordId,
-        field_values: editedRecords[recordId]
-      });
-      
-      setEditedRecords(prev => {
-        const newState = { ...prev };
-        delete newState[recordId];
-        return newState;
-      });
-    }
-  };
-
-  const cancelEditing = (recordId: string) => {
-    setEditedRecords(prev => {
-      const newState = { ...prev };
-      delete newState[recordId];
-      return newState;
-    });
-  };
-
-  const toggleEditMode = () => {
-    if (editMode && Object.keys(editedRecords).length > 0) {
-      setEditedRecords({});
-    }
-    setEditMode(!editMode);
-  };
-
-  const handleRowClick = (recordId: string) => {
-    if (!editMode) {
-      navigate(`/objects/${objectTypeId}/${recordId}`);
+  const handleLoadMore = () => {
+    if (hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
     }
   };
 
   if (!objectType) {
-    return <div>Object type not found</div>;
+    return (
+      <div className="flex justify-center items-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
   }
 
   return (
-    <div className="space-y-4">
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold">{objectType?.name}</h1>
-          <Button onClick={() => setShowCreateDialog(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            New {objectType?.name}
+    <div className="space-y-6">
+      <PageHeader
+        title={objectType.name}
+        description={objectType.description || `Manage your ${objectType.name.toLowerCase()}`}
+        actions={
+          <Button asChild>
+            <Link to={`/objects/${objectTypeId}/new`}>
+              <Plus className="mr-1.5 h-4 w-4" />
+              New {objectType.name}
+            </Link>
           </Button>
-        </div>
+        }
+      />
 
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={toggleEditMode}
-            className={editMode ? "bg-amber-100" : ""}
-          >
-            <Edit className="h-4 w-4 mr-1" />
-            {editMode ? "Exit Edit Mode" : "Edit Mode"}
-          </Button>
-          
-          <Collapsible open={showFilters} onOpenChange={setShowFilters}>
-            <CollapsibleTrigger asChild>
-              <Button variant="outline" size="sm" className={showFilters ? "bg-blue-100" : ""}>
-                <Filter className="h-4 w-4 mr-1" />
-                Filters
-              </Button>
-            </CollapsibleTrigger>
-          </Collapsible>
-        </div>
-      </div>
-
-      <Collapsible open={showFilters} className="w-full">
-        <CollapsibleContent className="space-y-2">
-          <Card className="mb-4">
-            <CardContent className="pt-6">
-              <ObjectRecordsFilter 
-                objectTypeId={objectTypeId} 
-                fields={fields || []} 
-              />
-            </CardContent>
-          </Card>
-        </CollapsibleContent>
-      </Collapsible>
-
-      <Card>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-10 p-0">
-                  <FieldsConfigDialog
-                    objectTypeId={objectTypeId}
-                    onVisibilityChange={handleVisibilityChange}
-                    defaultVisibleFields={visibleFields}
-                  />
-                </TableHead>
-                {fields?.filter(field => visibleFields.includes(field.api_name))
-                  .map(field => (
-                    <TableHead key={field.api_name}>{field.name}</TableHead>
-                  ))}
-                <TableHead>Created At</TableHead>
-                <TableHead>Last Modified</TableHead>
-                {editMode && <TableHead className="w-24">Actions</TableHead>}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {records?.map((record) => (
-                <TableRow 
-                  key={record.id} 
-                  className={!editMode ? "cursor-pointer hover:bg-muted/50" : ""}
-                  onClick={!editMode ? () => handleRowClick(record.id) : undefined}
-                >
-                  <TableCell className="p-0 w-10">
-                  </TableCell>
-                  {fields?.filter(field => visibleFields.includes(field.api_name))
-                    .map(field => (
-                      <EditableCell
-                        key={`${record.id}-${field.api_name}`}
-                        value={record.field_values?.[field.api_name]}
-                        editMode={editMode}
-                        onChange={(value) => handleFieldChange(record.id, field.api_name, value)}
-                        fieldType={field.data_type}
-                        isRequired={field.is_required}
-                        fieldOptions={field.options}
-                      />
-                    ))}
-                  <TableCell>{formatDate(record.created_at)}</TableCell>
-                  <TableCell>{formatDate(record.updated_at)}</TableCell>
-                  {editMode && (
-                    <TableCell className="w-24">
-                      {isRecordEdited(record.id) ? (
-                        <div className="flex gap-1">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              saveRecord(record.id);
-                            }}
-                          >
-                            <Save className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              cancelEditing(record.id);
-                            }}
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      ) : null}
-                    </TableCell>
-                  )}
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
+      <Card className="overflow-hidden">
+        {isLoading || isLoadingFields ? (
+          <div className="flex justify-center py-8">
+            <Loader2 className="h-8 w-8 animate-spin" />
+          </div>
+        ) : (
+          <RecordsTable 
+            records={allRecords} 
+            fields={fields} 
+            objectTypeId={objectTypeId!}
+          />
+        )}
       </Card>
 
-      <CreateRecordDialog
-        objectTypeId={objectTypeId}
-        open={showCreateDialog}
-        onOpenChange={setShowCreateDialog}
-      />
+      {hasNextPage && (
+        <div className="flex justify-center mt-4">
+          <Button
+            variant="outline"
+            onClick={handleLoadMore}
+            disabled={isFetchingNextPage}
+          >
+            {isFetchingNextPage ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : null}
+            Load More
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

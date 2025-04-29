@@ -6,8 +6,7 @@ import { cn } from "@/lib/utils";
 import { Search } from "lucide-react";
 import { UserProfileMenu } from "./UserProfileMenu";
 import { CommandSearch } from "@/components/search/CommandSearch";
-import { ActiveObjectsMenu } from "./ActiveObjectsMenu";
-import { SidebarTrigger } from "@/components/ui/sidebar";
+import { MainNavigation } from "./MainNavigation";
 
 interface HeaderProps extends React.HTMLAttributes<HTMLElement> {}
 
@@ -28,19 +27,15 @@ export function Header({ className }: HeaderProps) {
 
   return (
     <header className={cn(
-      "sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-background px-4",
+      "sticky top-0 z-30 flex flex-col w-full bg-background",
       className
     )}>
-      <div className="flex items-center gap-4">
-        <SidebarTrigger className="mr-2" />
-        <h1 className="font-semibold hidden md:block">CRMbeauty</h1>
-        <ActiveObjectsMenu />
-      </div>
+      <MainNavigation />
       
-      <div className="flex items-center gap-4">
+      <div className="flex h-14 items-center justify-end border-b px-4">
         <Button 
           variant="outline" 
-          className="relative h-9 w-full md:w-40 lg:w-64 px-8 text-muted-foreground"
+          className="relative h-9 w-full md:w-40 lg:w-64 px-8 text-muted-foreground mr-4"
           onClick={() => setSearchDialogOpen(true)}
         >
           <Search className="absolute left-2 h-4 w-4" />
@@ -52,7 +47,7 @@ export function Header({ className }: HeaderProps) {
         
         <CommandSearch open={searchDialogOpen} setOpen={setSearchDialogOpen} />
         
-        <div className="ml-2 flex items-center space-x-2">
+        <div className="flex items-center space-x-2">
           <UserProfileMenu />
         </div>
       </div>
