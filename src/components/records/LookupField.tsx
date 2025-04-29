@@ -14,7 +14,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 interface LookupFieldProps {
   value: string | null;
   onChange: (value: string | null) => void;
-  targetObjectTypeId?: string;
+  targetObjectTypeId: string;
   disabled?: boolean;
 }
 
@@ -71,7 +71,7 @@ export function LookupField({
       onValueChange={handleChange}
       disabled={disabled || !records || records.length === 0}
     >
-      <SelectTrigger className="w-full">
+      <SelectTrigger>
         <SelectValue placeholder={records && records.length > 0 ? "Select..." : "No records available"} />
       </SelectTrigger>
       <SelectContent>

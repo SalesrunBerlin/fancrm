@@ -1,4 +1,3 @@
-
 import { useQuery } from "@tanstack/react-query";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,7 +8,6 @@ import { useObjectFields } from "@/hooks/useObjectFields";
 import { EditableCell } from "./EditableCell";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { FieldsConfigDialog } from "./FieldsConfigDialog";
-import { useIsMobile } from "@/hooks/use-mobile";
 
 interface RelatedRecordsListProps {
   objectTypeId: string;
@@ -31,8 +29,6 @@ interface RelatedSection {
 }
 
 export function RelatedRecordsList({ objectTypeId, recordId }: RelatedRecordsListProps) {
-  const isMobile = useIsMobile();
-  
   const { data: relatedSections, isLoading } = useQuery({
     queryKey: ["related-records", objectTypeId, recordId],
     queryFn: async () => {
@@ -145,15 +141,11 @@ export function RelatedRecordsList({ objectTypeId, recordId }: RelatedRecordsLis
         const storedFields = localStorage.getItem(`visible-fields-${relatedObjectTypeId}`);
         const visibleFields = storedFields ? JSON.parse(storedFields) : fields.map(f => f.api_name);
 
-        // On mobile, limit the number of fields to avoid horizontal scrolling issues
-        const filteredFields = fields.filter(f => visibleFields.includes(f.api_name));
-        const displayFields = isMobile ? filteredFields.slice(0, 2) : filteredFields;
-
         return {
           objectType,
           relationship,
           records: recordsWithValues,
-          fields: displayFields,
+          fields: fields.filter(f => visibleFields.includes(f.api_name)),
           displayField: fields.find(f => f.api_name === objectType.default_field_api_name) || fields[0]
         };
       }));
@@ -179,64 +171,52 @@ export function RelatedRecordsList({ objectTypeId, recordId }: RelatedRecordsLis
   }
 
   return (
-    <div className="space-y-6 mb-20">
+    <div className="space-y-6">
       {relatedSections.map((section) => (
         <Card key={section.relationship.id}>
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>{section.relationship.name}</CardTitle>
-            {!isMobile && (
-              <FieldsConfigDialog
-                objectTypeId={section.objectType.id}
-                onVisibilityChange={() => {}}
-                defaultVisibleFields={section.fields.map(f => f.api_name)}
-              />
-            )}
+            <FieldsConfigDialog
+              objectTypeId={section.objectType.id}
+              onVisibilityChange={() => {}}
+              defaultVisibleFields={section.fields.map(f => f.api_name)}
+            />
           </CardHeader>
-          <CardContent className="overflow-x-auto -webkit-overflow-scrolling-touch">
-            <div className="table-container">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    {section.fields.map((field) => (
-                      <TableHead key={field.api_name}>{field.name}</TableHead>
-                    ))}
-                    {!isMobile && (
-                      <>
-                        <TableHead>Created At</TableHead>
-                        <TableHead>Last Modified</TableHead>
-                      </>
-                    )}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {section.records.map((record) => (
-                    <TableRow 
-                      key={record.id}
-                      className="cursor-pointer hover:bg-muted/50"
-                      onClick={() => window.location.href = `/objects/${section.objectType.id}/${record.id}`}
-                    >
-                      {section.fields.map((field) => (
-                        <EditableCell
-                          key={`${record.id}-${field.api_name}`}
-                          value={record.field_values?.[field.api_name]}
-                          editMode={false}
-                          onChange={() => {}}
-                          fieldType={field.data_type}
-                          isRequired={field.is_required}
-                          fieldOptions={field.options}
-                        />
-                      ))}
-                      {!isMobile && (
-                        <>
-                          <TableCell>{new Date(record.created_at).toLocaleDateString()}</TableCell>
-                          <TableCell>{new Date(record.updated_at).toLocaleDateString()}</TableCell>
-                        </>
-                      )}
-                    </TableRow>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  {section.fields.map((field) => (
+                    <TableHead key={field.api_name}>{field.name}</TableHead>
                   ))}
-                </TableBody>
-              </Table>
-            </div>
+                  <TableHead>Created At</TableHead>
+                  <TableHead>Last Modified</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {section.records.map((record) => (
+                  <TableRow 
+                    key={record.id}
+                    className="cursor-pointer hover:bg-muted/50"
+                    onClick={() => window.location.href = `/objects/${section.objectType.id}/${record.id}`}
+                  >
+                    {section.fields.map((field) => (
+                      <EditableCell
+                        key={`${record.id}-${field.api_name}`}
+                        value={record.field_values?.[field.api_name]}
+                        editMode={false}
+                        onChange={() => {}}
+                        fieldType={field.data_type}
+                        isRequired={field.is_required}
+                        fieldOptions={field.options}
+                      />
+                    ))}
+                    <TableCell>{new Date(record.created_at).toLocaleDateString()}</TableCell>
+                    <TableCell>{new Date(record.updated_at).toLocaleDateString()}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           </CardContent>
         </Card>
       ))}
