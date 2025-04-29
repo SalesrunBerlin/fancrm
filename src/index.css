@@ -75,18 +75,21 @@
   html, body {
     height: 100%;
     overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
   }
 
   body {
     @apply bg-background text-foreground;
   }
-  
-  /* Mobile scrolling fixes */
-  .overflow-x-auto,
-  .overflow-y-auto {
-    -webkit-overflow-scrolling: touch;
-  }
+}
+
+/* Mobile scrolling fixes */
+.overflow-x-auto,
+.overflow-y-auto {
+  -webkit-overflow-scrolling: touch;
+}
+
+html, body {
+  -webkit-overflow-scrolling: touch;
 }
 
 /* Table styling fixes */
@@ -116,7 +119,7 @@
 }
 
 .crm-table-head {
-  @apply h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0;
+  @apply h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 whitespace-nowrap;
 }
 
 /* Animation utilities */

@@ -49,10 +49,15 @@ export function RelatedRecordsList({ objectTypeId, recordId }: RelatedRecordsLis
       if (relError) throw relError;
       if (!relationships) return [];
 
+      console.log("Found relationships:", relationships);
+
       const sections = await Promise.all(relationships.map(async (relationship) => {
         // Determine if this is a forward or reverse relationship
         const isForward = relationship.from_object_id === objectTypeId;
         const relatedObjectTypeId = isForward ? relationship.to_object_id : relationship.from_object_id;
+        
+        console.log(`Processing relationship: ${relationship.name}, isForward: ${isForward}`);
+        console.log(`Related object type ID: ${relatedObjectTypeId}`);
         
         // Get the stored field settings for this object type
         const storedFieldsString = localStorage.getItem(`visible-fields-${relatedObjectTypeId}`);
@@ -75,6 +80,8 @@ export function RelatedRecordsList({ objectTypeId, recordId }: RelatedRecordsLis
 
         if (!fields) return null;
 
+        console.log(`Found ${fields.length} fields for object type ${relatedObjectTypeId}`);
+
         // If we don't have visible fields stored, default to the first 5 fields
         if (visibleFieldsApiNames.length === 0 && fields.length > 0) {
           visibleFieldsApiNames = fields.slice(0, 5).map(f => f.api_name);
@@ -90,6 +97,8 @@ export function RelatedRecordsList({ objectTypeId, recordId }: RelatedRecordsLis
           f.options.target_object_type_id === objectTypeId
         );
 
+        console.log("Lookup field found:", lookupField);
+
         if (isForward && lookupField) {
           // For forward relationships, get records from field values
           const { data: fieldValues } = await supabase
@@ -98,9 +107,13 @@ export function RelatedRecordsList({ objectTypeId, recordId }: RelatedRecordsLis
             .eq("field_api_name", lookupField.api_name)
             .eq("value", recordId);
 
-          if (!fieldValues || fieldValues.length === 0) return null;
+          if (!fieldValues || fieldValues.length === 0) {
+            console.log("No field values found for forward relationship");
+            return null;
+          }
 
           const recordIds = fieldValues.map(fv => fv.record_id);
+          console.log("Forward relationship record IDs:", recordIds);
 
           const { data: relatedRecords } = await supabase
             .from("object_records")
@@ -108,6 +121,7 @@ export function RelatedRecordsList({ objectTypeId, recordId }: RelatedRecordsLis
             .in("id", recordIds);
 
           records = relatedRecords;
+          console.log("Forward related records:", records);
         } else if (!isForward && lookupField) {
           // For reverse relationships, find records that this record references
           const { data: fieldValues } = await supabase
@@ -116,9 +130,13 @@ export function RelatedRecordsList({ objectTypeId, recordId }: RelatedRecordsLis
             .eq("record_id", recordId)
             .eq("field_api_name", lookupField.api_name);
 
-          if (!fieldValues || fieldValues.length === 0) return null;
+          if (!fieldValues || fieldValues.length === 0) {
+            console.log("No field values found for reverse relationship");
+            return null;
+          }
 
           const relatedRecordIds = fieldValues.map(fv => fv.value).filter(Boolean);
+          console.log("Reverse relationship record IDs:", relatedRecordIds);
           
           if (relatedRecordIds.length === 0) return null;
 
@@ -128,9 +146,13 @@ export function RelatedRecordsList({ objectTypeId, recordId }: RelatedRecordsLis
             .in("id", relatedRecordIds);
 
           records = relatedRecords;
+          console.log("Reverse related records:", records);
         }
 
-        if (!records || records.length === 0) return null;
+        if (!records || records.length === 0) {
+          console.log("No related records found");
+          return null;
+        }
 
         // Get values for these records
         const { data: values } = await supabase
@@ -221,11 +243,11 @@ export function RelatedRecordsList({ objectTypeId, recordId }: RelatedRecordsLis
                     >
                       {section.fields.map((field) => (
                         <TableCell key={`${record.id}-${field.api_name}`}>
-                          {field.data_type === "lookup" && field.options && record.field_values?.[field.api_name] ? (
+                          {field.data_type === "lookup" && field.options && field.options.target_object_type_id && record.field_values?.[field.api_name] ? (
                             <LookupValueDisplay
                               value={record.field_values[field.api_name]}
                               fieldOptions={{
-                                target_object_type_id: field.options.target_object_type_id as string
+                                target_object_type_id: field.options.target_object_type_id
                               }}
                             />
                           ) : (

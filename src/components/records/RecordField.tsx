@@ -7,6 +7,8 @@ import { FormItem, FormLabel, FormControl, FormDescription, FormMessage } from "
 import { ControllerRenderProps, UseFormReturn } from "react-hook-form";
 import { ObjectField } from "@/hooks/useObjectTypes";
 import { LookupField } from "./LookupField";
+import { useFieldPicklistValues } from "@/hooks/useFieldPicklistValues";
+import { Loader2 } from "lucide-react";
 
 interface RecordFieldProps {
   field: ObjectField;
@@ -16,6 +18,7 @@ interface RecordFieldProps {
 export function RecordField({ field, form }: RecordFieldProps) {
   const { name } = useFormField();
   const value = form.watch(field.api_name);
+  const { picklistValues, isLoading: loadingPicklist } = useFieldPicklistValues(field.id);
 
   const renderField = () => {
     switch (field.data_type) {
@@ -72,6 +75,39 @@ export function RecordField({ field, form }: RecordFieldProps) {
             {...form.register(field.api_name, { required: field.is_required })}
           />
         );
+      case "picklist":
+        if (loadingPicklist) {
+          return <div className="flex items-center space-x-2">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <span>Loading options...</span>
+          </div>;
+        }
+        
+        if (!picklistValues || picklistValues.length === 0) {
+          return <Input 
+            type="text"
+            placeholder={`No options available for ${field.name}`}
+            disabled
+          />;
+        }
+        
+        return (
+          <Select
+            value={value || ""}
+            onValueChange={(val) => form.setValue(field.api_name, val)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder={`Select ${field.name.toLowerCase()}`} />
+            </SelectTrigger>
+            <SelectContent>
+              {picklistValues.map(option => (
+                <SelectItem key={option.id} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        );
       case "lookup":
         const targetObjectTypeId = field.options?.target_object_type_id;
         if (!targetObjectTypeId) return null;
@@ -104,7 +140,6 @@ export function RecordField({ field, form }: RecordFieldProps) {
       <FormControl>
         {renderField()}
       </FormControl>
-      {/* Entferne die Beschreibung, wenn sie nicht existiert oder leer ist */}
       {field.options?.description && (
         <FormDescription>{field.options.description}</FormDescription>
       )}
