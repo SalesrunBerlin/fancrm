@@ -6,21 +6,25 @@ import { useObjectRecords } from "@/hooks/useObjectRecords";
 import { useRecordFields } from "@/hooks/useRecordFields";
 import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
-import { Loader2, Plus, Upload } from "lucide-react";
+import { Loader2, Plus, Upload, Trash2 } from "lucide-react";
 import { RecordsTable } from "@/components/records/RecordsTable";
 import { Card } from "@/components/ui/card";
 import { FieldsConfigDialog } from "@/components/records/FieldsConfigDialog";
 import { useUserFieldSettings } from "@/hooks/useUserFieldSettings";
 import { ObjectField } from "@/hooks/useObjectTypes";
+import { DeleteDialog } from "@/components/common/DeleteDialog";
+import { toast } from "sonner";
 
 export default function ObjectRecordsList() {
   const { objectTypeId } = useParams<{ objectTypeId: string }>();
   const { objectTypes } = useObjectTypes();
-  const { records, isLoading } = useObjectRecords(objectTypeId);
+  const { records, isLoading, deleteRecord } = useObjectRecords(objectTypeId);
   const { fields, isLoading: isLoadingFields } = useRecordFields(objectTypeId);
   const objectType = objectTypes?.find(type => type.id === objectTypeId);
   const [allRecords, setAllRecords] = useState<any[]>([]);
   const { visibleFields, updateVisibleFields } = useUserFieldSettings(objectTypeId);
+  const [selectedRecords, setSelectedRecords] = useState<string[]>([]);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   
   // System fields definition
   const systemFields: ObjectField[] = [
@@ -33,7 +37,9 @@ export default function ObjectRecordsList() {
       data_type: "datetime",
       object_type_id: objectTypeId || "",
       display_order: 1000,
-      owner_id: ""
+      owner_id: "",
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
     },
     { 
       id: "sys_updated_at", 
@@ -44,7 +50,9 @@ export default function ObjectRecordsList() {
       data_type: "datetime",
       object_type_id: objectTypeId || "",
       display_order: 1001,
-      owner_id: ""
+      owner_id: "",
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
     },
     { 
       id: "sys_record_id", 
@@ -55,7 +63,9 @@ export default function ObjectRecordsList() {
       data_type: "text",
       object_type_id: objectTypeId || "",
       display_order: 1002,
-      owner_id: ""
+      owner_id: "",
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
     }
   ];
   
@@ -74,6 +84,28 @@ export default function ObjectRecordsList() {
 
   const handleVisibilityChange = (fieldApiNames: string[]) => {
     updateVisibleFields(fieldApiNames);
+  };
+
+  const handleRecordSelectionChange = (selectedIds: string[]) => {
+    setSelectedRecords(selectedIds);
+  };
+
+  const handleBatchDelete = async () => {
+    if (selectedRecords.length === 0) return;
+    
+    try {
+      // Process deletion of each selected record
+      await Promise.all(selectedRecords.map(id => deleteRecord.mutateAsync(id)));
+      
+      // Show success message
+      toast.success(`${selectedRecords.length} record(s) deleted successfully`);
+      
+      // Clear selection
+      setSelectedRecords([]);
+    } catch (error) {
+      console.error("Error deleting records:", error);
+      toast.error("Failed to delete some records");
+    }
   };
 
   if (!objectType) {
@@ -117,6 +149,15 @@ export default function ObjectRecordsList() {
                 Import
               </Link>
             </Button>
+            {selectedRecords.length > 0 && (
+              <Button 
+                variant="destructive"
+                onClick={() => setIsDeleteDialogOpen(true)}
+              >
+                <Trash2 className="mr-1.5 h-4 w-4" />
+                Delete Selected ({selectedRecords.length})
+              </Button>
+            )}
             <Button asChild>
               <Link to={`/objects/${objectTypeId}/new`}>
                 <Plus className="mr-1.5 h-4 w-4" />
@@ -137,9 +178,19 @@ export default function ObjectRecordsList() {
             records={allRecords} 
             fields={getFieldsToDisplay()} 
             objectTypeId={objectTypeId!}
+            selectable={true}
+            onSelectionChange={handleRecordSelectionChange}
           />
         )}
       </Card>
+
+      <DeleteDialog
+        isOpen={isDeleteDialogOpen}
+        onClose={() => setIsDeleteDialogOpen(false)}
+        onConfirm={handleBatchDelete}
+        title={`Delete ${selectedRecords.length} Records`}
+        description={`Are you sure you want to delete ${selectedRecords.length} records? This action cannot be undone.`}
+      />
     </div>
   );
 }

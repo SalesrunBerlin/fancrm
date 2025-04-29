@@ -1,19 +1,34 @@
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Loader2, Edit, List } from "lucide-react";
+import { Loader2, Edit, List, Trash2 } from "lucide-react";
 import { ObjectField } from "@/hooks/useObjectTypes";
 import { Link } from "react-router-dom";
 import { Card } from "@/components/ui/card";
+import { useState } from "react";
+import { DeleteDialog } from "@/components/common/DeleteDialog";
 
 export interface ObjectFieldsListProps {
   fields: ObjectField[];
   objectTypeId: string;
   isLoading: boolean;
   onManagePicklistValues: (fieldId: string) => void;
+  onDeleteField?: (fieldId: string) => Promise<void>;
 }
 
-export function ObjectFieldsList({ fields, objectTypeId, isLoading, onManagePicklistValues }: ObjectFieldsListProps) {
+export function ObjectFieldsList({ fields, objectTypeId, isLoading, onManagePicklistValues, onDeleteField }: ObjectFieldsListProps) {
+  const [deleteFieldId, setDeleteFieldId] = useState<string | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  
+  const fieldToDelete = fields.find(field => field.id === deleteFieldId);
+
+  const handleDeleteField = async () => {
+    if (deleteFieldId && onDeleteField) {
+      await onDeleteField(deleteFieldId);
+      setDeleteFieldId(null);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex justify-center py-8">
@@ -71,6 +86,20 @@ export function ObjectFieldsList({ fields, objectTypeId, isLoading, onManagePick
                           <span className="sr-only">Edit</span>
                         </Link>
                       </Button>
+                      {!field.is_system && onDeleteField && (
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                          onClick={() => {
+                            setDeleteFieldId(field.id);
+                            setIsDeleteDialogOpen(true);
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          <span className="sr-only">Delete</span>
+                        </Button>
+                      )}
                     </div>
                   </TableCell>
                 </TableRow>
@@ -79,6 +108,14 @@ export function ObjectFieldsList({ fields, objectTypeId, isLoading, onManagePick
           </TableBody>
         </Table>
       </div>
+
+      <DeleteDialog
+        isOpen={isDeleteDialogOpen}
+        onClose={() => setIsDeleteDialogOpen(false)}
+        onConfirm={handleDeleteField}
+        title={`Delete Field: ${fieldToDelete?.name}`}
+        description={`Are you sure you want to delete the field "${fieldToDelete?.name}"? This action cannot be undone and may affect existing records.`}
+      />
     </Card>
   );
 }

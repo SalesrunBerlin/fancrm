@@ -15,14 +15,19 @@ import { ObjectRecord } from "@/hooks/useObjectRecords";
 import { Edit, Trash2, Eye } from "lucide-react";
 import { LookupValueDisplay } from "./LookupValueDisplay";
 import { format } from "date-fns";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface RecordsTableProps {
   records: ObjectRecord[];
   fields: ObjectField[];
   objectTypeId: string;
+  selectable?: boolean;
+  onSelectionChange?: (selectedIds: string[]) => void;
 }
 
-export function RecordsTable({ records, fields, objectTypeId }: RecordsTableProps) {
+export function RecordsTable({ records, fields, objectTypeId, selectable = false, onSelectionChange }: RecordsTableProps) {
+  const [selectedRecords, setSelectedRecords] = useState<string[]>([]);
+
   if (records.length === 0) {
     return (
       <div className="py-8 text-center text-muted-foreground">
@@ -65,11 +70,46 @@ export function RecordsTable({ records, fields, objectTypeId }: RecordsTableProp
     return "—";
   };
 
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      const allIds = records.map(record => record.id);
+      setSelectedRecords(allIds);
+      if (onSelectionChange) onSelectionChange(allIds);
+    } else {
+      setSelectedRecords([]);
+      if (onSelectionChange) onSelectionChange([]);
+    }
+  };
+
+  const handleSelectRecord = (recordId: string, checked: boolean) => {
+    let newSelectedRecords = [...selectedRecords];
+    
+    if (checked) {
+      newSelectedRecords.push(recordId);
+    } else {
+      newSelectedRecords = newSelectedRecords.filter(id => id !== recordId);
+    }
+    
+    setSelectedRecords(newSelectedRecords);
+    if (onSelectionChange) onSelectionChange(newSelectedRecords);
+  };
+
+  const allSelected = records.length > 0 && selectedRecords.length === records.length;
+
   return (
     <div className="rounded-md border overflow-hidden overflow-x-auto">
       <Table>
         <TableHeader>
           <TableRow>
+            {selectable && (
+              <TableHead className="w-[50px]">
+                <Checkbox 
+                  checked={allSelected} 
+                  onCheckedChange={handleSelectAll} 
+                  aria-label="Select all records"
+                />
+              </TableHead>
+            )}
             {fields.map((field) => (
               <TableHead key={field.id}>{field.name}</TableHead>
             ))}
@@ -78,7 +118,16 @@ export function RecordsTable({ records, fields, objectTypeId }: RecordsTableProp
         </TableHeader>
         <TableBody>
           {records.map((record) => (
-            <TableRow key={record.id}>
+            <TableRow key={record.id} className={selectedRecords.includes(record.id) ? "bg-muted/30" : undefined}>
+              {selectable && (
+                <TableCell>
+                  <Checkbox
+                    checked={selectedRecords.includes(record.id)}
+                    onCheckedChange={(checked) => handleSelectRecord(record.id, !!checked)}
+                    aria-label={`Select record ${record.id}`}
+                  />
+                </TableCell>
+              )}
               {fields.map((field) => (
                 <TableCell key={`${record.id}-${field.id}`}>
                   {getFieldValue(record, field)}

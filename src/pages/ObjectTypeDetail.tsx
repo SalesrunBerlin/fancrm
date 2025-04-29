@@ -6,9 +6,10 @@ import { useObjectFields } from "@/hooks/useObjectFields";
 import { ObjectFieldsList } from "@/components/settings/ObjectFieldsList";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
-import { ArrowLeft, List, Plus } from "lucide-react";
+import { ArrowLeft, List, Plus, Trash2 } from "lucide-react";
 import { Link } from "react-router-dom";
-import { ObjectField } from "@/hooks/useObjectTypes";
+import { DeleteDialog } from "@/components/common/DeleteDialog";
+import { toast } from "sonner";
 
 export default function ObjectTypeDetail() {
   const { objectTypeId } = useParams<{ objectTypeId: string }>();
@@ -16,6 +17,7 @@ export default function ObjectTypeDetail() {
   const { objectTypes, updateObjectType, publishObjectType, unpublishObjectType } = useObjectTypes();
   const { fields, isLoading, createField, updateField, deleteField } = useObjectFields(objectTypeId);
   const [isPublishing, setIsPublishing] = useState(false);
+  const [isDeleteObjectDialogOpen, setIsDeleteObjectDialogOpen] = useState(false);
   
   // Find the current object type
   const currentObjectType = objectTypes?.find(obj => obj.id === objectTypeId);
@@ -60,6 +62,23 @@ export default function ObjectTypeDetail() {
     // You could navigate to another page or open a dialog here
   };
 
+  const handleDeleteField = async (fieldId: string) => {
+    try {
+      await deleteField.mutateAsync(fieldId);
+      toast.success("Field deleted successfully");
+    } catch (error) {
+      console.error("Error deleting field:", error);
+      toast.error("Failed to delete field");
+    }
+  };
+
+  const handleDeleteObjectType = async () => {
+    // In a real implementation, this would call an API to delete the object type
+    // and all its related data (fields, records, etc.)
+    toast.error("Object type deletion is not implemented yet");
+    setIsDeleteObjectDialogOpen(false);
+  };
+
   return (
     <div className="container mx-auto px-2 md:px-0 space-y-6 max-w-5xl">
       <PageHeader
@@ -81,13 +100,24 @@ export default function ObjectTypeDetail() {
               New Field
             </Button>
             {!currentObjectType.is_system && (
-              <Button 
-                onClick={handleTogglePublish}
-                disabled={isPublishing}
-                variant={currentObjectType.is_published ? "outline" : "default"}
-              >
-                {currentObjectType.is_published ? "Unpublish" : "Publish"}
-              </Button>
+              <>
+                <Button 
+                  onClick={handleTogglePublish}
+                  disabled={isPublishing}
+                  variant={currentObjectType.is_published ? "outline" : "default"}
+                >
+                  {currentObjectType.is_published ? "Unpublish" : "Publish"}
+                </Button>
+                {!currentObjectType.is_system && (
+                  <Button 
+                    variant="destructive"
+                    onClick={() => setIsDeleteObjectDialogOpen(true)}
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete
+                  </Button>
+                )}
+              </>
             )}
           </>
         }
@@ -98,6 +128,15 @@ export default function ObjectTypeDetail() {
         objectTypeId={objectTypeId as string} 
         isLoading={isLoading}
         onManagePicklistValues={handleManagePicklistValues}
+        onDeleteField={!currentObjectType.is_system ? handleDeleteField : undefined}
+      />
+
+      <DeleteDialog
+        isOpen={isDeleteObjectDialogOpen}
+        onClose={() => setIsDeleteObjectDialogOpen(false)}
+        onConfirm={handleDeleteObjectType}
+        title={`Delete ${currentObjectType.name}`}
+        description={`Are you sure you want to delete the object type "${currentObjectType.name}"? This will delete all fields, records, and relationships associated with this object. This action cannot be undone.`}
       />
     </div>
   );
