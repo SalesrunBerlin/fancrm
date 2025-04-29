@@ -191,14 +191,14 @@ export function ImportRecordsDialog({
                       </TableCell>
                       <TableCell>
                         <Select
-                          value={mapping.targetField?.id || ""}
-                          onValueChange={(value) => updateColumnMapping(index, value || null)}
+                          value={mapping.targetField?.id || "none"}
+                          onValueChange={(value) => updateColumnMapping(index, value === "none" ? null : value)}
                         >
                           <SelectTrigger className="w-full">
                             <SelectValue placeholder="Select a field" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="">-- Not mapped --</SelectItem>
+                            <SelectItem value="none">-- Not mapped --</SelectItem>
                             {fields.map((field) => (
                               <SelectItem key={field.id} value={field.id}>
                                 {field.name}
