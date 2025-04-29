@@ -60,7 +60,7 @@ export default function ObjectTypeDetail() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="container mx-auto px-2 md:px-0 space-y-6 max-w-5xl">
       <PageHeader
         title={currentObjectType.name}
         description={currentObjectType.description || `API Name: ${currentObjectType.api_name}`}
