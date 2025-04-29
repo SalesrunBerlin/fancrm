@@ -18,6 +18,8 @@ export function useObjectLookup(objectTypeId: string) {
         throw new Error("Missing target object ID");
       }
       
+      console.log("Fetching lookup records for object type:", objectTypeId);
+      
       const { data: records, error } = await supabase
         .from("object_records")
         .select(`
@@ -26,20 +28,31 @@ export function useObjectLookup(objectTypeId: string) {
         `)
         .eq("object_type_id", objectTypeId);
 
-      if (error) throw error;
+      if (error) {
+        console.error("Supabase error fetching lookup records:", error);
+        throw error;
+      }
 
-      return records.map(record => ({
-        id: record.id,
-        display_value: record.field_values.find((f: any) => f.field_api_name === "name")?.value || 
+      console.log("Lookup records fetched:", records?.length || 0);
+      
+      return records.map(record => {
+        const displayValue = record.field_values.find((f: any) => f.field_api_name === "name")?.value || 
                       [
                         record.field_values.find((f: any) => f.field_api_name === "first_name")?.value,
                         record.field_values.find((f: any) => f.field_api_name === "last_name")?.value
                       ].filter(Boolean).join(" ") || 
                       record.id.substring(0, 8) || 
-                      "Unnamed Record"
-      })) as LookupRecord[];
+                      "Unnamed Record";
+                      
+        console.log(`Record ${record.id} display value:`, displayValue);
+        
+        return {
+          id: record.id,
+          display_value: displayValue
+        };
+      }) as LookupRecord[];
     },
-    enabled: !!user && !!objectTypeId
+    enabled: !!objectTypeId
   });
 
   return {

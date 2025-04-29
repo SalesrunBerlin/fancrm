@@ -1,6 +1,6 @@
 
 import { Link } from "react-router-dom";
-import { Loader2 } from "lucide-react";
+import { Loader2, AlertCircle } from "lucide-react";
 import { useObjectLookup } from "@/hooks/useObjectLookup";
 
 interface LookupValueDisplayProps {
@@ -11,17 +11,28 @@ interface LookupValueDisplayProps {
 }
 
 export function LookupValueDisplay({ value, fieldOptions }: LookupValueDisplayProps) {
-  const { records, isLoading } = useObjectLookup(fieldOptions.target_object_type_id);
+  const { records, isLoading, error } = useObjectLookup(fieldOptions.target_object_type_id);
   
   if (isLoading) {
     return <Loader2 className="h-4 w-4 animate-spin" />;
+  }
+  
+  if (error) {
+    console.error("Error in LookupValueDisplay:", error);
+    return <div className="text-red-500 flex items-center gap-1">
+      <AlertCircle className="h-4 w-4" />
+      <span>Error loading record</span>
+    </div>;
   }
 
   if (!value) return <span>-</span>;
 
   const record = records?.find(r => r.id === value);
   
-  if (!record) return <span>{value}</span>;
+  if (!record) {
+    console.log("Record not found for ID:", value);
+    return <span>{value} (Record not found)</span>;
+  }
 
   return (
     <Link 

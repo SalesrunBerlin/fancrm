@@ -32,6 +32,7 @@ export function LookupField({
   }, [value]);
 
   const handleChange = (newValue: string) => {
+    console.log("LookupField value changed:", newValue);
     setSelectedRecord(newValue || null);
     onChange(newValue || null);
   };
@@ -60,6 +61,9 @@ export function LookupField({
       <span className="text-sm text-muted-foreground">Loading...</span>
     </div>;
   }
+
+  console.log("Available lookup records:", records);
+  console.log("Currently selected value:", selectedRecord);
 
   return (
     <Select
