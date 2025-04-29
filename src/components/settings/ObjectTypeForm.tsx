@@ -25,6 +25,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
+import { useEffect } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 
 const objectTypeSchema = z.object({
   name: z.string().min(2, {
@@ -53,6 +55,7 @@ interface ObjectTypeFormProps {
 export function ObjectTypeForm({ onComplete }: ObjectTypeFormProps) {
   const { createObjectType } = useObjectTypes();
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const form = useForm<ObjectTypeFormValues>({
     resolver: zodResolver(objectTypeSchema),
@@ -78,15 +81,52 @@ export function ObjectTypeForm({ onComplete }: ObjectTypeFormProps) {
     }
   };
 
-  const createDefaultField = async (objectTypeId: string, fieldApiName: string) => {
+  // Check if the field already exists
+  const checkFieldExists = async (objectTypeId: string, fieldApiName: string) => {
     try {
-      console.log(`Creating default field ${fieldApiName} for object type ${objectTypeId}`);
+      const { data, error } = await supabase
+        .from("object_fields")
+        .select("id")
+        .eq("object_type_id", objectTypeId)
+        .eq("api_name", fieldApiName)
+        .single();
+        
+      if (error && error.code !== 'PGRST116') { // PGRST116 is "not found" error
+        console.warn("Error checking if field exists:", error);
+        return false;
+      }
+      
+      return !!data;
+    } catch (err) {
+      console.error("Exception checking field existence:", err);
+      return false;
+    }
+  };
+
+  const createDefaultField = async (objectTypeId: string, fieldApiName: string) => {
+    if (!user) {
+      console.error("User not authenticated, cannot create fields");
+      throw new Error("Authentication required to create fields");
+    }
+    
+    const userId = user.id;
+    console.log(`Creating default field ${fieldApiName} for object type ${objectTypeId} by user ${userId}`);
+    
+    try {
+      // First check if field already exists (to avoid duplicate errors)
+      const fieldExists = await checkFieldExists(objectTypeId, fieldApiName);
+      if (fieldExists) {
+        console.log(`Field ${fieldApiName} already exists for object type ${objectTypeId}, skipping creation`);
+        return null;
+      }
       
       // Create the default field (text field)
       const fieldName = fieldApiName === "name" 
         ? "Name" 
         : fieldApiName.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-        
+      
+      console.log(`Creating primary field: ${fieldName} (${fieldApiName})`);
+      
       const { data: field, error: fieldError } = await supabase
         .from("object_fields")
         .insert({
@@ -97,6 +137,7 @@ export function ObjectTypeForm({ onComplete }: ObjectTypeFormProps) {
           is_required: true,
           is_system: false,
           display_order: 1,
+          owner_id: userId
         })
         .select();
 
@@ -113,35 +154,52 @@ export function ObjectTypeForm({ onComplete }: ObjectTypeFormProps) {
       console.log(`Successfully created default field: ${fieldName}`, field);
       
       // Create an additional text field with the same name but with _text suffix
-      const additionalFieldApiName = `${fieldApiName}_text`;
-      const additionalFieldName = `${fieldName} Text`;
-      
-      console.log(`Creating additional text field: ${additionalFieldName}`);
+      try {
+        const additionalFieldApiName = `${fieldApiName}_text`;
+        
+        // Check if the additional field already exists
+        const additionalFieldExists = await checkFieldExists(objectTypeId, additionalFieldApiName);
+        if (additionalFieldExists) {
+          console.log(`Additional field ${additionalFieldApiName} already exists, skipping creation`);
+          return field;
+        }
+        
+        const additionalFieldName = `${fieldName} Text`;
+        
+        console.log(`Creating additional text field: ${additionalFieldName}`);
 
-      const { data: additionalField, error: additionalFieldError } = await supabase
-        .from("object_fields")
-        .insert({
-          object_type_id: objectTypeId,
-          name: additionalFieldName,
-          api_name: additionalFieldApiName,
-          data_type: "textarea",
-          is_required: false,
-          is_system: false,
-          display_order: 2,
-          owner_id: (await supabase.auth.getUser()).data.user?.id
-        })
-        .select();
+        const { data: additionalField, error: additionalFieldError } = await supabase
+          .from("object_fields")
+          .insert({
+            object_type_id: objectTypeId,
+            name: additionalFieldName,
+            api_name: additionalFieldApiName,
+            data_type: "textarea",
+            is_required: false,
+            is_system: false,
+            display_order: 2,
+            owner_id: userId
+          })
+          .select();
 
-      if (additionalFieldError) {
-        console.error("Error creating additional text field:", additionalFieldError);
-        // Don't throw here, as we already created the default field
+        if (additionalFieldError) {
+          console.error("Error creating additional text field:", additionalFieldError);
+          // Don't throw here, as we already created the default field
+          toast({
+            title: "Warning",
+            description: `Default field created, but failed to create the additional text field: ${additionalFieldError.message}`,
+            variant: "destructive",
+          });
+        } else {
+          console.log(`Successfully created additional text field: ${additionalFieldName}`, additionalField);
+        }
+      } catch (additionalFieldError) {
+        console.error("Exception creating additional field:", additionalFieldError);
         toast({
           title: "Warning",
-          description: `Default field created, but failed to create the additional text field: ${additionalFieldError.message}`,
+          description: "Default field was created, but there was an error creating the additional text field",
           variant: "destructive",
         });
-      } else {
-        console.log(`Successfully created additional text field: ${additionalFieldName}`, additionalField);
       }
       
       return field;
@@ -177,11 +235,11 @@ export function ObjectTypeForm({ onComplete }: ObjectTypeFormProps) {
             title: "Success",
             description: "Object type and fields created successfully",
           });
-        } catch (fieldError) {
+        } catch (fieldError: any) {
           console.error("Error creating fields:", fieldError);
           toast({
             title: "Warning",
-            description: "Object type was created, but there was an issue creating the fields",
+            description: `Object type was created, but there was an issue creating the fields: ${fieldError?.message || 'Unknown error'}`,
             variant: "destructive",
           });
         }
@@ -192,15 +250,22 @@ export function ObjectTypeForm({ onComplete }: ObjectTypeFormProps) {
       if (onComplete) {
         onComplete();
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error creating object type:", error);
       toast({
         title: "Error",
-        description: "Object type could not be created",
+        description: `Object type could not be created: ${error?.message || 'Unknown error'}`,
         variant: "destructive",
       });
     }
   };
+
+  // Listen for user auth status
+  useEffect(() => {
+    if (!user) {
+      console.log("Warning: No authenticated user detected. Field creation may fail.");
+    }
+  }, [user]);
 
   return (
     <Form {...form}>
