@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -73,11 +74,21 @@
 
   body {
     @apply bg-background text-foreground;
+    -webkit-overflow-scrolling: touch;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+  
+  /* Add horizontal scrolling to table containers */
+  .crm-table-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
   }
 }
 
 .crm-table-wrapper {
   @apply w-full overflow-auto rounded-md border;
+  -webkit-overflow-scrolling: touch;
 }
 
 .crm-table {
@@ -104,6 +115,12 @@
   @apply h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0;
 }
 
+/* Make sure tables are responsive */
+.relative.w-full.overflow-auto {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 /* Animation utilities */
 @keyframes fade-in {
   from { opacity: 0; transform: translateY(10px); }
@@ -112,4 +129,23 @@
 
 .animate-fade-in {
   animation: fade-in 0.3s ease-out;
+}
+
+/* Mobile-specific styles */
+@media (max-width: 768px) {
+  .table-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    width: 100%;
+  }
+  
+  /* Make sure the table content can be scrolled horizontally */
+  table {
+    min-width: 100%;
+  }
+  
+  /* Add some spacing for card content on mobile */
+  .card-content {
+    padding: 1rem;
+  }
 }

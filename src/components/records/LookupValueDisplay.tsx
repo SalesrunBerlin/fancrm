@@ -2,6 +2,7 @@
 import { Link } from "react-router-dom";
 import { Loader2, AlertCircle } from "lucide-react";
 import { useObjectLookup } from "@/hooks/useObjectLookup";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface LookupValueDisplayProps {
   value: string | null;
@@ -11,6 +12,8 @@ interface LookupValueDisplayProps {
 }
 
 export function LookupValueDisplay({ value, fieldOptions }: LookupValueDisplayProps) {
+  const isMobile = useIsMobile();
+  
   // Handle missing target object type ID
   if (!fieldOptions?.target_object_type_id) {
     return <div className="text-amber-500 flex items-center gap-1">
@@ -39,13 +42,16 @@ export function LookupValueDisplay({ value, fieldOptions }: LookupValueDisplayPr
   
   if (!record) {
     console.log("Record not found for ID:", value);
-    return <span>{value} (Record not found)</span>;
+    return <span className="break-all">
+      {isMobile && value.length > 15 ? `${value.substring(0, 15)}...` : value} 
+      <span className="text-muted-foreground">(Record not found)</span>
+    </span>;
   }
 
   return (
     <Link 
       to={`/objects/${fieldOptions.target_object_type_id}/${value}`}
-      className="text-blue-600 hover:underline"
+      className="text-blue-600 hover:underline break-words"
     >
       {record.display_value}
     </Link>

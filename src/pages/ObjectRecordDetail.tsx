@@ -10,6 +10,8 @@ import { Loader2, ArrowLeft, Edit, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { DeleteDialog } from "@/components/common/DeleteDialog";
+import { RelatedRecordsList } from "@/components/records/RelatedRecordsList";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { toast } from "sonner";
 
 export default function ObjectRecordDetail() {
@@ -20,6 +22,7 @@ export default function ObjectRecordDetail() {
   const { fields } = useRecordFields(objectTypeId);
   const { updateRecord } = useObjectRecords(objectTypeId);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const isMobile = useIsMobile();
 
   const objectType = objectTypes?.find(type => type.id === objectTypeId);
   
@@ -70,18 +73,18 @@ export default function ObjectRecordDetail() {
   const recordName = record.displayName || `${objectType.name} Record`;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 mb-20">
       <PageHeader
         title={recordName}
         actions={
-          <div className="flex items-center space-x-2">
-            <Button variant="outline" asChild>
+          <div className={`flex ${isMobile ? 'flex-col' : 'flex-row'} ${isMobile ? 'space-y-2' : 'space-x-2'}`}>
+            <Button variant="outline" asChild className={`${isMobile ? 'w-full' : ''}`}>
               <Link to={`/objects/${objectTypeId}`}>
                 <ArrowLeft className="mr-2 h-4 w-4" />
                 Back
               </Link>
             </Button>
-            <Button variant="outline" asChild>
+            <Button variant="outline" asChild className={`${isMobile ? 'w-full' : ''}`}>
               <Link to={`/objects/${objectTypeId}/${recordId}/edit`}>
                 <Edit className="mr-2 h-4 w-4" />
                 Edit
@@ -90,6 +93,7 @@ export default function ObjectRecordDetail() {
             <Button 
               variant="destructive"
               onClick={() => setDeleteDialogOpen(true)}
+              className={`${isMobile ? 'w-full' : ''}`}
             >
               <Trash2 className="mr-2 h-4 w-4" />
               Delete
@@ -105,11 +109,11 @@ export default function ObjectRecordDetail() {
             .map((field) => {
               const value = record.fieldValues[field.api_name];
               return (
-                <div key={field.id} className="py-3 grid grid-cols-3">
+                <div key={field.id} className="py-3 grid grid-cols-1 md:grid-cols-3">
                   <div className="font-medium text-muted-foreground">
                     {field.name}
                   </div>
-                  <div className="col-span-2">
+                  <div className="col-span-1 md:col-span-2 break-words">
                     {value !== null && value !== undefined ? String(value) : "—"}
                   </div>
                 </div>
@@ -117,6 +121,14 @@ export default function ObjectRecordDetail() {
             })}
         </CardContent>
       </Card>
+      
+      {/* Related Records Section */}
+      {recordId && objectTypeId && (
+        <div className="mt-8">
+          <h2 className="text-xl font-semibold mb-4">Related Records</h2>
+          <RelatedRecordsList objectTypeId={objectTypeId} recordId={recordId} />
+        </div>
+      )}
 
       <DeleteDialog
         isOpen={deleteDialogOpen}
