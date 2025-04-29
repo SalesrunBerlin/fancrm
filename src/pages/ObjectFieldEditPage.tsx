@@ -8,6 +8,7 @@ import { Loader2, ArrowLeft } from "lucide-react";
 import { ObjectFieldEditFields } from "@/components/settings/ObjectFieldEditFields";
 import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/card";
 import { useEffect } from "react";
+import { ObjectField } from "@/hooks/useObjectTypes";
 
 export default function ObjectFieldEditPage() {
   const navigate = useNavigate();
@@ -20,18 +21,23 @@ export default function ObjectFieldEditPage() {
     navigate(`/settings/objects/${objectTypeId}`);
   };
   
-  // Initialize the hook with a safe default when field is not available
+  // Initialize the hook with a properly typed default when field is not available
+  const defaultField: ObjectField = {
+    id: '',
+    name: '',
+    api_name: '',
+    object_type_id: objectTypeId || '',
+    data_type: 'text',
+    is_system: false,
+    is_required: false,
+    display_order: 0,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    owner_id: null
+  };
+  
   const { form, isSubmitting, onSubmit } = useObjectFieldEdit({
-    field: field || {
-      id: '',
-      name: '',
-      api_name: '',
-      object_type_id: objectTypeId || '',
-      data_type: 'text',
-      is_system: false,
-      is_required: false,
-      display_order: 0,
-    },
+    field: field || defaultField,
     onClose: handleClose,
   });
   

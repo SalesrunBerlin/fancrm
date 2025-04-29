@@ -6,11 +6,12 @@ import { useObjectRecords } from "@/hooks/useObjectRecords";
 import { useRecordFields } from "@/hooks/useRecordFields";
 import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
-import { Loader2, Plus } from "lucide-react";
+import { Loader2, Plus, Upload } from "lucide-react";
 import { RecordsTable } from "@/components/records/RecordsTable";
 import { Card } from "@/components/ui/card";
 import { FieldsConfigDialog } from "@/components/records/FieldsConfigDialog";
 import { useUserFieldSettings } from "@/hooks/useUserFieldSettings";
+import { ImportRecordsDialog } from "@/components/records/ImportRecordsDialog";
 
 export default function ObjectRecordsList() {
   const { objectTypeId } = useParams<{ objectTypeId: string }>();
@@ -20,6 +21,7 @@ export default function ObjectRecordsList() {
   const objectType = objectTypes?.find(type => type.id === objectTypeId);
   const [allRecords, setAllRecords] = useState<any[]>([]);
   const { visibleFields, updateVisibleFields } = useUserFieldSettings(objectTypeId);
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   
   // Initialize visible fields if none are saved yet
   useEffect(() => {
@@ -57,6 +59,13 @@ export default function ObjectRecordsList() {
               objectTypeId={objectTypeId!}
               onVisibilityChange={handleVisibilityChange}
             />
+            <Button 
+              variant="outline"
+              onClick={() => setIsImportDialogOpen(true)}
+            >
+              <Upload className="mr-1.5 h-4 w-4" />
+              Import
+            </Button>
             <Button asChild>
               <Link to={`/objects/${objectTypeId}/new`}>
                 <Plus className="mr-1.5 h-4 w-4" />
@@ -80,6 +89,15 @@ export default function ObjectRecordsList() {
           />
         )}
       </Card>
+
+      {fields && (
+        <ImportRecordsDialog
+          objectTypeId={objectTypeId!}
+          fields={fields}
+          isOpen={isImportDialogOpen}
+          onClose={() => setIsImportDialogOpen(false)}
+        />
+      )}
     </div>
   );
 }
