@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, ArrowLeft, Box, Download, Loader2 } from "lucide-react";
+import { AlertCircle, ArrowLeft, Box, Download, Loader2, RefreshCw } from "lucide-react";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
 import { ObjectField } from "@/hooks/useObjectTypes";
 import { useToast } from "@/hooks/use-toast";
@@ -29,6 +29,7 @@ export function PublishedObjectDetail() {
   const { importObjectType } = useObjectTypes();
   const [isImporting, setIsImporting] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Fetch object type details
   const { 
@@ -53,24 +54,37 @@ export function PublishedObjectDetail() {
   // Fetch object fields with publishing info
   const { 
     data: fields, 
-    isLoading: isFieldsLoading 
+    isLoading: isFieldsLoading,
+    refetch: refetchFields 
   } = useQuery({
     queryKey: ["published-object-fields", objectId],
     queryFn: async () => {
+      console.log("Fetching fields for published object:", objectId);
+      
       const { data: objectFields, error: fieldsError } = await supabase
         .from("object_fields")
         .select("*")
         .eq("object_type_id", objectId)
         .order("display_order");
 
-      if (fieldsError) throw fieldsError;
+      if (fieldsError) {
+        console.error("Error fetching fields:", fieldsError);
+        throw fieldsError;
+      }
+      
+      console.log("Published object fields fetched:", objectFields?.length || 0);
 
       const { data: publishingSettings, error: publishingError } = await supabase
         .from("object_field_publishing")
         .select("*")
         .eq("object_type_id", objectId);
 
-      if (publishingError) throw publishingError;
+      if (publishingError) {
+        console.error("Error fetching publishing settings:", publishingError);
+        throw publishingError;
+      }
+      
+      console.log("Publishing settings fetched:", publishingSettings?.length || 0);
 
       // Map publishing settings to fields
       const publishingMap = new Map();
@@ -78,16 +92,43 @@ export function PublishedObjectDetail() {
         publishingMap.set(setting.field_id, setting.is_included);
       });
 
-      // Filter fields by publishing settings
-      return objectFields
-        .filter(field => publishingMap.has(field.id) ? publishingMap.get(field.id) : true)
-        .map(field => ({ 
-          ...field, 
-          isPublished: publishingMap.has(field.id) ? publishingMap.get(field.id) : true
-        }));
+      // Filter fields by publishing settings if we have any settings
+      let finalFields = objectFields;
+      
+      if (publishingSettings && publishingSettings.length > 0) {
+        finalFields = objectFields
+          .filter(field => publishingMap.has(field.id) ? publishingMap.get(field.id) : true)
+          .map(field => ({ 
+            ...field, 
+            isPublished: publishingMap.has(field.id) ? publishingMap.get(field.id) : true
+          }));
+      }
+      
+      console.log("Final fields to display:", finalFields?.length || 0);
+      return finalFields;
     },
     enabled: !!objectId,
   });
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await refetchFields();
+      toast({
+        title: "Felder aktualisiert",
+        description: "Die Feldliste wurde aktualisiert."
+      });
+    } catch (error) {
+      console.error("Error refreshing fields:", error);
+      toast({
+        title: "Fehler",
+        description: "Fehler beim Aktualisieren der Felder",
+        variant: "destructive"
+      });
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   const handleImport = async () => {
     if (!objectId) return;
@@ -212,18 +253,33 @@ export function PublishedObjectDetail() {
 
         <TabsContent value="fields" className="mt-4">
           <Card>
-            <CardHeader>
-              <CardTitle>Felder</CardTitle>
-              <CardDescription>
-                Felder, die mit diesem Objekttyp importiert werden
-              </CardDescription>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Felder</CardTitle>
+                <CardDescription>
+                  Felder, die mit diesem Objekttyp importiert werden
+                </CardDescription>
+              </div>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleRefresh} 
+                disabled={isRefreshing}
+              >
+                {isRefreshing ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : (
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                )}
+                Aktualisieren
+              </Button>
             </CardHeader>
             <CardContent>
               {isFieldsLoading ? (
                 <div className="flex justify-center p-8">
                   <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                 </div>
-              ) : (
+              ) : fields && fields.length > 0 ? (
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -234,24 +290,28 @@ export function PublishedObjectDetail() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {fields?.length ? (
-                      fields.filter(f => f.isPublished).map(field => (
-                        <TableRow key={field.id}>
-                          <TableCell>{field.name}</TableCell>
-                          <TableCell>{field.api_name}</TableCell>
-                          <TableCell>{field.data_type}</TableCell>
-                          <TableCell>{field.is_required ? 'Ja' : 'Nein'}</TableCell>
-                        </TableRow>
-                      ))
-                    ) : (
-                      <TableRow>
-                        <TableCell colSpan={4} className="text-center py-6 text-muted-foreground">
-                          Keine Felder für dieses Objekt verfügbar
-                        </TableCell>
+                    {fields.map(field => (
+                      <TableRow key={field.id}>
+                        <TableCell>{field.name}</TableCell>
+                        <TableCell>{field.api_name}</TableCell>
+                        <TableCell>{field.data_type}</TableCell>
+                        <TableCell>{field.is_required ? 'Ja' : 'Nein'}</TableCell>
                       </TableRow>
-                    )}
+                    ))}
                   </TableBody>
                 </Table>
+              ) : (
+                <div className="text-center py-6">
+                  <p className="text-muted-foreground">
+                    Keine Felder für dieses Objekt verfügbar oder veröffentlicht.
+                  </p>
+                  <Alert variant="warning" className="mt-4">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>
+                      Der Eigentümer des Objekts muss Felder veröffentlichen, damit diese angezeigt werden können.
+                    </AlertDescription>
+                  </Alert>
+                </div>
               )}
             </CardContent>
           </Card>
