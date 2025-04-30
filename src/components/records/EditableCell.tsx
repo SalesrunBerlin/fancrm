@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { TableCell } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
@@ -6,8 +7,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { LookupField } from "./LookupField";
 import { LookupValueDisplay } from "./LookupValueDisplay";
 import { useFieldPicklistValues } from "@/hooks/useFieldPicklistValues";
-import { Loader2 } from "lucide-react";
+import { Loader2, Star } from "lucide-react";
 import { formatDate } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { PicklistSuggestionDialog } from "@/components/settings/PicklistSuggestionDialog";
 
 interface EditableCellProps {
   value: any;
@@ -16,6 +19,7 @@ interface EditableCellProps {
   fieldType: string;
   isRequired: boolean;
   fieldOptions?: any;
+  objectTypeId?: string;
 }
 
 export function EditableCell({ 
@@ -24,10 +28,12 @@ export function EditableCell({
   editMode, 
   fieldType, 
   isRequired,
-  fieldOptions
+  fieldOptions,
+  objectTypeId
 }: EditableCellProps) {
   const [editValue, setEditValue] = useState<any>(value);
   const [error, setError] = useState<string | null>(null);
+  const [showSuggestionDialog, setShowSuggestionDialog] = useState(false);
   const { picklistValues, isLoading: loadingPicklist } = useFieldPicklistValues(fieldOptions?.field_id || '');
 
   useEffect(() => {
@@ -90,21 +96,33 @@ export function EditableCell({
         }
         
         return (
-          <Select 
-            value={editValue || ""} 
-            onValueChange={handleChange}
-          >
-            <SelectTrigger className={error ? "border-red-500" : ""}>
-              <SelectValue placeholder="Select..." />
-            </SelectTrigger>
-            <SelectContent>
-              {picklistValues?.map((option) => (
-                <SelectItem key={option.id} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="flex gap-2 items-center">
+            <Select 
+              value={editValue || ""} 
+              onValueChange={handleChange}
+            >
+              <SelectTrigger className={`flex-1 ${error ? "border-red-500" : ""}`}>
+                <SelectValue placeholder="Select..." />
+              </SelectTrigger>
+              <SelectContent>
+                {picklistValues?.map((option) => (
+                  <SelectItem key={option.id} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {objectTypeId && fieldOptions?.field_id && (
+              <Button
+                variant="outline"
+                size="icon"
+                title="Suggest values from existing records"
+                onClick={() => setShowSuggestionDialog(true)}
+              >
+                <Star className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
         );
       case "boolean":
         return (
@@ -200,6 +218,16 @@ export function EditableCell({
       <div className="relative">
         {renderEditControl()}
         {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
+        
+        {/* Suggestion Dialog */}
+        {fieldType === "picklist" && showSuggestionDialog && objectTypeId && fieldOptions?.field_id && (
+          <PicklistSuggestionDialog
+            isOpen={showSuggestionDialog}
+            onClose={() => setShowSuggestionDialog(false)}
+            objectTypeId={objectTypeId}
+            fieldId={fieldOptions.field_id}
+          />
+        )}
       </div>
     </TableCell>
   );
