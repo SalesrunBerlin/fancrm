@@ -12,6 +12,9 @@ interface RelatedFieldValueProps {
 }
 
 export function RelatedFieldValue({ field, value }: RelatedFieldValueProps) {
+  // Add debug output to help diagnose issues
+  console.log("RelatedFieldValue rendering:", { fieldApiName: field.api_name, dataType: field.data_type, value });
+  
   if (field.data_type === "lookup" && field.options) {
     return (
       <LookupValueDisplay

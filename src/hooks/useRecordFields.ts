@@ -9,6 +9,8 @@ export function useRecordFields(objectTypeId: string) {
 
   useEffect(() => {
     if (originalFields) {
+      // Make sure we have fields to display
+      console.log("Record fields received:", originalFields.length, "fields");
       const sorted = [...originalFields].sort((a, b) => a.display_order - b.display_order);
       setSortedFields(sorted);
     }

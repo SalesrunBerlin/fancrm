@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -42,6 +41,14 @@ export function useObjectFields(objectTypeId?: string) {
       const isTemplateOrPublished = objectType.is_template || objectType.is_published;
       const isOwnedByOthers = objectType.owner_id !== user?.id;
 
+      console.log("Object fields query for:", { 
+        objectTypeId, 
+        isTemplateOrPublished, 
+        isOwnedByOthers,
+        userID: user?.id,
+        ownerID: objectType.owner_id 
+      });
+
       let query = supabase
         .from("object_fields")
         .select("*")
@@ -51,9 +58,11 @@ export function useObjectFields(objectTypeId?: string) {
       // we don't need to filter by owner_id (show all fields)
       if (isTemplateOrPublished && isOwnedByOthers) {
         // No additional filters needed - show all fields for this object
+        console.log("Showing all fields for template/published object");
       } else {
         // For regular objects or objects owned by the current user,
         // use the original filter logic
+        console.log("Using owner filter for fields");
         query = query.or(`is_system.eq.true,owner_id.eq.${user?.id}`);
       }
 
@@ -63,6 +72,8 @@ export function useObjectFields(objectTypeId?: string) {
         console.error("Error fetching fields:", error);
         throw error;
       }
+
+      console.log("Fields fetched:", data.length);
 
       // Transform the JSON options to match the expected type
       return data.map(field => ({

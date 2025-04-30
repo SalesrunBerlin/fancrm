@@ -38,6 +38,8 @@ export function useRecordDetail(objectTypeId?: string, recordId?: string) {
         throw fieldValuesError;
       }
 
+      console.log("Field values fetched:", fieldValues.length);
+
       // Convert field values array to object
       const valuesObject = fieldValues.reduce((acc, curr) => {
         acc[curr.field_api_name] = curr.value;
