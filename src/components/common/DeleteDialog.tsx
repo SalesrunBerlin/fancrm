@@ -35,6 +35,8 @@ export function DeleteDialog({
     try {
       setIsDeleting(true);
       await onConfirm();
+    } catch (error) {
+      console.error("Error in delete operation:", error);
     } finally {
       setIsDeleting(false);
       onClose();
@@ -42,7 +44,9 @@ export function DeleteDialog({
   };
 
   return (
-    <AlertDialog open={isOpen} onOpenChange={onClose}>
+    <AlertDialog open={isOpen} onOpenChange={(open) => {
+      if (!open) onClose();
+    }}>
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>{title}</AlertDialogTitle>

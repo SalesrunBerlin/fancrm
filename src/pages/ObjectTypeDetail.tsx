@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
@@ -16,7 +15,7 @@ export default function ObjectTypeDetail() {
   const { objectTypeId } = useParams<{ objectTypeId: string }>();
   const navigate = useNavigate();
   const { objectTypes, updateObjectType, publishObjectType, unpublishObjectType, publishedObjects, isLoadingPublished } = useObjectTypes();
-  const { fields, isLoading, createField, updateField, deleteField } = useObjectFields(objectTypeId);
+  const { fields, isLoading, createField, updateField, deleteField, deleteObjectType } = useObjectFields(objectTypeId);
   const [isPublishing, setIsPublishing] = useState(false);
   const [isDeleteObjectDialogOpen, setIsDeleteObjectDialogOpen] = useState(false);
   
@@ -84,9 +83,16 @@ export default function ObjectTypeDetail() {
   };
 
   const handleDeleteObjectType = async () => {
-    // In a real implementation, this would call an API to delete the object type
-    // and all its related data (fields, records, etc.)
-    toast.error("Object type deletion is not implemented yet");
+    try {
+      // In a real implementation, this would call an API to delete the object type
+      // and all its related data (fields, records, etc.)
+      await deleteObjectType.mutateAsync(objectTypeId);
+      toast.success(`${currentObjectType.name} deleted successfully`);
+      navigate("/settings/object-manager");
+    } catch (error) {
+      console.error("Error deleting object type:", error);
+      toast.error("Failed to delete object type");
+    }
     setIsDeleteObjectDialogOpen(false);
   };
 

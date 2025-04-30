@@ -17,6 +17,8 @@ export function RecordDeleteDialog({ isOpen, onClose, onConfirm, recordName = "t
     try {
       setIsDeleting(true);
       await onConfirm();
+    } catch (error) {
+      console.error("Error deleting record:", error);
     } finally {
       setIsDeleting(false);
       onClose();
@@ -24,7 +26,9 @@ export function RecordDeleteDialog({ isOpen, onClose, onConfirm, recordName = "t
   };
 
   return (
-    <AlertDialog open={isOpen} onOpenChange={onClose}>
+    <AlertDialog open={isOpen} onOpenChange={(open) => {
+      if (!open) onClose();
+    }}>
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Are you sure?</AlertDialogTitle>

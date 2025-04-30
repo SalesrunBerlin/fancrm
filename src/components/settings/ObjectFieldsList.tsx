@@ -41,11 +41,12 @@ export function ObjectFieldsList({
       try {
         await onDeleteField(deleteFieldId);
         toast.success(`Field "${fieldToDelete?.name}" deleted successfully`);
-        setDeleteFieldId(null);
-        setIsDeleteDialogOpen(false);
       } catch (error) {
         console.error("Error deleting field:", error);
         toast.error("Failed to delete field");
+      } finally {
+        setDeleteFieldId(null);
+        setIsDeleteDialogOpen(false);
       }
     }
   };
