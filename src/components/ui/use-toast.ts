@@ -1,5 +1,5 @@
 
-// This file re-exports the hooks from the proper location
+// Re-export from the main implementation
 import { useToast, toast } from "@/hooks/use-toast";
 
 export { useToast, toast };

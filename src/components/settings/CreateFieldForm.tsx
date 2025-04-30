@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -43,16 +44,21 @@ interface CreateFieldFormProps {
   onFieldCreated?: () => void;
 }
 
+interface PicklistValue {
+  label: string;
+  value: string;
+}
+
 export function CreateFieldForm({ objectTypeId, onFieldCreated }: CreateFieldFormProps) {
   const [loading, setLoading] = useState(false);
   const { createField } = useObjectFields(objectTypeId);
   const { objectTypes } = useObjectTypes();
-  const [picklistValues, setPicklistValues] = useState<string[]>([]);
+  const [picklistValues, setPicklistValues] = useState<PicklistValue[]>([]);
   const [selectedFieldId, setSelectedFieldId] = useState<string | null>(null);
   const { addBatchPicklistValues } = usePicklistCreation(selectedFieldId);
   const [lookupConfig, setLookupConfig] = useState<{
-    targetObjectTypeId: string;
-    displayFieldApiName: string;
+    target_object_type_id: string;
+    display_field_api_name: string;
   } | null>(null);
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -84,10 +90,10 @@ export function CreateFieldForm({ objectTypeId, onFieldCreated }: CreateFieldFor
     try {
       setLoading(true);
       
-      // Ensure name is provided
-      const fieldData = {
+      // Prepare field data with possible options
+      const fieldData: any = {
         object_type_id: objectTypeId,
-        name: values.name, // This is now explicitly required by the type
+        name: values.name,
         api_name: values.api_name,
         data_type: values.data_type,
         is_required: values.is_required,
@@ -97,8 +103,8 @@ export function CreateFieldForm({ objectTypeId, onFieldCreated }: CreateFieldFor
       // Add lookup field options if applicable
       if (values.data_type === "lookup" && lookupConfig) {
         fieldData.options = {
-          target_object_type_id: lookupConfig.targetObjectTypeId,
-          display_field_api_name: lookupConfig.displayFieldApiName
+          target_object_type_id: lookupConfig.target_object_type_id,
+          display_field_api_name: lookupConfig.display_field_api_name
         };
       }
       
@@ -107,7 +113,12 @@ export function CreateFieldForm({ objectTypeId, onFieldCreated }: CreateFieldFor
       
       // If it's a picklist field and we have values, add them
       if (values.data_type === "picklist" && picklistValues.length > 0 && result?.id) {
-        await addBatchPicklistValues(result.id, picklistValues);
+        setSelectedFieldId(result.id);
+        
+        // Convert PicklistValue[] to string[] for addBatchPicklistValues
+        const picklistLabels = picklistValues.map(item => item.label);
+        
+        await addBatchPicklistValues(result.id, picklistLabels);
       }
       
       form.reset();
@@ -202,7 +213,10 @@ export function CreateFieldForm({ objectTypeId, onFieldCreated }: CreateFieldFor
 
         {dataType === "lookup" && (
           <LookupFieldConfig
-            objectTypes={objectTypes || []}
+            value={{
+              target_object_type_id: lookupConfig?.target_object_type_id || "",
+              display_field_api_name: lookupConfig?.display_field_api_name || ""
+            }}
             onChange={setLookupConfig}
           />
         )}
