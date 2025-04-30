@@ -1,3 +1,4 @@
+
 import { ObjectField } from "@/hooks/useObjectTypes";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -148,7 +149,7 @@ export function RecordDetailForm({
     } else {
       if (field.data_type === 'lookup' && field.options && 'target_object_type_id' in field.options && field.options.target_object_type_id) {
         return (
-          <div className="pt-1">
+          <div className="text-base font-normal">
             <LookupValueDisplay 
               value={value} 
               fieldOptions={field.options as { target_object_type_id: string }}
@@ -156,15 +157,15 @@ export function RecordDetailForm({
           </div>
         );
       }
-      return <p className="pt-1">{value || "-"}</p>;
+      return <div className="text-base font-normal pt-1">{value || "—"}</div>;
     }
   };
 
   const content = (
     <div className="grid grid-cols-1 gap-6">
       {fields.map(field => (
-        <div key={field.api_name} className="space-y-2">
-          <Label htmlFor={field.api_name}>
+        <div key={field.api_name} className="pb-4 border-b border-gray-100 last:border-0">
+          <Label htmlFor={field.api_name} className="text-sm font-medium text-gray-500 mb-1 block">
             {field.name}
             {field.is_required && <span className="text-red-500 ml-1">*</span>}
           </Label>

@@ -2,6 +2,7 @@
 import { Loader2 } from "lucide-react";
 import { useRelatedRecords } from "@/hooks/useRelatedRecords";
 import { RelatedRecordsSection } from "./RelatedRecordsSection";
+import { Card } from "@/components/ui/card";
 
 interface RelatedRecordsListProps {
   objectTypeId: string;
@@ -21,9 +22,9 @@ export function RelatedRecordsList({ objectTypeId, recordId }: RelatedRecordsLis
 
   if (!relatedSections || relatedSections.length === 0) {
     return (
-      <div className="text-center text-muted-foreground py-8">
+      <Card className="p-6 text-center text-muted-foreground">
         Keine verknüpften Datensätze gefunden
-      </div>
+      </Card>
     );
   }
 
