@@ -1,4 +1,5 @@
 
+import { useNavigate } from "react-router-dom";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { RelatedFieldValue } from "./RelatedFieldValue";
 import { RelatedSection } from "@/hooks/useRelatedRecords";
@@ -8,6 +9,12 @@ interface RelatedRecordsTableProps {
 }
 
 export function RelatedRecordsTable({ section }: RelatedRecordsTableProps) {
+  const navigate = useNavigate();
+
+  const handleRowClick = (recordId: string) => {
+    navigate(`/objects/${section.objectType.id}/${recordId}`);
+  };
+
   return (
     <div className="overflow-x-auto">
       <Table>
@@ -25,7 +32,7 @@ export function RelatedRecordsTable({ section }: RelatedRecordsTableProps) {
             <TableRow 
               key={record.id}
               className="cursor-pointer hover:bg-muted/50"
-              onClick={() => window.location.href = `/objects/${section.objectType.id}/${record.id}`}
+              onClick={() => handleRowClick(record.id)}
             >
               {section.fields.map((field) => (
                 <TableCell key={`${record.id}-${field.api_name}`} className="whitespace-nowrap">

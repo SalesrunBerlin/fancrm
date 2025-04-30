@@ -7,9 +7,10 @@ interface RecordDeleteDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: () => Promise<void>;
+  recordName?: string;
 }
 
-export function RecordDeleteDialog({ isOpen, onClose, onConfirm }: RecordDeleteDialogProps) {
+export function RecordDeleteDialog({ isOpen, onClose, onConfirm, recordName = "this record" }: RecordDeleteDialogProps) {
   const [isDeleting, setIsDeleting] = useState(false);
 
   const handleConfirm = async () => {
@@ -28,7 +29,7 @@ export function RecordDeleteDialog({ isOpen, onClose, onConfirm }: RecordDeleteD
         <AlertDialogHeader>
           <AlertDialogTitle>Are you sure?</AlertDialogTitle>
           <AlertDialogDescription>
-            This action cannot be undone. This will permanently delete this record
+            This action cannot be undone. This will permanently delete {recordName}
             and remove its data from our servers.
           </AlertDialogDescription>
         </AlertDialogHeader>
