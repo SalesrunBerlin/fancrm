@@ -12,12 +12,19 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Info, CheckSquare, Square } from "lucide-react";
+import { Info, CheckSquare, Square, AlertTriangle } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface PreviewImportDataProps {
   importData: { headers: string[]; rows: string[][] };
   columnMappings: any[];
   selectedRows: number[];
+  duplicateRows?: number[];  // New prop for duplicate row indices
   onSelectRow: (rowIndex: number, selected: boolean) => void;
   onSelectAll: (selected: boolean) => void;
   onContinue: () => void;
@@ -28,6 +35,7 @@ export function PreviewImportData({
   importData,
   columnMappings,
   selectedRows,
+  duplicateRows = [],  // Default to empty array if not provided
   onSelectRow,
   onSelectAll,
   onContinue,
@@ -56,12 +64,20 @@ export function PreviewImportData({
     return value;
   };
 
+  // Calculate counts for UI display
+  const duplicateCount = duplicateRows.length;
+
   return (
     <div className="space-y-6">
       <Alert className="mb-4">
         <Info className="h-4 w-4" />
         <AlertDescription>
           Preview the data to be imported. You can deselect any rows you don't want to import.
+          {duplicateCount > 0 && (
+            <span className="ml-1 font-medium">
+              {duplicateCount} potential {duplicateCount === 1 ? 'duplicate' : 'duplicates'} found.
+            </span>
+          )}
         </AlertDescription>
       </Alert>
 
@@ -70,6 +86,11 @@ export function PreviewImportData({
           <CardTitle className="text-base">Import Preview</CardTitle>
           <div className="text-sm">
             {selectedRows.length} of {importData.rows.length} rows selected
+            {duplicateCount > 0 && (
+              <span className="ml-3 text-amber-500">
+                {duplicateCount} potential {duplicateCount === 1 ? 'duplicate' : 'duplicates'}
+              </span>
+            )}
           </div>
         </CardHeader>
         <CardContent className="p-0">
@@ -98,11 +119,15 @@ export function PreviewImportData({
               <TableBody>
                 {importData.rows.map((row, rowIndex) => {
                   const isSelected = selectedRows.includes(rowIndex);
+                  const isDuplicate = duplicateRows.includes(rowIndex);
                   
                   return (
                     <TableRow 
                       key={rowIndex}
-                      className={isSelected ? "" : "opacity-60"}
+                      className={`
+                        ${isSelected ? "" : "opacity-60"} 
+                        ${isDuplicate ? "bg-amber-50 border-l-4 border-l-amber-500" : ""}
+                      `}
                     >
                       <TableCell>
                         <div className="flex items-center justify-center">
@@ -114,7 +139,23 @@ export function PreviewImportData({
                         </div>
                       </TableCell>
                       <TableCell className="text-center font-medium">
-                        {rowIndex + 1}
+                        <div className="flex items-center justify-center gap-2">
+                          {isDuplicate && (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span>
+                                    <AlertTriangle className="h-4 w-4 text-amber-500" />
+                                  </span>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Potential duplicate record</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          )}
+                          {rowIndex + 1}
+                        </div>
                       </TableCell>
                       {mappedColumns.map((column, colIndex) => (
                         <TableCell key={colIndex}>

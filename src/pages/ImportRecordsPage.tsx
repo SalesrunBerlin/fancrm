@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { PageHeader } from "@/components/ui/page-header";
@@ -251,6 +250,9 @@ export default function ImportRecordsPage() {
     );
   }
 
+  // Extract duplicate row indices from the duplicates array
+  const duplicateRowIndices = duplicates.map(duplicate => duplicate.importRowIndex);
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -447,6 +449,7 @@ export default function ImportRecordsPage() {
               importData={importData}
               columnMappings={columnMappings}
               selectedRows={selectedRows}
+              duplicateRows={duplicateRowIndices}
               onSelectRow={handleSelectRow}
               onSelectAll={handleSelectAll}
               onContinue={handlePreviewContinue}
