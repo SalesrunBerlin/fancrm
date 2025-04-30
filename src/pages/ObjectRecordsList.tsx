@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
@@ -136,10 +137,9 @@ export default function ObjectRecordsList() {
 
   // Handler for when a record is moved in Kanban view
   const handleRecordMoved = () => {
-    // Refresh data after a short delay to allow the database update to complete
-    setTimeout(() => {
-      refetch();
-    }, 500);
+    // Refresh data immediately to ensure changes are reflected
+    console.log("Record was moved, refreshing data...");
+    refetch();
   };
 
   if (!objectType) {

@@ -145,30 +145,9 @@ export function RecordsKanban({
     setIsUpdating(true);
     
     try {
-      // First check if the record already has field_values data
-      const { data: recordData } = await supabase
-        .from("object_records")
-        .select("id")
-        .eq("id", recordId)
-        .single();
-        
-      if (!recordData) {
-        throw new Error("Record not found");
-      }
-
-      // Find the field_id for the field with this api_name
-      const { data: fieldData, error: fieldError } = await supabase
-        .from("object_fields")
-        .select("id")
-        .eq("object_type_id", objectTypeId)
-        .eq("api_name", fieldApiName)
-        .single();
-        
-      if (fieldError || !fieldData) {
-        throw new Error(`Field not found: ${fieldError?.message}`);
-      }
-
-      // Check if there's already a value for this record and field
+      console.log(`Updating record ${recordId} field ${fieldApiName} with value ${value}`);
+      
+      // First check if the record already has a value for this field
       const { data: existingValue, error: existingValueError } = await supabase
         .from("object_field_values")
         .select("id")
@@ -183,15 +162,20 @@ export function RecordsKanban({
       // Either update or insert the field value
       if (existingValue) {
         // Update existing value
+        console.log(`Found existing value, updating to ${value}`);
         const { error: updateError } = await supabase
           .from("object_field_values")
           .update({ value: value === "other" ? null : value })
           .eq("record_id", recordId)
           .eq("field_api_name", fieldApiName);
           
-        if (updateError) throw updateError;
+        if (updateError) {
+          console.error("Update error:", updateError);
+          throw updateError;
+        }
       } else {
         // Insert new value
+        console.log(`No existing value found, inserting new value ${value}`);
         const { error: insertError } = await supabase
           .from("object_field_values")
           .insert({
@@ -200,25 +184,28 @@ export function RecordsKanban({
             value: value === "other" ? null : value
           });
           
-        if (insertError) throw insertError;
+        if (insertError) {
+          console.error("Insert error:", insertError);
+          throw insertError;
+        }
       }
 
-      // Update the last_modified_by and updated_at on the record
+      // Update the last_modified timestamp on the record
       const { error: recordUpdateError } = await supabase
         .from("object_records")
         .update({ 
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
+          last_modified_by: null // Will be handled by RLS trigger
         })
         .eq("id", recordId);
 
-      if (recordUpdateError) throw recordUpdateError;
-      
-      toast.success("Record updated successfully");
-      
-      // Notify parent component that a record was moved
-      if (onRecordMoved) {
-        onRecordMoved();
+      if (recordUpdateError) {
+        console.error("Record update error:", recordUpdateError);
+        throw recordUpdateError;
       }
+      
+      console.log("Update successful");
+      toast.success("Record updated successfully");
       
       return true;
     } catch (error) {
@@ -288,8 +275,9 @@ export function RecordsKanban({
         destinationColumnId
       );
       
-      // If the update fails, revert the UI change by re-fetching data
-      if (!success && onRecordMoved) {
+      // If the update succeeds, refresh data
+      if (success && onRecordMoved) {
+        console.log("Calling onRecordMoved callback to refresh data");
         onRecordMoved();
       }
     }
