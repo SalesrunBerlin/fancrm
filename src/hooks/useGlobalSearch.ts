@@ -77,26 +77,39 @@ export function useGlobalSearch() {
       console.log("Searching for term:", term);
       console.log("Searching in objects:", searchableObjects.map(obj => obj.name));
 
+      // Clean the search term to handle special characters and mixed strings better
+      const cleanedTerm = term.trim().toLowerCase();
+      console.log("Cleaned search term:", cleanedTerm);
+
       // Fetch records that match the search term across all objects
       const searchPromises = searchableObjects.map(async (objectType) => {
         try {
           // First, query object_field_values directly with search term
           const { data: matchedFieldValues, error: fieldValueError } = await supabase
             .from('object_field_values')
-            .select('record_id, field_api_name, value')
-            .ilike('value', `%${term}%`);
+            .select('record_id, field_api_name, value');
 
           if (fieldValueError) {
             console.error(`Error searching field values for ${objectType.name}:`, fieldValueError);
             return [];
           }
 
-          console.log(`Found ${matchedFieldValues?.length || 0} field value matches for ${objectType.name}`);
+          // Filter the field values client-side to have more control over the search logic
+          // This allows for more flexible matching, especially for mixed strings
+          const filteredFieldValues = matchedFieldValues?.filter(fv => {
+            if (!fv.value) return false;
+            const valueString = String(fv.value).toLowerCase();
+            return valueString.includes(cleanedTerm);
+          });
           
-          if (!matchedFieldValues || matchedFieldValues.length === 0) return [];
+          console.log(`Found ${filteredFieldValues?.length || 0} field value matches for ${objectType.name}`);
+          
+          if (!filteredFieldValues || filteredFieldValues.length === 0) return [];
           
           // Get the record IDs from matching field values
-          const matchedRecordIds = [...new Set(matchedFieldValues.map(fv => fv.record_id))];
+          const matchedRecordIds = [...new Set(filteredFieldValues.map(fv => fv.record_id))];
+          
+          console.log(`Unique matched record IDs for ${objectType.name}:`, matchedRecordIds.length);
           
           // Now get full records information for these record IDs that belong to this object type
           const { data: objectRecords, error: recordsError } = await supabase
@@ -110,19 +123,21 @@ export function useGlobalSearch() {
             return [];
           }
           
+          console.log(`Found ${objectRecords?.length || 0} matching records for ${objectType.name}`);
+          
           if (!objectRecords || objectRecords.length === 0) return [];
           
-          console.log(`Found ${objectRecords.length} matching records for ${objectType.name}`);
-          
           // Map field values to records
-          const recordFieldValueMap = matchedFieldValues.reduce((acc, fv) => {
+          const recordFieldValueMap = filteredFieldValues.reduce((acc, fv) => {
             if (!acc[fv.record_id]) acc[fv.record_id] = [];
             acc[fv.record_id].push(fv);
             return acc;
-          }, {} as Record<string, typeof matchedFieldValues>);
+          }, {} as Record<string, typeof filteredFieldValues>);
           
           // Determine primary field for this object type
           const defaultFieldApiName = objectType.default_field_api_name || 'name';
+          
+          console.log(`Default field for ${objectType.name}:`, defaultFieldApiName);
           
           // Fetch all needed field values for the matched records
           const { data: allFieldValues, error: allFieldsError } = await supabase
@@ -135,6 +150,8 @@ export function useGlobalSearch() {
             return [];
           }
           
+          console.log(`Fetched ${allFieldValues?.length || 0} total field values for records`);
+          
           // Group all field values by record
           const allFieldsByRecord = allFieldValues?.reduce((acc, fv) => {
             if (!acc[fv.record_id]) acc[fv.record_id] = [];
@@ -143,18 +160,23 @@ export function useGlobalSearch() {
           }, {} as Record<string, typeof allFieldValues>) || {};
           
           // Build search results
-          return objectRecords.map(record => {
+          const objectResults = objectRecords.map(record => {
             const matchedFields = recordFieldValueMap[record.id] || [];
             const allFields = allFieldsByRecord[record.id] || [];
+            
+            // Log detailed information about each record for debugging
+            console.log(`Processing record: ${record.id} (${record.record_id})`);
+            console.log(`All fields for this record:`, allFields);
+            console.log(`Matched fields for this record:`, matchedFields);
             
             // Find the primary field value
             const primaryField = allFields.find(fv => fv.field_api_name === defaultFieldApiName);
             const primaryValue = primaryField?.value || 'Unnamed Record';
             
+            console.log(`Primary field (${defaultFieldApiName}) value:`, primaryValue);
+            
             // Find the field that matched the search term
-            const matchedField = matchedFields.find(fv => 
-              fv.value && fv.value.toString().toLowerCase().includes(term.toLowerCase())
-            );
+            const matchedField = matchedFields[0]; // Just take the first matched field for simplicity
             
             // Get a secondary field for additional context
             const secondaryField = allFields.find(fv => 
@@ -175,6 +197,9 @@ export function useGlobalSearch() {
               matchedValue: matchedField?.value?.toString()
             };
           });
+          
+          console.log(`Final results for ${objectType.name}:`, objectResults.length);
+          return objectResults;
         } catch (error) {
           console.error(`Error searching ${objectType.name}:`, error);
           return [];
@@ -184,7 +209,7 @@ export function useGlobalSearch() {
       const resultsArrays = await Promise.all(searchPromises);
       const allResults = resultsArrays.flat();
       
-      console.log(`Total search results: ${allResults.length}`);
+      console.log(`Total search results across all object types: ${allResults.length}`);
       
       // Sort by relevance (prioritize matches in primary fields)
       const sortedResults = allResults.sort((a, b) => {
@@ -199,6 +224,7 @@ export function useGlobalSearch() {
         return new Date(b.lastUpdated).getTime() - new Date(a.lastUpdated).getTime();
       });
       
+      console.log("Final sorted results:", sortedResults);
       setResults(sortedResults);
     } catch (error) {
       console.error('Search error:', error);

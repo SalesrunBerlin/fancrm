@@ -51,13 +51,24 @@ export function CommandSearch({ open, setOpen }: CommandSearchProps) {
       default: return <Box className="h-4 w-4" />;
     }
   };
+
+  // Log the search state for debugging
+  console.log("CommandSearch render state:", {
+    searchTerm,
+    isSearching,
+    groupedResultsCount: groupedResults.length,
+    groupedResults
+  });
   
   return (
     <CommandDialog open={open} onOpenChange={setOpen}>
       <CommandInput 
         placeholder="Suche in allen Objekten..." 
         value={searchTerm}
-        onValueChange={setSearchTerm}
+        onValueChange={(value) => {
+          console.log("Search input changed:", value);
+          setSearchTerm(value);
+        }}
       />
       <CommandList>
         <CommandEmpty>
@@ -102,8 +113,8 @@ export function CommandSearch({ open, setOpen }: CommandSearchProps) {
                     setOpen(false);
                   }}
                 >
-                  <span className="mr-2">{type.icon || "📋"}</span>
-                  <span>{type.name}</span>
+                  {getIconComponent(type.icon)}
+                  <span className="ml-2">{type.name}</span>
                 </CommandItem>
               ))}
           </CommandGroup>
