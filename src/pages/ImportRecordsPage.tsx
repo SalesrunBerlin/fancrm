@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { PageHeader } from "@/components/ui/page-header";
@@ -28,16 +29,18 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ObjectField } from "@/hooks/useObjectTypes";
 import { BatchFieldCreation } from "@/components/import/BatchFieldCreation";
 import { DuplicateRecordsResolver } from "@/components/import/DuplicateRecordsResolver";
+import { PreviewImportData } from "@/components/import/PreviewImportData";
 
 export default function ImportRecordsPage() {
   const { objectTypeId } = useParams<{ objectTypeId: string }>();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [pastedText, setPastedText] = useState("");
-  const [step, setStep] = useState<"paste" | "mapping" | "duplicate-check" | "batch-field-creation" | "importing">("paste");
+  const [step, setStep] = useState<"paste" | "mapping" | "duplicate-check" | "preview" | "batch-field-creation" | "importing">("paste");
   const [activeTab, setActiveTab] = useState<"paste" | "example">("paste");
   const [unmappedColumns, setUnmappedColumns] = useState<string[]>([]);
   const [columnData, setColumnData] = useState<{ [columnName: string]: string[] }>({});
+  const [selectedRows, setSelectedRows] = useState<number[]>([]);
   
   const { objectTypes } = useObjectTypes();
   const { fields, isLoading: isLoadingFields } = useRecordFields(objectTypeId);
@@ -74,6 +77,9 @@ export default function ImportRecordsPage() {
         });
         
         setColumnData(extractedData);
+        
+        // Initially select all rows
+        setSelectedRows(Array.from({ length: importData.rows.length }, (_, i) => i));
       }
     }
   }, [importData]);
@@ -151,14 +157,17 @@ export default function ImportRecordsPage() {
     if (hasDuplicates) {
       setStep("duplicate-check");
     } else {
-      setStep("importing");
-      importRecords();
+      setStep("preview");
     }
   };
 
-  const handleImport = async () => {
+  const handlePreviewContinue = () => {
     setStep("importing");
-    const result = await importRecords();
+    importSelectedRecords();
+  };
+
+  const importSelectedRecords = async () => {
+    const result = await importRecords(selectedRows);
     if (result) {
       navigate(`/objects/${objectTypeId}`);
     }
@@ -207,14 +216,31 @@ export default function ImportRecordsPage() {
   };
 
   const handleDuplicateResolutionContinue = () => {
-    setStep("importing");
-    importRecords();
+    // Move to preview step after duplicate resolution
+    setStep("preview");
   };
 
   const handleCreateNewField = (columnIndex: number) => {
     const columnName = columnMappings[columnIndex]?.sourceColumnName || "";
     // Navigate to the field creation page, passing the column name as a URL parameter
     navigate(`/objects/${objectTypeId}/import/create-field/${encodeURIComponent(columnName)}`);
+  };
+
+  // Row selection handlers for preview
+  const handleSelectRow = (rowIndex: number, selected: boolean) => {
+    if (selected) {
+      setSelectedRows(prev => [...prev, rowIndex]);
+    } else {
+      setSelectedRows(prev => prev.filter(idx => idx !== rowIndex));
+    }
+  };
+
+  const handleSelectAll = (selected: boolean) => {
+    if (selected && importData) {
+      setSelectedRows(Array.from({ length: importData.rows.length }, (_, i) => i));
+    } else {
+      setSelectedRows([]);
+    }
   };
 
   if (!objectType || isLoadingFields) {
@@ -413,6 +439,18 @@ export default function ImportRecordsPage() {
               onUpdateMatchingFields={updateMatchingFields}
               onContinue={handleDuplicateResolutionContinue}
               onBack={() => setStep("mapping")}
+            />
+          )}
+
+          {step === "preview" && importData && (
+            <PreviewImportData 
+              importData={importData}
+              columnMappings={columnMappings}
+              selectedRows={selectedRows}
+              onSelectRow={handleSelectRow}
+              onSelectAll={handleSelectAll}
+              onContinue={handlePreviewContinue}
+              onBack={() => setStep(duplicates.length > 0 ? "duplicate-check" : "mapping")}
             />
           )}
 

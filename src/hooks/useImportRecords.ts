@@ -288,7 +288,7 @@ export function useImportRecords(objectTypeId: string, fields: ObjectField[]) {
   }, [importData, columnMappings, objectTypeId, matchingFields]);
 
   // Import the records to the database
-  const importRecords = useCallback(async () => {
+  const importRecords = useCallback(async (selectedRowIndices?: number[]) => {
     if (!importData || !objectTypeId || !user) {
       console.error("Missing required data for import:", { importData, objectTypeId, user });
       return;
@@ -306,8 +306,16 @@ export function useImportRecords(objectTypeId: string, fields: ObjectField[]) {
         return map;
       }, {} as Record<number, DuplicateRecord>);
       
-      // Process each row of data
-      for (let rowIndex = 0; rowIndex < importData.rows.length; rowIndex++) {
+      // Determine which rows to process
+      const rowsToProcess = selectedRowIndices || Array.from({ length: importData.rows.length }, (_, i) => i);
+      
+      // Process each selected row of data
+      for (const rowIndex of rowsToProcess) {
+        if (rowIndex >= importData.rows.length) {
+          console.warn(`Row index ${rowIndex} is out of bounds, skipping`);
+          continue;
+        }
+        
         const row = importData.rows[rowIndex];
         
         try {

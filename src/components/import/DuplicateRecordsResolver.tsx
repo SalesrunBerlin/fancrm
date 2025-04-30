@@ -91,8 +91,8 @@ export function DuplicateRecordsResolver({
 
   return (
     <div className="space-y-6">
-      <Alert variant="warning" className="mb-4">
-        <AlertCircle className="h-4 w-4" />
+      <Alert variant="default" className="mb-4 border-yellow-500 bg-yellow-50 dark:bg-yellow-950/20">
+        <AlertCircle className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
         <AlertDescription>
           {duplicates.length} duplicate {duplicates.length === 1 ? 'record was' : 'records were'} found based on the matching fields.
           Please decide whether to create new records or update existing ones.
