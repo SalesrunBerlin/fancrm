@@ -1,4 +1,3 @@
-
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -59,8 +58,9 @@ export function useRelatedRecords(objectTypeId: string, recordId: string) {
         const isForward = relationship.from_object_id === objectTypeId;
         const relatedObjectTypeId = isForward ? relationship.to_object_id : relationship.from_object_id;
         
-        // Create a unique key for this relationship + object type combination
-        const relationshipKey = `${relationship.id}-${relatedObjectTypeId}`;
+        // Create a unique key based on the relationship name + object type ID instead of relationship ID
+        // This will prevent duplicate sections with the same relationship name pointing to the same object type
+        const relationshipKey = `${relationship.name}-${relatedObjectTypeId}`;
         
         // Skip if we've already processed this combination
         if (processedRelationships.has(relationshipKey)) {

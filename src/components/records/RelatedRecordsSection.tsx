@@ -12,7 +12,7 @@ export function RelatedRecordsSection({ section }: RelatedRecordsSectionProps) {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>{section.relationship.name} - {section.objectType.name}</CardTitle>
+        <CardTitle>{section.objectType.name}</CardTitle>
         <FieldsConfigDialog
           objectTypeId={section.objectType.id}
           defaultVisibleFields={section.fields.map(f => f.api_name)}
