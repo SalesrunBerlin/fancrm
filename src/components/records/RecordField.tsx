@@ -1,5 +1,4 @@
 
-import { useState } from "react";
 import { useFormField } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -9,10 +8,7 @@ import { ControllerRenderProps, UseFormReturn } from "react-hook-form";
 import { ObjectField } from "@/hooks/useObjectTypes";
 import { LookupField } from "./LookupField";
 import { useFieldPicklistValues } from "@/hooks/useFieldPicklistValues";
-import { Loader2, Star } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { PicklistSuggestionDialog } from "@/components/settings/PicklistSuggestionDialog";
-import { useParams } from "react-router-dom";
+import { Loader2 } from "lucide-react";
 
 interface RecordFieldProps {
   field: ObjectField;
@@ -23,8 +19,6 @@ export function RecordField({ field, form }: RecordFieldProps) {
   const { name } = useFormField();
   const value = form.watch(field.api_name);
   const { picklistValues, isLoading: loadingPicklist } = useFieldPicklistValues(field.id);
-  const [showSuggestionDialog, setShowSuggestionDialog] = useState(false);
-  const { objectTypeId } = useParams<{ objectTypeId: string }>();
 
   const renderField = () => {
     switch (field.data_type) {
@@ -91,49 +85,29 @@ export function RecordField({ field, form }: RecordFieldProps) {
         }
         
         if (!picklistValues || picklistValues.length === 0) {
-          return <div className="flex gap-2 items-center">
-            <Input 
-              type="text"
-              placeholder={`No options available for ${field.name}`}
-              disabled
-            />
-            <Button 
-              variant="outline" 
-              size="icon"
-              title="Suggest values from existing records"
-              onClick={() => setShowSuggestionDialog(true)}
-            >
-              <Star className="h-4 w-4" />
-            </Button>
-          </div>;
+          return <Input 
+            type="text"
+            placeholder={`No options available for ${field.name}`}
+            disabled
+          />;
         }
         
         return (
-          <div className="flex gap-2 items-center">
-            <Select
-              value={value || ""}
-              onValueChange={(val) => form.setValue(field.api_name, val, { shouldValidate: true })}
-            >
-              <SelectTrigger className="flex-1">
-                <SelectValue placeholder={`Select ${field.name.toLowerCase()}`} />
-              </SelectTrigger>
-              <SelectContent>
-                {picklistValues.map(option => (
-                  <SelectItem key={option.id} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button 
-              variant="outline" 
-              size="icon"
-              title="Suggest values from existing records"
-              onClick={() => setShowSuggestionDialog(true)}
-            >
-              <Star className="h-4 w-4" />
-            </Button>
-          </div>
+          <Select
+            value={value || ""}
+            onValueChange={(val) => form.setValue(field.api_name, val, { shouldValidate: true })}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder={`Select ${field.name.toLowerCase()}`} />
+            </SelectTrigger>
+            <SelectContent>
+              {picklistValues.map(option => (
+                <SelectItem key={option.id} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         );
       case "lookup":
         const fieldOptions = field.options as { target_object_type_id?: string } | undefined;
@@ -176,16 +150,6 @@ export function RecordField({ field, form }: RecordFieldProps) {
         <FormDescription>{String(field.options.description)}</FormDescription>
       )}
       <FormMessage />
-      
-      {/* Suggestion Dialog */}
-      {field.data_type === "picklist" && showSuggestionDialog && objectTypeId && (
-        <PicklistSuggestionDialog
-          isOpen={showSuggestionDialog}
-          onClose={() => setShowSuggestionDialog(false)}
-          objectTypeId={objectTypeId}
-          fieldId={field.id}
-        />
-      )}
     </FormItem>
   );
 }
