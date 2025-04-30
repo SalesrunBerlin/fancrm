@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -75,7 +74,8 @@ export function BatchFieldCreation({
         uniqueValues = Array.from(new Set(columnData[name].filter(val => val?.trim() !== '')));
       }
       
-      return {
+      // Create properly typed field config
+      const config: FieldConfig = {
         columnName: name,
         name: name,
         apiName: name.toLowerCase().replace(/[^a-z0-9_]/g, '_'),
@@ -85,6 +85,8 @@ export function BatchFieldCreation({
         uniqueValues,
         createPicklistValues: uniqueValues.length > 0
       };
+      
+      return config;
     });
     
     setFieldConfigs(configs);

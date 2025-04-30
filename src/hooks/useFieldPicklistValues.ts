@@ -21,7 +21,7 @@ export function useFieldPicklistValues(fieldId: string) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
-  const { data: picklistValues, isLoading } = useQuery({
+  const { data: picklistValues, isLoading, refetch } = useQuery({
     queryKey: ["picklist-values", fieldId],
     queryFn: async (): Promise<PicklistValue[]> => {
       // First check if this is a system field
@@ -90,5 +90,6 @@ export function useFieldPicklistValues(fieldId: string) {
     isLoading,
     addValue,
     removeValue,
+    refetch
   };
 }

@@ -65,7 +65,7 @@ export function PicklistValuesManager({ fieldId, onComplete, initialValues }: Pi
         return;
       }
       
-      const success = await addBatchPicklistValues(valuesToAdd);
+      const success = await addBatchPicklistValues(null, valuesToAdd);
       if (success) {
         toast.success("Initial values added successfully");
         if (onComplete) {
