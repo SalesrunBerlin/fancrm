@@ -1,14 +1,14 @@
 import React, { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Loader2 } from "lucide-react";
-import { RecordDetailForm } from "@/components/records/RecordDetailForm";
+import { ChevronDown, Edit, Eye, EyeOff, Loader2, MoreHorizontal, PlusCircle, Settings, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
-import { RelatedRecordsSection } from "@/components/records/RelatedRecordsSection";
-import { useRecordDetail } from "@/hooks/useRecordDetail";
 import { RecordDeleteDialog } from "@/components/records/RecordDeleteDialog";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { PublishingConfigWrapper } from "@/components/settings/PublishingConfigWrapper";
+import { useObjectRecords } from "@/hooks/useObjectRecords";
 
 export default function ObjectTypeDetail() {
   const { objectTypeId } = useParams<{ objectTypeId: string }>();
@@ -136,12 +136,12 @@ export default function ObjectTypeDetail() {
         </div>
       </div>
 
-      <PublishingConfigDialog
+      <PublishingConfigWrapper
         objectTypeId={objectType.id}
         isPublished={objectType.is_published}
         onPublish={handlePublish}
         onUnpublish={handlePublish}
-        open={isPublishingDialogOpen}
+        isOpen={isPublishingDialogOpen}
         onOpenChange={setIsPublishingDialogOpen}
       />
 
@@ -274,4 +274,3 @@ function ObjectRecordsTable({
     </div>
   );
 }
-
