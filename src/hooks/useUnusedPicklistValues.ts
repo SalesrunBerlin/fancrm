@@ -34,29 +34,12 @@ export function useUnusedPicklistValues(objectTypeId: string, fieldId: string) {
         const fieldApiName = fieldData.api_name;
         console.log(`Field API name: ${fieldApiName}`);
         
-        // Get all records for this object type
-        const { data: records, error: recordsError } = await supabase
-          .from("object_records")
-          .select(`id, record_field_values!inner(field_id, value)`)
-          .eq("object_type_id", objectTypeId);
-        
-        if (recordsError) {
-          console.error("Error fetching records:", recordsError);
-          throw recordsError;
-        }
-        
-        console.log(`Found ${records?.length || 0} records for this object type`);
-        
-        if (!records || records.length === 0) {
-          return [];
-        }
-
-        // Get field value records for the specific field
+        // Get all field values from object_field_values for records of this object type
         const { data: fieldValues, error: fieldValuesError } = await supabase
-          .from("record_field_values")
-          .select("value")
-          .eq("field_id", fieldId)
-          .in("record_id", records.map(record => record.id));
+          .from("object_field_values")
+          .select("value, object_records!inner(object_type_id)")
+          .eq("field_api_name", fieldApiName)
+          .eq("object_records.object_type_id", objectTypeId);
         
         if (fieldValuesError) {
           console.error("Error fetching field values:", fieldValuesError);
