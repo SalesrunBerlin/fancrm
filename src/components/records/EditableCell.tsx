@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { TableCell } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
@@ -8,6 +7,7 @@ import { LookupField } from "./LookupField";
 import { LookupValueDisplay } from "./LookupValueDisplay";
 import { useFieldPicklistValues } from "@/hooks/useFieldPicklistValues";
 import { Loader2 } from "lucide-react";
+import { formatDate } from "@/lib/utils";
 
 interface EditableCellProps {
   value: any;
@@ -60,6 +60,10 @@ export function EditableCell({
     if (fieldType === 'picklist' && picklistValues) {
       const selectedOption = picklistValues.find(option => option.value === value);
       return <TableCell>{selectedOption?.label || value || "-"}</TableCell>;
+    }
+    
+    if (fieldType === 'date' && value) {
+      return <TableCell>{formatDate(value)}</TableCell>;
     }
     
     return <TableCell>{value || "-"}</TableCell>;

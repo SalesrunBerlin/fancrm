@@ -1,10 +1,10 @@
-
 import { useState, useCallback, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { ObjectField } from "@/hooks/useObjectTypes";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { parseMultiFormatDate } from "@/lib/utils";
 
 interface ImportData {
   headers: string[];
@@ -186,7 +186,20 @@ export function useImportRecords(objectTypeId: string, fields: ObjectField[]) {
           const fieldValues = [];
           for (const mapping of columnMappings) {
             if (mapping.targetField) {
-              const value = row[mapping.sourceColumnIndex] || '';
+              let value = row[mapping.sourceColumnIndex] || '';
+              
+              // Process date values based on field type
+              if (mapping.targetField.data_type === 'date' || mapping.targetField.data_type === 'datetime') {
+                const parsedDate = parseMultiFormatDate(value);
+                if (parsedDate) {
+                  value = parsedDate;
+                  console.log(`Parsed date "${value}" to "${parsedDate}"`);
+                } else if (value) {
+                  // If we couldn't parse but there was a value, log a warning
+                  console.warn(`Could not parse date value: "${value}"`);
+                }
+              }
+              
               fieldValues.push({
                 record_id: recordId,
                 field_api_name: mapping.targetField.api_name,
