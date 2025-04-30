@@ -1,173 +1,277 @@
-
-import { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useObjectTypes } from "@/hooks/useObjectTypes";
-import { useObjectFields } from "@/hooks/useObjectFields";
-import { ObjectFieldsList } from "@/components/settings/ObjectFieldsList";
+import { Loader2 } from "lucide-react";
+import { RecordDetailForm } from "@/components/records/RecordDetailForm";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
-import { ArrowLeft, List, Plus, Trash2, Loader2 } from "lucide-react";
-import { Link } from "react-router-dom";
-import { DeleteDialog } from "@/components/common/DeleteDialog";
+import { RelatedRecordsSection } from "@/components/records/RelatedRecordsSection";
+import { useRecordDetail } from "@/hooks/useRecordDetail";
+import { RecordDeleteDialog } from "@/components/records/RecordDeleteDialog";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { DefaultFieldSelector } from "@/components/settings/DefaultFieldSelector";
 
 export default function ObjectTypeDetail() {
   const { objectTypeId } = useParams<{ objectTypeId: string }>();
   const navigate = useNavigate();
-  const { objectTypes, updateObjectType, publishObjectType, unpublishObjectType, publishedObjects, isLoadingPublished } = useObjectTypes();
-  const { fields, isLoading, createField, updateField, deleteField } = useObjectFields(objectTypeId);
-  const [isPublishing, setIsPublishing] = useState(false);
-  const [isDeleteObjectDialogOpen, setIsDeleteObjectDialogOpen] = useState(false);
-  
-  // Find the current object type either from user's objects or from published objects
-  const currentObjectType = objectTypes?.find(obj => obj.id === objectTypeId) || 
-                          publishedObjects?.find(obj => obj.id === objectTypeId);
-  
-  // Show loading state while data is being fetched
-  if (isLoading || isLoadingPublished) {
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [recordToDeleteId, setRecordToDeleteId] = useState<string | null>(null);
+  const [isPublishingDialogOpen, setIsPublishingDialogOpen] = useState(false);
+
+  const {
+    isLoading,
+    objectType,
+    fields,
+    records,
+    deleteRecord,
+    updateObjectType,
+    publishObjectType,
+    unpublishObjectType,
+    defaultFieldApiName,
+  } = useObjectRecords(objectTypeId || "");
+
+  const handleCreateRecord = () => {
+    navigate(`/objects/${objectTypeId}/new`);
+  };
+
+  const handleImportRecords = () => {
+    navigate(`/objects/${objectTypeId}/import`);
+  };
+
+  const handleEditObjectType = () => {
+    navigate(`/settings/objects/${objectTypeId}`);
+  };
+
+  const handleFieldEdit = (fieldId: string) => {
+    navigate(`/settings/objects/${objectTypeId}/fields/${fieldId}/edit`);
+  };
+
+  const handleNewField = () => {
+    navigate(`/settings/objects/${objectTypeId}/fields/new`);
+  };
+
+  const handleDeleteRecord = (recordId: string) => {
+    setRecordToDeleteId(recordId);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const confirmDeleteRecord = async () => {
+    if (recordToDeleteId) {
+      await deleteRecord.mutateAsync(recordToDeleteId);
+      setIsDeleteDialogOpen(false);
+      setRecordToDeleteId(null);
+    }
+  };
+
+  const handlePublishToggle = () => {
+    setIsPublishingDialogOpen(true);
+  };
+
+  const handlePublish = async () => {
+    if (!objectType) return;
+
+    if (objectType.is_published) {
+      await unpublishObjectType.mutateAsync(objectType.id);
+    } else {
+      await publishObjectType.mutateAsync(objectType.id);
+    }
+
+    setIsPublishingDialogOpen(false);
+  };
+
+  if (isLoading || !objectType) {
     return (
-      <div className="flex items-center justify-center h-64">
+      <div className="flex h-full w-full items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />
       </div>
     );
   }
-  
-  if (!currentObjectType) {
-    return (
-      <div>
-        <PageHeader
-          title="Object Type Not Found"
-          description="The requested object type does not exist or is not accessible."
-          actions={
-            <Button variant="outline" onClick={() => navigate("/settings/object-manager")}>
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Object Manager
-            </Button>
-          }
-        />
-      </div>
-    );
-  }
-
-  const handleTogglePublish = async () => {
-    if (!objectTypeId) return;
-    
-    try {
-      setIsPublishing(true);
-      if (currentObjectType.is_published) {
-        await unpublishObjectType.mutateAsync(objectTypeId);
-      } else {
-        await publishObjectType.mutateAsync(objectTypeId);
-      }
-    } catch (error) {
-      console.error("Error toggling publish status:", error);
-    } finally {
-      setIsPublishing(false);
-    }
-  };
-
-  const handleManagePicklistValues = (fieldId: string) => {
-    // This would be implemented to handle managing picklist values
-    console.log("Managing picklist values for field:", fieldId);
-    // You could navigate to another page or open a dialog here
-  };
-
-  const handleDeleteField = async (fieldId: string) => {
-    try {
-      await deleteField.mutateAsync(fieldId);
-      toast.success("Field deleted successfully");
-    } catch (error) {
-      console.error("Error deleting field:", error);
-      toast.error("Failed to delete field");
-    }
-  };
-
-  const handleDeleteObjectType = async () => {
-    // In a real implementation, this would call an API to delete the object type
-    // and all its related data (fields, records, etc.)
-    toast.error("Object type deletion is not implemented yet");
-    setIsDeleteObjectDialogOpen(false);
-  };
-
-  const handleUpdateDefaultField = async (fieldApiName: string) => {
-    if (!objectTypeId) return;
-    
-    await updateObjectType.mutateAsync({
-      id: objectTypeId,
-      default_field_api_name: fieldApiName
-    });
-  };
-
-  // Check if the current user owns this object
-  const isPublishedByOthers = publishedObjects?.some(obj => obj.id === objectTypeId) || false;
 
   return (
-    <div className="container mx-auto px-2 md:px-0 space-y-6 max-w-5xl">
-      <PageHeader
-        title={currentObjectType.name}
-        description={currentObjectType.description || `API Name: ${currentObjectType.api_name}`}
-        actions={
-          <>
-            <Button variant="outline" asChild>
-              <Link to="/settings/object-manager">
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Back to Object Manager
-              </Link>
-            </Button>
-            {!isPublishedByOthers && !currentObjectType.is_system && (
-              <>
-                <Button 
-                  variant="default"
-                  onClick={() => navigate(`/settings/objects/${objectTypeId}/fields/new`)}
-                >
-                  <Plus className="mr-2 h-4 w-4" />
-                  New Field
-                </Button>
-                <Button 
-                  onClick={handleTogglePublish}
-                  disabled={isPublishing}
-                  variant={currentObjectType.is_published ? "outline" : "default"}
-                >
-                  {currentObjectType.is_published ? "Unpublish" : "Publish"}
-                </Button>
-                <Button 
-                  variant="destructive"
-                  onClick={() => setIsDeleteObjectDialogOpen(true)}
-                >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Delete
-                </Button>
-              </>
-            )}
-          </>
-        }
-      />
-      
-      {/* Only show the field selector for objects that can be edited */}
-      {!isPublishedByOthers && !currentObjectType.is_system && fields && (
-        <DefaultFieldSelector
-          objectType={currentObjectType}
-          fields={fields}
-          onUpdateDefaultField={handleUpdateDefaultField}
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <PageHeader
+          title={objectType.name}
+          description={objectType.description || "No description provided."}
         />
-      )}
-      
-      <ObjectFieldsList 
-        fields={fields || []} 
-        objectTypeId={objectTypeId as string} 
-        isLoading={isLoading}
-        onManagePicklistValues={handleManagePicklistValues}
-        onDeleteField={!currentObjectType.is_system && !isPublishedByOthers ? handleDeleteField : undefined}
+        <div className="flex gap-2">
+          <Button onClick={handleCreateRecord}>Create Record</Button>
+          <Button onClick={handleImportRecords}>Import Records</Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline">
+                Actions <ChevronDown className="ml-2 h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-56">
+              <DropdownMenuLabel>Object Actions</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={handleEditObjectType}>
+                <Edit className="mr-2 h-4 w-4" />
+                <span>Edit Object</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleNewField}>
+                <PlusCircle className="mr-2 h-4 w-4" />
+                <span>Add Field</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handlePublishToggle}>
+                {objectType.is_published ? (
+                  <>
+                    <EyeOff className="mr-2 h-4 w-4" />
+                    <span>Unpublish</span>
+                  </>
+                ) : (
+                  <>
+                    <Eye className="mr-2 h-4 w-4" />
+                    <span>Publish</span>
+                  </>
+                )}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem className="text-destructive">
+                <Trash2 className="mr-2 h-4 w-4" />
+                <span>Delete Object</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </div>
+
+      <PublishingConfigDialog
+        objectTypeId={objectType.id}
+        isPublished={objectType.is_published}
+        onPublish={handlePublish}
+        onUnpublish={handlePublish}
+        open={isPublishingDialogOpen}
+        onOpenChange={setIsPublishingDialogOpen}
       />
 
-      <DeleteDialog
-        isOpen={isDeleteObjectDialogOpen}
-        onClose={() => setIsDeleteObjectDialogOpen(false)}
-        onConfirm={handleDeleteObjectType}
-        title={`Delete ${currentObjectType.name}`}
-        description={`Are you sure you want to delete the object type "${currentObjectType.name}"? This will delete all fields, records, and relationships associated with this object. This action cannot be undone.`}
+      <RecordDeleteDialog
+        isOpen={isDeleteDialogOpen}
+        onClose={() => setIsDeleteDialogOpen(false)}
+        onConfirm={confirmDeleteRecord}
       />
+
+      <div className="grid grid-cols-1 gap-6">
+        {fields && fields.length > 0 ? (
+          <ObjectRecordsTable
+            records={records || []}
+            fields={fields}
+            objectTypeId={objectTypeId || ""}
+            onEdit={handleFieldEdit}
+            onDelete={handleDeleteRecord}
+            defaultFieldApiName={defaultFieldApiName}
+          />
+        ) : (
+          <Card>
+            <CardHeader>
+              <CardTitle>No Fields Defined</CardTitle>
+              <CardDescription>
+                This object type has no fields defined. Add some fields to start
+                collecting data.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={handleNewField}>Add First Field</Button>
+            </CardContent>
+          </Card>
+        )}
+      </div>
     </div>
   );
 }
+
+interface ObjectRecordsTableProps {
+  records: any[];
+  fields: any[];
+  objectTypeId: string;
+  onEdit: (fieldId: string) => void;
+  onDelete: (recordId: string) => void;
+  defaultFieldApiName?: string;
+}
+
+function ObjectRecordsTable({
+  records,
+  fields,
+  objectTypeId,
+  onEdit,
+  onDelete,
+  defaultFieldApiName,
+}: ObjectRecordsTableProps) {
+  const navigate = useNavigate();
+
+  const handleRowClick = (recordId: string) => {
+    navigate(`/objects/${objectTypeId}/${recordId}`);
+  };
+
+  return (
+    <div className="relative overflow-x-auto">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead className="w-[200px]">
+              {fields.find(f => f.api_name === defaultFieldApiName)?.name || 'Name'}
+            </TableHead>
+            {fields
+              .filter(f => f.api_name !== defaultFieldApiName)
+              .map((field) => (
+                <TableHead key={field.id}>{field.name}</TableHead>
+              ))}
+            <TableHead className="text-right">Actions</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {records.map((record) => (
+            <TableRow
+              key={record.id}
+              onClick={() => handleRowClick(record.id)}
+              className="cursor-pointer hover:bg-accent hover:text-accent-foreground"
+            >
+              <TableCell className="font-medium">
+                {record.field_values[defaultFieldApiName || 'name']}
+              </TableCell>
+              {fields
+                .filter(f => f.api_name !== defaultFieldApiName)
+                .map((field) => (
+                  <TableCell key={field.id}>
+                    {record.field_values[field.api_name]}
+                  </TableCell>
+                ))}
+              <TableCell className="text-right">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className="h-8 w-8 p-0">
+                      <span className="sr-only">Open menu</span>
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem
+                      onClick={() =>
+                        navigate(`/objects/${objectTypeId}/${record.id}/edit`)
+                      }
+                    >
+                      <Edit className="mr-2 h-4 w-4" /> <span>Edit</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => onEdit(record.id)}
+                    >
+                      <Settings className="mr-2 h-4 w-4" /> <span>Edit Fields</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={() => onDelete(record.id)}
+                      className="text-destructive"
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" /> <span>Delete</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
+  );
+}
+

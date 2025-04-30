@@ -23,7 +23,9 @@ export function RecordDeleteDialog({ isOpen, onClose, onConfirm }: RecordDeleteD
   };
 
   return (
-    <AlertDialog open={isOpen} onOpenChange={onClose}>
+    <AlertDialog open={isOpen} onOpenChange={(open) => {
+      if (!open) onClose();
+    }}>
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Are you sure?</AlertDialogTitle>
@@ -33,13 +35,14 @@ export function RecordDeleteDialog({ isOpen, onClose, onConfirm }: RecordDeleteD
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
           <AlertDialogAction
             onClick={(e) => {
               e.preventDefault();
               handleConfirm();
             }}
             className="bg-destructive hover:bg-destructive/90"
+            disabled={isDeleting}
           >
             {isDeleting ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />

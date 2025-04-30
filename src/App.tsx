@@ -20,6 +20,7 @@ import CreateObjectPage from "@/pages/CreateObjectPage";
 import ImportRecordsPage from "@/pages/ImportRecordsPage";
 import CreateFieldPage from "@/pages/CreateFieldPage";
 import ImportCreateFieldPage from "@/pages/ImportCreateFieldPage";
+import ProfilePage from "@/pages/ProfilePage";
 
 // Create a client
 const queryClient = new QueryClient({
@@ -42,6 +43,7 @@ function App() {
             <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
               <Route path="/" element={<Dashboard />} />
               <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/profile" element={<ProfilePage />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/settings/object-manager" element={<ObjectManager />} />
               <Route path="/settings/object-manager/new" element={<CreateObjectPage />} />
