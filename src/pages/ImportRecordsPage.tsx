@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { PageHeader } from "@/components/ui/page-header";
@@ -36,11 +37,11 @@ export default function ImportRecordsPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [pastedText, setPastedText] = useState("");
-  const [step, setStep<"paste" | "mapping" | "duplicate-check" | "preview" | "batch-field-creation" | "importing">("paste");
-  const [activeTab, setActiveTab<"paste" | "example">("paste");
-  const [unmappedColumns, setUnmappedColumns<string[]>([]);
-  const [columnData, setColumnData<{ [columnName: string]: string[] }>({});
-  const [selectedRows, setSelectedRows<number[]>([]);
+  const [step, setStep] = useState<"paste" | "mapping" | "duplicate-check" | "preview" | "batch-field-creation" | "importing">("paste");
+  const [activeTab, setActiveTab] = useState<"paste" | "example">("paste");
+  const [unmappedColumns, setUnmappedColumns] = useState<string[]>([]);
+  const [columnData, setColumnData] = useState<{ [columnName: string]: string[] }>({});
+  const [selectedRows, setSelectedRows] = useState<number[]>([]);
   
   const { objectTypes } = useObjectTypes();
   const { fields, isLoading: isLoadingFields } = useRecordFields(objectTypeId);
@@ -274,7 +275,7 @@ export default function ImportRecordsPage() {
     if (selected) {
       setSelectedRows(prev => [...prev, rowIndex]);
     } else {
-      setSelectedRows(prev => prev.filter(idx => idx !== rowIndex]);
+      setSelectedRows(prev => prev.filter(idx => idx !== rowIndex));
     }
   };
 
