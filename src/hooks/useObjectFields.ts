@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -76,14 +77,14 @@ export function useObjectFields(objectTypeId?: string) {
         }
   
         // Execute query with order
-        const { data, error } = await query.order("display_order");
+        const { data: fieldsData, error } = await query.order("display_order");
   
         if (error) {
           console.error("Error fetching fields:", error);
           throw error;
         }
   
-        console.log("Fields fetched:", data.length);
+        console.log("Fields fetched:", fieldsData.length);
   
         // For published objects, check for field publishing settings
         if (isPublishedObject) {
@@ -109,17 +110,22 @@ export function useObjectFields(objectTypeId?: string) {
             });
             
             // Filter fields by publishing settings
-            const filteredData = data.filter(field => {
+            const filteredData = fieldsData.filter(field => {
               return publishingMap.has(field.id) ? publishingMap.get(field.id) : true;
             });
             
             console.log("After publishing filter, fields count:", filteredData.length);
-            data = filteredData;
+            
+            // Transform the JSON options to match the expected type
+            return filteredData.map(field => ({
+              ...field,
+              options: field.options ? field.options : undefined
+            })) as ObjectField[];
           }
         }
   
         // Transform the JSON options to match the expected type
-        return data.map(field => ({
+        return fieldsData.map(field => ({
           ...field,
           options: field.options ? field.options : undefined
         })) as ObjectField[];
