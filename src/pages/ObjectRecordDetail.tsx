@@ -5,7 +5,7 @@ import { Loader2 } from "lucide-react";
 import { RecordDetailForm } from "@/components/records/RecordDetailForm";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
-import { RelatedRecordsSection } from "@/components/records/RelatedRecordsSection";
+import { RelatedRecordsList } from "@/components/records/RelatedRecordsList";
 import { useRecordDetail } from "@/hooks/useRecordDetail";
 import { RecordDeleteDialog } from "@/components/records/RecordDeleteDialog";
 import { supabase } from "@/integrations/supabase/client";
@@ -18,11 +18,10 @@ export default function ObjectRecordDetail() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   
   const { 
-    isLoading, 
-    objectType, 
-    record, 
+    record,
     fields,
-    defaultFieldApiName
+    objectType,
+    isLoading,
   } = useRecordDetail(objectTypeId, recordId);
 
   const handleEdit = () => {
@@ -50,7 +49,7 @@ export default function ObjectRecordDetail() {
     }
   };
 
-  if (isLoading || !objectType) {
+  if (isLoading || !record) {
     return (
       <div className="flex h-full w-full items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -62,8 +61,8 @@ export default function ObjectRecordDetail() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <PageHeader 
-          title={record?.display_value || "Record Detail"} 
-          description={objectType.name}
+          title={record.displayName || "Record Detail"} 
+          description={objectType?.name || "Object"}
         />
         <div className="flex gap-2">
           <Button variant="outline" onClick={handleEdit}>Edit</Button>
@@ -87,15 +86,16 @@ export default function ObjectRecordDetail() {
           <RecordDetailForm
             record={record}
             fields={fields}
-            isReadOnly={true}
-            defaultFieldApiName={defaultFieldApiName}
+            editedValues={{}}
+            onFieldChange={() => {}} // Pass empty function for read-only view
+            isEditing={false}
           />
         )}
         
-        {record && (
-          <RelatedRecordsSection 
-            objectTypeId={objectTypeId || ""} 
-            recordId={recordId || ""} 
+        {record && objectTypeId && recordId && (
+          <RelatedRecordsList 
+            objectTypeId={objectTypeId} 
+            recordId={recordId} 
           />
         )}
       </div>

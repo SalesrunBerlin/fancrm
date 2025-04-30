@@ -2,11 +2,16 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useRecordFields } from "@/hooks/useRecordFields";
+import { ObjectField } from "@/hooks/useObjectTypes";
 
 export function useRecordDetail(objectTypeId?: string, recordId?: string) {
   const { user } = useAuth();
+  
+  // Use the record fields hook to get the fields for this object type
+  const { fields } = useRecordFields(objectTypeId || "");
 
-  const { data: record, isLoading } = useQuery({
+  const { data: record, isLoading: recordLoading } = useQuery({
     queryKey: ["record-detail", objectTypeId, recordId],
     queryFn: async () => {
       if (!objectTypeId || !recordId) {
@@ -62,6 +67,7 @@ export function useRecordDetail(objectTypeId?: string, recordId?: string) {
         ...recordData,
         fieldValues: valuesObject,
         displayName,
+        display_value: displayName, // Add display_value for compatibility
         objectName: objectType?.name || 'Object'
       };
     },
@@ -70,6 +76,9 @@ export function useRecordDetail(objectTypeId?: string, recordId?: string) {
 
   return {
     record,
-    isLoading
+    fields,
+    objectType: { name: record?.objectName || "Object" },
+    defaultFieldApiName: record?.displayName ? null : undefined,
+    isLoading: recordLoading
   };
 }

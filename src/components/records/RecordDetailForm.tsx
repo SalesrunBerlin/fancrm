@@ -1,5 +1,4 @@
 import { ObjectField } from "@/hooks/useObjectTypes";
-import { ObjectRecord } from "@/hooks/useObjectRecords";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -10,7 +9,7 @@ import { useFieldPicklistValues } from "@/hooks/useFieldPicklistValues";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface RecordDetailFormProps {
-  record: ObjectRecord;
+  record: any;
   fields: ObjectField[];
   onFieldChange: (fieldName: string, value: any) => void;
   editedValues: Record<string, any>;
@@ -30,7 +29,7 @@ export function RecordDetailForm({
     if (fieldApiName in editedValues) {
       return editedValues[fieldApiName];
     }
-    return record.field_values?.[fieldApiName] || "";
+    return record.fieldValues?.[fieldApiName] || "";
   };
 
   const renderField = (field: ObjectField) => {
