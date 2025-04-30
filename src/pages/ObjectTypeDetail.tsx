@@ -1,12 +1,12 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
 import { useObjectFields } from "@/hooks/useObjectFields";
 import { ObjectFieldsList } from "@/components/settings/ObjectFieldsList";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
-import { ArrowLeft, List, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, List, Plus, Trash2, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { DeleteDialog } from "@/components/common/DeleteDialog";
 import { toast } from "sonner";
@@ -14,13 +14,23 @@ import { toast } from "sonner";
 export default function ObjectTypeDetail() {
   const { objectTypeId } = useParams<{ objectTypeId: string }>();
   const navigate = useNavigate();
-  const { objectTypes, updateObjectType, publishObjectType, unpublishObjectType } = useObjectTypes();
+  const { objectTypes, updateObjectType, publishObjectType, unpublishObjectType, publishedObjects, isLoadingPublished } = useObjectTypes();
   const { fields, isLoading, createField, updateField, deleteField } = useObjectFields(objectTypeId);
   const [isPublishing, setIsPublishing] = useState(false);
   const [isDeleteObjectDialogOpen, setIsDeleteObjectDialogOpen] = useState(false);
   
-  // Find the current object type
-  const currentObjectType = objectTypes?.find(obj => obj.id === objectTypeId);
+  // Find the current object type either from user's objects or from published objects
+  const currentObjectType = objectTypes?.find(obj => obj.id === objectTypeId) || 
+                          publishedObjects?.find(obj => obj.id === objectTypeId);
+  
+  // Show loading state while data is being fetched
+  if (isLoading || isLoadingPublished) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
   
   if (!currentObjectType) {
     return (
@@ -79,6 +89,9 @@ export default function ObjectTypeDetail() {
     setIsDeleteObjectDialogOpen(false);
   };
 
+  // Check if the current user owns this object
+  const isPublishedByOthers = publishedObjects?.some(obj => obj.id === objectTypeId) || false;
+
   return (
     <div className="container mx-auto px-2 md:px-0 space-y-6 max-w-5xl">
       <PageHeader
@@ -92,15 +105,15 @@ export default function ObjectTypeDetail() {
                 Back to Object Manager
               </Link>
             </Button>
-            <Button 
-              variant="default"
-              onClick={() => navigate(`/settings/objects/${objectTypeId}/fields/new`)}
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              New Field
-            </Button>
-            {!currentObjectType.is_system && (
+            {!isPublishedByOthers && !currentObjectType.is_system && (
               <>
+                <Button 
+                  variant="default"
+                  onClick={() => navigate(`/settings/objects/${objectTypeId}/fields/new`)}
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  New Field
+                </Button>
                 <Button 
                   onClick={handleTogglePublish}
                   disabled={isPublishing}
@@ -108,15 +121,13 @@ export default function ObjectTypeDetail() {
                 >
                   {currentObjectType.is_published ? "Unpublish" : "Publish"}
                 </Button>
-                {!currentObjectType.is_system && (
-                  <Button 
-                    variant="destructive"
-                    onClick={() => setIsDeleteObjectDialogOpen(true)}
-                  >
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Delete
-                  </Button>
-                )}
+                <Button 
+                  variant="destructive"
+                  onClick={() => setIsDeleteObjectDialogOpen(true)}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete
+                </Button>
               </>
             )}
           </>
@@ -128,7 +139,7 @@ export default function ObjectTypeDetail() {
         objectTypeId={objectTypeId as string} 
         isLoading={isLoading}
         onManagePicklistValues={handleManagePicklistValues}
-        onDeleteField={!currentObjectType.is_system ? handleDeleteField : undefined}
+        onDeleteField={!currentObjectType.is_system && !isPublishedByOthers ? handleDeleteField : undefined}
       />
 
       <DeleteDialog

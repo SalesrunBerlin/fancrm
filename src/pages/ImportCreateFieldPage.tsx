@@ -23,6 +23,13 @@ export default function ImportCreateFieldPage() {
     console.log("Field created successfully:", field);
     toast.success(`Field '${field.name}' created successfully`);
     
+    // Log details for debugging
+    console.log("Redirecting with params:", {
+      fieldId: field.id,
+      columnName: columnName || '',
+      objectTypeId
+    });
+    
     // Redirect back to the import page with the field information
     // We encode the field ID to be used for mapping
     navigate(`/objects/${objectTypeId}/import?newFieldId=${field.id}&columnName=${encodeURIComponent(columnName || '')}`);

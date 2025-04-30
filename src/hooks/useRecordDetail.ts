@@ -13,6 +13,8 @@ export function useRecordDetail(objectTypeId?: string, recordId?: string) {
         return null;
       }
 
+      console.log("Fetching record details:", { objectTypeId, recordId });
+
       // Get the record
       const { data: recordData, error: recordError } = await supabase
         .from("object_records")
@@ -45,7 +47,7 @@ export function useRecordDetail(objectTypeId?: string, recordId?: string) {
       // Find display name field if exists
       const { data: objectType } = await supabase
         .from("object_types")
-        .select("default_field_api_name")
+        .select("default_field_api_name, name")
         .eq("id", objectTypeId)
         .single();
 
@@ -57,7 +59,8 @@ export function useRecordDetail(objectTypeId?: string, recordId?: string) {
       return {
         ...recordData,
         fieldValues: valuesObject,
-        displayName
+        displayName,
+        objectName: objectType?.name || 'Object'
       };
     },
     enabled: !!user && !!objectTypeId && !!recordId,

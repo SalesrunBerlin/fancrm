@@ -273,10 +273,10 @@ export function useObjectTypes() {
           throw new Error("Source object not found");
         }
 
-        // 2. Create the new object (clone)
+        // 2. Create the new object (clone) with a unique API name to avoid conflicts
         const newObjectData = {
           name: sourceObject.name,
-          api_name: sourceObject.api_name.toLowerCase(),
+          api_name: `${sourceObject.api_name.toLowerCase()}_${Date.now().toString().slice(-6)}`,
           description: sourceObject.description,
           icon: sourceObject.icon,
           is_active: true,
@@ -340,7 +340,7 @@ export function useObjectTypes() {
           // 5. Get the newly created fields to copy picklist values
           const { data: createdFields, error: createdFieldsError } = await supabase
             .from("object_fields")
-            .select("id, api_name, data_type")
+            .select("id, api_name, data_type, name")
             .eq("object_type_id", newObject.id);
 
           if (createdFieldsError) {
