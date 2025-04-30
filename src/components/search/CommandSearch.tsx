@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/command";
 import { useNavigate } from "react-router-dom";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
-import { Search, Calendar, User, Building, Briefcase, Box } from "lucide-react";
+import { Search, Calendar, User, Building, Briefcase, Box, Upload, Globe } from "lucide-react";
 import { useGlobalSearch } from "@/hooks/useGlobalSearch";
 import { formatDate } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -115,6 +115,26 @@ export function CommandSearch({ open, setOpen }: CommandSearchProps) {
                 >
                   {getIconComponent(type.icon)}
                   <span className="ml-2">{type.name}</span>
+                </CommandItem>
+              ))}
+          </CommandGroup>
+        )}
+        
+        {/* Show import options for object types */}
+        {objectTypes && objectTypes.length > 0 && (
+          <CommandGroup heading="Import">
+            {objectTypes
+              .filter(type => type.is_active)
+              .map(type => (
+                <CommandItem
+                  key={`import-${type.id}`}
+                  onSelect={() => {
+                    navigate(`/objects/${type.id}/import`);
+                    setOpen(false);
+                  }}
+                >
+                  <Upload className="mr-2 h-4 w-4" />
+                  <span className="ml-2">Import {type.name}</span>
                 </CommandItem>
               ))}
           </CommandGroup>

@@ -6,7 +6,7 @@ import { useObjectRecords } from "@/hooks/useObjectRecords";
 import { useRecordFields } from "@/hooks/useRecordFields";
 import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
-import { Loader2, Plus, Upload, Trash2, List, Kanban } from "lucide-react";
+import { Loader2, Plus, Upload, Trash2, List, Kanban, Globe } from "lucide-react";
 import { RecordsTable } from "@/components/records/RecordsTable";
 import { RecordsKanban } from "@/components/records/RecordsKanban";
 import { Card } from "@/components/ui/card";
@@ -18,6 +18,12 @@ import { DeleteDialog } from "@/components/common/DeleteDialog";
 import { toast } from "sonner";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { KanbanSkeleton } from "@/components/records/KanbanSkeleton";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export default function ObjectRecordsList() {
   const { objectTypeId } = useParams<{ objectTypeId: string }>();
@@ -174,15 +180,31 @@ export default function ObjectRecordsList() {
               objectTypeId={objectTypeId!}
               onVisibilityChange={handleVisibilityChange}
             />
-            <Button 
-              variant="outline"
-              asChild
-            >
-              <Link to={`/objects/${objectTypeId}/import`}>
-                <Upload className="mr-1.5 h-4 w-4" />
-                Import
-              </Link>
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline">
+                  <Upload className="mr-1.5 h-4 w-4" />
+                  Import
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem asChild>
+                  <Link to={`/objects/${objectTypeId}/import`} className="flex items-center">
+                    <Upload className="mr-2 h-4 w-4" />
+                    Import from Excel
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link 
+                    to={`/objects/${objectTypeId}/import?source=url`} 
+                    className="flex items-center"
+                  >
+                    <Globe className="mr-2 h-4 w-4" />
+                    Import from URL
+                  </Link>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             {selectedRecords.length > 0 && (
               <Button 
                 variant="destructive"
