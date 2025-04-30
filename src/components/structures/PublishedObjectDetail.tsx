@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -57,80 +56,87 @@ export function PublishedObjectDetail() {
     enabled: !!objectId,
   });
 
-  // Fetch object fields with publishing info - improved to get all fields regardless of owner
+  // Fetch object fields with publishing info - improved to better handle empty publishing settings
   const { 
     data: fields, 
     isLoading: isFieldsLoading,
-    refetch: refetchFields 
+    refetch: refetchFields,
+    error: fieldsError 
   } = useQuery({
     queryKey: ["published-object-fields", objectId],
     queryFn: async () => {
       console.log("Fetching fields for published object:", objectId);
       
-      // First, check if the object is published
-      const { data: objCheck, error: objError } = await supabase
-        .from("object_types")
-        .select("is_published, owner_id")
-        .eq("id", objectId)
-        .single();
-
-      if (objError || !objCheck?.is_published) {
-        console.error("Object is not published or error:", objError);
-        return [];
+      try {
+        // First, check if the object is published
+        const { data: objCheck, error: objError } = await supabase
+          .from("object_types")
+          .select("is_published, owner_id")
+          .eq("id", objectId)
+          .single();
+  
+        if (objError || !objCheck?.is_published) {
+          console.error("Object is not published or error:", objError);
+          throw new Error(objError?.message || "Object not found or not published");
+        }
+        
+        // Get all fields for the object without owner filter since we now have RLS policies
+        const { data: objectFields, error: fieldsError } = await supabase
+          .from("object_fields")
+          .select("*")
+          .eq("object_type_id", objectId)
+          .order("display_order");
+  
+        if (fieldsError) {
+          console.error("Error fetching fields:", fieldsError);
+          throw fieldsError;
+        }
+        
+        console.log("Published object fields fetched:", objectFields?.length || 0);
+  
+        // Get publishing settings to filter fields - the query will succeed now with our new RLS policy
+        const { data: publishingSettings, error: publishingError } = await supabase
+          .from("object_field_publishing")
+          .select("*")
+          .eq("object_type_id", objectId);
+  
+        if (publishingError) {
+          console.error("Error fetching publishing settings:", publishingError);
+          console.warn("Proceeding without publishing settings");
+          // Don't throw error here - we'll just show all fields if publishing settings aren't available
+        }
+        
+        console.log("Publishing settings fetched:", publishingSettings?.length || 0);
+  
+        // Map publishing settings to fields
+        const publishingMap = new Map();
+        publishingSettings?.forEach(setting => {
+          publishingMap.set(setting.field_id, setting.is_included);
+        });
+  
+        // Apply publishing settings if they exist, otherwise show all fields
+        // If we have specific publishingSettings and it's not empty, use them to filter
+        // Otherwise, show all fields for a published object
+        let finalFields = objectFields;
+        
+        if (publishingSettings && publishingSettings.length > 0) {
+          finalFields = objectFields
+            .filter(field => {
+              const isIncluded = publishingMap.has(field.id) ? publishingMap.get(field.id) : true;
+              return isIncluded;
+            })
+            .map(field => ({ 
+              ...field, 
+              isPublished: publishingMap.has(field.id) ? publishingMap.get(field.id) : true
+            }));
+        }
+        
+        console.log("Final fields to display:", finalFields?.length || 0);
+        return finalFields;
+      } catch (error) {
+        console.error("Error in published object fields query:", error);
+        throw error;
       }
-      
-      // Get all fields for the object without owner filter since it's published
-      const { data: objectFields, error: fieldsError } = await supabase
-        .from("object_fields")
-        .select("*")
-        .eq("object_type_id", objectId)
-        .order("display_order");
-
-      if (fieldsError) {
-        console.error("Error fetching fields:", fieldsError);
-        throw fieldsError;
-      }
-      
-      console.log("Published object fields fetched:", objectFields?.length || 0);
-
-      // Get publishing settings to filter fields
-      const { data: publishingSettings, error: publishingError } = await supabase
-        .from("object_field_publishing")
-        .select("*")
-        .eq("object_type_id", objectId);
-
-      if (publishingError) {
-        console.error("Error fetching publishing settings:", publishingError);
-        throw publishingError;
-      }
-      
-      console.log("Publishing settings fetched:", publishingSettings?.length || 0);
-
-      // Map publishing settings to fields
-      const publishingMap = new Map();
-      publishingSettings?.forEach(setting => {
-        publishingMap.set(setting.field_id, setting.is_included);
-      });
-
-      // Filter fields by publishing settings if we have any settings
-      // If we have publishing settings, only include fields that are explicitly set to be included
-      // If no publishing settings exist, include all fields
-      let finalFields = objectFields;
-      
-      if (publishingSettings && publishingSettings.length > 0) {
-        finalFields = objectFields
-          .filter(field => {
-            const isIncluded = publishingMap.has(field.id) ? publishingMap.get(field.id) : true;
-            return isIncluded;
-          })
-          .map(field => ({ 
-            ...field, 
-            isPublished: publishingMap.has(field.id) ? publishingMap.get(field.id) : true
-          }));
-      }
-      
-      console.log("Final fields to display:", finalFields?.length || 0);
-      return finalFields;
     },
     enabled: !!objectId,
   });
@@ -304,6 +310,13 @@ export function PublishedObjectDetail() {
                 <div className="flex justify-center p-8">
                   <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                 </div>
+              ) : fieldsError ? (
+                <Alert variant="destructive" className="my-4">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    Fehler beim Laden der Felder: {fieldsError.message}
+                  </AlertDescription>
+                </Alert>
               ) : fields && fields.length > 0 ? (
                 <Table>
                   <TableHeader>

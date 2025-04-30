@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -24,7 +23,7 @@ export function useObjectFields(objectTypeId?: string) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: fields, isLoading } = useQuery({
+  const { data: fields, isLoading, error } = useQuery({
     queryKey: ["object-fields", objectTypeId],
     queryFn: async (): Promise<ObjectField[]> => {
       if (!objectTypeId) {
@@ -34,96 +33,102 @@ export function useObjectFields(objectTypeId?: string) {
       
       console.log(`Fetching fields for object type: ${objectTypeId}`);
       
-      // First determine the object type status (template, published, ownership)
-      const { data: objectType, error: objectError } = await supabase
-        .from("object_types")
-        .select("is_template, source_object_id, is_published, owner_id")
-        .eq("id", objectTypeId)
-        .single();
-
-      if (objectError) {
-        console.error("Error fetching object type:", objectError);
-        throw objectError;
-      }
-
-      // Check if this is a published object
-      const isPublishedObject = objectType.is_published;
-      const isOwnedByOthers = objectType.owner_id !== user?.id;
-
-      console.log("Object fields query for:", { 
-        objectTypeId, 
-        isPublishedObject, 
-        isOwnedByOthers,
-        userID: user?.id,
-        ownerID: objectType.owner_id 
-      });
-
-      // Base query for fields
-      let query = supabase
-        .from("object_fields")
-        .select("*")
-        .eq("object_type_id", objectTypeId);
-
-      // For published objects, don't filter by owner_id - show all fields that are published
-      // For all other scenarios (user's own objects or templates), use the original filter
-      if (isPublishedObject && isOwnedByOthers) {
-        // For published objects owned by others, we don't add any owner filter
-        // This allows showing all fields that are part of the published object
-        console.log("Fetching all fields for published object without owner filter");
-      } else {
-        // For regular objects or objects owned by the current user,
-        // use the original filter logic
-        console.log("Using owner filter for fields");
-        query = query.or(`is_system.eq.true,owner_id.eq.${user?.id}`);
-      }
-
-      // Changed from const to let to allow reassignment
-      let { data, error } = await query.order("display_order");
-
-      if (error) {
-        console.error("Error fetching fields:", error);
-        throw error;
-      }
-
-      console.log("Fields fetched:", data.length);
-
-      // For published objects owned by others, check for field publishing settings
-      if (isPublishedObject && isOwnedByOthers) {
-        const { data: publishingSettings, error: publishingError } = await supabase
-          .from("object_field_publishing")
+      try {
+        // First determine the object type status (template, published, ownership)
+        const { data: objectType, error: objectError } = await supabase
+          .from("object_types")
+          .select("is_template, source_object_id, is_published, owner_id")
+          .eq("id", objectTypeId)
+          .single();
+  
+        if (objectError) {
+          console.error("Error fetching object type:", objectError);
+          throw objectError;
+        }
+  
+        // Check if this is a published object
+        const isPublishedObject = objectType.is_published;
+        const isOwnedByOthers = objectType.owner_id !== user?.id;
+  
+        console.log("Object fields query for:", { 
+          objectTypeId, 
+          isPublishedObject, 
+          isOwnedByOthers,
+          userID: user?.id,
+          ownerID: objectType.owner_id 
+        });
+  
+        // Base query for fields - thanks to our new RLS policy, this will work for all published objects
+        let query = supabase
+          .from("object_fields")
           .select("*")
           .eq("object_type_id", objectTypeId);
-
-        if (publishingError) {
-          console.error("Error fetching publishing settings:", publishingError);
-          // Don't throw here, just continue with all fields
+  
+        // For published objects, don't filter by owner_id - our RLS policy will handle this
+        // For all other scenarios (user's own objects or templates), use the original filter
+        if (!isPublishedObject && (user?.id || !isOwnedByOthers)) {
+          // For regular objects or objects owned by the current user,
+          // use the original filter logic
+          console.log("Using owner filter for fields");
+          query = query.or(`is_system.eq.true,owner_id.eq.${user?.id}`);
+        } else {
+          console.log("Using RLS policy for published object fields");
         }
-        
-        if (publishingSettings && publishingSettings.length > 0) {
-          console.log("Applying publishing filters to fields");
-          
-          // Create a map of field_id -> is_included
-          const publishingMap = new Map();
-          publishingSettings.forEach(setting => {
-            publishingMap.set(setting.field_id, setting.is_included);
-          });
-          
-          // Filter fields by publishing settings
-          data = data.filter(field => {
-            return publishingMap.has(field.id) ? publishingMap.get(field.id) : true;
-          });
-          
-          console.log("After publishing filter, fields count:", data.length);
+  
+        // Execute query with order
+        const { data, error } = await query.order("display_order");
+  
+        if (error) {
+          console.error("Error fetching fields:", error);
+          throw error;
         }
+  
+        console.log("Fields fetched:", data.length);
+  
+        // For published objects, check for field publishing settings
+        if (isPublishedObject) {
+          const { data: publishingSettings, error: publishingError } = await supabase
+            .from("object_field_publishing")
+            .select("*")
+            .eq("object_type_id", objectTypeId);
+  
+          if (publishingError) {
+            console.error("Warning - issue fetching publishing settings:", publishingError);
+            console.log("Continuing with all fields due to policy permission");
+            // Don't throw here, continue with all fields
+          }
+          
+          // Only apply publishing filters if we actually have settings
+          if (publishingSettings && publishingSettings.length > 0) {
+            console.log("Applying publishing filters to fields");
+            
+            // Create a map of field_id -> is_included
+            const publishingMap = new Map();
+            publishingSettings.forEach(setting => {
+              publishingMap.set(setting.field_id, setting.is_included);
+            });
+            
+            // Filter fields by publishing settings
+            const filteredData = data.filter(field => {
+              return publishingMap.has(field.id) ? publishingMap.get(field.id) : true;
+            });
+            
+            console.log("After publishing filter, fields count:", filteredData.length);
+            data = filteredData;
+          }
+        }
+  
+        // Transform the JSON options to match the expected type
+        return data.map(field => ({
+          ...field,
+          options: field.options ? field.options : undefined
+        })) as ObjectField[];
+      } catch (err) {
+        console.error("Error in useObjectFields:", err);
+        throw err;
       }
-
-      // Transform the JSON options to match the expected type
-      return data.map(field => ({
-        ...field,
-        options: field.options ? field.options : undefined
-      })) as ObjectField[];
     },
-    enabled: !!user && !!objectTypeId,
+    enabled: !!objectTypeId,
   });
 
   const createField = useMutation({
@@ -256,6 +261,7 @@ export function useObjectFields(objectTypeId?: string) {
   return {
     fields,
     isLoading,
+    error,
     createField,
     updateField,
     deleteField,
