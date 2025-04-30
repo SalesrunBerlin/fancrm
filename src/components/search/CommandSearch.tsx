@@ -8,6 +8,7 @@ import {
   CommandItem,
   CommandList,
   CommandSeparator,
+  CommandShortcut,
 } from "@/components/ui/command";
 import { useNavigate } from "react-router-dom";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
