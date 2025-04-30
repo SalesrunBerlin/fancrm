@@ -1,7 +1,5 @@
 
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Loader2, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { DeleteDialog } from "@/components/common/DeleteDialog";
 
 interface RecordDeleteDialogProps {
   isOpen: boolean;
@@ -10,51 +8,21 @@ interface RecordDeleteDialogProps {
   recordName?: string;
 }
 
-export function RecordDeleteDialog({ isOpen, onClose, onConfirm, recordName = "this record" }: RecordDeleteDialogProps) {
-  const [isDeleting, setIsDeleting] = useState(false);
-
-  const handleConfirm = async () => {
-    try {
-      setIsDeleting(true);
-      await onConfirm();
-    } catch (error) {
-      console.error("Error deleting record:", error);
-    } finally {
-      setIsDeleting(false);
-      onClose();
-    }
-  };
-
+export function RecordDeleteDialog({ 
+  isOpen, 
+  onClose, 
+  onConfirm, 
+  recordName = "this record" 
+}: RecordDeleteDialogProps) {
   return (
-    <AlertDialog open={isOpen} onOpenChange={(open) => {
-      if (!open) onClose();
-    }}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-          <AlertDialogDescription>
-            This action cannot be undone. This will permanently delete {recordName}
-            and remove its data from our servers.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction
-            onClick={(e) => {
-              e.preventDefault();
-              handleConfirm();
-            }}
-            className="bg-destructive hover:bg-destructive/90"
-          >
-            {isDeleting ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <Trash2 className="mr-2 h-4 w-4" />
-            )}
-            Delete
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+    <DeleteDialog
+      isOpen={isOpen}
+      onClose={onClose}
+      onConfirm={onConfirm}
+      title="Are you sure?"
+      description={`This action cannot be undone. This will permanently delete ${recordName} and remove its data from our servers.`}
+      deleteButtonText="Delete"
+      isDestructive={true}
+    />
   );
 }

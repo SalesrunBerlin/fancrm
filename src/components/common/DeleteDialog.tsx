@@ -19,6 +19,7 @@ interface DeleteDialogProps {
   title: string;
   description: string;
   deleteButtonText?: string;
+  isDestructive?: boolean;
 }
 
 export function DeleteDialog({
@@ -28,6 +29,7 @@ export function DeleteDialog({
   title,
   description,
   deleteButtonText = "Delete",
+  isDestructive = true,
 }: DeleteDialogProps) {
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -45,7 +47,7 @@ export function DeleteDialog({
 
   return (
     <AlertDialog open={isOpen} onOpenChange={(open) => {
-      if (!open) onClose();
+      if (!open && !isDeleting) onClose();
     }}>
       <AlertDialogContent>
         <AlertDialogHeader>
@@ -53,13 +55,14 @@ export function DeleteDialog({
           <AlertDialogDescription>{description}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel onClick={onClose}>Cancel</AlertDialogCancel>
+          <AlertDialogCancel disabled={isDeleting} onClick={onClose}>Cancel</AlertDialogCancel>
           <AlertDialogAction
             onClick={(e) => {
               e.preventDefault();
               handleConfirm();
             }}
-            className="bg-destructive hover:bg-destructive/90"
+            disabled={isDeleting}
+            className={isDestructive ? "bg-destructive hover:bg-destructive/90" : ""}
           >
             {isDeleting ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
