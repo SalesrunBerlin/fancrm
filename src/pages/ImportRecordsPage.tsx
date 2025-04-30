@@ -27,14 +27,16 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ObjectField } from "@/hooks/useObjectTypes";
+import { BatchFieldCreation } from "@/components/import/BatchFieldCreation";
 
 export default function ImportRecordsPage() {
   const { objectTypeId } = useParams<{ objectTypeId: string }>();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [pastedText, setPastedText] = useState("");
-  const [step, setStep] = useState<"paste" | "mapping" | "importing">("paste");
+  const [step, setStep] = useState<"paste" | "mapping" | "batch-field-creation" | "importing">("paste");
   const [activeTab, setActiveTab] = useState<"paste" | "example">("paste");
+  const [unmappedColumns, setUnmappedColumns] = useState<string[]>([]);
   
   const { objectTypes } = useObjectTypes();
   const { fields, isLoading: isLoadingFields } = useRecordFields(objectTypeId);
@@ -46,7 +48,8 @@ export default function ImportRecordsPage() {
     isImporting, 
     parseImportText, 
     updateColumnMapping, 
-    importRecords 
+    importRecords,
+    clearImportData
   } = useImportRecords(objectTypeId!, fields || []);
 
   // Check if we have import data and move to mapping step
@@ -86,6 +89,18 @@ export default function ImportRecordsPage() {
     }
   }, [searchParams, fields, columnMappings, updateColumnMapping]);
 
+  // Function to identify unmapped columns
+  useEffect(() => {
+    if (columnMappings && columnMappings.length > 0) {
+      const unmapped = columnMappings
+        .filter(mapping => mapping.targetField === null)
+        .map(mapping => mapping.sourceColumnName);
+      setUnmappedColumns(unmapped);
+    } else {
+      setUnmappedColumns([]);
+    }
+  }, [columnMappings]);
+
   const handleTextPaste = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setPastedText(e.target.value);
   };
@@ -121,6 +136,30 @@ export default function ImportRecordsPage() {
     ];
     
     return `${headers}\n${rows.join("\n")}`;
+  };
+
+  const handleCreateBatchFields = () => {
+    setStep("batch-field-creation");
+  };
+
+  const handleBatchFieldCreationComplete = (createdFields: { columnName: string; fieldId: string }[]) => {
+    // Update mappings for each created field
+    createdFields.forEach(({ columnName, fieldId }) => {
+      const columnIndex = columnMappings.findIndex(
+        mapping => mapping.sourceColumnName === columnName
+      );
+      
+      if (columnIndex >= 0) {
+        updateColumnMapping(columnIndex, fieldId);
+      }
+    });
+    
+    // Return to mapping step
+    setStep("mapping");
+  };
+
+  const handleBatchFieldCreationCancel = () => {
+    setStep("mapping");
   };
 
   const handleCreateNewField = (columnIndex: number) => {
@@ -199,15 +238,27 @@ export default function ImportRecordsPage() {
                 <p className="text-sm text-muted-foreground">
                   {getMappedCount()} of {columnMappings.length} columns mapped
                 </p>
-                {getMappedCount() < columnMappings.length && (
-                  <Alert variant="destructive" className="py-2">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription>
-                      Some columns couldn't be matched automatically. Please map them manually or create new fields.
-                    </AlertDescription>
-                  </Alert>
+                {unmappedColumns.length > 0 && (
+                  <div className="flex items-center">
+                    <Button 
+                      variant="secondary" 
+                      onClick={handleCreateBatchFields}
+                    >
+                      <Plus className="mr-2 h-4 w-4" />
+                      Create {unmappedColumns.length} Missing Fields
+                    </Button>
+                  </div>
                 )}
               </div>
+
+              {getMappedCount() < columnMappings.length && (
+                <Alert variant="destructive" className="py-2">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    Some columns couldn't be matched automatically. Please map them manually or create new fields.
+                  </AlertDescription>
+                </Alert>
+              )}
 
               <div className="border rounded-md overflow-hidden">
                 <Table>
@@ -286,7 +337,10 @@ export default function ImportRecordsPage() {
               </div>
 
               <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setStep("paste")}>
+                <Button variant="outline" onClick={() => {
+                  clearImportData();
+                  setStep("paste");
+                }}>
                   Back
                 </Button>
                 <Button 
@@ -297,6 +351,15 @@ export default function ImportRecordsPage() {
                 </Button>
               </div>
             </div>
+          )}
+
+          {step === "batch-field-creation" && unmappedColumns.length > 0 && (
+            <BatchFieldCreation
+              objectTypeId={objectTypeId!}
+              columnNames={unmappedColumns}
+              onComplete={handleBatchFieldCreationComplete}
+              onCancel={handleBatchFieldCreationCancel}
+            />
           )}
 
           {step === "importing" && (
