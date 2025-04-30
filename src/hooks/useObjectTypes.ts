@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -193,23 +194,6 @@ export function useObjectTypes() {
   // Publish an object type
   const publishObjectType = useMutation({
     mutationFn: async (objectTypeId: string) => {
-      // First check if the user has set a screen name
-      if (!user) throw new Error("User must be logged in to publish object types");
-      
-      const { data: profileData, error: profileError } = await supabase
-        .from("profiles")
-        .select("screen_name")
-        .eq("id", user.id)
-        .single();
-        
-      if (profileError) throw profileError;
-      
-      // Check if screen_name is the same as user.id (default) or not set
-      if (!profileData.screen_name || profileData.screen_name === user.id) {
-        throw new Error("You must set a custom screen name in your profile before publishing objects");
-      }
-      
-      // Proceed with publishing if screen name is set
       const { data, error } = await supabase
         .from("object_types")
         .update({ is_published: true })
@@ -234,7 +218,7 @@ export function useObjectTypes() {
       console.error("Error publishing object type:", error);
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to publish object type",
+        description: "Failed to publish object type",
         variant: "destructive",
       });
     }

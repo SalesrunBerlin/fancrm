@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import {
   Table,
@@ -194,7 +195,7 @@ export function DuplicateRecordsResolver({
                   </RadioGroup>
                 </div>
                 
-                <Alert variant="default" className="bg-slate-50 dark:bg-slate-900">
+                <Alert variant="outline" className="bg-slate-50 dark:bg-slate-900">
                   <Info className="h-4 w-4" />
                   <AlertDescription className="text-sm">
                     {selectedMatchingFields.length === 0 && (

@@ -1,5 +1,5 @@
-
 import { ObjectField } from "@/hooks/useObjectTypes";
+import { ObjectRecord } from "@/hooks/useObjectRecords";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -10,7 +10,7 @@ import { useFieldPicklistValues } from "@/hooks/useFieldPicklistValues";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface RecordDetailFormProps {
-  record: any;
+  record: ObjectRecord;
   fields: ObjectField[];
   onFieldChange: (fieldName: string, value: any) => void;
   editedValues: Record<string, any>;
@@ -30,7 +30,7 @@ export function RecordDetailForm({
     if (fieldApiName in editedValues) {
       return editedValues[fieldApiName];
     }
-    return record.fieldValues?.[fieldApiName] || "";
+    return record.field_values?.[fieldApiName] || "";
   };
 
   const renderField = (field: ObjectField) => {
@@ -149,7 +149,7 @@ export function RecordDetailForm({
     } else {
       if (field.data_type === 'lookup' && field.options && 'target_object_type_id' in field.options && field.options.target_object_type_id) {
         return (
-          <div className="text-base font-normal">
+          <div className="pt-1">
             <LookupValueDisplay 
               value={value} 
               fieldOptions={field.options as { target_object_type_id: string }}
@@ -157,15 +157,15 @@ export function RecordDetailForm({
           </div>
         );
       }
-      return <div className="text-base font-normal pt-1">{value || "—"}</div>;
+      return <p className="pt-1">{value || "-"}</p>;
     }
   };
 
   const content = (
     <div className="grid grid-cols-1 gap-6">
       {fields.map(field => (
-        <div key={field.api_name} className="pb-4 border-b border-gray-100 last:border-0">
-          <Label htmlFor={field.api_name} className="text-sm font-medium text-gray-500 mb-1 block">
+        <div key={field.api_name} className="space-y-2">
+          <Label htmlFor={field.api_name}>
             {field.name}
             {field.is_required && <span className="text-red-500 ml-1">*</span>}
           </Label>

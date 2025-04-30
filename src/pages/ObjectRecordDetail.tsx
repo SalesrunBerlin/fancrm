@@ -1,129 +1,148 @@
 
-import React, { useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { Loader2, ArrowLeft } from "lucide-react";
-import { RecordDetailForm } from "@/components/records/RecordDetailForm";
-import { Button } from "@/components/ui/button";
-import { PageHeader } from "@/components/ui/page-header";
-import { RelatedRecordsList } from "@/components/records/RelatedRecordsList";
+import { useState } from "react";
+import { useParams, Link, useNavigate } from "react-router-dom";
+import { useObjectTypes } from "@/hooks/useObjectTypes";
 import { useRecordDetail } from "@/hooks/useRecordDetail";
-import { RecordDeleteDialog } from "@/components/records/RecordDeleteDialog";
-import { supabase } from "@/integrations/supabase/client";
+import { useRecordFields } from "@/hooks/useRecordFields";
+import { useObjectRecords } from "@/hooks/useObjectRecords";
+import { PageHeader } from "@/components/ui/page-header";
+import { Loader2, ArrowLeft, Edit, Trash2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { DeleteDialog } from "@/components/common/DeleteDialog";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card } from "@/components/ui/card";
+import { RelatedRecordsList } from "@/components/records/RelatedRecordsList";
+import { LookupValueDisplay } from "@/components/records/LookupValueDisplay";
 
 export default function ObjectRecordDetail() {
-  const { objectTypeId, recordId } = useParams<{ objectTypeId: string; recordId: string }>();
   const navigate = useNavigate();
-  
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const { objectTypeId, recordId } = useParams<{ objectTypeId: string, recordId: string }>();
+  const { objectTypes } = useObjectTypes();
+  const { record, isLoading } = useRecordDetail(objectTypeId, recordId);
+  const { fields } = useRecordFields(objectTypeId);
+  const { updateRecord } = useObjectRecords(objectTypeId);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("details");
+
+  const objectType = objectTypes?.find(type => type.id === objectTypeId);
   
-  const { 
-    record,
-    fields,
-    objectType,
-    isLoading,
-  } = useRecordDetail(objectTypeId, recordId);
-
-  const handleEdit = () => {
-    navigate(`/objects/${objectTypeId}/${recordId}/edit`);
-  };
-
   const handleDelete = async () => {
+    if (!recordId) return;
     try {
-      if (!recordId) return;
+      // Direct API call to delete the record since we're not exposing this in the hook
+      const { data, error } = await fetch(`/api/records/${recordId}`, {
+        method: 'DELETE'
+      }).then(res => res.json());
       
-      // Use the Supabase client instead of direct fetch
-      const { error } = await supabase
-        .from("object_records")
-        .delete()
-        .eq("id", recordId);
-      
-      if (error) throw error;
+      if (error) throw new Error(error.message);
       
       toast.success("Record deleted successfully");
       navigate(`/objects/${objectTypeId}`);
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error deleting record:", error);
-      toast.error(`Failed to delete record: ${error.message || "Unknown error"}`);
+      toast.error("Failed to delete record");
     }
   };
 
-  const handleBack = () => {
-    navigate(`/objects/${objectTypeId}`);
-  };
-
-  if (isLoading || !record) {
+  if (isLoading || !objectType) {
     return (
-      <div className="flex h-full w-full items-center justify-center">
+      <div className="flex justify-center items-center h-64">
         <Loader2 className="h-8 w-8 animate-spin" />
       </div>
     );
   }
 
-  return (
-    <div className="space-y-6">
-      {/* Back button */}
-      <Button 
-        variant="ghost" 
-        onClick={handleBack}
-        className="mb-2 pl-2"
-      >
-        <ArrowLeft className="mr-2 h-4 w-4" />
-        Back to {objectType?.name || "Objects"}
-      </Button>
-
-      <div className="flex items-center justify-between">
-        <PageHeader 
-          title={record.displayName || "Record Detail"} 
-          description={`ID: ${recordId?.substring(0, 8)}...`}
-        />
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={handleEdit}>Edit</Button>
-          <Button 
-            variant="destructive" 
-            onClick={() => setIsDeleteDialogOpen(true)}
-          >
-            Delete
-          </Button>
-        </div>
+  if (!record) {
+    return (
+      <div className="space-y-4">
+        <Button variant="outline" asChild>
+          <Link to={`/objects/${objectTypeId}`}>
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to {objectType.name} List
+          </Link>
+        </Button>
+        <Card>
+          <CardContent className="pt-6">
+            <p className="text-center text-muted-foreground">Record not found</p>
+          </CardContent>
+        </Card>
       </div>
+    );
+  }
 
-      <RecordDeleteDialog 
-        isOpen={isDeleteDialogOpen}
-        onClose={() => setIsDeleteDialogOpen(false)}
-        onConfirm={handleDelete}
+  const recordName = record.displayName || `${objectType.name} Record`;
+
+  return (
+    <div className="container mx-auto px-2 md:px-0 space-y-6 max-w-5xl">
+      <PageHeader
+        title={recordName}
+        actions={
+          <div className="flex items-center space-x-2">
+            <Button variant="outline" asChild>
+              <Link to={`/objects/${objectTypeId}`}>
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Back
+              </Link>
+            </Button>
+            <Button variant="outline" asChild>
+              <Link to={`/objects/${objectTypeId}/${recordId}/edit`}>
+                <Edit className="mr-2 h-4 w-4" />
+                Edit
+              </Link>
+            </Button>
+            <Button 
+              variant="destructive"
+              onClick={() => setDeleteDialogOpen(true)}
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              Delete
+            </Button>
+          </div>
+        }
       />
 
-      <Tabs 
-        defaultValue="details" 
-        value={activeTab} 
-        onValueChange={setActiveTab}
-        className="w-full"
-      >
-        <TabsList className="mb-4">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList>
           <TabsTrigger value="details">Details</TabsTrigger>
-          <TabsTrigger value="related">Related</TabsTrigger>
+          <TabsTrigger value="related">Related Records</TabsTrigger>
         </TabsList>
         
-        <TabsContent value="details" className="space-y-4">
-          <Card className="p-6">
-            {record && fields && (
-              <RecordDetailForm
-                record={record}
-                fields={fields}
-                editedValues={{}}
-                onFieldChange={() => {}} // Pass empty function for read-only view
-                isEditing={false}
-              />
-            )}
+        <TabsContent value="details" className="mt-4">
+          <Card>
+            <CardContent className="pt-6 divide-y">
+              {fields
+                .sort((a, b) => (a.display_order || 0) - (b.display_order || 0))
+                .map((field) => {
+                  const value = record.fieldValues[field.api_name];
+                  return (
+                    <div key={field.id} className="py-3 grid grid-cols-3">
+                      <div className="font-medium text-muted-foreground">
+                        {field.name}
+                      </div>
+                      <div className="col-span-2">
+                        {field.data_type === "lookup" && field.options ? (
+                          <LookupValueDisplay
+                            value={value}
+                            fieldOptions={{
+                              target_object_type_id: (field.options as { target_object_type_id?: string })?.target_object_type_id || ''
+                            }}
+                          />
+                        ) : field.data_type === "picklist" && value ? (
+                          <span>{value}</span>
+                        ) : (
+                          value !== null && value !== undefined ? String(value) : "—"
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+            </CardContent>
           </Card>
         </TabsContent>
         
-        <TabsContent value="related" className="space-y-4">
-          {record && objectTypeId && recordId && (
+        <TabsContent value="related" className="mt-4">
+          {objectTypeId && recordId && (
             <RelatedRecordsList 
               objectTypeId={objectTypeId} 
               recordId={recordId} 
@@ -131,6 +150,14 @@ export default function ObjectRecordDetail() {
           )}
         </TabsContent>
       </Tabs>
+
+      <DeleteDialog
+        isOpen={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+        onConfirm={handleDelete}
+        title={`Delete ${objectType.name}`}
+        description={`Are you sure you want to delete this ${objectType.name.toLowerCase()}? This action cannot be undone.`}
+      />
     </div>
   );
 }

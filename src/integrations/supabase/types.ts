@@ -9,6 +9,123 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      accounts: {
+        Row: {
+          city: string | null
+          country: string | null
+          created_at: string | null
+          id: string
+          industry: string | null
+          latitude: number | null
+          longitude: number | null
+          name: string
+          owner_id: string | null
+          postal_code: string | null
+          street: string | null
+          type: string | null
+          updated_at: string | null
+          website: string | null
+        }
+        Insert: {
+          city?: string | null
+          country?: string | null
+          created_at?: string | null
+          id?: string
+          industry?: string | null
+          latitude?: number | null
+          longitude?: number | null
+          name: string
+          owner_id?: string | null
+          postal_code?: string | null
+          street?: string | null
+          type?: string | null
+          updated_at?: string | null
+          website?: string | null
+        }
+        Update: {
+          city?: string | null
+          country?: string | null
+          created_at?: string | null
+          id?: string
+          industry?: string | null
+          latitude?: number | null
+          longitude?: number | null
+          name?: string
+          owner_id?: string | null
+          postal_code?: string | null
+          street?: string | null
+          type?: string | null
+          updated_at?: string | null
+          website?: string | null
+        }
+        Relationships: []
+      }
+      activities: {
+        Row: {
+          account_id: string | null
+          contact_id: string | null
+          created_at: string | null
+          deal_id: string | null
+          description: string | null
+          end_time: string | null
+          id: string
+          outcome: string | null
+          owner_id: string | null
+          scheduled_at: string | null
+          status: string
+          subject: string
+          type: string
+          updated_at: string | null
+        }
+        Insert: {
+          account_id?: string | null
+          contact_id?: string | null
+          created_at?: string | null
+          deal_id?: string | null
+          description?: string | null
+          end_time?: string | null
+          id?: string
+          outcome?: string | null
+          owner_id?: string | null
+          scheduled_at?: string | null
+          status: string
+          subject: string
+          type: string
+          updated_at?: string | null
+        }
+        Update: {
+          account_id?: string | null
+          contact_id?: string | null
+          created_at?: string | null
+          deal_id?: string | null
+          description?: string | null
+          end_time?: string | null
+          id?: string
+          outcome?: string | null
+          owner_id?: string | null
+          scheduled_at?: string | null
+          status?: string
+          subject?: string
+          type?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activities_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "activities_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contacts: {
         Row: {
           account_id: string | null
@@ -61,7 +178,15 @@ export type Database = {
           street?: string | null
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "contacts_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       field_display_configs: {
         Row: {
@@ -450,7 +575,6 @@ export type Database = {
           id: string
           last_name: string | null
           role: string | null
-          screen_name: string | null
           updated_at: string
         }
         Insert: {
@@ -461,7 +585,6 @@ export type Database = {
           id: string
           last_name?: string | null
           role?: string | null
-          screen_name?: string | null
           updated_at?: string
         }
         Update: {
@@ -472,7 +595,6 @@ export type Database = {
           id?: string
           last_name?: string | null
           role?: string | null
-          screen_name?: string | null
           updated_at?: string
         }
         Relationships: []
