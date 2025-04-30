@@ -19,7 +19,10 @@ import { UseFormReturn } from "react-hook-form";
 import { FieldEditFormData } from "./schemas/fieldEditSchema";
 import { PicklistValuesManager } from "./PicklistValuesManager";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Star } from "lucide-react";
+import { PicklistSuggestionsDialog } from "./PicklistSuggestionsDialog";
 
 interface ObjectFieldEditFieldsProps {
   form: UseFormReturn<FieldEditFormData>;
@@ -29,6 +32,7 @@ interface ObjectFieldEditFieldsProps {
 
 export function ObjectFieldEditFields({ form, field, targetFields }: ObjectFieldEditFieldsProps) {
   const { objectTypes } = useObjectTypes();
+  const [showSuggestions, setShowSuggestions] = useState(false);
   
   // Ensure target_object_type_id is set in form when editing a lookup field
   useEffect(() => {
@@ -69,8 +73,28 @@ export function ObjectFieldEditFields({ form, field, targetFields }: ObjectField
 
       {field.data_type === "picklist" && (
         <div className="mt-4 border-t pt-4">
-          <h3 className="text-sm font-medium mb-2">Picklist Values</h3>
+          <div className="flex justify-between items-center mb-2">
+            <h3 className="text-sm font-medium">Picklist Values</h3>
+            <Button 
+              type="button" 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => setShowSuggestions(true)}
+              className="flex items-center gap-1 text-xs"
+            >
+              <Star className="h-3.5 w-3.5" />
+              Suggest Values
+            </Button>
+          </div>
           <PicklistValuesManager fieldId={field.id} />
+          
+          {/* Suggestions dialog */}
+          <PicklistSuggestionsDialog 
+            isOpen={showSuggestions} 
+            onClose={() => setShowSuggestions(false)} 
+            objectTypeId={field.object_type_id}
+            fieldId={field.id}
+          />
         </div>
       )}
 
