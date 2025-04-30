@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -23,12 +23,16 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useObjectFields } from "@/hooks/useObjectFields";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
-import { AlertCircle, Loader2 } from "lucide-react";
+import { usePicklistCreation } from "@/hooks/usePicklistCreation";
+import { AlertCircle, Loader2, Check, AlertTriangle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface BatchFieldCreationProps {
   objectTypeId: string;
   columnNames: string[];
+  columnData?: { [columnName: string]: string[] };
   onComplete: (createdFields: { columnName: string; fieldId: string }[]) => void;
   onCancel: () => void;
 }
@@ -41,29 +45,50 @@ interface FieldConfig {
   isRequired: boolean;
   status: "pending" | "creating" | "success" | "error";
   error?: string;
+  uniqueValues?: string[];
+  createPicklistValues?: boolean;
+  picklistValuesStatus?: "pending" | "creating" | "success" | "error";
 }
 
 export function BatchFieldCreation({ 
   objectTypeId,
   columnNames,
+  columnData = {},
   onComplete,
   onCancel
 }: BatchFieldCreationProps) {
-  const [fieldConfigs, setFieldConfigs] = useState<FieldConfig[]>(
-    columnNames.map(name => ({
-      columnName: name,
-      name: name,
-      apiName: name.toLowerCase().replace(/[^a-z0-9_]/g, '_'),
-      dataType: "text",
-      isRequired: false,
-      status: "pending"
-    }))
-  );
+  const [fieldConfigs, setFieldConfigs] = useState<FieldConfig[]>([]);
   const [isCreating, setIsCreating] = useState(false);
   const { toast } = useToast();
   const { createField } = useObjectFields(objectTypeId);
   const { objectTypes } = useObjectTypes();
+  const { addBatchPicklistValues } = usePicklistCreation(null);
   const objectType = objectTypes?.find(type => type.id === objectTypeId);
+
+  // Initialize field configs when component mounts or column data changes
+  useEffect(() => {
+    const configs = columnNames.map(name => {
+      // Extract unique values for this column if available
+      let uniqueValues: string[] = [];
+      if (columnData[name]) {
+        // Filter out empty values and get unique values
+        uniqueValues = Array.from(new Set(columnData[name].filter(val => val?.trim() !== '')));
+      }
+      
+      return {
+        columnName: name,
+        name: name,
+        apiName: name.toLowerCase().replace(/[^a-z0-9_]/g, '_'),
+        dataType: "text",
+        isRequired: false,
+        status: "pending",
+        uniqueValues,
+        createPicklistValues: uniqueValues.length > 0
+      };
+    });
+    
+    setFieldConfigs(configs);
+  }, [columnNames, columnData]);
 
   const handleFieldChange = (index: number, field: Partial<FieldConfig>) => {
     const newConfigs = [...fieldConfigs];
@@ -72,6 +97,15 @@ export function BatchFieldCreation({
     // If name is updated, suggest an API name
     if (field.name) {
       newConfigs[index].apiName = field.name.toLowerCase().replace(/[^a-z0-9_]/g, '_');
+    }
+    
+    // Reset picklist values creation flag when data type changes
+    if (field.dataType && field.dataType !== 'picklist') {
+      newConfigs[index].createPicklistValues = false;
+    } else if (field.dataType === 'picklist') {
+      // Enable picklist values creation by default if there are unique values
+      newConfigs[index].createPicklistValues = newConfigs[index].uniqueValues && 
+        newConfigs[index].uniqueValues.length > 0;
     }
     
     setFieldConfigs(newConfigs);
@@ -151,6 +185,48 @@ export function BatchFieldCreation({
             columnName: config.columnName,
             fieldId: field.id
           });
+          
+          // If it's a picklist field and we need to create picklist values
+          if (config.dataType === "picklist" && 
+              config.createPicklistValues && 
+              config.uniqueValues && 
+              config.uniqueValues.length > 0) {
+            
+            // Update status for picklist values creation
+            newConfigs[i].picklistValuesStatus = "creating";
+            setFieldConfigs([...newConfigs]);
+            
+            try {
+              // Create picklist values for this field
+              const success = await addBatchPicklistValues(field.id, config.uniqueValues);
+              
+              if (success) {
+                newConfigs[i].picklistValuesStatus = "success";
+                toast({
+                  title: "Success",
+                  description: `Created ${config.uniqueValues.length} picklist values for '${config.name}'`,
+                });
+              } else {
+                newConfigs[i].picklistValuesStatus = "error";
+                toast({
+                  title: "Warning",
+                  description: `Some picklist values for '${config.name}' could not be created`,
+                  variant: "destructive",
+                });
+              }
+            } catch (error) {
+              console.error("Error creating picklist values:", error);
+              newConfigs[i].picklistValuesStatus = "error";
+              toast({
+                title: "Error",
+                description: `Failed to create picklist values for '${config.name}'`,
+                variant: "destructive",
+              });
+            }
+            
+            setFieldConfigs([...newConfigs]);
+          }
+          
         } catch (error) {
           console.error("Error creating field:", error);
           newConfigs[i].status = "error";
@@ -194,6 +270,71 @@ export function BatchFieldCreation({
     { value: "checkbox", label: "Checkbox" },
     { value: "picklist", label: "Picklist" }
   ];
+
+  // Function to render picklist values preview and toggle
+  const renderPicklistValuesSection = (config: FieldConfig, index: number) => {
+    if (config.dataType !== "picklist" || !config.uniqueValues || config.uniqueValues.length === 0) {
+      return null;
+    }
+
+    return (
+      <div className="mt-2 space-y-2">
+        <div className="flex justify-between items-center">
+          <div className="flex items-center space-x-2">
+            <Switch
+              checked={config.createPicklistValues || false}
+              onCheckedChange={(checked) => 
+                handleFieldChange(index, { createPicklistValues: checked })}
+              disabled={isCreating || config.status === "success"}
+            />
+            <Label>Create picklist values automatically</Label>
+          </div>
+          <Badge variant="outline">
+            {config.uniqueValues.length} unique values found
+          </Badge>
+        </div>
+        
+        {config.createPicklistValues && (
+          <div className="border rounded-md p-2 bg-muted/30">
+            <p className="text-xs text-muted-foreground mb-1">Preview of values:</p>
+            <ScrollArea className="h-20">
+              <div className="flex flex-wrap gap-1">
+                {config.uniqueValues.map((value, i) => (
+                  <Badge key={i} variant="outline" className="bg-background">
+                    {value}
+                  </Badge>
+                ))}
+              </div>
+            </ScrollArea>
+          </div>
+        )}
+        
+        {/* Status indicator for picklist values creation */}
+        {config.status === "success" && config.picklistValuesStatus && (
+          <div className="text-sm">
+            {config.picklistValuesStatus === "creating" && (
+              <div className="flex items-center space-x-2 text-muted-foreground">
+                <Loader2 className="h-3 w-3 animate-spin" />
+                <span>Creating picklist values...</span>
+              </div>
+            )}
+            {config.picklistValuesStatus === "success" && (
+              <div className="flex items-center space-x-2 text-green-500">
+                <Check className="h-3 w-3" />
+                <span>Picklist values created</span>
+              </div>
+            )}
+            {config.picklistValuesStatus === "error" && (
+              <div className="flex items-center space-x-2 text-destructive">
+                <AlertTriangle className="h-3 w-3" />
+                <span>Error creating some picklist values</span>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div className="space-y-4">
@@ -242,22 +383,27 @@ export function BatchFieldCreation({
                     />
                   </TableCell>
                   <TableCell>
-                    <Select
-                      value={config.dataType}
-                      onValueChange={(value) => handleFieldChange(index, { dataType: value })}
-                      disabled={isCreating || config.status === "success"}
-                    >
-                      <SelectTrigger className="w-[180px]">
-                        <SelectValue placeholder="Select type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {dataTypeOptions.map(option => (
-                          <SelectItem key={option.value} value={option.value}>
-                            {option.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <div className="space-y-2">
+                      <Select
+                        value={config.dataType}
+                        onValueChange={(value) => handleFieldChange(index, { dataType: value })}
+                        disabled={isCreating || config.status === "success"}
+                      >
+                        <SelectTrigger className="w-[180px]">
+                          <SelectValue placeholder="Select type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {dataTypeOptions.map(option => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      
+                      {/* Render picklist values section if applicable */}
+                      {renderPicklistValuesSection(config, index)}
+                    </div>
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center space-x-2">

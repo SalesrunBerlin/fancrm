@@ -37,6 +37,7 @@ export default function ImportRecordsPage() {
   const [step, setStep] = useState<"paste" | "mapping" | "batch-field-creation" | "importing">("paste");
   const [activeTab, setActiveTab] = useState<"paste" | "example">("paste");
   const [unmappedColumns, setUnmappedColumns] = useState<string[]>([]);
+  const [columnData, setColumnData] = useState<{ [columnName: string]: string[] }>({});
   
   const { objectTypes } = useObjectTypes();
   const { fields, isLoading: isLoadingFields } = useRecordFields(objectTypeId);
@@ -56,6 +57,18 @@ export default function ImportRecordsPage() {
   useEffect(() => {
     if (importData && step === "paste") {
       setStep("mapping");
+      
+      // Extract column data for use in field creation
+      if (importData.headers && importData.rows) {
+        const extractedData: { [columnName: string]: string[] } = {};
+        
+        importData.headers.forEach((header, columnIndex) => {
+          // Get all values from this column
+          extractedData[header] = importData.rows.map(row => row[columnIndex] || '');
+        });
+        
+        setColumnData(extractedData);
+      }
     }
   }, [importData]);
 
@@ -357,6 +370,7 @@ export default function ImportRecordsPage() {
             <BatchFieldCreation
               objectTypeId={objectTypeId!}
               columnNames={unmappedColumns}
+              columnData={columnData}
               onComplete={handleBatchFieldCreationComplete}
               onCancel={handleBatchFieldCreationCancel}
             />
