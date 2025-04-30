@@ -10,6 +10,7 @@ import { ArrowLeft, List, Plus, Trash2, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { DeleteDialog } from "@/components/common/DeleteDialog";
 import { toast } from "sonner";
+import { DefaultFieldSelector } from "@/components/settings/DefaultFieldSelector";
 
 export default function ObjectTypeDetail() {
   const { objectTypeId } = useParams<{ objectTypeId: string }>();
@@ -89,6 +90,15 @@ export default function ObjectTypeDetail() {
     setIsDeleteObjectDialogOpen(false);
   };
 
+  const handleUpdateDefaultField = async (fieldApiName: string) => {
+    if (!objectTypeId) return;
+    
+    await updateObjectType.mutateAsync({
+      id: objectTypeId,
+      default_field_api_name: fieldApiName
+    });
+  };
+
   // Check if the current user owns this object
   const isPublishedByOthers = publishedObjects?.some(obj => obj.id === objectTypeId) || false;
 
@@ -133,6 +143,15 @@ export default function ObjectTypeDetail() {
           </>
         }
       />
+      
+      {/* Only show the field selector for objects that can be edited */}
+      {!isPublishedByOthers && !currentObjectType.is_system && fields && (
+        <DefaultFieldSelector
+          objectType={currentObjectType}
+          fields={fields}
+          onUpdateDefaultField={handleUpdateDefaultField}
+        />
+      )}
       
       <ObjectFieldsList 
         fields={fields || []} 
