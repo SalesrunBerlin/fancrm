@@ -77,7 +77,8 @@ export function useObjectFields(objectTypeId?: string) {
         query = query.or(`is_system.eq.true,owner_id.eq.${user?.id}`);
       }
 
-      const { data, error } = await query.order("display_order");
+      // Changed from const to let to allow reassignment
+      let { data, error } = await query.order("display_order");
 
       if (error) {
         console.error("Error fetching fields:", error);
