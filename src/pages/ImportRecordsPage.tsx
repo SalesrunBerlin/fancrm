@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { PageHeader } from "@/components/ui/page-header";
@@ -28,13 +27,14 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ObjectField } from "@/hooks/useObjectTypes";
 import { BatchFieldCreation } from "@/components/import/BatchFieldCreation";
+import { DuplicateRecordsResolver } from "@/components/import/DuplicateRecordsResolver";
 
 export default function ImportRecordsPage() {
   const { objectTypeId } = useParams<{ objectTypeId: string }>();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [pastedText, setPastedText] = useState("");
-  const [step, setStep] = useState<"paste" | "mapping" | "batch-field-creation" | "importing">("paste");
+  const [step, setStep] = useState<"paste" | "mapping" | "duplicate-check" | "batch-field-creation" | "importing">("paste");
   const [activeTab, setActiveTab] = useState<"paste" | "example">("paste");
   const [unmappedColumns, setUnmappedColumns] = useState<string[]>([]);
   const [columnData, setColumnData] = useState<{ [columnName: string]: string[] }>({});
@@ -46,11 +46,17 @@ export default function ImportRecordsPage() {
   const { 
     importData, 
     columnMappings, 
-    isImporting, 
+    isImporting,
+    duplicates,
+    matchingFields,
+    isDuplicateCheckCompleted, 
     parseImportText, 
     updateColumnMapping, 
     importRecords,
-    clearImportData
+    clearImportData,
+    checkForDuplicates,
+    updateMatchingFields,
+    updateDuplicateAction
   } = useImportRecords(objectTypeId!, fields || []);
 
   // Check if we have import data and move to mapping step
@@ -125,6 +131,31 @@ export default function ImportRecordsPage() {
     }
   };
 
+  const handleCheckForDuplicates = async () => {
+    // Set default matching fields if none are selected
+    if (matchingFields.length === 0 && fields) {
+      // Find the first text/email field to use as default matching field
+      const defaultField = fields.find(f => 
+        ["text", "email"].includes(f.data_type)
+      );
+      
+      if (defaultField) {
+        updateMatchingFields([defaultField.api_name]);
+      }
+    }
+    
+    const hasDuplicates = await checkForDuplicates();
+    
+    // If duplicates were found, show the duplicate check step
+    // Otherwise, move straight to importing
+    if (hasDuplicates) {
+      setStep("duplicate-check");
+    } else {
+      setStep("importing");
+      importRecords();
+    }
+  };
+
   const handleImport = async () => {
     setStep("importing");
     const result = await importRecords();
@@ -173,6 +204,11 @@ export default function ImportRecordsPage() {
 
   const handleBatchFieldCreationCancel = () => {
     setStep("mapping");
+  };
+
+  const handleDuplicateResolutionContinue = () => {
+    setStep("importing");
+    importRecords();
   };
 
   const handleCreateNewField = (columnIndex: number) => {
@@ -357,13 +393,27 @@ export default function ImportRecordsPage() {
                   Back
                 </Button>
                 <Button 
-                  onClick={handleImport} 
+                  onClick={handleCheckForDuplicates} 
                   disabled={getMappedCount() === 0}
                 >
-                  Import Records
+                  Continue
                 </Button>
               </div>
             </div>
+          )}
+
+          {step === "duplicate-check" && duplicates.length > 0 && importData && (
+            <DuplicateRecordsResolver 
+              duplicates={duplicates}
+              fields={fields || []}
+              matchingFields={matchingFields}
+              columnMappings={columnMappings}
+              importData={importData}
+              onSetAction={updateDuplicateAction}
+              onUpdateMatchingFields={updateMatchingFields}
+              onContinue={handleDuplicateResolutionContinue}
+              onBack={() => setStep("mapping")}
+            />
           )}
 
           {step === "batch-field-creation" && unmappedColumns.length > 0 && (

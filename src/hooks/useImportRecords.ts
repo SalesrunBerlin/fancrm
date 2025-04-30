@@ -1,3 +1,4 @@
+
 import { useState, useCallback, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { ObjectField } from "@/hooks/useObjectTypes";
@@ -5,6 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { parseMultiFormatDate } from "@/lib/utils";
+import { useObjectRecords, ObjectRecord } from "@/hooks/useObjectRecords";
 
 interface ImportData {
   headers: string[];
@@ -17,15 +19,25 @@ interface ColumnMapping {
   targetField: ObjectField | null;
 }
 
+interface DuplicateRecord {
+  importRowIndex: number;
+  existingRecord: ObjectRecord;
+  matchingFields: string[];
+  action: 'create' | 'update';
+}
+
 const STORAGE_KEY_PREFIX = 'import_data_';
 
 export function useImportRecords(objectTypeId: string, fields: ObjectField[]) {
   const [importData, setImportData] = useState<ImportData | null>(null);
   const [columnMappings, setColumnMappings] = useState<ColumnMapping[]>([]);
   const [isImporting, setIsImporting] = useState(false);
+  const [duplicates, setDuplicates] = useState<DuplicateRecord[]>([]);
+  const [matchingFields, setMatchingFields] = useState<string[]>([]);
+  const [isDuplicateCheckCompleted, setIsDuplicateCheckCompleted] = useState(false);
   const queryClient = useQueryClient();
   const { user } = useAuth();
-
+  
   // Load cached import data when component mounts
   useEffect(() => {
     if (objectTypeId) {
@@ -52,6 +64,11 @@ export function useImportRecords(objectTypeId: string, fields: ObjectField[]) {
           } else {
             setColumnMappings(cachedData.columnMappings || []);
           }
+          
+          // Restore matching fields if available
+          if (cachedData.matchingFields) {
+            setMatchingFields(cachedData.matchingFields);
+          }
         } catch (error) {
           console.error("Error restoring cached import data:", error);
         }
@@ -64,10 +81,11 @@ export function useImportRecords(objectTypeId: string, fields: ObjectField[]) {
     if (objectTypeId && importData) {
       localStorage.setItem(`${STORAGE_KEY_PREFIX}${objectTypeId}`, JSON.stringify({
         importData,
-        columnMappings
+        columnMappings,
+        matchingFields
       }));
     }
-  }, [objectTypeId, importData, columnMappings]);
+  }, [objectTypeId, importData, columnMappings, matchingFields]);
 
   // Parse pasted text into a structured format
   const parseImportText = useCallback((text: string) => {
@@ -145,7 +163,129 @@ export function useImportRecords(objectTypeId: string, fields: ObjectField[]) {
     localStorage.removeItem(`${STORAGE_KEY_PREFIX}${objectTypeId}`);
     setImportData(null);
     setColumnMappings([]);
+    setDuplicates([]);
+    setIsDuplicateCheckCompleted(false);
   }, [objectTypeId]);
+
+  // Update matching fields for duplicate detection
+  const updateMatchingFields = useCallback((fieldApiNames: string[]) => {
+    setMatchingFields(fieldApiNames);
+    
+    // Cache the updated matching fields
+    if (importData) {
+      const cachedDataStr = localStorage.getItem(`${STORAGE_KEY_PREFIX}${objectTypeId}`);
+      if (cachedDataStr) {
+        try {
+          const cachedData = JSON.parse(cachedDataStr);
+          localStorage.setItem(`${STORAGE_KEY_PREFIX}${objectTypeId}`, JSON.stringify({
+            ...cachedData,
+            matchingFields: fieldApiNames
+          }));
+        } catch (error) {
+          console.error("Error updating cached matching fields:", error);
+        }
+      }
+    }
+  }, [importData, objectTypeId]);
+
+  // Update action for a duplicate record
+  const updateDuplicateAction = useCallback((rowIndex: number, action: 'create' | 'update') => {
+    setDuplicates(prev => prev.map(duplicate => 
+      duplicate.importRowIndex === rowIndex 
+        ? { ...duplicate, action }
+        : duplicate
+    ));
+  }, []);
+
+  // Check for duplicates based on matching fields
+  const checkForDuplicates = useCallback(async () => {
+    if (!importData || !columnMappings || !objectTypeId || !matchingFields.length) {
+      return false;
+    }
+    
+    try {
+      // Get all existing records for this object type
+      const { data: existingRecords, error } = await supabase
+        .from('object_records')
+        .select(`
+          *,
+          field_values:object_field_values(field_api_name, value)
+        `)
+        .eq('object_type_id', objectTypeId);
+
+      if (error) throw error;
+      
+      if (!existingRecords || existingRecords.length === 0) {
+        // No existing records, so no duplicates
+        setIsDuplicateCheckCompleted(true);
+        return false;
+      }
+      
+      // Process the records into a more usable format
+      const processedExistingRecords = existingRecords.map((record: any) => {
+        const fieldValues = record.field_values.reduce((acc: any, fv: any) => {
+          acc[fv.field_api_name] = fv.value;
+          return acc;
+        }, {});
+        
+        return { ...record, field_values: fieldValues };
+      });
+      
+      // Check each import row against existing records
+      const foundDuplicates: DuplicateRecord[] = [];
+      
+      importLoop: for (let rowIndex = 0; rowIndex < importData.rows.length; rowIndex++) {
+        const importRow = importData.rows[rowIndex];
+        
+        // Build a map of field values for the current import row
+        const importRowFieldValues: Record<string, string> = {};
+        columnMappings.forEach(mapping => {
+          if (mapping.targetField) {
+            importRowFieldValues[mapping.targetField.api_name] = importRow[mapping.sourceColumnIndex] || '';
+          }
+        });
+        
+        // Check against each existing record
+        for (const existingRecord of processedExistingRecords) {
+          const matchingFieldsList: string[] = [];
+          
+          // Check each matching field
+          for (const fieldApiName of matchingFields) {
+            const importValue = importRowFieldValues[fieldApiName] || '';
+            const existingValue = existingRecord.field_values[fieldApiName] || '';
+            
+            // If values match (case-insensitive)
+            if (importValue.trim().toLowerCase() === existingValue.trim().toLowerCase() && importValue !== '') {
+              matchingFieldsList.push(fieldApiName);
+            }
+          }
+          
+          // If all specified matching fields match, consider it a duplicate
+          if (matchingFieldsList.length === matchingFields.length) {
+            foundDuplicates.push({
+              importRowIndex: rowIndex,
+              existingRecord,
+              matchingFields: matchingFieldsList,
+              action: 'create' // Default action is create
+            });
+            
+            // Found a duplicate for this row, so move to the next import row
+            continue importLoop;
+          }
+        }
+      }
+      
+      setDuplicates(foundDuplicates);
+      setIsDuplicateCheckCompleted(true);
+      
+      // Return true if duplicates found, false otherwise
+      return foundDuplicates.length > 0;
+    } catch (error) {
+      console.error("Error checking for duplicates:", error);
+      toast.error("Failed to check for duplicate records");
+      return false;
+    }
+  }, [importData, columnMappings, objectTypeId, matchingFields]);
 
   // Import the records to the database
   const importRecords = useCallback(async () => {
@@ -157,33 +297,26 @@ export function useImportRecords(objectTypeId: string, fields: ObjectField[]) {
     setIsImporting(true);
     let successCount = 0;
     let errorCount = 0;
+    let updateCount = 0;
 
     try {
+      // Get map of row indices to duplicate actions
+      const duplicateActionsMap = duplicates.reduce((map, duplicate) => {
+        map[duplicate.importRowIndex] = duplicate;
+        return map;
+      }, {} as Record<number, DuplicateRecord>);
+      
       // Process each row of data
-      for (const row of importData.rows) {
+      for (let rowIndex = 0; rowIndex < importData.rows.length; rowIndex++) {
+        const row = importData.rows[rowIndex];
+        
         try {
-          console.log("Importing row with owner_id:", user.id);
+          // Check if this row is marked for update
+          const duplicateInfo = duplicateActionsMap[rowIndex];
+          const shouldUpdate = duplicateInfo && duplicateInfo.action === 'update';
           
-          // Create a new record in object_records
-          const { data: recordData, error: recordError } = await supabase
-            .from('object_records')
-            .insert({
-              object_type_id: objectTypeId,
-              owner_id: user.id  // Explicitly set the owner_id to the current user's ID
-            })
-            .select('id')
-            .single();
-
-          if (recordError) {
-            console.error("Error creating record:", recordError);
-            throw recordError;
-          }
-          
-          const recordId = recordData.id;
-          console.log("Created record with ID:", recordId);
-
-          // Create field values for each mapped column
-          const fieldValues = [];
+          // Create field values for this row
+          const fieldValues: Record<string, string> = {};
           for (const mapping of columnMappings) {
             if (mapping.targetField) {
               let value = row[mapping.sourceColumnIndex] || '';
@@ -193,37 +326,109 @@ export function useImportRecords(objectTypeId: string, fields: ObjectField[]) {
                 const parsedDate = parseMultiFormatDate(value);
                 if (parsedDate) {
                   value = parsedDate;
-                  console.log(`Parsed date "${value}" to "${parsedDate}"`);
-                } else if (value) {
-                  // If we couldn't parse but there was a value, log a warning
-                  console.warn(`Could not parse date value: "${value}"`);
                 }
               }
               
-              fieldValues.push({
-                record_id: recordId,
-                field_api_name: mapping.targetField.api_name,
-                value
-              });
-            }
-          }
-
-          // Insert field values
-          if (fieldValues.length > 0) {
-            console.log("Inserting field values:", fieldValues);
-            const { error: valuesError } = await supabase
-              .from('object_field_values')
-              .insert(fieldValues);
-
-            if (valuesError) {
-              console.error("Error inserting field values:", valuesError);
-              throw valuesError;
+              fieldValues[mapping.targetField.api_name] = value;
             }
           }
           
-          successCount++;
+          if (shouldUpdate) {
+            // Update existing record
+            const recordId = duplicateInfo.existingRecord.id;
+            
+            console.log("Updating existing record:", recordId, "with values:", fieldValues);
+            
+            // Update the field values
+            const fieldValuesArray = Object.entries(fieldValues).map(([field_api_name, value]) => ({
+              record_id: recordId,
+              field_api_name,
+              value
+            }));
+            
+            for (const fieldValue of fieldValuesArray) {
+              // Check if field value already exists
+              const { data: existingValue } = await supabase
+                .from('object_field_values')
+                .select('*')
+                .eq('record_id', recordId)
+                .eq('field_api_name', fieldValue.field_api_name)
+                .single();
+              
+              if (existingValue) {
+                // Update existing field value
+                const { error } = await supabase
+                  .from('object_field_values')
+                  .update({ value: fieldValue.value })
+                  .eq('record_id', recordId)
+                  .eq('field_api_name', fieldValue.field_api_name);
+                
+                if (error) throw error;
+              } else {
+                // Insert new field value
+                const { error } = await supabase
+                  .from('object_field_values')
+                  .insert(fieldValue);
+                
+                if (error) throw error;
+              }
+            }
+            
+            // Update the record's updated_at timestamp
+            const { error: recordUpdateError } = await supabase
+              .from('object_records')
+              .update({ updated_at: new Date().toISOString() })
+              .eq('id', recordId);
+            
+            if (recordUpdateError) throw recordUpdateError;
+            
+            updateCount++;
+            successCount++;
+          } else {
+            // Create a new record
+            console.log("Creating new record with owner_id:", user.id);
+            
+            // Create a new record in object_records
+            const { data: recordData, error: recordError } = await supabase
+              .from('object_records')
+              .insert({
+                object_type_id: objectTypeId,
+                owner_id: user.id
+              })
+              .select('id')
+              .single();
+
+            if (recordError) {
+              console.error("Error creating record:", recordError);
+              throw recordError;
+            }
+            
+            const recordId = recordData.id;
+            console.log("Created record with ID:", recordId);
+
+            // Insert field values
+            const fieldValuesArray = Object.entries(fieldValues).map(([field_api_name, value]) => ({
+              record_id: recordId,
+              field_api_name,
+              value
+            }));
+            
+            if (fieldValuesArray.length > 0) {
+              console.log("Inserting field values:", fieldValuesArray);
+              const { error: valuesError } = await supabase
+                .from('object_field_values')
+                .insert(fieldValuesArray);
+
+              if (valuesError) {
+                console.error("Error inserting field values:", valuesError);
+                throw valuesError;
+              }
+            }
+            
+            successCount++;
+          }
         } catch (error) {
-          console.error("Error importing row:", error);
+          console.error("Error processing row:", error);
           errorCount++;
         }
       }
@@ -233,29 +438,35 @@ export function useImportRecords(objectTypeId: string, fields: ObjectField[]) {
       
       // Show success message
       toast.success(
-        `Import completed: ${successCount} records imported${errorCount > 0 ? `, ${errorCount} failed` : ''}`
+        `Import completed: ${successCount} records processed (${successCount - updateCount} created, ${updateCount} updated)${errorCount > 0 ? `, ${errorCount} failed` : ''}`
       );
       
       // Clear cached import data after successful import
       clearImportData();
       
-      return { success: successCount, errors: errorCount };
+      return { success: successCount, updated: updateCount, errors: errorCount };
     } catch (error) {
       console.error("Import error:", error);
       toast.error("Failed to import records");
-      return { success: 0, errors: importData.rows.length };
+      return { success: 0, updated: 0, errors: importData.rows.length };
     } finally {
       setIsImporting(false);
     }
-  }, [importData, objectTypeId, columnMappings, queryClient, user, clearImportData]);
+  }, [importData, objectTypeId, columnMappings, queryClient, user, duplicates, clearImportData]);
 
   return {
-    importData,
-    columnMappings,
+    importData, 
+    columnMappings, 
     isImporting,
+    duplicates,
+    matchingFields,
+    isDuplicateCheckCompleted,
     parseImportText,
     updateColumnMapping,
     importRecords,
-    clearImportData
+    clearImportData,
+    checkForDuplicates,
+    updateMatchingFields,
+    updateDuplicateAction
   };
 }
