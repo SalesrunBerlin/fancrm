@@ -27,12 +27,37 @@ export function useObjectFields(objectTypeId?: string) {
   const { data: fields, isLoading } = useQuery({
     queryKey: ["object-fields", objectTypeId],
     queryFn: async (): Promise<ObjectField[]> => {
-      const { data, error } = await supabase
+      const { data: objectType, error: objectError } = await supabase
+        .from("object_types")
+        .select("is_template, source_object_id, is_published, owner_id")
+        .eq("id", objectTypeId)
+        .single();
+
+      if (objectError) {
+        console.error("Error fetching object type:", objectError);
+        throw objectError;
+      }
+
+      // Check if this is an imported object (template) or public object
+      const isTemplateOrPublished = objectType.is_template || objectType.is_published;
+      const isOwnedByOthers = objectType.owner_id !== user?.id;
+
+      let query = supabase
         .from("object_fields")
         .select("*")
-        .eq("object_type_id", objectTypeId)
-        .or(`is_system.eq.true,owner_id.eq.${user?.id}`)
-        .order("display_order");
+        .eq("object_type_id", objectTypeId);
+
+      // If the object is a template/published and not owned by the current user,
+      // we don't need to filter by owner_id (show all fields)
+      if (isTemplateOrPublished && isOwnedByOthers) {
+        // No additional filters needed - show all fields for this object
+      } else {
+        // For regular objects or objects owned by the current user,
+        // use the original filter logic
+        query = query.or(`is_system.eq.true,owner_id.eq.${user?.id}`);
+      }
+
+      const { data, error } = await query.order("display_order");
 
       if (error) {
         console.error("Error fetching fields:", error);
