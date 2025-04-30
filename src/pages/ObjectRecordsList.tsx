@@ -16,13 +16,13 @@ import { useViewMode, ViewMode } from "@/hooks/useViewMode";
 import { ObjectField } from "@/hooks/useObjectTypes";
 import { DeleteDialog } from "@/components/common/DeleteDialog";
 import { toast } from "sonner";
-import { Toggle } from "@/components/ui/toggle";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { KanbanSkeleton } from "@/components/records/KanbanSkeleton";
 
 export default function ObjectRecordsList() {
   const { objectTypeId } = useParams<{ objectTypeId: string }>();
   const { objectTypes } = useObjectTypes();
-  const { records, isLoading, deleteRecord } = useObjectRecords(objectTypeId);
+  const { records, isLoading, deleteRecord, refetch } = useObjectRecords(objectTypeId);
   const { fields, isLoading: isLoadingFields } = useRecordFields(objectTypeId);
   const objectType = objectTypes?.find(type => type.id === objectTypeId);
   const [allRecords, setAllRecords] = useState<any[]>([]);
@@ -135,6 +135,14 @@ export default function ObjectRecordsList() {
     updateGroupingField(fieldApiName);
   };
 
+  // Handler for when a record is moved in Kanban view
+  const handleRecordMoved = () => {
+    // Refresh data after a short delay to allow the database update to complete
+    setTimeout(() => {
+      refetch();
+    }, 500);
+  };
+
   if (!objectType) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -216,9 +224,13 @@ export default function ObjectRecordsList() {
 
       <Card className="overflow-hidden">
         {isLoading || isLoadingFields ? (
-          <div className="flex justify-center py-8">
-            <Loader2 className="h-8 w-8 animate-spin" />
-          </div>
+          viewMode === "table" ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin" />
+            </div>
+          ) : (
+            <KanbanSkeleton />
+          )
         ) : viewMode === "table" ? (
           <RecordsTable 
             records={allRecords} 

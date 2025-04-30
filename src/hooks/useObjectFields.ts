@@ -16,6 +16,7 @@ export interface CreateFieldInput {
     display_field_api_name?: string;
     [key: string]: any;
   };
+  description?: string; // Make description optional
 }
 
 export function useObjectFields(objectTypeId?: string) {

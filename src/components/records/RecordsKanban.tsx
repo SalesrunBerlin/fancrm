@@ -11,6 +11,8 @@ import { Eye, Edit } from "lucide-react";
 import { useFieldPicklistValues } from "@/hooks/useFieldPicklistValues";
 import { format } from "date-fns";
 import { LookupValueDisplay } from "./LookupValueDisplay";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface RecordsKanbanProps {
   records: ObjectRecord[];
@@ -40,6 +42,7 @@ export function RecordsKanban({
   const { picklistValues, isLoading: loadingPicklistValues } = useFieldPicklistValues(
     selectedField?.id || ''
   );
+  const [isUpdating, setIsUpdating] = useState(false);
 
   // Find the selected field based on groupingField
   useEffect(() => {
@@ -135,21 +138,107 @@ export function RecordsKanban({
     return "—";
   };
 
-  const handleDragEnd = (result: any) => {
-    // In a real application, we would update the record's field value here
-    // For now, we'll just log the result
-    console.log('Drag ended', result);
+  // Update record field value in database
+  const updateRecordFieldValue = async (recordId: string, fieldApiName: string, value: string) => {
+    setIsUpdating(true);
     
-    // Implementation could include:
-    // 1. Update the record's field value in Supabase
-    // 2. Refresh the data or update state
-    if (!result.destination) return;
+    try {
+      // First check if the record already has field_values data
+      const { data: recordData } = await supabase
+        .from("object_records")
+        .select("id")
+        .eq("id", recordId)
+        .single();
+        
+      if (!recordData) {
+        throw new Error("Record not found");
+      }
+
+      // Update the field value in record_field_values table
+      const { data, error } = await supabase
+        .from("record_field_values")
+        .upsert([
+          {
+            record_id: recordId,
+            field_id: selectedField!.id,
+            value: JSON.stringify(value)
+          }
+        ]);
+
+      if (error) throw error;
+      
+      toast.success(`Record updated successfully`);
+      return true;
+    } catch (error) {
+      console.error("Error updating record:", error);
+      toast.error("Failed to update record");
+      return false;
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleDragEnd = async (result: any) => {
+    const { destination, source, draggableId } = result;
     
-    const sourceColumn = result.source.droppableId;
-    const destinationColumn = result.destination.droppableId;
-    const recordId = result.draggableId;
+    // If dropped outside of any droppable area or dropped in the same place
+    if (!destination || 
+        (destination.droppableId === source.droppableId && 
+         destination.index === source.index)) {
+      return;
+    }
     
-    console.log(`Moving record ${recordId} from ${sourceColumn} to ${destinationColumn}`);
+    const sourceColumnId = source.droppableId;
+    const destinationColumnId = destination.droppableId;
+    const recordId = draggableId;
+    
+    if (selectedField && destinationColumnId !== sourceColumnId) {
+      // Create a new array of columns with the dragged card moved
+      const updatedColumns = columns.map(column => {
+        // Remove the record from the source column
+        if (column.id === sourceColumnId) {
+          return {
+            ...column,
+            records: column.records.filter(record => record.id !== recordId)
+          };
+        }
+        
+        // Add the record to the destination column
+        if (column.id === destinationColumnId) {
+          const recordToMove = records.find(record => record.id === recordId);
+          if (recordToMove) {
+            // Update the record with the new value (column id)
+            const newRecord = {
+              ...recordToMove,
+              field_values: {
+                ...recordToMove.field_values,
+                [selectedField.api_name]: destinationColumnId === "other" ? null : destinationColumnId
+              }
+            };
+            
+            return {
+              ...column,
+              records: [...column.records, newRecord]
+            };
+          }
+        }
+        
+        return column;
+      });
+      
+      // Optimistically update the UI
+      setColumns(updatedColumns);
+      
+      // Save the change to the database
+      const success = await updateRecordFieldValue(
+        recordId, 
+        selectedField.api_name, 
+        destinationColumnId === "other" ? "" : destinationColumnId
+      );
+      
+      // If the update fails, revert the UI change by re-fetching data
+      // This part is handled by the query invalidation in the parent component
+    }
   };
 
   if (!selectedField) {
@@ -201,6 +290,7 @@ export function RecordsKanban({
                         key={record.id}
                         draggableId={record.id}
                         index={index}
+                        isDragDisabled={isUpdating}
                       >
                         {(provided) => (
                           <Card
