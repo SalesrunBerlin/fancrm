@@ -7,6 +7,7 @@ import { useUnusedPicklistValues } from "@/hooks/useUnusedPicklistValues";
 import { usePicklistCreation } from "@/hooks/usePicklistCreation";
 import { Loader2, Star, AlertTriangle, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface PicklistSuggestionsDialogProps {
   isOpen: boolean;
@@ -26,6 +27,7 @@ export function PicklistSuggestionsDialog({
   
   const { unusedValues, isLoading, refetch, isError, error } = useUnusedPicklistValues(objectTypeId, fieldId);
   const { addBatchPicklistValues } = usePicklistCreation(fieldId);
+  const { user } = useAuth();
   
   // Reset selected values when dialog opens or values change
   useEffect(() => {
@@ -54,14 +56,20 @@ export function PicklistSuggestionsDialog({
       return;
     }
     
+    if (!user) {
+      toast.error("You must be logged in to add picklist values");
+      return;
+    }
+    
     setIsAddingValues(true);
     try {
+      console.log(`Adding ${selectedValues.length} selected values to field ${fieldId}`);
       const success = await addBatchPicklistValues(null, selectedValues);
       if (success) {
         toast.success(`Added ${selectedValues.length} values to picklist`);
         onClose();
       } else {
-        toast.error("Failed to add some values");
+        toast.error("Failed to add values to picklist");
       }
     } catch (error) {
       console.error("Error adding picklist values:", error);
@@ -160,7 +168,7 @@ export function PicklistSuggestionsDialog({
           </Button>
           <Button 
             onClick={handleAddValues} 
-            disabled={selectedValues.length === 0 || isAddingValues || isLoading || isError}
+            disabled={selectedValues.length === 0 || isAddingValues || isLoading || isError || !user}
           >
             {isAddingValues && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Add Selected Values

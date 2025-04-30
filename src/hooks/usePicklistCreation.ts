@@ -3,13 +3,19 @@ import { useState } from 'react';
 import { useFieldPicklistValues } from './useFieldPicklistValues';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
 
 export function usePicklistCreation(fieldId: string | null) {
   const [isAddingValues, setIsAddingValues] = useState(false);
   const { addValue, removeValue, refetch } = useFieldPicklistValues(fieldId || '');
+  const { user } = useAuth();
 
   const addPicklistValue = async (value: string) => {
     if (!fieldId) return false;
+    if (!user) {
+      toast.error('You must be logged in to add picklist values');
+      return false;
+    }
     
     setIsAddingValues(true);
     try {
@@ -32,6 +38,10 @@ export function usePicklistCreation(fieldId: string | null) {
     const fieldToUse = targetFieldId || fieldId;
     
     if (!fieldToUse || values.length === 0) return false;
+    if (!user) {
+      toast.error('You must be logged in to add picklist values');
+      return false;
+    }
     
     setIsAddingValues(true);
     let successCount = 0;
@@ -48,7 +58,10 @@ export function usePicklistCreation(fieldId: string | null) {
         field_id: fieldToUse,
         value: value.trim(),
         label: value.trim(),
+        owner_id: user.id, // Explicitly set the owner_id to the current user's ID
       }));
+      
+      console.log('Inserting picklist values with owner_id:', user.id);
       
       // Insert in batches of 20 to avoid potential limitations
       const batchSize = 20;
@@ -74,10 +87,20 @@ export function usePicklistCreation(fieldId: string | null) {
       }
       
       console.log(`Batch picklist creation results - Success: ${successCount}, Errors: ${errorCount}`);
+      
+      if (errorCount > 0) {
+        if (errorCount === picklistValueObjects.length) {
+          toast.error('Failed to add any picklist values. Please check your permissions.');
+        } else {
+          toast.warning(`Added ${successCount} values, but ${errorCount} failed.`);
+        }
+        return successCount > 0;
+      }
+      
       return errorCount === 0; // Return true only if all values were added successfully
     } catch (error) {
       console.error('Error in batch picklist creation:', error);
-      toast.error('Failed to add some picklist values');
+      toast.error('Failed to add picklist values');
       return false;
     } finally {
       setIsAddingValues(false);
