@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { PageHeader } from "@/components/ui/page-header";
@@ -29,6 +30,7 @@ import { ObjectField } from "@/hooks/useObjectTypes";
 import { BatchFieldCreation } from "@/components/import/BatchFieldCreation";
 import { DuplicateRecordsResolver } from "@/components/import/DuplicateRecordsResolver";
 import { PreviewImportData } from "@/components/import/PreviewImportData";
+import { toast } from "sonner";
 
 export default function ImportRecordsPage() {
   const { objectTypeId } = useParams<{ objectTypeId: string }>();
@@ -51,14 +53,16 @@ export default function ImportRecordsPage() {
     isImporting,
     duplicates,
     matchingFields,
-    isDuplicateCheckCompleted, 
+    isDuplicateCheckCompleted,
+    duplicateCheckIntensity,
     parseImportText, 
     updateColumnMapping, 
     importRecords,
     clearImportData,
     checkForDuplicates,
     updateMatchingFields,
-    updateDuplicateAction
+    updateDuplicateAction,
+    updateDuplicateCheckIntensity
   } = useImportRecords(objectTypeId!, fields || []);
 
   // Check if we have import data and move to mapping step
@@ -137,27 +141,39 @@ export default function ImportRecordsPage() {
   };
 
   const handleCheckForDuplicates = async () => {
-    // Set default matching fields if none are selected
+    // Clear any previous duplicate check results
+    // Reset selected matching fields if none are selected
     if (matchingFields.length === 0 && fields) {
-      // Find the first text/email field to use as default matching field
-      const defaultField = fields.find(f => 
+      // Find potential matching fields - prioritize text and email fields
+      const potentialMatchFields = fields.filter(f => 
         ["text", "email"].includes(f.data_type)
-      );
+      ).slice(0, 2); // Take up to 2 fields for initial matching
       
-      if (defaultField) {
-        updateMatchingFields([defaultField.api_name]);
+      if (potentialMatchFields.length > 0) {
+        const fieldApiNames = potentialMatchFields.map(field => field.api_name);
+        toast.info(`Selected ${potentialMatchFields.map(f => f.name).join(", ")} as default fields for duplicate checking`);
+        updateMatchingFields(fieldApiNames);
       }
     }
     
-    const hasDuplicates = await checkForDuplicates();
-    
-    // If duplicates were found, show the duplicate check step
-    // Otherwise, move straight to importing
-    if (hasDuplicates) {
-      setStep("duplicate-check");
-    } else {
-      setStep("preview");
-    }
+    // Run duplicate check
+    toast.promise(
+      checkForDuplicates(),
+      {
+        loading: 'Checking for potential duplicates...',
+        success: (hasDuplicates) => {
+          // Move to appropriate step based on result
+          if (hasDuplicates) {
+            setStep("duplicate-check");
+            return `Found ${duplicates.length} potential duplicate records`;
+          } else {
+            setStep("preview");
+            return 'No duplicate records found';
+          }
+        },
+        error: 'Failed to check for duplicates'
+      }
+    );
   };
 
   const handlePreviewContinue = () => {
@@ -165,11 +181,40 @@ export default function ImportRecordsPage() {
     importSelectedRecords();
   };
 
+  const handleRecheckDuplicates = async () => {
+    // Run duplicate check again with updated settings
+    toast.promise(
+      checkForDuplicates(),
+      {
+        loading: 'Rechecking with new settings...',
+        success: (hasDuplicates) => {
+          if (hasDuplicates) {
+            return `Found ${duplicates.length} potential duplicate records with new settings`;
+          } else {
+            setStep("preview");
+            return 'No duplicate records found with new settings';
+          }
+        },
+        error: 'Failed to recheck for duplicates'
+      }
+    );
+  };
+
   const importSelectedRecords = async () => {
-    const result = await importRecords(selectedRows);
-    if (result) {
-      navigate(`/objects/${objectTypeId}`);
-    }
+    toast.promise(
+      importRecords(selectedRows),
+      {
+        loading: 'Importing records...',
+        success: (result) => {
+          if (result) {
+            navigate(`/objects/${objectTypeId}`);
+            return `Successfully imported ${result.success} records`;
+          }
+          return 'Import completed';
+        },
+        error: 'Failed to import records'
+      }
+    );
   };
 
   const getMappedCount = () => {
@@ -439,8 +484,11 @@ export default function ImportRecordsPage() {
               importData={importData}
               onSetAction={updateDuplicateAction}
               onUpdateMatchingFields={updateMatchingFields}
+              onUpdateDuplicateCheckIntensity={updateDuplicateCheckIntensity}
+              duplicateCheckIntensity={duplicateCheckIntensity}
               onContinue={handleDuplicateResolutionContinue}
               onBack={() => setStep("mapping")}
+              onRecheck={handleRecheckDuplicates}
             />
           )}
 

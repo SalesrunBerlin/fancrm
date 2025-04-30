@@ -12,19 +12,26 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Info, CheckSquare, Square, AlertTriangle } from "lucide-react";
+import { Info, CheckSquare, Square, AlertTriangle, Filter } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Badge } from "@/components/ui/badge";
 
 interface PreviewImportDataProps {
   importData: { headers: string[]; rows: string[][] };
   columnMappings: any[];
   selectedRows: number[];
-  duplicateRows?: number[];  // New prop for duplicate row indices
+  duplicateRows?: number[];  // Array of duplicate row indices
   onSelectRow: (rowIndex: number, selected: boolean) => void;
   onSelectAll: (selected: boolean) => void;
   onContinue: () => void;
@@ -41,6 +48,8 @@ export function PreviewImportData({
   onContinue,
   onBack
 }: PreviewImportDataProps) {
+  const [filterMode, setFilterMode] = useState<'all' | 'duplicates' | 'clean'>('all');
+  
   // Compute mapped columns to display
   const mappedColumns = columnMappings
     .filter(mapping => mapping.targetField !== null)
@@ -66,6 +75,19 @@ export function PreviewImportData({
 
   // Calculate counts for UI display
   const duplicateCount = duplicateRows.length;
+  
+  // Filter rows based on the selected filter mode
+  const filteredRowIndices = React.useMemo(() => {
+    switch (filterMode) {
+      case 'duplicates':
+        return importData.rows.map((_, index) => index).filter(index => duplicateRows.includes(index));
+      case 'clean':
+        return importData.rows.map((_, index) => index).filter(index => !duplicateRows.includes(index));
+      case 'all':
+      default:
+        return importData.rows.map((_, index) => index);
+    }
+  }, [importData.rows, duplicateRows, filterMode]);
 
   return (
     <div className="space-y-6">
@@ -83,13 +105,46 @@ export function PreviewImportData({
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-base">Import Preview</CardTitle>
-          <div className="text-sm">
-            {selectedRows.length} of {importData.rows.length} rows selected
+          <CardTitle className="text-base flex items-center">
+            Import Preview
             {duplicateCount > 0 && (
-              <span className="ml-3 text-amber-500">
-                {duplicateCount} potential {duplicateCount === 1 ? 'duplicate' : 'duplicates'}
-              </span>
+              <Badge variant="outline" className="ml-2 bg-amber-50 text-amber-700 border-amber-300">
+                <AlertTriangle className="h-3 w-3 mr-1" />
+                {duplicateCount} Duplicates
+              </Badge>
+            )}
+          </CardTitle>
+          <div className="flex items-center gap-4">
+            <div className="text-sm">
+              {selectedRows.length} of {importData.rows.length} rows selected
+              {duplicateCount > 0 && (
+                <span className="ml-3 text-amber-500">
+                  {duplicateCount} potential {duplicateCount === 1 ? 'duplicate' : 'duplicates'}
+                </span>
+              )}
+            </div>
+            
+            {duplicateCount > 0 && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="flex items-center">
+                    <Filter className="h-3.5 w-3.5 mr-1.5" />
+                    {filterMode === 'all' ? 'All Records' : 
+                     filterMode === 'duplicates' ? 'Duplicates Only' : 'Clean Records'}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => setFilterMode('all')}>
+                    Show All Records
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setFilterMode('duplicates')}>
+                    Show Duplicates Only
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setFilterMode('clean')}>
+                    Show Clean Records Only
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             )}
           </div>
         </CardHeader>
@@ -117,7 +172,7 @@ export function PreviewImportData({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {importData.rows.map((row, rowIndex) => {
+                {filteredRowIndices.map(rowIndex => {
                   const isSelected = selectedRows.includes(rowIndex);
                   const isDuplicate = duplicateRows.includes(rowIndex);
                   
@@ -126,7 +181,7 @@ export function PreviewImportData({
                       key={rowIndex}
                       className={`
                         ${isSelected ? "" : "opacity-60"} 
-                        ${isDuplicate ? "bg-amber-50 border-l-4 border-l-amber-500" : ""}
+                        ${isDuplicate ? "bg-amber-50 dark:bg-amber-900/20 border-l-4 border-l-amber-500" : ""}
                       `}
                     >
                       <TableCell>
@@ -158,13 +213,33 @@ export function PreviewImportData({
                         </div>
                       </TableCell>
                       {mappedColumns.map((column, colIndex) => (
-                        <TableCell key={colIndex}>
+                        <TableCell 
+                          key={colIndex}
+                          className={isDuplicate ? "relative" : ""}
+                        >
                           {getCellValue(rowIndex, column)}
                         </TableCell>
                       ))}
                     </TableRow>
                   );
                 })}
+                {filteredRowIndices.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={mappedColumns.length + 2} className="h-32 text-center">
+                      <div className="flex flex-col items-center justify-center text-muted-foreground">
+                        <Filter className="h-8 w-8 mb-2 opacity-40" />
+                        <p>No records match the current filter</p>
+                        <Button 
+                          variant="link" 
+                          size="sm"
+                          onClick={() => setFilterMode('all')}
+                        >
+                          Show all records
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
           </div>
@@ -189,6 +264,23 @@ export function PreviewImportData({
             <Square className="mr-2 h-4 w-4" />
             Deselect All
           </Button>
+          {duplicateCount > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                // Deselect all duplicate rows
+                duplicateRows.forEach(rowIndex => {
+                  if (selectedRows.includes(rowIndex)) {
+                    onSelectRow(rowIndex, false);
+                  }
+                });
+              }}
+            >
+              <AlertTriangle className="mr-2 h-4 w-4 text-amber-500" />
+              Deselect Duplicates
+            </Button>
+          )}
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={onBack}>

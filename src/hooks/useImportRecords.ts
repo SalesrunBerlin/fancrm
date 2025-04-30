@@ -35,6 +35,7 @@ export function useImportRecords(objectTypeId: string, fields: ObjectField[]) {
   const [duplicates, setDuplicates] = useState<DuplicateRecord[]>([]);
   const [matchingFields, setMatchingFields] = useState<string[]>([]);
   const [isDuplicateCheckCompleted, setIsDuplicateCheckCompleted] = useState(false);
+  const [duplicateCheckIntensity, setDuplicateCheckIntensity] = useState<'strict' | 'moderate' | 'lenient'>('moderate');
   const queryClient = useQueryClient();
   const { user } = useAuth();
   
@@ -188,6 +189,26 @@ export function useImportRecords(objectTypeId: string, fields: ObjectField[]) {
     }
   }, [importData, objectTypeId]);
 
+  // Update duplicate check intensity
+  const updateDuplicateCheckIntensity = useCallback((intensity: 'strict' | 'moderate' | 'lenient') => {
+    setDuplicateCheckIntensity(intensity);
+    // Also cache this setting
+    if (importData) {
+      const cachedDataStr = localStorage.getItem(`${STORAGE_KEY_PREFIX}${objectTypeId}`);
+      if (cachedDataStr) {
+        try {
+          const cachedData = JSON.parse(cachedDataStr);
+          localStorage.setItem(`${STORAGE_KEY_PREFIX}${objectTypeId}`, JSON.stringify({
+            ...cachedData,
+            duplicateCheckIntensity: intensity
+          }));
+        } catch (error) {
+          console.error("Error updating cached duplicate check intensity:", error);
+        }
+      }
+    }
+  }, [importData, objectTypeId]);
+
   // Update action for a duplicate record
   const updateDuplicateAction = useCallback((rowIndex: number, action: 'create' | 'update') => {
     setDuplicates(prev => prev.map(duplicate => 
@@ -197,13 +218,104 @@ export function useImportRecords(objectTypeId: string, fields: ObjectField[]) {
     ));
   }, []);
 
+  // Helper function to compare two values based on intensity setting
+  const compareValues = useCallback((value1: string, value2: string): boolean => {
+    // Normalize values for comparison
+    const v1 = value1.trim().toLowerCase();
+    const v2 = value2.trim().toLowerCase();
+    
+    // Skip comparison if either value is empty
+    if (!v1 || !v2) return false;
+    
+    switch (duplicateCheckIntensity) {
+      case 'strict':
+        // Strict: exact match after normalization
+        return v1 === v2;
+      
+      case 'moderate':
+        // Moderate: values are similar (contains or is contained)
+        return v1.includes(v2) || v2.includes(v1);
+      
+      case 'lenient':
+        // Lenient: check if one is a substring of the other or if Levenshtein distance is small
+        if (v1.includes(v2) || v2.includes(v1)) return true;
+        
+        // Simple implementation of Levenshtein distance for lenient matching
+        // Calculate distance as percentage of the longer string length
+        const distance = levenshteinDistance(v1, v2);
+        const maxLength = Math.max(v1.length, v2.length);
+        if (maxLength === 0) return true; // Both empty means match
+        const similarityPercentage = (maxLength - distance) / maxLength;
+        return similarityPercentage > 0.7; // 70% similarity threshold
+        
+      default:
+        return v1 === v2;
+    }
+  }, [duplicateCheckIntensity]);
+
+  // Helper function to calculate Levenshtein distance between two strings
+  const levenshteinDistance = (a: string, b: string): number => {
+    if (a.length === 0) return b.length;
+    if (b.length === 0) return a.length;
+    
+    const matrix: number[][] = [];
+    
+    // Initialize matrix
+    for (let i = 0; i <= b.length; i++) {
+      matrix[i] = [i];
+    }
+    for (let j = 0; j <= a.length; j++) {
+      matrix[0][j] = j;
+    }
+    
+    // Fill matrix
+    for (let i = 1; i <= b.length; i++) {
+      for (let j = 1; j <= a.length; j++) {
+        const cost = a[j - 1] === b[i - 1] ? 0 : 1;
+        matrix[i][j] = Math.min(
+          matrix[i - 1][j] + 1,       // deletion
+          matrix[i][j - 1] + 1,       // insertion
+          matrix[i - 1][j - 1] + cost // substitution
+        );
+      }
+    }
+    
+    return matrix[b.length][a.length];
+  };
+
   // Check for duplicates based on matching fields
   const checkForDuplicates = useCallback(async () => {
-    if (!importData || !columnMappings || !objectTypeId || !matchingFields.length) {
+    if (!importData || !columnMappings || !objectTypeId) {
       return false;
     }
     
     try {
+      // If no matching fields were selected, automatically select suitable fields
+      if (!matchingFields.length) {
+        console.log("No matching fields selected. Auto-selecting fields for duplicate check.");
+        
+        // Prioritize unique identifying fields like name, email, ID
+        const priorityFieldTypes = ['text', 'email', 'phone', 'url'];
+        const potentialMatchFields = fields
+          .filter(field => priorityFieldTypes.includes(field.data_type))
+          .map(field => field.api_name);
+        
+        if (potentialMatchFields.length) {
+          updateMatchingFields(potentialMatchFields.slice(0, 2)); // Use up to 2 fields
+          console.log("Auto-selected matching fields:", potentialMatchFields.slice(0, 2));
+        } else {
+          // If no suitable fields, use the first text field
+          const firstTextField = fields.find(f => f.data_type === 'text');
+          if (firstTextField) {
+            updateMatchingFields([firstTextField.api_name]);
+            console.log("Auto-selected matching field:", firstTextField.api_name);
+          } else {
+            console.warn("No suitable fields found for duplicate matching");
+            return false;
+          }
+        }
+      }
+      
       // Get all existing records for this object type
       const { data: existingRecords, error } = await supabase
         .from('object_records')
@@ -231,6 +343,8 @@ export function useImportRecords(objectTypeId: string, fields: ObjectField[]) {
         return { ...record, field_values: fieldValues };
       });
       
+      console.log(`Running duplicate check with ${duplicateCheckIntensity} intensity on ${matchingFields.length} fields`);
+      
       // Check each import row against existing records
       const foundDuplicates: DuplicateRecord[] = [];
       
@@ -248,20 +362,28 @@ export function useImportRecords(objectTypeId: string, fields: ObjectField[]) {
         // Check against each existing record
         for (const existingRecord of processedExistingRecords) {
           const matchingFieldsList: string[] = [];
+          let matchCount = 0;
           
           // Check each matching field
           for (const fieldApiName of matchingFields) {
             const importValue = importRowFieldValues[fieldApiName] || '';
             const existingValue = existingRecord.field_values[fieldApiName] || '';
             
-            // If values match (case-insensitive)
-            if (importValue.trim().toLowerCase() === existingValue.trim().toLowerCase() && importValue !== '') {
+            // Compare values based on intensity setting
+            if (compareValues(importValue, existingValue)) {
               matchingFieldsList.push(fieldApiName);
+              matchCount++;
             }
           }
           
-          // If all specified matching fields match, consider it a duplicate
-          if (matchingFieldsList.length === matchingFields.length) {
+          // Determine if this is a duplicate based on matching strategy
+          const isPartialMatch = duplicateCheckIntensity === 'lenient' && 
+              matchCount > 0 && matchCount >= Math.ceil(matchingFields.length * 0.5); // At least 50% of fields match for lenient
+              
+          const isFullMatch = matchCount === matchingFields.length;
+          
+          // Consider it a duplicate if all fields match (or using partial match in lenient mode)
+          if (isFullMatch || isPartialMatch) {
             foundDuplicates.push({
               importRowIndex: rowIndex,
               existingRecord,
@@ -277,6 +399,7 @@ export function useImportRecords(objectTypeId: string, fields: ObjectField[]) {
       
       setDuplicates(foundDuplicates);
       setIsDuplicateCheckCompleted(true);
+      console.log(`Found ${foundDuplicates.length} potential duplicates`);
       
       // Return true if duplicates found, false otherwise
       return foundDuplicates.length > 0;
@@ -285,7 +408,7 @@ export function useImportRecords(objectTypeId: string, fields: ObjectField[]) {
       toast.error("Failed to check for duplicate records");
       return false;
     }
-  }, [importData, columnMappings, objectTypeId, matchingFields]);
+  }, [importData, columnMappings, objectTypeId, matchingFields, fields, compareValues, updateMatchingFields, duplicateCheckIntensity]);
 
   // Import the records to the database
   const importRecords = useCallback(async (selectedRowIndices?: number[]) => {
@@ -469,12 +592,14 @@ export function useImportRecords(objectTypeId: string, fields: ObjectField[]) {
     duplicates,
     matchingFields,
     isDuplicateCheckCompleted,
+    duplicateCheckIntensity,
     parseImportText,
     updateColumnMapping,
     importRecords,
     clearImportData,
     checkForDuplicates,
     updateMatchingFields,
-    updateDuplicateAction
+    updateDuplicateAction,
+    updateDuplicateCheckIntensity
   };
 }
