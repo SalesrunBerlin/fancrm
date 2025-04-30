@@ -382,31 +382,35 @@ export function useObjectTypes() {
       
       try {
         // Step 1: Delete field picklist values for this object's fields
-        const { error: picklistError } = await supabase
-          .from("field_picklist_values")
-          .delete()
-          .in("field_id", (supabase
-            .from("object_fields")
-            .select("id")
-            .eq("object_type_id", objectTypeId)));
+        const { data: objectFields } = await supabase
+          .from("object_fields")
+          .select("id")
+          .eq("object_type_id", objectTypeId);
             
-        if (picklistError) {
-          console.error("Error deleting field picklist values:", picklistError);
-          throw picklistError;
-        }
-        
-        // Step 2: Delete field display configs for this object's fields
-        const { error: displayConfigError } = await supabase
-          .from("field_display_configs")
-          .delete()
-          .in("field_id", (supabase
-            .from("object_fields")
-            .select("id")
-            .eq("object_type_id", objectTypeId)));
+        if (objectFields && objectFields.length > 0) {
+          const fieldIds = objectFields.map(f => f.id);
+          
+          // Delete picklist values
+          const { error: picklistError } = await supabase
+            .from("field_picklist_values")
+            .delete()
+            .in("field_id", fieldIds);
             
-        if (displayConfigError) {
-          console.error("Error deleting field display configs:", displayConfigError);
-          throw displayConfigError;
+          if (picklistError) {
+            console.error("Error deleting field picklist values:", picklistError);
+            throw picklistError;
+          }
+          
+          // Step 2: Delete field display configs for this object's fields
+          const { error: displayConfigError } = await supabase
+            .from("field_display_configs")
+            .delete()
+            .in("field_id", fieldIds);
+            
+          if (displayConfigError) {
+            console.error("Error deleting field display configs:", displayConfigError);
+            throw displayConfigError;
+          }
         }
         
         // Step 3: Delete field publishing settings for this object
