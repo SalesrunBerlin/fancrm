@@ -1,11 +1,11 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useUnusedPicklistValues } from "@/hooks/useUnusedPicklistValues";
 import { usePicklistCreation } from "@/hooks/usePicklistCreation";
-import { Loader2, Star } from "lucide-react";
+import { Loader2, Star, AlertTriangle, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 
 interface PicklistSuggestionsDialogProps {
@@ -24,8 +24,13 @@ export function PicklistSuggestionsDialog({
   const [selectedValues, setSelectedValues] = useState<string[]>([]);
   const [isAddingValues, setIsAddingValues] = useState(false);
   
-  const { unusedValues, isLoading, refetch } = useUnusedPicklistValues(objectTypeId, fieldId);
+  const { unusedValues, isLoading, refetch, isError, error } = useUnusedPicklistValues(objectTypeId, fieldId);
   const { addBatchPicklistValues } = usePicklistCreation(fieldId);
+  
+  // Reset selected values when dialog opens or values change
+  useEffect(() => {
+    setSelectedValues([]);
+  }, [isOpen, unusedValues]);
   
   const handleToggleValue = (value: string) => {
     setSelectedValues(prev => 
@@ -81,10 +86,35 @@ export function PicklistSuggestionsDialog({
             <div className="flex justify-center py-8">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
             </div>
+          ) : isError ? (
+            <div className="text-center space-y-4 py-4">
+              <AlertTriangle className="h-10 w-10 text-destructive mx-auto" />
+              <p className="text-center text-muted-foreground">
+                Error loading suggested values: {String(error)}
+              </p>
+              <Button variant="outline" size="sm" onClick={() => refetch()} className="mx-auto flex items-center gap-1">
+                <RefreshCw className="h-4 w-4" />
+                Try Again
+              </Button>
+            </div>
           ) : unusedValues.length === 0 ? (
-            <p className="text-center text-muted-foreground py-4">
-              No additional values found in existing records.
-            </p>
+            <div className="text-center space-y-4 py-6">
+              <p className="text-center text-muted-foreground py-4">
+                No additional values found in existing records.
+              </p>
+              <div className="text-xs text-muted-foreground max-w-sm mx-auto space-y-2">
+                <p>Possible reasons:</p>
+                <ul className="list-disc list-inside">
+                  <li>All values from records are already in the picklist</li>
+                  <li>No records have values for this field</li>
+                  <li>Field is new and hasn't been used in records yet</li>
+                </ul>
+              </div>
+              <Button variant="outline" size="sm" onClick={() => refetch()} className="mx-auto flex items-center gap-1">
+                <RefreshCw className="h-4 w-4" />
+                Refresh
+              </Button>
+            </div>
           ) : (
             <>
               <div className="flex items-center justify-between mb-4">
@@ -130,7 +160,7 @@ export function PicklistSuggestionsDialog({
           </Button>
           <Button 
             onClick={handleAddValues} 
-            disabled={selectedValues.length === 0 || isAddingValues || isLoading}
+            disabled={selectedValues.length === 0 || isAddingValues || isLoading || isError}
           >
             {isAddingValues && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Add Selected Values
