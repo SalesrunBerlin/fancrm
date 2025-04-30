@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
@@ -247,6 +246,7 @@ export default function ObjectRecordsList() {
             groupingField={groupingField}
             picklistFields={picklistFields}
             onGroupingFieldChange={handleGroupingFieldChange}
+            onRecordMoved={handleRecordMoved}
           />
         )}
       </Card>

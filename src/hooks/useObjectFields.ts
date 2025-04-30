@@ -6,7 +6,7 @@ import { type ObjectField } from "./useObjectTypes";
 
 // Define the CreateFieldInput type for better type safety
 export interface CreateFieldInput {
-  name: string;
+  name: string; // Make sure this is required 
   api_name: string;
   data_type: string;
   is_required: boolean;
@@ -16,7 +16,7 @@ export interface CreateFieldInput {
     display_field_api_name?: string;
     [key: string]: any;
   };
-  description?: string; // Make description optional
+  description?: string; // Optional
 }
 
 export function useObjectFields(objectTypeId?: string) {

@@ -21,6 +21,7 @@ interface RecordsKanbanProps {
   groupingField: string;
   picklistFields: ObjectField[];
   onGroupingFieldChange: (fieldApiName: string) => void;
+  onRecordMoved?: () => void;
 }
 
 interface KanbanColumn {
@@ -35,7 +36,8 @@ export function RecordsKanban({
   objectTypeId, 
   groupingField, 
   picklistFields,
-  onGroupingFieldChange 
+  onGroupingFieldChange,
+  onRecordMoved
 }: RecordsKanbanProps) {
   const [columns, setColumns] = useState<KanbanColumn[]>([]);
   const [selectedField, setSelectedField] = useState<ObjectField | null>(null);
@@ -154,20 +156,70 @@ export function RecordsKanban({
         throw new Error("Record not found");
       }
 
-      // Update the field value in record_field_values table
-      const { data, error } = await supabase
-        .from("record_field_values")
-        .upsert([
-          {
-            record_id: recordId,
-            field_id: selectedField!.id,
-            value: JSON.stringify(value)
-          }
-        ]);
+      // Find the field_id for the field with this api_name
+      const { data: fieldData, error: fieldError } = await supabase
+        .from("object_fields")
+        .select("id")
+        .eq("object_type_id", objectTypeId)
+        .eq("api_name", fieldApiName)
+        .single();
+        
+      if (fieldError || !fieldData) {
+        throw new Error(`Field not found: ${fieldError?.message}`);
+      }
 
-      if (error) throw error;
+      // Check if there's already a value for this record and field
+      const { data: existingValue, error: existingValueError } = await supabase
+        .from("object_field_values")
+        .select("id")
+        .eq("record_id", recordId)
+        .eq("field_api_name", fieldApiName)
+        .maybeSingle();
+        
+      if (existingValueError) {
+        throw existingValueError;
+      }
       
-      toast.success(`Record updated successfully`);
+      // Either update or insert the field value
+      if (existingValue) {
+        // Update existing value
+        const { error: updateError } = await supabase
+          .from("object_field_values")
+          .update({ value: value === "other" ? null : value })
+          .eq("record_id", recordId)
+          .eq("field_api_name", fieldApiName);
+          
+        if (updateError) throw updateError;
+      } else {
+        // Insert new value
+        const { error: insertError } = await supabase
+          .from("object_field_values")
+          .insert({
+            record_id: recordId,
+            field_api_name: fieldApiName,
+            value: value === "other" ? null : value
+          });
+          
+        if (insertError) throw insertError;
+      }
+
+      // Update the last_modified_by and updated_at on the record
+      const { error: recordUpdateError } = await supabase
+        .from("object_records")
+        .update({ 
+          updated_at: new Date().toISOString()
+        })
+        .eq("id", recordId);
+
+      if (recordUpdateError) throw recordUpdateError;
+      
+      toast.success("Record updated successfully");
+      
+      // Notify parent component that a record was moved
+      if (onRecordMoved) {
+        onRecordMoved();
+      }
+      
       return true;
     } catch (error) {
       console.error("Error updating record:", error);
@@ -233,11 +285,13 @@ export function RecordsKanban({
       const success = await updateRecordFieldValue(
         recordId, 
         selectedField.api_name, 
-        destinationColumnId === "other" ? "" : destinationColumnId
+        destinationColumnId
       );
       
       // If the update fails, revert the UI change by re-fetching data
-      // This part is handled by the query invalidation in the parent component
+      if (!success && onRecordMoved) {
+        onRecordMoved();
+      }
     }
   };
 

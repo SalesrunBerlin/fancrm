@@ -1,19 +1,19 @@
-
+import { useState, useEffect } from "react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useObjectFields } from "@/hooks/useObjectFields";
 import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -21,90 +21,107 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
-import { useEffect } from "react";
-import { toast } from "sonner";
+import { Textarea } from "@/components/ui/textarea";
+import { Loader2 } from "lucide-react";
+import { useObjectFields } from "@/hooks/useObjectFields";
+import { useObjectTypes } from "@/hooks/useObjectTypes";
+import { usePicklistCreation } from "@/hooks/usePicklistCreation";
+import { PicklistValuesInput } from "./PicklistValuesInput";
+import { LookupFieldConfig } from "./LookupFieldConfig";
 
-const createFieldSchema = z.object({
-  name: z.string().min(1, "Field name is required"),
-  api_name: z.string().min(1, "API name is required").regex(/^[a-zA-Z][a-zA-Z0-9_]*$/, "API name must start with a letter and contain only letters, numbers and underscores"),
-  data_type: z.string().min(1, "Data type is required"),
-  description: z.string().optional(),
+const formSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  api_name: z.string().min(1, "API Name is required")
+    .regex(/^[a-z][a-z0-9_]*$/, "API Name must start with a lowercase letter and contain only lowercase letters, numbers, and underscores"),
+  data_type: z.string().min(1, "Data Type is required"),
   is_required: z.boolean().default(false),
+  description: z.string().optional(),
 });
-
-type CreateFieldFormValues = z.infer<typeof createFieldSchema>;
 
 interface CreateFieldFormProps {
   objectTypeId: string;
-  apiNameSuggestion?: string;
-  onComplete?: () => void;
+  onFieldCreated?: () => void;
 }
 
-export function CreateFieldForm({ objectTypeId, apiNameSuggestion, onComplete }: CreateFieldFormProps) {
+export function CreateFieldForm({ objectTypeId, onFieldCreated }: CreateFieldFormProps) {
+  const [loading, setLoading] = useState(false);
   const { createField } = useObjectFields(objectTypeId);
+  const { objectTypes } = useObjectTypes();
+  const [picklistValues, setPicklistValues] = useState<string[]>([]);
+  const [selectedFieldId, setSelectedFieldId] = useState<string | null>(null);
+  const { addBatchPicklistValues } = usePicklistCreation(selectedFieldId);
+  const [lookupConfig, setLookupConfig] = useState<{
+    targetObjectTypeId: string;
+    displayFieldApiName: string;
+  } | null>(null);
 
-  const form = useForm<CreateFieldFormValues>({
-    resolver: zodResolver(createFieldSchema),
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
       api_name: "",
       data_type: "text",
-      description: "",
       is_required: false,
+      description: "",
     },
   });
 
-  // If apiNameSuggestion is provided, generate a clean API name and set it
+  const dataType = form.watch("data_type");
+  const fieldName = form.watch("name");
+
+  // Auto-generate API name from field name
   useEffect(() => {
-    if (apiNameSuggestion) {
-      const suggestedName = apiNameSuggestion.trim();
-      const cleanApiName = suggestedName
+    if (fieldName && !form.getValues("api_name")) {
+      const apiName = fieldName
         .toLowerCase()
-        .replace(/[^a-z0-9_]/g, "_")
-        .replace(/^[^a-z]/, "a"); // Ensure first character is a letter
-      
-      form.setValue("name", suggestedName);
-      form.setValue("api_name", cleanApiName);
+        .replace(/[^a-z0-9\s]/g, "")
+        .replace(/\s+/g, "_");
+      form.setValue("api_name", apiName, { shouldValidate: true });
     }
-  }, [apiNameSuggestion, form]);
+  }, [fieldName, form]);
 
-  // Auto-generate API name when name changes
-  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const name = e.target.value;
-    form.setValue("name", name);
-    
-    // Only auto-generate if API name is empty or was previously auto-generated
-    const currentApiName = form.getValues("api_name");
-    if (!currentApiName || currentApiName === form.getValues("name").toLowerCase().replace(/[^a-z0-9_]/g, "_")) {
-      const apiName = name
-        .toLowerCase()
-        .replace(/[^a-z0-9_]/g, "_")
-        .replace(/^[^a-z]/, "a"); // Ensure first character is a letter
-      form.setValue("api_name", apiName);
-    }
-  };
-
-  const onSubmit = async (data: CreateFieldFormValues) => {
+  const createObjectField = async (values: z.infer<typeof formSchema>) => {
     try {
-      await createField.mutateAsync({
-        ...data,
+      setLoading(true);
+      
+      // Ensure name is provided
+      const fieldData = {
         object_type_id: objectTypeId,
-      });
-      
-      toast.success("Field created successfully");
-      
-      if (onComplete) {
-        onComplete();
+        name: values.name, // This is now explicitly required by the type
+        api_name: values.api_name,
+        data_type: values.data_type,
+        is_required: values.is_required,
+        description: values.description
+      };
+
+      // Add lookup field options if applicable
+      if (values.data_type === "lookup" && lookupConfig) {
+        fieldData.options = {
+          target_object_type_id: lookupConfig.targetObjectTypeId,
+          display_field_api_name: lookupConfig.displayFieldApiName
+        };
       }
+      
+      // Create the field
+      const result = await createField.mutateAsync(fieldData);
+      
+      // If it's a picklist field and we have values, add them
+      if (values.data_type === "picklist" && picklistValues.length > 0 && result?.id) {
+        await addBatchPicklistValues(result.id, picklistValues);
+      }
+      
+      form.reset();
+      onFieldCreated?.();
     } catch (error) {
-      console.error("Error creating field:", error);
+      console.error('Error creating field:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+      <form onSubmit={form.handleSubmit(createObjectField)} className="space-y-6">
         <FormField
           control={form.control}
           name="name"
@@ -112,17 +129,16 @@ export function CreateFieldForm({ objectTypeId, apiNameSuggestion, onComplete }:
             <FormItem>
               <FormLabel>Field Name</FormLabel>
               <FormControl>
-                <Input 
-                  placeholder="Enter field name" 
-                  {...field} 
-                  onChange={handleNameChange}
-                />
+                <Input placeholder="Customer Name" {...field} />
               </FormControl>
+              <FormDescription>
+                The display name for this field
+              </FormDescription>
               <FormMessage />
             </FormItem>
           )}
         />
-        
+
         <FormField
           control={form.control}
           name="api_name"
@@ -130,47 +146,67 @@ export function CreateFieldForm({ objectTypeId, apiNameSuggestion, onComplete }:
             <FormItem>
               <FormLabel>API Name</FormLabel>
               <FormControl>
-                <Input 
-                  placeholder="api_name" 
-                  {...field} 
-                />
+                <Input placeholder="customer_name" {...field} />
               </FormControl>
+              <FormDescription>
+                The API identifier for this field (lowercase, no spaces)
+              </FormDescription>
               <FormMessage />
             </FormItem>
           )}
         />
-        
+
         <FormField
           control={form.control}
           name="data_type"
           render={({ field }) => (
             <FormItem>
               <FormLabel>Data Type</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
+              <Select
+                onValueChange={field.onChange}
+                defaultValue={field.value}
+              >
                 <FormControl>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select field type" />
+                    <SelectValue placeholder="Select a data type" />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
                   <SelectItem value="text">Text</SelectItem>
-                  <SelectItem value="textarea">Text Area</SelectItem>
                   <SelectItem value="number">Number</SelectItem>
                   <SelectItem value="date">Date</SelectItem>
-                  <SelectItem value="datetime">Date/Time</SelectItem>
-                  <SelectItem value="picklist">Picklist</SelectItem>
-                  <SelectItem value="boolean">Boolean</SelectItem>
+                  <SelectItem value="datetime">Date & Time</SelectItem>
                   <SelectItem value="email">Email</SelectItem>
                   <SelectItem value="url">URL</SelectItem>
                   <SelectItem value="phone">Phone</SelectItem>
+                  <SelectItem value="picklist">Picklist</SelectItem>
                   <SelectItem value="lookup">Lookup</SelectItem>
+                  <SelectItem value="checkbox">Checkbox</SelectItem>
+                  <SelectItem value="textarea">Text Area</SelectItem>
                 </SelectContent>
               </Select>
+              <FormDescription>
+                The type of data this field will store
+              </FormDescription>
               <FormMessage />
             </FormItem>
           )}
         />
-        
+
+        {dataType === "picklist" && (
+          <PicklistValuesInput
+            values={picklistValues}
+            onChange={setPicklistValues}
+          />
+        )}
+
+        {dataType === "lookup" && (
+          <LookupFieldConfig
+            objectTypes={objectTypes || []}
+            onChange={setLookupConfig}
+          />
+        )}
+
         <FormField
           control={form.control}
           name="description"
@@ -178,16 +214,19 @@ export function CreateFieldForm({ objectTypeId, apiNameSuggestion, onComplete }:
             <FormItem>
               <FormLabel>Description</FormLabel>
               <FormControl>
-                <Textarea 
-                  placeholder="Field description (optional)" 
-                  {...field} 
+                <Textarea
+                  placeholder="Enter a description for this field"
+                  {...field}
                 />
               </FormControl>
+              <FormDescription>
+                Optional description to explain the purpose of this field
+              </FormDescription>
               <FormMessage />
             </FormItem>
           )}
         />
-        
+
         <FormField
           control={form.control}
           name="is_required"
@@ -201,13 +240,23 @@ export function CreateFieldForm({ objectTypeId, apiNameSuggestion, onComplete }:
               </FormControl>
               <div className="space-y-1 leading-none">
                 <FormLabel>Required Field</FormLabel>
+                <FormDescription>
+                  Make this field mandatory when creating records
+                </FormDescription>
               </div>
             </FormItem>
           )}
         />
-        
-        <Button type="submit" disabled={createField.isPending}>
-          {createField.isPending ? "Creating..." : "Create Field"}
+
+        <Button type="submit" disabled={loading}>
+          {loading ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Creating...
+            </>
+          ) : (
+            "Create Field"
+          )}
         </Button>
       </form>
     </Form>
