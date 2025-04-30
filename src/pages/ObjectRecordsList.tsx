@@ -6,14 +6,18 @@ import { useObjectRecords } from "@/hooks/useObjectRecords";
 import { useRecordFields } from "@/hooks/useRecordFields";
 import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
-import { Loader2, Plus, Upload, Trash2 } from "lucide-react";
+import { Loader2, Plus, Upload, Trash2, List, Kanban } from "lucide-react";
 import { RecordsTable } from "@/components/records/RecordsTable";
+import { RecordsKanban } from "@/components/records/RecordsKanban";
 import { Card } from "@/components/ui/card";
 import { FieldsConfigDialog } from "@/components/records/FieldsConfigDialog";
 import { useUserFieldSettings } from "@/hooks/useUserFieldSettings";
+import { useViewMode, ViewMode } from "@/hooks/useViewMode";
 import { ObjectField } from "@/hooks/useObjectTypes";
 import { DeleteDialog } from "@/components/common/DeleteDialog";
 import { toast } from "sonner";
+import { Toggle } from "@/components/ui/toggle";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function ObjectRecordsList() {
   const { objectTypeId } = useParams<{ objectTypeId: string }>();
@@ -23,8 +27,10 @@ export default function ObjectRecordsList() {
   const objectType = objectTypes?.find(type => type.id === objectTypeId);
   const [allRecords, setAllRecords] = useState<any[]>([]);
   const { visibleFields, updateVisibleFields } = useUserFieldSettings(objectTypeId);
+  const { viewMode, updateViewMode, groupingField, updateGroupingField } = useViewMode(objectTypeId);
   const [selectedRecords, setSelectedRecords] = useState<string[]>([]);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [picklistFields, setPicklistFields] = useState<ObjectField[]>([]);
   
   // System fields definition
   const systemFields: ObjectField[] = [
@@ -68,6 +74,19 @@ export default function ObjectRecordsList() {
       updated_at: new Date().toISOString()
     }
   ];
+
+  // Find all picklist fields for Kanban grouping
+  useEffect(() => {
+    if (fields) {
+      const picklistFieldsList = fields.filter(field => field.data_type === "picklist");
+      setPicklistFields(picklistFieldsList);
+      
+      // If no grouping field is set yet but we have picklist fields, set the first one as default
+      if ((!groupingField || groupingField === "") && picklistFieldsList.length > 0) {
+        updateGroupingField(picklistFieldsList[0].api_name);
+      }
+    }
+  }, [fields, groupingField, updateGroupingField]);
   
   // Initialize visible fields if none are saved yet
   useEffect(() => {
@@ -106,6 +125,14 @@ export default function ObjectRecordsList() {
       console.error("Error deleting records:", error);
       toast.error("Failed to delete some records");
     }
+  };
+
+  const handleViewModeChange = (mode: string) => {
+    updateViewMode(mode as ViewMode);
+  };
+
+  const handleGroupingFieldChange = (fieldApiName: string) => {
+    updateGroupingField(fieldApiName);
   };
 
   if (!objectType) {
@@ -168,18 +195,46 @@ export default function ObjectRecordsList() {
         }
       />
 
+      <div className="flex justify-end mb-4">
+        <Tabs value={viewMode} onValueChange={handleViewModeChange} className="w-auto">
+          <TabsList>
+            <TabsTrigger value="table" className="flex items-center gap-1">
+              <List className="h-4 w-4" />
+              <span>Table</span>
+            </TabsTrigger>
+            <TabsTrigger 
+              value="kanban" 
+              className="flex items-center gap-1"
+              disabled={picklistFields.length === 0}
+            >
+              <Kanban className="h-4 w-4" />
+              <span>Kanban</span>
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+      </div>
+
       <Card className="overflow-hidden">
         {isLoading || isLoadingFields ? (
           <div className="flex justify-center py-8">
             <Loader2 className="h-8 w-8 animate-spin" />
           </div>
-        ) : (
+        ) : viewMode === "table" ? (
           <RecordsTable 
             records={allRecords} 
             fields={getFieldsToDisplay()} 
             objectTypeId={objectTypeId!}
             selectable={true}
             onSelectionChange={handleRecordSelectionChange}
+          />
+        ) : (
+          <RecordsKanban
+            records={allRecords}
+            fields={fields || []}
+            objectTypeId={objectTypeId!}
+            groupingField={groupingField}
+            picklistFields={picklistFields}
+            onGroupingFieldChange={handleGroupingFieldChange}
           />
         )}
       </Card>

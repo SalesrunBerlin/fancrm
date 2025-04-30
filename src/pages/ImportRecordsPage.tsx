@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { useObjectTypes, ObjectType, ObjectField } from "@/hooks/useObjectTypes";
 import { useObjectRecords } from "@/hooks/useObjectRecords";
+import { useObjectFields } from "@/hooks/useObjectFields";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -50,9 +51,10 @@ import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { Slider } from "@/components/ui/slider"
+} from "@/components/ui/popover";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Slider } from "@/components/ui/slider";
+import { supabase } from "@/integrations/supabase/client";
 
 interface ColumnMapping {
   columnName: string;
@@ -330,8 +332,7 @@ export default function ImportRecordsPage() {
             recordId: newRecord.recordId,
             fieldValues: newRecord,
             matches: matches,
-            action: "update",
-            record_id: newRecord.record_id,
+            action: "update"
           });
         }
       });
@@ -510,7 +511,7 @@ export default function ImportRecordsPage() {
                           <DialogHeader>
                             <DialogTitle>Create New Field</DialogTitle>
                           </DialogHeader>
-                          <CreateFieldForm objectTypeId={objectTypeId} apiNameSuggestion={columnName} onComplete={onCreateFieldComplete} />
+                          <CreateFieldForm objectTypeId={objectTypeId!} apiNameSuggestion={columnName} onComplete={onCreateFieldComplete} />
                         </DialogContent>
                       </Dialog>
                     </TableCell>
