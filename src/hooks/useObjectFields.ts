@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -26,6 +27,14 @@ export function useObjectFields(objectTypeId?: string) {
   const { data: fields, isLoading } = useQuery({
     queryKey: ["object-fields", objectTypeId],
     queryFn: async (): Promise<ObjectField[]> => {
+      if (!objectTypeId) {
+        console.log("No objectTypeId provided, skipping fields fetch");
+        return [];
+      }
+      
+      console.log(`Fetching fields for object type: ${objectTypeId}`);
+      
+      // First determine the object type status (template, published, ownership)
       const { data: objectType, error: objectError } = await supabase
         .from("object_types")
         .select("is_template, source_object_id, is_published, owner_id")
@@ -37,28 +46,30 @@ export function useObjectFields(objectTypeId?: string) {
         throw objectError;
       }
 
-      // Check if this is an imported object (template) or public object
-      const isTemplateOrPublished = objectType.is_template || objectType.is_published;
+      // Check if this is a published object
+      const isPublishedObject = objectType.is_published;
       const isOwnedByOthers = objectType.owner_id !== user?.id;
 
       console.log("Object fields query for:", { 
         objectTypeId, 
-        isTemplateOrPublished, 
+        isPublishedObject, 
         isOwnedByOthers,
         userID: user?.id,
         ownerID: objectType.owner_id 
       });
 
+      // Base query for fields
       let query = supabase
         .from("object_fields")
         .select("*")
         .eq("object_type_id", objectTypeId);
 
-      // If the object is a template/published and not owned by the current user,
-      // we don't need to filter by owner_id (show all fields)
-      if (isTemplateOrPublished && isOwnedByOthers) {
-        // No additional filters needed - show all fields for this object
-        console.log("Showing all fields for template/published object");
+      // For published objects, don't filter by owner_id - show all fields that are published
+      // For all other scenarios (user's own objects or templates), use the original filter
+      if (isPublishedObject && isOwnedByOthers) {
+        // For published objects owned by others, we don't add any owner filter
+        // This allows showing all fields that are part of the published object
+        console.log("Fetching all fields for published object without owner filter");
       } else {
         // For regular objects or objects owned by the current user,
         // use the original filter logic
@@ -74,6 +85,36 @@ export function useObjectFields(objectTypeId?: string) {
       }
 
       console.log("Fields fetched:", data.length);
+
+      // For published objects owned by others, check for field publishing settings
+      if (isPublishedObject && isOwnedByOthers) {
+        const { data: publishingSettings, error: publishingError } = await supabase
+          .from("object_field_publishing")
+          .select("*")
+          .eq("object_type_id", objectTypeId);
+
+        if (publishingError) {
+          console.error("Error fetching publishing settings:", publishingError);
+          // Don't throw here, just continue with all fields
+        }
+        
+        if (publishingSettings && publishingSettings.length > 0) {
+          console.log("Applying publishing filters to fields");
+          
+          // Create a map of field_id -> is_included
+          const publishingMap = new Map();
+          publishingSettings.forEach(setting => {
+            publishingMap.set(setting.field_id, setting.is_included);
+          });
+          
+          // Filter fields by publishing settings
+          data = data.filter(field => {
+            return publishingMap.has(field.id) ? publishingMap.get(field.id) : true;
+          });
+          
+          console.log("After publishing filter, fields count:", data.length);
+        }
+      }
 
       // Transform the JSON options to match the expected type
       return data.map(field => ({

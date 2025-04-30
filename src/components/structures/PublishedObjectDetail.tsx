@@ -17,7 +17,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { AlertCircle, ArrowLeft, Box, Download, Loader2, RefreshCw } from "lucide-react";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
-import { ObjectField } from "@/hooks/useObjectTypes";
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
@@ -38,6 +37,8 @@ export function PublishedObjectDetail() {
   } = useQuery({
     queryKey: ["published-object-detail", objectId],
     queryFn: async () => {
+      console.log("Fetching published object detail:", objectId);
+      
       const { data, error } = await supabase
         .from("object_types")
         .select("*")
@@ -45,13 +46,18 @@ export function PublishedObjectDetail() {
         .eq("is_published", true)
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching published object:", error);
+        throw error;
+      }
+      
+      console.log("Published object fetched:", data?.name);
       return data;
     },
     enabled: !!objectId,
   });
 
-  // Fetch object fields with publishing info
+  // Fetch object fields with publishing info - improved to get all fields regardless of owner
   const { 
     data: fields, 
     isLoading: isFieldsLoading,
@@ -61,6 +67,19 @@ export function PublishedObjectDetail() {
     queryFn: async () => {
       console.log("Fetching fields for published object:", objectId);
       
+      // First, check if the object is published
+      const { data: objCheck, error: objError } = await supabase
+        .from("object_types")
+        .select("is_published, owner_id")
+        .eq("id", objectId)
+        .single();
+
+      if (objError || !objCheck?.is_published) {
+        console.error("Object is not published or error:", objError);
+        return [];
+      }
+      
+      // Get all fields for the object without owner filter since it's published
       const { data: objectFields, error: fieldsError } = await supabase
         .from("object_fields")
         .select("*")
@@ -74,6 +93,7 @@ export function PublishedObjectDetail() {
       
       console.log("Published object fields fetched:", objectFields?.length || 0);
 
+      // Get publishing settings to filter fields
       const { data: publishingSettings, error: publishingError } = await supabase
         .from("object_field_publishing")
         .select("*")
@@ -93,11 +113,16 @@ export function PublishedObjectDetail() {
       });
 
       // Filter fields by publishing settings if we have any settings
+      // If we have publishing settings, only include fields that are explicitly set to be included
+      // If no publishing settings exist, include all fields
       let finalFields = objectFields;
       
       if (publishingSettings && publishingSettings.length > 0) {
         finalFields = objectFields
-          .filter(field => publishingMap.has(field.id) ? publishingMap.get(field.id) : true)
+          .filter(field => {
+            const isIncluded = publishingMap.has(field.id) ? publishingMap.get(field.id) : true;
+            return isIncluded;
+          })
           .map(field => ({ 
             ...field, 
             isPublished: publishingMap.has(field.id) ? publishingMap.get(field.id) : true
@@ -305,7 +330,7 @@ export function PublishedObjectDetail() {
                   <p className="text-muted-foreground">
                     Keine Felder für dieses Objekt verfügbar oder veröffentlicht.
                   </p>
-                  <Alert variant="warning" className="mt-4">
+                  <Alert variant="default" className="mt-4">
                     <AlertCircle className="h-4 w-4" />
                     <AlertDescription>
                       Der Eigentümer des Objekts muss Felder veröffentlichen, damit diese angezeigt werden können.

@@ -1,9 +1,11 @@
+
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useState, useEffect } from "react";
 
+// Define object field type
 export interface ObjectField {
   id: string;
   object_type_id: string;
@@ -25,6 +27,7 @@ export interface ObjectField {
   isPublished?: boolean; // Used for publishing configuration
 }
 
+// Define object type
 export interface ObjectType {
   id: string;
   name: string;
@@ -55,6 +58,7 @@ export function useObjectTypes() {
     }
   }, [user]);
 
+  // Fetch user's object types
   const { data: objectTypes, isLoading } = useQuery({
     queryKey: ["object-types"],
     queryFn: async () => {
@@ -81,6 +85,7 @@ export function useObjectTypes() {
     enabled: !!user,
   });
 
+  // Fetch published objects from other users
   const { 
     data: publishedObjects, 
     isLoading: isLoadingPublished,
@@ -107,7 +112,7 @@ export function useObjectTypes() {
           throw error;
         }
         
-        console.log(`Fetched ${data?.length || 0} published objects:`, data);
+        console.log(`Fetched ${data?.length || 0} published objects`);
         return data;
       } catch (err) {
         console.error("Exception in published objects fetch:", err);
@@ -119,6 +124,7 @@ export function useObjectTypes() {
     refetchOnWindowFocus: true,
   });
 
+  // Create a new object type
   const createObjectType = useMutation({
     mutationFn: async (newObjectType: Omit<ObjectType, "id" | "created_at" | "updated_at" | "owner_id">) => {
       if (!user) throw new Error("User must be logged in to create object types");
@@ -152,6 +158,7 @@ export function useObjectTypes() {
     },
   });
 
+  // Update an existing object type
   const updateObjectType = useMutation({
     mutationFn: async (updates: Partial<ObjectType> & { id: string }) => {
       const { data, error } = await supabase
@@ -184,6 +191,7 @@ export function useObjectTypes() {
     }
   });
 
+  // Publish an object type
   const publishObjectType = useMutation({
     mutationFn: async (objectTypeId: string) => {
       const { data, error } = await supabase
@@ -216,6 +224,7 @@ export function useObjectTypes() {
     }
   });
 
+  // Unpublish an object type
   const unpublishObjectType = useMutation({
     mutationFn: async (objectTypeId: string) => {
       const { data, error } = await supabase
@@ -248,6 +257,7 @@ export function useObjectTypes() {
     }
   });
 
+  // Import an object type from a published one
   const importObjectType = useMutation({
     mutationFn: async (sourceObjectId: string) => {
       if (!user) throw new Error("User must be logged in to import object types");
@@ -255,8 +265,7 @@ export function useObjectTypes() {
       console.log("Starting import of object structure:", sourceObjectId);
       
       try {
-        // Instead of manually implementing the field copying logic,
-        // let's use the clone_object_structure database function
+        // Use the clone_object_structure database function to handle the import
         const { data, error } = await supabase.rpc('clone_object_structure', {
           source_object_id: sourceObjectId,
           new_owner_id: user.id
@@ -303,6 +312,7 @@ export function useObjectTypes() {
     }
   });
 
+  // Delete system objects
   const deleteSystemObjects = useMutation({
     mutationFn: async () => {
       try {
@@ -341,6 +351,7 @@ export function useObjectTypes() {
     }
   });
 
+  // Manually refresh published objects
   const refreshPublishedObjects = async () => {
     console.log("Manually refreshing published objects...");
     try {
