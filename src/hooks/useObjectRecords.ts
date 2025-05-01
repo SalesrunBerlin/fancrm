@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -154,6 +153,8 @@ export function useObjectRecords(objectTypeId?: string) {
 
       // For each field value, upsert (update or insert)
       for (const [key, value] of Object.entries(field_values)) {
+        console.log(`Updating field ${key} with value:`, value);
+        
         const { error } = await supabase
           .from("object_field_values")
           .upsert({
@@ -172,9 +173,13 @@ export function useObjectRecords(objectTypeId?: string) {
 
       return { id, field_values };
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log("Record updated successfully:", data);
       queryClient.invalidateQueries({ queryKey: ["object-records", objectTypeId] });
       queryClient.invalidateQueries({ queryKey: ["record-detail", objectTypeId] });
+    },
+    onError: (error) => {
+      console.error("Failed to update record:", error);
     }
   });
 
