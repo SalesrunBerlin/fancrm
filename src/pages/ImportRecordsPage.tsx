@@ -1,11 +1,15 @@
+
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
 import { useRecordFields } from "@/hooks/useRecordFields";
+import { useImportRecords } from "@/hooks/useImportRecords";
 import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select,
   SelectContent,
@@ -24,7 +28,7 @@ import {
 } from "@/components/ui/table";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, FileText, ClipboardPaste } from "lucide-react";
 import * as XLSX from 'xlsx';
 import { supabase } from "@/integrations/supabase/client";
 
@@ -32,12 +36,15 @@ export default function ImportRecordsPage() {
   const { objectTypeId } = useParams<{ objectTypeId: string }>();
   const { objectTypes } = useObjectTypes();
   const { fields } = useRecordFields(objectTypeId);
+  const { parseImportText } = useImportRecords(objectTypeId!, fields || []);
   const objectType = objectTypes?.find(type => type.id === objectTypeId);
   const [excelData, setExcelData] = useState<any[]>([]);
   const [importData, setImportData] = useState<any[]>([]);
   const [uniqueKeyField, setUniqueKeyField] = useState<string>("");
-	const [file, setFile] = useState<File | null>(null);
+  const [file, setFile] = useState<File | null>(null);
   const [fetchingRecords, setFetchingRecords] = useState(false);
+  const [importMethod, setImportMethod] = useState<string>("excel");
+  const [pastedText, setPastedText] = useState<string>("");
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -47,12 +54,12 @@ export default function ImportRecordsPage() {
   }, [fields]);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-		const selectedFile = event.target.files && event.target.files[0];
-		if (selectedFile) {
-			setFile(selectedFile);
-			readExcel(selectedFile);
-		}
-	};
+    const selectedFile = event.target.files && event.target.files[0];
+    if (selectedFile) {
+      setFile(selectedFile);
+      readExcel(selectedFile);
+    }
+  };
 
   const readExcel = (file: File) => {
     const fileReader = new FileReader();
@@ -65,6 +72,31 @@ export default function ImportRecordsPage() {
       setExcelData(json);
     };
     fileReader.readAsBinaryString(file);
+  };
+
+  const handlePastedTextImport = () => {
+    if (!pastedText.trim()) {
+      toast.error("Please paste some data first");
+      return;
+    }
+
+    // Use the parseImportText function from useImportRecords hook
+    const parsedData = parseImportText(pastedText);
+    if (parsedData && parsedData.rows.length > 0) {
+      // Convert the parsed data to a format similar to what excelData uses
+      const convertedData = parsedData.rows.map(row => {
+        const rowData: { [key: string]: string } = {};
+        parsedData.headers.forEach((header, index) => {
+          rowData[header] = row[index] || "";
+        });
+        return rowData;
+      });
+      
+      setExcelData(convertedData);
+      toast.success(`Successfully parsed ${convertedData.length} rows of data`);
+    } else {
+      toast.error("Could not parse the pasted data. Please check the format.");
+    }
   };
 
   const prepareImportData = () => {
@@ -192,7 +224,7 @@ export default function ImportRecordsPage() {
         title={`Import ${objectType.name} Records`}
         description={`Import records into your ${objectType.name.toLowerCase()} object`}
         actions={
-          <Button onClick={processImportData} disabled={fetchingRecords}>
+          <Button onClick={processImportData} disabled={fetchingRecords || importData.length === 0}>
             {fetchingRecords ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -206,12 +238,51 @@ export default function ImportRecordsPage() {
       />
 
       <Card>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="file">Choose Excel File</Label>
-            <Input type="file" id="file" accept=".xlsx, .xls" onChange={handleFileChange} />
-          </div>
-
+        <CardContent className="pt-6 space-y-4">
+          <Tabs defaultValue="excel" value={importMethod} onValueChange={setImportMethod}>
+            <TabsList className="mb-4">
+              <TabsTrigger value="excel" className="flex items-center gap-2">
+                <FileText className="h-4 w-4" />
+                Excel File
+              </TabsTrigger>
+              <TabsTrigger value="paste" className="flex items-center gap-2">
+                <ClipboardPaste className="h-4 w-4" />
+                Paste Data
+              </TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="excel" className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="file">Choose Excel File</Label>
+                <Input type="file" id="file" accept=".xlsx, .xls" onChange={handleFileChange} />
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="paste" className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="pastedText">Paste Data (Tab or Comma Separated)</Label>
+                <Textarea 
+                  id="pastedText" 
+                  placeholder="Paste your data here. First row should contain headers."
+                  className="min-h-[200px] font-mono text-sm"
+                  value={pastedText}
+                  onChange={(e) => setPastedText(e.target.value)}
+                />
+                <div className="text-sm text-muted-foreground mt-2">
+                  <p>Format: First row should be column headers, subsequent rows should be data.</p>
+                  <p>Example: Name[tab]Email[tab]Phone</p>
+                </div>
+                <Button 
+                  onClick={handlePastedTextImport} 
+                  disabled={!pastedText.trim()}
+                  variant="secondary"
+                >
+                  Parse Pasted Data
+                </Button>
+              </div>
+            </TabsContent>
+          </Tabs>
+          
           {fields && fields.length > 0 && (
             <div className="space-y-2">
               <Label htmlFor="uniqueKeyField">Unique Key Field</Label>
@@ -234,7 +305,7 @@ export default function ImportRecordsPage() {
 
       {importData.length > 0 && (
         <Card>
-          <CardContent className="overflow-x-auto">
+          <CardContent className="overflow-x-auto pt-6">
             <Table>
               <TableCaption>Preview of data to be imported</TableCaption>
               <TableHeader>
