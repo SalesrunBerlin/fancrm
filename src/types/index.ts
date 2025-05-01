@@ -1,4 +1,5 @@
 
+
 export type FieldValue = string | number | boolean | Date | null;
 
 export interface RecordFormData {
@@ -41,6 +42,8 @@ export interface ContactType {
   lastActivity?: string;
   firstName?: string;
   lastName?: string;
+  accountName?: string;
+  tags?: string[];
 }
 
 export interface AccountType {
@@ -51,6 +54,7 @@ export interface AccountType {
   location?: string;
   employees?: number;
   type?: string;
+  createdAt?: string;
 }
 
 export interface DealType {
@@ -65,3 +69,4 @@ export interface DealType {
   status?: string;
   accountName?: string;
 }
+

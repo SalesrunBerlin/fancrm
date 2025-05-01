@@ -45,9 +45,11 @@ export default function EditRecordPage() {
         id: recordId,
         field_values: data
       });
+      toast.success("Record updated successfully");
       navigate(`/objects/${objectTypeId}/${recordId}`);
     } catch (error) {
       console.error("Error updating record:", error);
+      toast.error("Failed to update record. Please try again.");
     } finally {
       setIsSubmitting(false);
     }

@@ -2,7 +2,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import type { RecordFormData } from "@/lib/types/records";
+import type { RecordFormData } from "@/types";
 
 export interface ObjectRecord {
   id: string;
@@ -141,14 +141,18 @@ export function useObjectRecords(objectTypeId?: string) {
       
       console.log("Updating record:", id, "with data:", field_values);
 
-      // Update the record's timestamp
+      // Update the record's timestamp and ensure owner_id is set
       const { error: recordError } = await supabase
         .from("object_records")
-        .update({ updated_at: new Date().toISOString() })
+        .update({ 
+          updated_at: new Date().toISOString(),
+          owner_id: user.id, // Set owner_id to current user to comply with RLS policies
+          last_modified_by: user.id
+        })
         .eq("id", id);
 
       if (recordError) {
-        console.error("Error updating record timestamp:", recordError);
+        console.error("Error updating record:", recordError);
         throw recordError;
       }
 
