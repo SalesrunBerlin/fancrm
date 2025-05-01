@@ -8,7 +8,7 @@ import Dashboard from "@/pages/Dashboard";
 import Settings from "@/pages/Settings";
 import ObjectManager from "@/pages/ObjectManager";
 import Structures from "@/pages/Structures";
-import ObjectRecordsList from "@/pages/ObjectRecordsList";
+import { ObjectRecordsList } from "@/pages/ObjectRecordsList";
 import ObjectRecordDetail from "@/pages/ObjectRecordDetail";
 import ObjectTypeDetail from "@/pages/ObjectTypeDetail";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
