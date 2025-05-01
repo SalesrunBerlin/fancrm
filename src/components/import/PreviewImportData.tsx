@@ -47,24 +47,30 @@ export function PreviewImportData({ file, onPreview, onBack }: PreviewImportData
         const delimiter = firstRow.includes('\t') ? '\t' : ',';
         
         // Parse headers
-        const headerRow = rows[0].split(delimiter);
-        setHeaders(headerRow.map(h => h.trim()));
+        const headerRow = rows[0].split(delimiter).map(h => h.trim());
+        setHeaders(headerRow);
         
         // Parse the actual data (limited to first 10 rows for preview)
         const data = [];
         const maxRows = Math.min(rows.length, 11); // Headers + 10 data rows
         
         for (let i = 1; i < maxRows; i++) {
-          if (!rows[i].trim()) continue; // Skip empty rows
+          if (!rows[i]?.trim()) continue; // Skip empty rows
           
           const rowData = rows[i].split(delimiter);
           const rowObject: {[key: string]: string} = {};
           
           headerRow.forEach((header, index) => {
-            rowObject[header.trim()] = rowData[index] ? rowData[index].trim() : '';
+            // Make sure we're not adding undefined or empty header keys
+            if (header) {
+              rowObject[header] = rowData[index] ? rowData[index].trim() : '';
+            }
           });
           
-          data.push(rowObject);
+          // Only add row if it has at least one non-empty value
+          if (Object.values(rowObject).some(val => val.trim() !== '')) {
+            data.push(rowObject);
+          }
         }
         
         setPreviewData(data);
@@ -85,7 +91,12 @@ export function PreviewImportData({ file, onPreview, onBack }: PreviewImportData
   }, [file]);
 
   const handleContinue = () => {
-    onPreview(previewData);
+    // Make sure we have data before continuing
+    if (previewData.length > 0) {
+      onPreview(previewData);
+    } else {
+      setError("No valid data to import");
+    }
   };
 
   return (
@@ -106,6 +117,13 @@ export function PreviewImportData({ file, onPreview, onBack }: PreviewImportData
         ) : error ? (
           <div className="bg-red-50 p-4 rounded-md text-red-800">
             <p>{error}</p>
+            <Button variant="outline" onClick={onBack} className="mt-2">
+              Go Back
+            </Button>
+          </div>
+        ) : previewData.length === 0 ? (
+          <div className="bg-amber-50 p-4 rounded-md text-amber-800">
+            <p>No valid data found in the CSV file.</p>
             <Button variant="outline" onClick={onBack} className="mt-2">
               Go Back
             </Button>
@@ -134,7 +152,7 @@ export function PreviewImportData({ file, onPreview, onBack }: PreviewImportData
             </ScrollArea>
             <div className="flex justify-end space-x-2 mt-4">
               <Button variant="outline" onClick={onBack}>Back</Button>
-              <Button onClick={handleContinue}>Continue</Button>
+              <Button onClick={handleContinue} disabled={previewData.length === 0}>Continue</Button>
             </div>
           </>
         )}

@@ -27,11 +27,6 @@ enum ImportStep {
   FINISH,
 }
 
-// Define the type for column mapping
-type ColumnMapping = {
-  [columnName: string]: string | null;
-};
-
 export default function ImportRecordsPage() {
   const { objectTypeId } = useParams<{ objectTypeId: string }>();
   const navigate = useNavigate();
@@ -46,7 +41,7 @@ export default function ImportRecordsPage() {
   const [currentStep, setCurrentStep] = useState<ImportStep>(ImportStep.UPLOAD);
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [importData, setImportData] = useState<any[]>([]);
-  const [columnMappings, setColumnMappings] = useState<ColumnMapping>({});
+  const [columnMappings, setColumnMappings] = useState<{[key: string]: string | null}>({});
   const [matchingFields, setMatchingFields] = useState<string[]>([]);
   const [selectedApplicationId, setSelectedApplicationId] = useState<string | null>(null);
   const [duplicates, setDuplicates] = useState<any[]>([]);
@@ -63,12 +58,14 @@ export default function ImportRecordsPage() {
 
   // Function to handle data preview
   const handleDataPreview = (data: any[]) => {
+    console.log("Preview data received:", data);
     setImportData(data);
     setCurrentStep(ImportStep.FIELD_CREATION);
   };
 
   // Function to handle field creation
   const handleFieldCreation = (newFields: any[]) => {
+    console.log("Fields created:", newFields);
     setFields(newFields);
     setCurrentStep(ImportStep.MATCHING_FIELDS);
   };
@@ -80,7 +77,7 @@ export default function ImportRecordsPage() {
   };
 
   // Function to handle column mapping
-  const handleColumnMapping = (columnMappings: ColumnMapping) => {
+  const handleColumnMapping = (columnMappings: {[key: string]: string | null}) => {
     setColumnMappings(columnMappings);
     setCurrentStep(ImportStep.APPLICATION_SELECTION);
   };
@@ -188,15 +185,14 @@ export default function ImportRecordsPage() {
     });
 
     // Call the importRecords function from the hook
-    importRecordsHook.importRecords(records)
-      .then(() => {
-        toast.success("Records imported successfully!");
-        navigate(`/objects/${objectTypeId}`);
-      })
-      .catch((error: any) => {
-        console.error("Error importing records:", error);
-        toast.error(error.message || "Failed to import records.");
-      });
+    try {
+      await importRecordsHook.importRecords(records);
+      toast.success("Records imported successfully!");
+      navigate(`/objects/${objectTypeId}`);
+    } catch (error: any) {
+      console.error("Error importing records:", error);
+      toast.error(error.message || "Failed to import records.");
+    }
   };
 
   // Render content based on current step
@@ -253,7 +249,7 @@ export default function ImportRecordsPage() {
       case ImportStep.RESOLVE_DUPLICATES:
         return (
           <DuplicateRecordsResolver
-            headers={Object.keys(importData[0] || {})}
+            headers={importData.length > 0 ? Object.keys(importData[0]) : []}
             data={importData}
             onResolve={handleFinishImport}
             onCancel={handleBack}

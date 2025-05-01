@@ -44,7 +44,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
@@ -95,6 +95,7 @@ export function DuplicateRecordsResolver({
   }, [headers, form]);
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    console.log("Resolving duplicates with:", values);
     setIsResolving(true);
     try {
       const primaryKeyHeader = values.primaryKeyHeader;
@@ -119,6 +120,40 @@ export function DuplicateRecordsResolver({
       setIsResolving(false);
     }
   };
+
+  // If we have no data, show a message
+  if (!data || data.length === 0) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>No Data to Check</CardTitle>
+          <CardDescription>
+            There is no data available to check for duplicates.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button onClick={onCancel}>Back</Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // If headers are empty, we can't continue
+  if (!headers || headers.length === 0) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Invalid Data Format</CardTitle>
+          <CardDescription>
+            The import data does not have valid headers.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button onClick={onCancel}>Back</Button>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>
