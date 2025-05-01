@@ -1,75 +1,31 @@
+export type FieldValue = string | number | boolean | Date | null;
 
-export interface Product {
-  id: string;
-  name: string;
-  recurrence: 'once' | 'monthly' | 'yearly' | 'hourly';
-  productFamilyId?: string;
-  price: number;
-  createdAt: string;
-  updatedAt: string;
-  productFamily?: ProductFamily;
+export interface RecordFormData {
+  [key: string]: FieldValue;
 }
 
-export interface ProductFamily {
+export interface RecordUpdateData {
   id: string;
-  name: string;
-  orderPosition: number;
-  createdAt: string;
-  updatedAt: string;
+  field_values: RecordFormData;
 }
 
-export interface Account {
-  id: string;
-  name: string;
-  type: string | null;
-  website: string | null;
-  industry: string | null;
-  createdAt: string;
-  updatedAt: string;
-  ownerId: string;
-  contactCount?: number;
-  tags?: string[];
-}
-
-export interface Contact {
-  id: string;
-  firstName: string;
-  lastName: string;
-  email: string | null;
-  phone?: string;
-  accountName?: string;
-  accountId?: string;
-  tags?: string[];
-  name?: string;
-}
-
-export interface DealType {
-  id: string;
-  name: string;
-  amount: number;
-  status: string;
-  closeDate?: string;
-  accountId?: string;
-  contactId?: string;
-  accountName?: string;
-  contactName?: string;
-  tags?: string[];
-}
-
-export type AccountType = Account;
-export type ContactType = Contact;
-
-// Updated DuplicateRecord interface
+// Add DuplicateRecord type to match the useImportRecords hook
 export interface DuplicateRecord {
   importRowIndex: number;
   existingRecord: Record<string, any>;
   matchingFields: string[];
-  action: 'create' | 'update';
-  rowIndex?: number; // Added for backward compatibility
-  record?: Record<string, any>; // Added for backward compatibility
-  matches?: {
+  matchScore: number;
+  action: 'skip' | 'update' | 'create';
+  record: Record<string, string>;
+}
+
+// Add ColumnMapping type for the Import functionality
+export interface ColumnMapping {
+  sourceColumnName: string;
+  sourceColumnIndex: number;
+  targetField: {
     id: string;
-    values: Record<string, any>;
-  }[]; // Added for backward compatibility
-  matchingField?: string; // Added for backward compatibility
+    name: string;
+    api_name: string;
+  } | null;
 }

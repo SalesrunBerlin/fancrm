@@ -28,6 +28,7 @@ export default function CreateObjectFromFieldValuesPage() {
   const [newObjectDefaultField, setNewObjectDefaultField] = useState("name");
   const [isProcessing, setIsProcessing] = useState(false);
   const [originalFieldName, setOriginalFieldName] = useState("");
+  const [progress, setProgress] = useState<string | null>(null);
 
   // Fetch the unique values when the component loads
   useEffect(() => {
@@ -98,6 +99,7 @@ export default function CreateObjectFromFieldValuesPage() {
       const defaultFieldApiName = newObjectDefaultField.toLowerCase().replace(/\s+/g, '_');
       
       // 1. Create new object type
+      setProgress("Creating new object type...");
       const { data: newObjectType, error: objectError } = await supabase
         .from('object_types')
         .insert([{
@@ -125,6 +127,7 @@ export default function CreateObjectFromFieldValuesPage() {
       console.log("Created new object type:", newObjectType);
       
       // 2. Create the default field for the new object
+      setProgress("Creating default field...");
       const { data: nameField, error: nameFieldError } = await supabase
         .from('object_fields')
         .insert([{
@@ -148,8 +151,12 @@ export default function CreateObjectFromFieldValuesPage() {
       console.log("Created default field:", nameField);
       
       // 3. Create records for each unique value
+      setProgress("Creating records...");
       let createdCount = 0;
       const totalRecords = uniqueValues.length;
+      
+      // Store a mapping of original values to new record IDs
+      const valueToRecordIdMap = new Map<string, string>();
 
       for (const value of uniqueValues) {
         // Create record
@@ -181,16 +188,22 @@ export default function CreateObjectFromFieldValuesPage() {
           continue;
         }
         
+        // Store the mapping of value to record ID for later use
+        valueToRecordIdMap.set(value, newRecord.id);
+        
         createdCount++;
+        setProgress(`Created ${createdCount} of ${totalRecords} records...`);
       }
       
       // 4. Create lookup field in the original object type
+      setProgress("Creating lookup field...");
+      const lookupFieldApiName = `${newObjectName.toLowerCase().replace(/\s+/g, '_')}_lookup`;
       const { data: lookupField, error: lookupFieldError } = await supabase
         .from('object_fields')
         .insert([{
           object_type_id: objectTypeId,
           name: `${newObjectName} Lookup`,
-          api_name: `${newObjectName.toLowerCase().replace(/\s+/g, '_')}_lookup`,
+          api_name: lookupFieldApiName,
           data_type: 'lookup',
           options: {
             target_object_type_id: newObjectType.id,
@@ -208,12 +221,85 @@ export default function CreateObjectFromFieldValuesPage() {
         throw lookupFieldError;
       }
       
-      toast.success(`Successfully created new object "${newObjectName}" with ${createdCount} of ${totalRecords} records and added lookup field`);
+      // 5. Update original records with lookup references
+      setProgress("Connecting records with lookups...");
+      
+      // Get all field values for the original field
+      const { data: originalFieldValues, error: originalValuesError } = await supabase
+        .from('object_field_values')
+        .select('record_id, value')
+        .eq('field_api_name', fieldApiName);
+      
+      if (originalValuesError) {
+        throw originalValuesError;
+      }
+      
+      // Batch update process for connecting lookups
+      let updatedCount = 0;
+      let failedUpdates = 0;
+      
+      for (const { record_id, value } of originalFieldValues) {
+        if (value && valueToRecordIdMap.has(value)) {
+          const lookupRecordId = valueToRecordIdMap.get(value);
+          
+          // Check if a lookup value already exists for this record
+          const { data: existingLookup } = await supabase
+            .from('object_field_values')
+            .select('id')
+            .eq('record_id', record_id)
+            .eq('field_api_name', lookupFieldApiName)
+            .maybeSingle();
+          
+          if (existingLookup) {
+            // Update existing lookup value
+            const { error: updateError } = await supabase
+              .from('object_field_values')
+              .update({ value: lookupRecordId })
+              .eq('id', existingLookup.id);
+            
+            if (updateError) {
+              console.error(`Error updating lookup for record ${record_id}:`, updateError);
+              failedUpdates++;
+              continue;
+            }
+          } else {
+            // Insert new lookup value
+            const { error: insertError } = await supabase
+              .from('object_field_values')
+              .insert([{
+                record_id: record_id,
+                field_api_name: lookupFieldApiName,
+                value: lookupRecordId
+              }]);
+            
+            if (insertError) {
+              console.error(`Error inserting lookup for record ${record_id}:`, insertError);
+              failedUpdates++;
+              continue;
+            }
+          }
+          
+          updatedCount++;
+          if (updatedCount % 10 === 0) {
+            setProgress(`Linked ${updatedCount} of ${originalFieldValues.length} records...`);
+          }
+        }
+      }
+      
+      const successMessage = `Successfully created new object "${newObjectName}" with ${createdCount} of ${totalRecords} records and connected ${updatedCount} lookup references`;
+      console.log(successMessage);
+      toast.success(successMessage);
+      
+      if (failedUpdates > 0) {
+        toast.error(`Failed to update ${failedUpdates} lookup references`);
+      }
+      
       navigate(`/settings/objects/${newObjectType.id}`);
     } catch (error: any) {
       console.error("Error creating object:", error);
       toast.error(`Failed to create new object: ${error?.message || 'Unknown error'}`);
     } finally {
+      setProgress(null);
       setIsProcessing(false);
     }
   };
@@ -254,6 +340,7 @@ export default function CreateObjectFromFieldValuesPage() {
                     value={newObjectName}
                     onChange={(e) => setNewObjectName(e.target.value)}
                     required
+                    disabled={isProcessing}
                   />
                 </div>
 
@@ -265,6 +352,7 @@ export default function CreateObjectFromFieldValuesPage() {
                     onChange={(e) => setNewObjectDefaultField(e.target.value)}
                     placeholder="Name"
                     required
+                    disabled={isProcessing}
                   />
                   <p className="text-xs text-muted-foreground mt-1">
                     This will be the primary field for identifying records
@@ -279,19 +367,26 @@ export default function CreateObjectFromFieldValuesPage() {
                     onChange={(e) => setNewObjectDescription(e.target.value)}
                     placeholder="Optional description"
                     rows={2}
+                    disabled={isProcessing}
                   />
                 </div>
               </div>
 
-              <div>
+              <div className="space-y-2">
                 <Button 
                   onClick={createNewObjectFromValues} 
                   disabled={!newObjectName.trim() || !newObjectDefaultField.trim() || isProcessing}
-                  className="mt-2"
+                  className="mt-2 w-full"
                 >
                   {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Create Object
+                  {isProcessing ? 'Processing...' : 'Create Object'}
                 </Button>
+                
+                {progress && (
+                  <div className="text-sm text-muted-foreground text-center">
+                    {progress}
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>

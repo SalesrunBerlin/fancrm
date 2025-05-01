@@ -30,7 +30,37 @@ import { BatchFieldCreation } from "@/components/import/BatchFieldCreation";
 import { DuplicateRecordsResolver } from "@/components/import/DuplicateRecordsResolver";
 import { PreviewImportData } from "@/components/import/PreviewImportData";
 import { toast } from "sonner";
-import { DuplicateRecord } from "@/types"; // Add this if it doesn't exist
+import { DuplicateRecord, ColumnMapping } from "@/types"; // Import from the types file
+
+// Type adapter to convert between DuplicateRecord types
+const adaptDuplicates = (duplicates: import("@/hooks/useImportRecords").DuplicateRecord[]): DuplicateRecord[] => {
+  return duplicates as unknown as DuplicateRecord[];
+};
+
+// Type adapter to convert between ColumnMapping types
+const adaptColumnMappings = (mappings: import("@/hooks/useImportRecords").ColumnMapping[]): ColumnMapping[] => {
+  return mappings as unknown as ColumnMapping[];
+};
+
+// Map intensity values between different naming conventions
+const mapIntensity = (intensity: "low" | "medium" | "high"): "lenient" | "moderate" | "strict" => {
+  const map: Record<string, "lenient" | "moderate" | "strict"> = {
+    "low": "lenient",
+    "medium": "moderate",
+    "high": "strict"
+  };
+  return map[intensity];
+};
+
+// Map intensity values in reverse direction
+const mapReverseIntensity = (intensity: "lenient" | "moderate" | "strict"): "low" | "medium" | "high" => {
+  const map: Record<string, "low" | "medium" | "high"> = {
+    "lenient": "low",
+    "moderate": "medium",
+    "strict": "high"
+  };
+  return map[intensity];
+};
 
 export default function ImportRecordsPage() {
   const { objectTypeId } = useParams<{ objectTypeId: string }>();
@@ -49,21 +79,34 @@ export default function ImportRecordsPage() {
 
   const { 
     importData, 
-    columnMappings, 
+    columnMappings: rawColumnMappings, 
     isImporting,
-    duplicates,
+    duplicates: rawDuplicates,
     matchingFields,
     isDuplicateCheckCompleted,
-    duplicateCheckIntensity,
+    duplicateCheckIntensity: rawIntensity,
     parseImportText, 
     updateColumnMapping, 
     importRecords,
     clearImportData,
-    checkForDuplicates,
+    checkForDuplicates: rawCheckForDuplicates,
     updateMatchingFields,
     updateDuplicateAction,
-    updateDuplicateCheckIntensity
+    updateDuplicateCheckIntensity: rawUpdateIntensity
   } = useImportRecords(objectTypeId!, fields || []);
+
+  // Adapt types for the component
+  const duplicates = adaptDuplicates(rawDuplicates);
+  const columnMappings = adaptColumnMappings(rawColumnMappings);
+  const duplicateCheckIntensity = mapIntensity(rawIntensity);
+  
+  const updateDuplicateCheckIntensity = (intensity: "lenient" | "moderate" | "strict") => {
+    rawUpdateIntensity(mapReverseIntensity(intensity));
+  };
+
+  const checkForDuplicates = async (): Promise<boolean> => {
+    return await rawCheckForDuplicates();
+  };
 
   // Check if we have import data and move to mapping step
   useEffect(() => {
