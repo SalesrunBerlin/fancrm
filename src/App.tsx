@@ -1,66 +1,71 @@
-
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import { Toaster } from "@/components/ui/toaster";
-import { Layout } from "@/components/layout/Layout";
-import { AuthProvider } from "@/contexts/AuthContext";
-import Auth from "@/pages/Auth";
-import Dashboard from "@/pages/Dashboard";
-import Settings from "@/pages/Settings";
-import ObjectManager from "@/pages/ObjectManager";
-import Structures from "@/pages/Structures";
+import {
+  createBrowserRouter,
+  RouterProvider,
+} from "react-router-dom";
+import { Layout } from "@/components/Layout"
 import ObjectRecordsList from "@/pages/ObjectRecordsList";
 import ObjectRecordDetail from "@/pages/ObjectRecordDetail";
+import ObjectRecordCreate from "@/pages/ObjectRecordCreate";
+import ObjectRecordEdit from "@/pages/ObjectRecordEdit";
+import ObjectTypesList from "@/pages/ObjectTypesList";
 import ObjectTypeDetail from "@/pages/ObjectTypeDetail";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
-import ObjectFieldEditPage from "@/pages/ObjectFieldEditPage";
-import CreateRecordPage from "@/pages/CreateRecordPage";
-import EditRecordPage from "@/pages/EditRecordPage";
-import CreateObjectPage from "@/pages/CreateObjectPage";
+import ObjectTypeCreate from "@/pages/ObjectTypeCreate";
+import ObjectTypeEdit from "@/pages/ObjectTypeEdit";
+import SettingsPage from "@/pages/SettingsPage";
+import ErrorBoundary from "@/components/ErrorBoundary";
+import LoginPage from "@/pages/LoginPage";
+import { useAuth } from "@/contexts/AuthContext";
+import { useEffect, useState } from "react";
+import LoadingPage from "@/pages/LoadingPage";
 import ImportRecordsPage from "@/pages/ImportRecordsPage";
-import CreateFieldPage from "@/pages/CreateFieldPage";
 import ImportCreateFieldPage from "@/pages/ImportCreateFieldPage";
 
-// Create a client
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: 1,
-      refetchOnWindowFocus: false,
-    },
-  },
-});
-
 function App() {
+  const { isLoggedIn, isLoading } = useAuth();
+  const [router, setRouter] = useState(createBrowserRouter([]));
+
+  useEffect(() => {
+    if (isLoading) {
+      // Render a loading indicator while authentication state is loading
+      setRouter(createBrowserRouter([{ path: "*", element: <LoadingPage /> }]));
+      return;
+    }
+
+    if (!isLoggedIn) {
+      // If not logged in, show only the login page
+      setRouter(createBrowserRouter([{ path: "*", element: <LoginPage /> }]));
+      return;
+    }
+
+    // Define the routes when the user is logged in
+    const loggedInRouter = createBrowserRouter([
+      {
+        path: "/",
+        element: <Layout />,
+        errorElement: <ErrorBoundary />,
+        children: [
+          { path: "/", element: <ObjectTypesList /> },
+          { path: "/objects", element: <ObjectTypesList /> },
+          { path: "/objects/new", element: <ObjectTypeCreate /> },
+          { path: "/objects/:objectTypeId", element: <ObjectRecordsList /> },
+          { path: "/objects/:objectTypeId/view", element: <ObjectTypeDetail /> },
+          { path: "/objects/:objectTypeId/edit", element: <ObjectTypeEdit /> },
+          { path: "/objects/:objectTypeId/new", element: <ObjectRecordCreate /> },
+          { path: "/objects/:objectTypeId/:recordId", element: <ObjectRecordDetail /> },
+          { path: "/objects/:objectTypeId/:recordId/edit", element: <ObjectRecordEdit /> },
+          // Make sure we have the field creation route for import
+          { path: "/objects/:objectTypeId/import", element: <ImportRecordsPage /> },
+          { path: "/objects/:objectTypeId/import/create-field/:columnName", element: <ImportCreateFieldPage /> },
+          { path: "/settings", element: <SettingsPage /> },
+        ],
+      },
+    ]);
+
+    setRouter(loggedInRouter);
+  }, [isLoggedIn, isLoading]);
+
   return (
-    <QueryClientProvider client={queryClient}>
-      <Router>
-        <AuthProvider>
-          <Routes>
-            <Route path="/auth" element={<Auth />} />
-            
-            <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/settings" element={<Settings />} />
-              <Route path="/settings/object-manager" element={<ObjectManager />} />
-              <Route path="/settings/object-manager/new" element={<CreateObjectPage />} />
-              <Route path="/settings/objects/:objectTypeId" element={<ObjectTypeDetail />} />
-              <Route path="/settings/objects/:objectTypeId/fields/new" element={<CreateFieldPage />} />
-              <Route path="/settings/objects/:objectTypeId/fields/:fieldId/edit" element={<ObjectFieldEditPage />} />
-              <Route path="/structures/*" element={<Structures />} />
-              <Route path="/objects/:objectTypeId" element={<ObjectRecordsList />} />
-              <Route path="/objects/:objectTypeId/import" element={<ImportRecordsPage />} />
-              <Route path="/objects/:objectTypeId/import/create-field/:columnName" element={<ImportCreateFieldPage />} />
-              <Route path="/objects/:objectTypeId/new" element={<CreateRecordPage />} />
-              <Route path="/objects/:objectTypeId/:recordId" element={<ObjectRecordDetail />} />
-              <Route path="/objects/:objectTypeId/:recordId/edit" element={<EditRecordPage />} />
-            </Route>
-          </Routes>
-          <Toaster />
-        </AuthProvider>
-      </Router>
-    </QueryClientProvider>
+    <RouterProvider router={router} />
   );
 }
 

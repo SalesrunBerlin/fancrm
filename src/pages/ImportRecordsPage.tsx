@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
 import { useRecordFields } from "@/hooks/useRecordFields";
 import { useImportRecords } from "@/hooks/useImportRecords";
@@ -28,15 +28,19 @@ import {
 } from "@/components/ui/table";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Loader2, FileText, ClipboardPaste } from "lucide-react";
+import { Loader2, FileText, ClipboardPaste, AlertCircle } from "lucide-react";
 import * as XLSX from 'xlsx';
 import { supabase } from "@/integrations/supabase/client";
+import { FieldMapperWithCreation } from "@/components/import/FieldMapperWithCreation";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { BatchFieldCreation } from "@/components/import/BatchFieldCreation";
 
 export default function ImportRecordsPage() {
   const { objectTypeId } = useParams<{ objectTypeId: string }>();
+  const [searchParams] = useSearchParams();
   const { objectTypes } = useObjectTypes();
   const { fields } = useRecordFields(objectTypeId);
-  const { parseImportText } = useImportRecords(objectTypeId!, fields || []);
+  const { parseImportText, columnMappings, updateColumnMapping, importData, clearImportData } = useImportRecords(objectTypeId!, fields || []);
   const objectType = objectTypes?.find(type => type.id === objectTypeId);
   const [excelData, setExcelData] = useState<any[]>([]);
   const [importData, setImportData] = useState<any[]>([]);
@@ -45,13 +49,45 @@ export default function ImportRecordsPage() {
   const [fetchingRecords, setFetchingRecords] = useState(false);
   const [importMethod, setImportMethod] = useState<string>("excel");
   const [pastedText, setPastedText] = useState<string>("");
+  const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
+  const [needsFieldCreation, setNeedsFieldCreation] = useState(false);
+  const [showBatchFieldCreation, setShowBatchFieldCreation] = useState(false);
   const navigate = useNavigate();
+
+  // Check for params from create field page
+  useEffect(() => {
+    const newFieldId = searchParams.get('newFieldId');
+    const columnName = searchParams.get('columnName');
+    
+    if (newFieldId && columnName && columnMappings) {
+      // Find the column index for this column name
+      const columnIndex = columnMappings.findIndex(
+        mapping => mapping.sourceColumnName === decodeURIComponent(columnName)
+      );
+      
+      if (columnIndex !== -1) {
+        // Update the mapping with the new field
+        updateColumnMapping(columnIndex, newFieldId);
+        toast.success("Field created and mapped successfully");
+      }
+    }
+  }, [searchParams, columnMappings, updateColumnMapping]);
 
   useEffect(() => {
     if (fields && fields.length > 0) {
       setUniqueKeyField(fields[0].api_name);
     }
   }, [fields]);
+
+  // Check if any mappings have no target field
+  useEffect(() => {
+    if (columnMappings && columnMappings.length > 0) {
+      const hasUnmappedColumns = columnMappings.some(mapping => mapping.targetField === null);
+      setNeedsFieldCreation(hasUnmappedColumns);
+    } else {
+      setNeedsFieldCreation(false);
+    }
+  }, [columnMappings]);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = event.target.files && event.target.files[0];
@@ -124,6 +160,10 @@ export default function ImportRecordsPage() {
 
   const handleUniqueKeyFieldChange = (value: string) => {
     setUniqueKeyField(value);
+  };
+
+  const handleColumnMappingChange = (columnIndex: number, fieldId: string | null) => {
+    updateColumnMapping(columnIndex, fieldId);
   };
 
   const processImportData = async () => {
@@ -210,11 +250,79 @@ export default function ImportRecordsPage() {
     }
   };
 
+  const handleBatchFieldCreationComplete = (createdFields: { columnName: string; fieldId: string }[]) => {
+    // Update each mapping based on the created fields
+    createdFields.forEach(created => {
+      const columnIndex = columnMappings.findIndex(
+        mapping => mapping.sourceColumnName === created.columnName
+      );
+      
+      if (columnIndex !== -1) {
+        updateColumnMapping(columnIndex, created.fieldId);
+      }
+    });
+    
+    setShowBatchFieldCreation(false);
+    toast.success(`${createdFields.length} fields created and mapped successfully`);
+  };
+
+  const handleBatchFieldCreationCancel = () => {
+    setShowBatchFieldCreation(false);
+  };
+
+  // Get column data for batch field creation
+  const getColumnData = () => {
+    if (!excelData || excelData.length === 0) return {};
+    
+    const columnData: { [columnName: string]: string[] } = {};
+    
+    // Get unmapped columns
+    const unmappedColumns = columnMappings
+      .filter(mapping => mapping.targetField === null)
+      .map(mapping => mapping.sourceColumnName);
+    
+    // For each unmapped column, collect all values
+    unmappedColumns.forEach(columnName => {
+      columnData[columnName] = excelData.map(row => {
+        return row[columnName] || '';
+      });
+    });
+    
+    return columnData;
+  };
+
+  // Handle creating fields for all unmapped columns at once
+  const handleCreateFieldsForAll = () => {
+    if (!needsFieldCreation) return;
+    
+    const unmappedColumns = columnMappings
+      .filter(mapping => mapping.targetField === null)
+      .map(mapping => mapping.sourceColumnName);
+    
+    if (unmappedColumns.length === 0) return;
+    
+    setSelectedColumns(unmappedColumns);
+    setShowBatchFieldCreation(true);
+  };
+
   if (!objectType) {
     return (
       <div className="flex justify-center items-center h-64">
         <Loader2 className="h-8 w-8 animate-spin" />
       </div>
+    );
+  }
+
+  // If batch field creation is active, show that component
+  if (showBatchFieldCreation) {
+    return (
+      <BatchFieldCreation
+        objectTypeId={objectTypeId!}
+        columnNames={selectedColumns}
+        columnData={getColumnData()}
+        onComplete={handleBatchFieldCreationComplete}
+        onCancel={handleBatchFieldCreationCancel}
+      />
     );
   }
 
@@ -224,16 +332,23 @@ export default function ImportRecordsPage() {
         title={`Import ${objectType.name} Records`}
         description={`Import records into your ${objectType.name.toLowerCase()} object`}
         actions={
-          <Button onClick={processImportData} disabled={fetchingRecords || importData.length === 0}>
-            {fetchingRecords ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Importing...
-              </>
-            ) : (
-              "Import"
+          <>
+            {needsFieldCreation && (
+              <Button onClick={handleCreateFieldsForAll} variant="secondary">
+                Create Fields for All Columns
+              </Button>
             )}
-          </Button>
+            <Button onClick={processImportData} disabled={fetchingRecords || importData.length === 0 || needsFieldCreation}>
+              {fetchingRecords ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Importing...
+                </>
+              ) : (
+                "Import"
+              )}
+            </Button>
+          </>
         }
       />
 
@@ -303,7 +418,29 @@ export default function ImportRecordsPage() {
         </CardContent>
       </Card>
 
-      {importData.length > 0 && (
+      {columnMappings && columnMappings.length > 0 && (
+        <Card>
+          <CardContent className="pt-6">
+            <h2 className="text-lg font-medium mb-4">Map Columns to Fields</h2>
+            {needsFieldCreation && (
+              <Alert variant="warning" className="mb-4">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  Some columns couldn't be mapped to existing fields. Please map them or create new fields.
+                </AlertDescription>
+              </Alert>
+            )}
+            <FieldMapperWithCreation
+              objectTypeId={objectTypeId!}
+              columnMappings={columnMappings}
+              fields={fields || []}
+              onUpdateMapping={handleColumnMappingChange}
+            />
+          </CardContent>
+        </Card>
+      )}
+
+      {importData.length > 0 && !needsFieldCreation && (
         <Card>
           <CardContent className="overflow-x-auto pt-6">
             <Table>
