@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { PageHeader } from "@/components/ui/page-header";
@@ -36,13 +37,15 @@ export default function ImportRecordsPage() {
   const navigate = useNavigate();
   const { objectTypes } = useObjectTypes();
   const { mutate: importObjectType } = useImportObjectType();
-  const { mutate: importRecords } = useImportRecords();
+  
+  // We need to get the fields to use the useImportRecords hook
+  const [fields, setFields] = useState<any[]>([]);
+  const importRecordsHook = useImportRecords(objectTypeId || '', fields);
 
   // Local state for the import process
   const [currentStep, setCurrentStep] = useState<ImportStep>(ImportStep.UPLOAD);
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [importData, setImportData] = useState<any[]>([]);
-  const [fields, setFields] = useState<any[]>([]);
   const [columnMappings, setColumnMappings] = useState<ColumnMapping>({});
   const [matchingFields, setMatchingFields] = useState<string[]>([]);
   const [selectedApplicationId, setSelectedApplicationId] = useState<string | null>(null);
@@ -65,8 +68,8 @@ export default function ImportRecordsPage() {
   };
 
   // Function to handle field creation
-  const handleFieldCreation = (fields: any[]) => {
-    setFields(fields);
+  const handleFieldCreation = (newFields: any[]) => {
+    setFields(newFields);
     setCurrentStep(ImportStep.MATCHING_FIELDS);
   };
 
@@ -184,20 +187,16 @@ export default function ImportRecordsPage() {
       return record;
     });
 
-    // Call the importRecords mutation
-    importRecords({
-      objectTypeId: objectTypeId,
-      records: records,
-    }, {
-      onSuccess: () => {
+    // Call the importRecords function from the hook
+    importRecordsHook.importRecords(records)
+      .then(() => {
         toast.success("Records imported successfully!");
         navigate(`/objects/${objectTypeId}`);
-      },
-      onError: (error: any) => {
+      })
+      .catch((error: any) => {
         console.error("Error importing records:", error);
         toast.error(error.message || "Failed to import records.");
-      },
-    });
+      });
   };
 
   // Render content based on current step
@@ -212,17 +211,17 @@ export default function ImportRecordsPage() {
       case ImportStep.PREVIEW:
         return (
           <PreviewImportData
-            csvFile={csvFile}
-            onDataPreview={handleDataPreview}
+            file={csvFile}
+            onPreview={handleDataPreview}
             onBack={handleBack}
           />
         );
       case ImportStep.FIELD_CREATION:
         return (
           <BatchFieldCreation
-            importData={importData}
-            objectTypeId={objectTypeId}
-            onFieldCreation={handleFieldCreation}
+            data={importData}
+            objectTypeId={objectTypeId || ''}
+            onComplete={handleFieldCreation}
             onBack={handleBack}
           />
         );
@@ -247,22 +246,18 @@ export default function ImportRecordsPage() {
       case ImportStep.APPLICATION_SELECTION:
         return (
           <ApplicationSelector
-            onApplicationSelect={handleApplicationSelection}
-            onBack={handleBack}
+            objectTypeId={objectTypeId || ''}
+            onSelect={handleApplicationSelection}
           />
         );
       case ImportStep.RESOLVE_DUPLICATES:
         return (
           <DuplicateRecordsResolver
-            fields={fields}
-            matchingFields={matchingFields}
-            columnMappings={columnMappings}
-            importData={importData}
-            onBack={handleBack}
-            onContinue={handleFinishImport}
-            onSkip={handleSkipDuplicateResolution}
-            onRecheck={recheckDuplicates}
-            objectTypeId={objectTypeId}
+            headers={Object.keys(importData[0] || {})}
+            data={importData}
+            onResolve={handleFinishImport}
+            onCancel={handleBack}
+            objectTypeId={objectTypeId || ''}
           />
         );
       case ImportStep.FINISH:

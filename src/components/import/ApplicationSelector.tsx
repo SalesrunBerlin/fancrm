@@ -1,7 +1,8 @@
 
 import { useEffect, useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
 import { useApplications } from "@/hooks/useApplications";
 import { Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -9,10 +10,11 @@ import { supabase } from "@/integrations/supabase/client";
 
 interface ApplicationSelectorProps {
   objectTypeId: string;
-  onSelect: (applicationId: string | null) => void;
+  onSelect: (applicationId: string) => void;
+  onBack?: () => void;
 }
 
-export function ApplicationSelector({ objectTypeId, onSelect }: ApplicationSelectorProps) {
+export function ApplicationSelector({ objectTypeId, onSelect, onBack }: ApplicationSelectorProps) {
   const { applications, isLoading } = useApplications();
   const [recommendedAppIds, setRecommendedAppIds] = useState<string[]>([]);
   const [selectedApplicationId, setSelectedApplicationId] = useState<string | null>(null);
@@ -41,7 +43,6 @@ export function ApplicationSelector({ objectTypeId, onSelect }: ApplicationSelec
           const defaultApp = applications.find(app => app.is_default && appIds.includes(app.id));
           if (defaultApp) {
             setSelectedApplicationId(defaultApp.id);
-            onSelect(defaultApp.id);
           }
         }
       } catch (error) {
@@ -61,14 +62,21 @@ export function ApplicationSelector({ objectTypeId, onSelect }: ApplicationSelec
       const defaultApp = applications.find(app => app.is_default);
       if (defaultApp) {
         setSelectedApplicationId(defaultApp.id);
-        onSelect(defaultApp.id);
+      } else if (applications.length > 0) {
+        // If no default app, select the first one
+        setSelectedApplicationId(applications[0].id);
       }
     }
   }, [applications, selectedApplicationId, recommendedAppIds]);
   
   const handleApplicationChange = (value: string) => {
     setSelectedApplicationId(value);
-    onSelect(value);
+  };
+
+  const handleContinue = () => {
+    if (selectedApplicationId) {
+      onSelect(selectedApplicationId);
+    }
   };
   
   const isLoaderShown = isLoading || isLoadingRecommendations;
@@ -122,6 +130,19 @@ export function ApplicationSelector({ objectTypeId, onSelect }: ApplicationSelec
           </div>
         )}
       </CardContent>
+      <CardFooter className="flex justify-end gap-2">
+        {onBack && (
+          <Button variant="outline" onClick={onBack}>
+            Back
+          </Button>
+        )}
+        <Button 
+          onClick={handleContinue} 
+          disabled={!selectedApplicationId || isLoaderShown}
+        >
+          Continue
+        </Button>
+      </CardFooter>
     </Card>
   );
 }
