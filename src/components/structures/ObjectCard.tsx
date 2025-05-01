@@ -51,6 +51,7 @@ export function ObjectCard({ objectType, onPublish, showPublishButton = false }:
   }, [objectType.id]);
 
   const getIconComponent = (iconName: string | null) => {
+    
     switch(iconName) {
       case 'user': return <Eye className="h-5 w-5" />;
       case 'building': return <Eye className="h-5 w-5" />;
@@ -63,12 +64,12 @@ export function ObjectCard({ objectType, onPublish, showPublishButton = false }:
   return (
     <Card className="flex flex-col">
       <CardHeader>
-        <div className="flex flex-wrap justify-between items-start gap-2">
+        <div className="flex justify-between items-start">
           <div className="flex items-center gap-2">
             {getIconComponent(objectType.icon)}
-            <CardTitle className="break-words">{objectType.name}</CardTitle>
+            <CardTitle>{objectType.name}</CardTitle>
           </div>
-          <div className="flex flex-wrap gap-1">
+          <div className="flex gap-1">
             {objectType.is_system && (
               <Badge variant="secondary">System</Badge>
             )}
@@ -80,7 +81,7 @@ export function ObjectCard({ objectType, onPublish, showPublishButton = false }:
             )}
           </div>
         </div>
-        <CardDescription className="break-words">
+        <CardDescription>
           {objectType.description || `API Name: ${objectType.api_name}`}
         </CardDescription>
       </CardHeader>
@@ -107,19 +108,11 @@ export function ObjectCard({ objectType, onPublish, showPublishButton = false }:
       </CardContent>
       <CardFooter className="pt-2 mt-auto flex flex-col gap-2">
         <div className="flex w-full gap-2">
-          {objectType.is_published ? (
-            <Link to={`/structures/published/${objectType.id}`} className="flex-1">
-              <Button variant="outline" className="w-full">
-                Details
-              </Button>
-            </Link>
-          ) : (
-            <Link to={`/settings/objects/${objectType.id}`} className="flex-1">
-              <Button variant="outline" className="w-full">
-                Manage
-              </Button>
-            </Link>
-          )}
+          <Link to={`/settings/objects/${objectType.id}`} className="flex-1">
+            <Button variant="outline" className="w-full">
+              Manage
+            </Button>
+          </Link>
           {showPublishButton && !objectType.is_published && !objectType.is_template && (
             <Button 
               variant="outline" 

@@ -11,7 +11,6 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Loader2, ArrowLeft, Plus } from "lucide-react";
-import { ScrollArea } from "@/components/ui/scroll-area";
 
 export default function ApplicationObjectsPage() {
   const { applicationId } = useParams<{ applicationId: string }>();
@@ -142,21 +141,15 @@ export default function ApplicationObjectsPage() {
   }
 
   return (
-    <div className="container px-4 py-4 md:px-6 md:py-6 space-y-4 max-w-full">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+    <div className="container mx-auto py-6 space-y-6">
+      <div className="flex items-center justify-between mb-6">
         <div className="flex items-center">
-          <Button 
-            variant="outline" 
-            size="icon" 
-            onClick={() => navigate(`/applications/${applicationId}`)} 
-            className="mr-2 md:mr-4 flex-shrink-0"
-          >
+          <Button variant="outline" size="icon" onClick={() => navigate(`/applications/${applicationId}`)} className="mr-4">
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <PageHeader 
             title={`Manage Objects for ${currentApplication.name}`}
             description="Assign or remove objects from this application"
-            className="min-w-0"
           />
         </div>
       </div>
@@ -166,73 +159,66 @@ export default function ApplicationObjectsPage() {
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         </div>
       ) : (
-        <div className="border rounded-md overflow-hidden">
-          <ScrollArea className="w-full">
-            <div className="min-w-full">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="min-w-[150px]">Object Name</TableHead>
-                    <TableHead className="min-w-[150px]">API Name</TableHead>
-                    <TableHead className="min-w-[100px]">Status</TableHead>
-                    <TableHead className="text-right min-w-[100px]">Action</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {availableObjects.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={4} className="text-center py-4">
-                        No available objects found.
+        <div className="border rounded-md">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Object Name</TableHead>
+                <TableHead>API Name</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Action</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {availableObjects.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-center py-4">
+                    No available objects found.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                availableObjects.map((obj) => {
+                  const isAssigned = assignedObjectIds.includes(obj.id);
+                  
+                  return (
+                    <TableRow key={obj.id}>
+                      <TableCell>{obj.name}</TableCell>
+                      <TableCell>{obj.api_name}</TableCell>
+                      <TableCell>
+                        {obj.is_system && (
+                          <Badge variant="secondary" className="mr-1">System</Badge>
+                        )}
+                        {obj.is_active ? (
+                          <Badge variant="outline" className="bg-green-50">Active</Badge>
+                        ) : (
+                          <Badge variant="outline" className="bg-gray-50">Inactive</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          variant={isAssigned ? "destructive" : "outline"}
+                          size="sm"
+                          onClick={() => isAssigned ? handleRemoveObject(obj.id) : handleAssignObject(obj.id)}
+                          disabled={isAssigning}
+                        >
+                          {isAssigning ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : isAssigned ? (
+                            "Remove"
+                          ) : (
+                            <>
+                              <Plus className="h-4 w-4 mr-1" />
+                              Assign
+                            </>
+                          )}
+                        </Button>
                       </TableCell>
                     </TableRow>
-                  ) : (
-                    availableObjects.map((obj) => {
-                      const isAssigned = assignedObjectIds.includes(obj.id);
-                      
-                      return (
-                        <TableRow key={obj.id}>
-                          <TableCell className="font-medium">{obj.name}</TableCell>
-                          <TableCell className="text-sm break-all">{obj.api_name}</TableCell>
-                          <TableCell>
-                            <div className="flex flex-wrap gap-1">
-                              {obj.is_system && (
-                                <Badge variant="secondary" className="text-xs whitespace-nowrap">System</Badge>
-                              )}
-                              {obj.is_active ? (
-                                <Badge variant="outline" className="bg-green-50 text-xs whitespace-nowrap">Active</Badge>
-                              ) : (
-                                <Badge variant="outline" className="bg-gray-50 text-xs whitespace-nowrap">Inactive</Badge>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <Button
-                              variant={isAssigned ? "destructive" : "outline"}
-                              size="sm"
-                              onClick={() => isAssigned ? handleRemoveObject(obj.id) : handleAssignObject(obj.id)}
-                              disabled={isAssigning}
-                              className="whitespace-nowrap"
-                            >
-                              {isAssigning ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                              ) : isAssigned ? (
-                                "Remove"
-                              ) : (
-                                <>
-                                  <Plus className="h-4 w-4 mr-1" />
-                                  Assign
-                                </>
-                              )}
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          </ScrollArea>
+                  );
+                })
+              )}
+            </TableBody>
+          </Table>
         </div>
       )}
     </div>

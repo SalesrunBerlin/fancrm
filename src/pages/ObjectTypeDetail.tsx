@@ -10,12 +10,10 @@ import { ArrowLeft, List, Plus, Archive, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { DefaultFieldSelector } from "@/components/settings/DefaultFieldSelector";
-import { useIsMobile } from "@/hooks/use-mobile";
 
 export default function ObjectTypeDetail() {
   const { objectTypeId } = useParams<{ objectTypeId: string }>();
   const navigate = useNavigate();
-  const isMobile = useIsMobile();
   const { objectTypes, updateObjectType, publishObjectType, unpublishObjectType, publishedObjects, isLoadingPublished } = useObjectTypes();
   const { fields, isLoading, createField, updateField, deleteField } = useObjectFields(objectTypeId);
   const [isPublishing, setIsPublishing] = useState(false);
@@ -42,7 +40,7 @@ export default function ObjectTypeDetail() {
           actions={
             <Button variant="outline" onClick={() => navigate("/settings/object-manager")}>
               <ArrowLeft className="mr-2 h-4 w-4" />
-              <span className="md:inline">Back to Object Manager</span>
+              Back to Object Manager
             </Button>
           }
         />
@@ -97,64 +95,52 @@ export default function ObjectTypeDetail() {
   const isArchived = currentObjectType.is_archived;
 
   return (
-    <div className="container mx-auto px-2 md:px-0 space-y-6 max-w-5xl overflow-x-hidden">
+    <div className="container mx-auto px-2 md:px-0 space-y-6 max-w-5xl">
       <PageHeader
         title={currentObjectType.name}
         description={currentObjectType.description || `API Name: ${currentObjectType.api_name}`}
         actions={
-          <div className="flex flex-row gap-2 w-full justify-end">
-            <Button 
-              variant="outline" 
-              size="responsive"
-              asChild
-            >
+          <>
+            <Button variant="outline" asChild>
               <Link to="/settings/object-manager">
-                <ArrowLeft className="h-4 w-4" />
-                <span className="hidden md:inline">Back</span>
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Back to Object Manager
               </Link>
             </Button>
             {!isPublishedByOthers && !currentObjectType.is_system && !isArchived && (
               <>
                 <Button 
                   variant="default"
-                  size="responsive"
                   onClick={() => navigate(`/settings/objects/${objectTypeId}/fields/new`)}
                 >
-                  <Plus className="h-4 w-4" />
-                  <span className="hidden md:inline">New Field</span>
+                  <Plus className="mr-2 h-4 w-4" />
+                  New Field
                 </Button>
                 <Button 
                   onClick={handleTogglePublish}
                   disabled={isPublishing}
-                  size="responsive"
                   variant={currentObjectType.is_published ? "outline" : "default"}
                 >
-                  <List className="h-4 w-4" />
-                  <span className="hidden md:inline">
-                    {currentObjectType.is_published ? "Unpublish" : "Publish"}
-                  </span>
+                  {currentObjectType.is_published ? "Unpublish" : "Publish"}
                 </Button>
                 <Button 
                   variant="warning"
-                  size="responsive"
                   onClick={() => navigate(`/settings/objects/${objectTypeId}/archive`)}
                 >
-                  <Archive className="h-4 w-4" />
-                  <span className="hidden md:inline">Archive</span>
+                  <Archive className="mr-2 h-4 w-4" />
+                  Archive
                 </Button>
               </>
             )}
             {isArchived && (
               <Button
                 variant="success" 
-                size="responsive"
                 onClick={() => navigate(`/settings/objects/${objectTypeId}/restore`)}
               >
-                <Archive className="h-4 w-4" />
-                <span className="hidden md:inline">Restore</span>
+                Restore
               </Button>
             )}
-          </div>
+          </>
         }
       />
       
@@ -164,19 +150,16 @@ export default function ObjectTypeDetail() {
           objectType={currentObjectType}
           fields={fields}
           onUpdateDefaultField={handleUpdateDefaultField}
-          isMobile={isMobile}
         />
       )}
       
-      <div className="overflow-x-auto">
-        <ObjectFieldsList 
-          fields={fields || []} 
-          objectTypeId={objectTypeId as string} 
-          isLoading={isLoading}
-          onManagePicklistValues={handleManagePicklistValues}
-          onDeleteField={!currentObjectType.is_system && !isPublishedByOthers ? handleDeleteField : undefined}
-        />
-      </div>
+      <ObjectFieldsList 
+        fields={fields || []} 
+        objectTypeId={objectTypeId as string} 
+        isLoading={isLoading}
+        onManagePicklistValues={handleManagePicklistValues}
+        onDeleteField={!currentObjectType.is_system && !isPublishedByOthers ? handleDeleteField : undefined}
+      />
     </div>
   );
 }

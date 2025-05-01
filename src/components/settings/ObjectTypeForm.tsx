@@ -25,10 +25,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { Separator } from "@/components/ui/separator";
-import { ApplicationCheckboxList } from "./ApplicationCheckboxList";
 
 const objectTypeSchema = z.object({
   name: z.string().min(2, {
@@ -58,8 +56,6 @@ export function ObjectTypeForm({ onComplete }: ObjectTypeFormProps) {
   const { createObjectType } = useObjectTypes();
   const { toast } = useToast();
   const { user } = useAuth();
-  const [selectedApplications, setSelectedApplications] = useState<string[]>([]);
-  const [isCreatingApplicationAssignments, setIsCreatingApplicationAssignments] = useState(false);
 
   const form = useForm<ObjectTypeFormValues>({
     resolver: zodResolver(objectTypeSchema),
@@ -157,7 +153,7 @@ export function ObjectTypeForm({ onComplete }: ObjectTypeFormProps) {
 
       console.log(`Successfully created default field: ${fieldName}`, field);
       
-      // Create a description field
+      // Create a description field instead of an additional text field with the same name
       try {
         const descriptionApiName = "description";
         
@@ -188,6 +184,7 @@ export function ObjectTypeForm({ onComplete }: ObjectTypeFormProps) {
 
         if (descriptionError) {
           console.error("Error creating description field:", descriptionError);
+          // Don't throw here, as we already created the default field
           toast({
             title: "Warning",
             description: `Default field created, but failed to create the description field: ${descriptionError.message}`,
@@ -212,38 +209,6 @@ export function ObjectTypeForm({ onComplete }: ObjectTypeFormProps) {
     }
   };
 
-  // Create application assignments for a newly created object type
-  const createApplicationAssignments = async (objectTypeId: string) => {
-    if (!user || selectedApplications.length === 0) return;
-    
-    try {
-      setIsCreatingApplicationAssignments(true);
-      
-      const assignments = selectedApplications.map(appId => ({
-        application_id: appId,
-        object_type_id: objectTypeId,
-        owner_id: user.id
-      }));
-      
-      const { error } = await supabase
-        .from("object_application_assignments")
-        .insert(assignments);
-        
-      if (error) throw error;
-      
-      console.log(`Created ${assignments.length} application assignments for object type ${objectTypeId}`);
-    } catch (error) {
-      console.error("Error creating application assignments:", error);
-      toast({
-        title: "Warning",
-        description: "Object type was created, but there was an issue assigning it to applications",
-        variant: "destructive",
-      });
-    } finally {
-      setIsCreatingApplicationAssignments(false);
-    }
-  };
-
   const onSubmit = async (values: ObjectTypeFormValues) => {
     try {
       // First create the object type
@@ -263,17 +228,12 @@ export function ObjectTypeForm({ onComplete }: ObjectTypeFormProps) {
       
       if (result && result.id) {
         try {
-          // Create the default field and the additional text field
+          // Then create the default field and the additional text field
           await createDefaultField(result.id, values.default_field_api_name.trim());
-          
-          // Create application assignments if any are selected
-          if (selectedApplications.length > 0) {
-            await createApplicationAssignments(result.id);
-          }
           
           toast({
             title: "Success",
-            description: "Object type created successfully"
+            description: "Object type and fields created successfully",
           });
         } catch (fieldError: any) {
           console.error("Error creating fields:", fieldError);
@@ -286,7 +246,6 @@ export function ObjectTypeForm({ onComplete }: ObjectTypeFormProps) {
       }
 
       form.reset();
-      setSelectedApplications([]);
       
       if (onComplete) {
         onComplete();
@@ -400,26 +359,13 @@ export function ObjectTypeForm({ onComplete }: ObjectTypeFormProps) {
             </FormItem>
           )}
         />
-        
-        <Separator className="my-6" />
-        
-        <div className="space-y-2">
-          <FormLabel>Assign to Applications</FormLabel>
-          <FormDescription>
-            Select which applications this object should be available in
-          </FormDescription>
-          <ApplicationCheckboxList 
-            selectedApplications={selectedApplications}
-            onSelectionChange={setSelectedApplications}
-          />
-        </div>
 
         <Button 
           type="submit" 
-          disabled={createObjectType.isPending || isCreatingApplicationAssignments}
+          disabled={createObjectType.isPending}
           className="w-full"
         >
-          {(createObjectType.isPending || isCreatingApplicationAssignments) && (
+          {createObjectType.isPending && (
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
           )}
           Create Object Type

@@ -4,89 +4,89 @@ import { ContactType, AccountType, DealType } from "@/types";
 export const mockContacts: ContactType[] = [
   {
     id: "c1",
-    first_name: "Emma",
-    last_name: "Johnson",
+    firstName: "Emma",
+    lastName: "Johnson",
     email: "emma.johnson@example.com",
     phone: "+1 (555) 123-4567",
-    account_id: "a1",
-    created_at: "2023-01-01"
+    accountName: "Bella Salon",
+    tags: ["Client", "VIP"]
   },
   {
     id: "c2",
-    first_name: "Olivia",
-    last_name: "Smith",
+    firstName: "Olivia",
+    lastName: "Smith",
     email: "olivia.smith@example.com",
     phone: "+1 (555) 234-5678",
-    account_id: "a2",
-    created_at: "2023-01-02"
+    accountName: "Glow Spa",
+    tags: ["Client"]
   },
   {
     id: "c3",
-    first_name: "James",
-    last_name: "Williams",
+    firstName: "James",
+    lastName: "Williams",
     email: "james.williams@example.com",
     phone: "+1 (555) 345-6789",
-    created_at: "2023-01-03"
+    tags: ["Prospect", "New Lead"]
   },
   {
     id: "c4",
-    first_name: "Sophia",
-    last_name: "Brown",
+    firstName: "Sophia",
+    lastName: "Brown",
     email: "sophia.brown@example.com",
     phone: "+1 (555) 456-7890",
-    account_id: "a3",
-    created_at: "2023-01-04"
+    accountName: "Pure Beauty",
+    tags: ["Client", "Referral"]
   },
   {
     id: "c5",
-    first_name: "Noah",
-    last_name: "Miller",
+    firstName: "Noah",
+    lastName: "Miller",
     email: "noah.miller@example.com",
     phone: "+1 (555) 567-8901",
-    created_at: "2023-01-05"
+    tags: ["Prospect"]
   },
   {
     id: "c6",
-    first_name: "Mia",
-    last_name: "Davis",
+    firstName: "Mia",
+    lastName: "Davis",
     email: "mia.davis@example.com",
     phone: "+1 (555) 678-9012",
-    account_id: "a4",
-    created_at: "2023-01-06"
+    accountName: "Serene Wellness",
+    tags: ["Client"]
   },
   {
     id: "c7",
-    first_name: "Liam",
-    last_name: "Wilson",
+    firstName: "Liam",
+    lastName: "Wilson",
     email: "liam.wilson@example.com",
     phone: "+1 (555) 789-0123",
-    created_at: "2023-01-07"
+    tags: ["Prospect", "Hot Lead"]
   },
   {
     id: "c8",
-    first_name: "Charlotte",
-    last_name: "Anderson",
+    firstName: "Charlotte",
+    lastName: "Anderson",
     email: "charlotte.anderson@example.com",
     phone: "+1 (555) 890-1234",
-    account_id: "a5",
-    created_at: "2023-01-08"
+    accountName: "Radiance Studio",
+    tags: ["Client"]
   },
   {
     id: "c9",
-    first_name: "Elijah",
-    last_name: "Thomas",
+    firstName: "Elijah",
+    lastName: "Thomas",
     email: "elijah.thomas@example.com",
     phone: "+1 (555) 901-2345",
-    created_at: "2023-01-09"
+    tags: ["Prospect"]
   },
   {
     id: "c10",
-    first_name: "Amelia",
-    last_name: "Jackson",
+    firstName: "Amelia",
+    lastName: "Jackson",
     email: "amelia.jackson@example.com",
     phone: "+1 (555) 012-3456",
-    account_id: "a1",
-    created_at: "2023-01-10"
+    accountName: "Bella Salon",
+    tags: ["Client", "VIP"]
   }
 ];
 
@@ -94,58 +94,98 @@ export const mockAccounts: AccountType[] = [
   {
     id: "a1",
     name: "Bella Salon",
+    type: "Salon",
+    website: null,
     industry: "Beauty",
-    website: "bellasalon.com",
-    created_at: "2023-01-01"
+    createdAt: "2023-01-01",
+    updatedAt: "2023-01-01",
+    ownerId: "user-1",
+    contactCount: 3,
+    tags: ["Active", "VIP"]
   },
   {
     id: "a2",
     name: "Glow Spa",
+    type: "Spa",
+    website: null,
     industry: "Beauty",
-    website: "glowspa.com",
-    created_at: "2023-01-02"
+    createdAt: "2023-01-02",
+    updatedAt: "2023-01-02",
+    ownerId: "user-1",
+    contactCount: 2,
+    tags: ["Active"]
   },
   {
     id: "a3",
     name: "Pure Beauty",
+    type: "Beauty Center",
+    website: null,
     industry: "Beauty",
-    website: "purebeauty.com",
-    created_at: "2023-01-03"
+    createdAt: "2023-01-03",
+    updatedAt: "2023-01-03",
+    ownerId: "user-1",
+    contactCount: 1,
+    tags: ["Active", "New"]
   },
   {
     id: "a4",
     name: "Serene Wellness",
+    type: "Wellness Center",
+    website: null,
     industry: "Wellness",
-    website: "serenewellness.com",
-    created_at: "2023-01-04"
+    createdAt: "2023-01-04",
+    updatedAt: "2023-01-04",
+    ownerId: "user-1",
+    contactCount: 1,
+    tags: ["Active"]
   },
   {
     id: "a5",
     name: "Radiance Studio",
+    type: "Salon & Spa",
+    website: null,
     industry: "Beauty",
-    website: "radiancestudio.com",
-    created_at: "2023-01-05"
+    createdAt: "2023-01-05",
+    updatedAt: "2023-01-05",
+    ownerId: "user-1",
+    contactCount: 1,
+    tags: ["Active"]
   },
   {
     id: "a6",
     name: "Harmony Nails",
+    type: "Nail Salon",
+    website: null,
     industry: "Beauty",
-    website: "harmonynails.com",
-    created_at: "2023-01-06"
+    createdAt: "2023-01-06",
+    updatedAt: "2023-01-06",
+    ownerId: "user-1",
+    contactCount: 0,
+    tags: ["Prospect"]
   },
   {
     id: "a7",
     name: "Zen Treatment",
+    type: "Wellness Center",
+    website: null,
     industry: "Wellness",
-    website: "zentreatment.com",
-    created_at: "2023-01-07"
+    createdAt: "2023-01-07",
+    updatedAt: "2023-01-07",
+    ownerId: "user-1",
+    contactCount: 0,
+    tags: ["Prospect", "New Lead"]
   },
   {
     id: "a8",
     name: "Luxe Aesthetics",
+    type: "Medical Spa",
+    website: null,
     industry: "Beauty",
-    website: "luxeaesthetics.com",
-    created_at: "2023-01-08"
+    createdAt: "2023-01-08",
+    updatedAt: "2023-01-08",
+    ownerId: "user-1",
+    contactCount: 0,
+    tags: ["Prospect"]
   }
 ];
 
@@ -155,97 +195,78 @@ export const mockDeals: DealType[] = [
     name: "Annual Service Contract",
     amount: 12000,
     status: "Closed Won",
-    account_id: "a1",
-    contact_id: "c1",
-    close_date: "2023-03-15",
-    created_at: "2023-01-15"
+    accountName: "Bella Salon",
+    closeDate: "2023-03-15"
   },
   {
     id: "d2",
     name: "Equipment Upgrade",
     amount: 8500,
     status: "Negotiation",
-    account_id: "a2",
-    contact_id: "c2",
-    close_date: "2023-05-20",
-    created_at: "2023-01-16"
+    accountName: "Glow Spa",
+    closeDate: "2023-05-20"
   },
   {
     id: "d3",
     name: "Product Line Extension",
     amount: 15000,
     status: "Proposal",
-    account_id: "a3",
-    contact_id: "c4",
-    close_date: "2023-06-10",
-    created_at: "2023-01-17"
+    accountName: "Pure Beauty",
+    closeDate: "2023-06-10"
   },
   {
     id: "d4",
     name: "Marketing Campaign",
     amount: 5000,
     status: "Qualification",
-    account_id: "a4",
-    contact_id: "c6",
-    close_date: "2023-06-30",
-    created_at: "2023-01-18"
+    accountName: "Serene Wellness",
+    closeDate: "2023-06-30"
   },
   {
     id: "d5",
     name: "Staff Training Package",
     amount: 3500,
     status: "Prospect",
-    account_id: "a5",
-    contact_id: "c8",
-    created_at: "2023-01-19"
+    accountName: "Radiance Studio"
   },
   {
     id: "d6",
     name: "Software Implementation",
     amount: 9500,
     status: "Closed Lost",
-    account_id: "a6",
-    close_date: "2023-02-28",
-    created_at: "2023-01-20"
+    accountName: "Harmony Nails",
+    closeDate: "2023-02-28"
   },
   {
     id: "d7",
     name: "Consulting Services",
     amount: 7200,
     status: "Qualification",
-    account_id: "a1",
-    contact_id: "c10",
-    close_date: "2023-07-15",
-    created_at: "2023-01-21"
+    accountName: "Bella Salon",
+    closeDate: "2023-07-15"
   },
   {
     id: "d8",
     name: "Product Wholesale Deal",
     amount: 20000,
     status: "Proposal",
-    account_id: "a2",
-    contact_id: "c2",
-    close_date: "2023-08-01",
-    created_at: "2023-01-22"
+    accountName: "Glow Spa",
+    closeDate: "2023-08-01"
   },
   {
     id: "d9",
     name: "Expansion Project",
     amount: 50000,
     status: "Negotiation",
-    account_id: "a3",
-    contact_id: "c4",
-    close_date: "2023-09-15",
-    created_at: "2023-01-23"
+    accountName: "Pure Beauty",
+    closeDate: "2023-09-15"
   },
   {
     id: "d10",
     name: "Annual Maintenance",
     amount: 4800,
     status: "Closed Won",
-    account_id: "a4",
-    contact_id: "c6",
-    close_date: "2023-04-10",
-    created_at: "2023-01-24"
+    accountName: "Serene Wellness",
+    closeDate: "2023-04-10"
   }
 ];

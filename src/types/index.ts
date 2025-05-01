@@ -1,26 +1,48 @@
 
-import type { ObjectField } from "@/hooks/useObjectTypes";
+export type FieldValue = string | number | boolean | Date | null;
 
-export interface ColumnMapping {
-  sourceColumn: string;
-  targetField: ObjectField | { id: string; name: string; api_name: string; };
-  isMatched: boolean;
+export interface RecordFormData {
+  [key: string]: FieldValue;
 }
 
-export interface LookupOption {
+export interface RecordUpdateData {
   id: string;
-  label: string;
+  field_values: RecordFormData;
 }
 
-// Add missing type definitions
+// Add DuplicateRecord type to match the useImportRecords hook
+export interface DuplicateRecord {
+  importRowIndex: number;
+  existingRecord: Record<string, any>;
+  matchingFields: string[];
+  matchScore: number;
+  action: 'skip' | 'update' | 'create';
+  record: Record<string, string>;
+}
+
+// Add ColumnMapping type for the Import functionality
+export interface ColumnMapping {
+  sourceColumnName: string;
+  sourceColumnIndex: number;
+  targetField: {
+    id: string;
+    name: string;
+    api_name: string;
+  } | null;
+}
+
+// Update types for Dashboard components with correct properties
 export interface ContactType {
   id: string;
-  first_name: string;
-  last_name: string;
-  email?: string;
+  name: string;
+  email: string;
   phone?: string;
-  account_id?: string;
-  created_at?: string;
+  company?: string;
+  lastActivity?: string;
+  firstName?: string;
+  lastName?: string;
+  accountName?: string;
+  tags?: string[];
 }
 
 export interface AccountType {
@@ -28,33 +50,22 @@ export interface AccountType {
   name: string;
   industry?: string;
   website?: string;
-  created_at?: string;
+  location?: string;
+  employees?: number;
+  type?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface DealType {
   id: string;
   name: string;
-  amount: number;
-  status: string;
-  close_date?: string;
-  account_id?: string;
-  contact_id?: string;
-  created_at?: string;
-}
-
-export interface RecordFormData {
-  [key: string]: any;
-}
-
-// Consolidated DuplicateRecord interface to be used across the application
-export interface DuplicateRecord {
-  id: string;
-  values: Record<string, any>;
-  sourceRowIndex?: number;
-  importRowIndex?: number;
-  existingRecord?: Record<string, any>;
-  matchingFields?: string[];
-  matchScore?: number;
-  action?: 'skip' | 'update' | 'create';
-  record?: Record<string, string>;
+  value: number;
+  stage: string;
+  closeDate?: string;
+  probability?: number;
+  account?: string;
+  amount?: number;
+  status?: string;
+  accountName?: string;
 }

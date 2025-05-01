@@ -27,7 +27,6 @@ import ApplicationsPage from "@/pages/ApplicationsPage";
 import ApplicationDetailPage from "@/pages/ApplicationDetailPage";
 import ApplicationObjectsPage from "@/pages/ApplicationObjectsPage";
 import CreateObjectFromFieldValuesPage from "@/pages/CreateObjectFromFieldValuesPage";
-import { PublishedObjectDetail } from "@/components/structures/PublishedObjectDetail";
 
 // Create a client
 const queryClient = new QueryClient({
@@ -59,7 +58,6 @@ function App() {
               <Route path="/settings/objects/:objectTypeId/fields/new" element={<CreateFieldPage />} />
               <Route path="/settings/objects/:objectTypeId/fields/:fieldId/edit" element={<ObjectFieldEditPage />} />
               <Route path="/structures/*" element={<Structures />} />
-              <Route path="/structures/published/:objectId" element={<PublishedObjectDetail />} />
               <Route path="/applications" element={<ApplicationsPage />} />
               <Route path="/applications/:applicationId" element={<ApplicationDetailPage />} />
               <Route path="/applications/:applicationId/objects" element={<ApplicationObjectsPage />} />

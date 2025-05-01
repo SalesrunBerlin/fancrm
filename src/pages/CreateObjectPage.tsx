@@ -13,7 +13,7 @@ export default function CreateObjectPage() {
   };
 
   return (
-    <div className="space-y-4 container px-4 py-4 md:px-6 md:py-6">
+    <div className="space-y-4 max-w-2xl mx-auto">
       <Button variant="outline" asChild>
         <Link to="/settings/object-manager">
           <ArrowLeft className="mr-2 h-4 w-4" />

@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { PageHeader } from "@/components/ui/page-header";
 import { TabsContent, TabsList, TabsTrigger, Tabs } from "@/components/ui/tabs";
@@ -10,39 +9,18 @@ import { Button } from "@/components/ui/button";
 import { PublishedObjectDetail } from "@/components/structures/PublishedObjectDetail";
 import { PublishingConfigDialog } from "@/components/settings/PublishingConfigDialog";
 import { useQueryClient } from "@tanstack/react-query";
-import { AppWindow, RefreshCw } from "lucide-react";
+import { AppWindow } from "lucide-react";
 import { useEffect } from "react";
 
 export default function Structures() {
   const [open, setOpen] = useState(false);
-  const { 
-    objectTypes, 
-    isLoading, 
-    publishObjectType, 
-    publishedObjects, 
-    isLoadingPublished,
-    refreshPublishedObjects 
-  } = useObjectTypes();
+  const { objectTypes, isLoading, publishObjectType } = useObjectTypes();
   const queryClient = useQueryClient();
   const [selectedObject, setSelectedObject] = useState(null);
-  const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
-    // Refresh data when component mounts
     queryClient.invalidateQueries({ queryKey: ["objectTypes"] });
-    queryClient.invalidateQueries({ queryKey: ["published-objects"] });
   }, [queryClient]);
-
-  const handleRefresh = async () => {
-    setIsRefreshing(true);
-    try {
-      await refreshPublishedObjects();
-      setIsRefreshing(false);
-    } catch (error) {
-      console.error("Error refreshing published objects:", error);
-      setIsRefreshing(false);
-    }
-  };
 
   const handlePublish = async (objectId: string) => {
     try {
@@ -58,25 +36,10 @@ export default function Structures() {
       <PageHeader
         title="Structures"
         description="Define and customize your data structures"
-        actions={
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={handleRefresh} 
-            disabled={isRefreshing}
-          >
-            {isRefreshing ? (
-              <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <RefreshCw className="h-4 w-4 mr-2" />
-            )}
-            <span className="hidden md:inline">Refresh</span>
-          </Button>
-        }
       />
 
       <Tabs defaultValue="active" className="space-y-4">
-        <TabsList className="w-full sm:w-auto">
+        <TabsList>
           <TabsTrigger value="active">Active</TabsTrigger>
           <TabsTrigger value="inactive">Inactive</TabsTrigger>
           <TabsTrigger value="published">Published</TabsTrigger>
@@ -137,26 +100,25 @@ export default function Structures() {
         </TabsContent>
 
         <TabsContent value="published" className="space-y-4">
-          {isLoadingPublished ? (
+          {isLoading ? (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {Array.from({ length: 6 }).map((_, i) => (
                 <Skeleton key={i} className="h-48 w-full" />
               ))}
             </div>
-          ) : publishedObjects && publishedObjects.length > 0 ? (
+          ) : objectTypes && objectTypes.filter(obj => obj.is_published).length > 0 ? (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {publishedObjects.map(objectType => (
-                <ObjectCard 
-                  key={objectType.id} 
-                  objectType={objectType} 
-                />
-              ))}
+              {objectTypes
+                .filter(obj => obj.is_published)
+                .map(objectType => (
+                  <ObjectCard key={objectType.id} objectType={objectType} />
+                ))}
             </div>
           ) : (
             <Alert>
               <AlertTitle>No Published Objects</AlertTitle>
               <AlertDescription>
-                There are no published objects to display. Click the refresh button to update the list if you're expecting to see published objects.
+                There are no published objects to display.
               </AlertDescription>
             </Alert>
           )}
