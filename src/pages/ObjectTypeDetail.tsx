@@ -42,7 +42,7 @@ export default function ObjectTypeDetail() {
           actions={
             <Button variant="outline" onClick={() => navigate("/settings/object-manager")}>
               <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Object Manager
+              <span className="md:inline">Back to Object Manager</span>
             </Button>
           }
         />
@@ -102,52 +102,56 @@ export default function ObjectTypeDetail() {
         title={currentObjectType.name}
         description={currentObjectType.description || `API Name: ${currentObjectType.api_name}`}
         actions={
-          <div className={`flex ${isMobile ? 'flex-col w-full' : 'flex-row'} gap-2`}>
+          <div className="flex flex-row gap-2 w-full justify-end">
             <Button 
               variant="outline" 
-              asChild 
-              className={isMobile ? "w-full" : ""}
+              size="responsive"
+              asChild
             >
               <Link to="/settings/object-manager">
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Back to Object Manager
+                <ArrowLeft className="h-4 w-4" />
+                <span className="hidden md:inline">Back</span>
               </Link>
             </Button>
             {!isPublishedByOthers && !currentObjectType.is_system && !isArchived && (
               <>
                 <Button 
                   variant="default"
+                  size="responsive"
                   onClick={() => navigate(`/settings/objects/${objectTypeId}/fields/new`)}
-                  className={isMobile ? "w-full" : ""}
                 >
-                  <Plus className="mr-2 h-4 w-4" />
-                  New Field
+                  <Plus className="h-4 w-4" />
+                  <span className="hidden md:inline">New Field</span>
                 </Button>
                 <Button 
                   onClick={handleTogglePublish}
                   disabled={isPublishing}
+                  size="responsive"
                   variant={currentObjectType.is_published ? "outline" : "default"}
-                  className={isMobile ? "w-full" : ""}
                 >
-                  {currentObjectType.is_published ? "Unpublish" : "Publish"}
+                  <List className="h-4 w-4" />
+                  <span className="hidden md:inline">
+                    {currentObjectType.is_published ? "Unpublish" : "Publish"}
+                  </span>
                 </Button>
                 <Button 
                   variant="warning"
+                  size="responsive"
                   onClick={() => navigate(`/settings/objects/${objectTypeId}/archive`)}
-                  className={isMobile ? "w-full" : ""}
                 >
-                  <Archive className="mr-2 h-4 w-4" />
-                  Archive
+                  <Archive className="h-4 w-4" />
+                  <span className="hidden md:inline">Archive</span>
                 </Button>
               </>
             )}
             {isArchived && (
               <Button
                 variant="success" 
+                size="responsive"
                 onClick={() => navigate(`/settings/objects/${objectTypeId}/restore`)}
-                className={isMobile ? "w-full" : ""}
               >
-                Restore
+                <Archive className="h-4 w-4" />
+                <span className="hidden md:inline">Restore</span>
               </Button>
             )}
           </div>

@@ -108,25 +108,23 @@ export default function ImportRecordsPage() {
     }
     
     // Run duplicate check
-    toast.promise(
-      checkForDuplicates(),
-      {
-        loading: 'Checking for potential duplicates...',
-        success: (hasDuplicates) => {
-          // Move to appropriate step based on result
-          if (hasDuplicates) {
-            setStep("duplicate-check");
-            return `Found ${duplicates.length} potential duplicate records`;
-          } else {
-            setStep("preview");
-            return 'No duplicate records found';
-          }
-        },
-        error: 'Failed to check for duplicates'
+    try {
+      const hasDuplicates = await checkForDuplicates();
+      
+      // Move to appropriate step based on result
+      if (hasDuplicates) {
+        setStep("duplicate-check");
+        toast.info(`Found ${duplicates.length} potential duplicate records`);
+      } else {
+        setStep("preview");
+        toast.info('No duplicate records found');
       }
-    );
-    
-    return true; // Fix the return type to match Promise<boolean>
+      return true;
+    } catch (error) {
+      toast.error('Failed to check for duplicates');
+      console.error(error);
+      return false;
+    }
   };
 
   const handlePreviewContinue = () => {
@@ -285,10 +283,18 @@ export default function ImportRecordsPage() {
                     placeholder="Paste your data here..." 
                     className="h-[200px] font-mono"
                     value={pastedText} 
-                    onChange={handleTextPaste}
+                    onChange={(e) => setPastedText(e.target.value)}
                   />
                   <div className="flex justify-end">
-                    <Button onClick={handleParseData} disabled={!pastedText.trim()}>
+                    <Button 
+                      onClick={() => {
+                        if (pastedText.trim()) {
+                          parseImportText(pastedText);
+                          setStep("mapping");
+                        }
+                      }} 
+                      disabled={!pastedText.trim()}
+                    >
                       Continue
                     </Button>
                   </div>
