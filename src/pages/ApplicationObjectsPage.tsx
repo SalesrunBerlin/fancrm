@@ -7,10 +7,11 @@ import { useApplications } from "@/hooks/useApplications";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { Loader2, ArrowLeft, Plus } from "lucide-react";
+import { Loader2, ArrowLeft } from "lucide-react";
 
 export default function ApplicationObjectsPage() {
   const { applicationId } = useParams<{ applicationId: string }>();
@@ -21,7 +22,7 @@ export default function ApplicationObjectsPage() {
   const [currentApplication, setCurrentApplication] = useState<any>(null);
   const [assignedObjectIds, setAssignedObjectIds] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isAssigning, setIsAssigning] = useState(false);
+  const [pendingToggles, setPendingToggles] = useState<{ [key: string]: boolean }>({});
 
   // Find the current application
   useEffect(() => {
@@ -63,53 +64,48 @@ export default function ApplicationObjectsPage() {
     }
   };
 
-  const handleAssignObject = async (objectTypeId: string) => {
+  const handleToggleObject = async (objectTypeId: string, isCurrentlyAssigned: boolean) => {
     if (!user) return;
     
+    // Set pending state for this toggle
+    setPendingToggles(prev => ({ ...prev, [objectTypeId]: true }));
+    
     try {
-      setIsAssigning(true);
-      
-      const { error } = await supabase
-        .from("object_application_assignments")
-        .insert({
-          application_id: applicationId,
-          object_type_id: objectTypeId,
-          owner_id: user.id
-        });
+      if (isCurrentlyAssigned) {
+        // Remove object from application
+        const { error } = await supabase
+          .from("object_application_assignments")
+          .delete()
+          .eq("application_id", applicationId)
+          .eq("object_type_id", objectTypeId);
+          
+        if (error) throw error;
         
-      if (error) throw error;
-      
-      // Update local state
-      setAssignedObjectIds(prev => [...prev, objectTypeId]);
-      toast.success("Object assigned to application");
-    } catch (error) {
-      console.error("Error assigning object:", error);
-      toast.error("Failed to assign object");
-    } finally {
-      setIsAssigning(false);
-    }
-  };
-
-  const handleRemoveObject = async (objectTypeId: string) => {
-    try {
-      setIsAssigning(true);
-      
-      const { error } = await supabase
-        .from("object_application_assignments")
-        .delete()
-        .eq("application_id", applicationId)
-        .eq("object_type_id", objectTypeId);
+        // Update local state
+        setAssignedObjectIds(prev => prev.filter(id => id !== objectTypeId));
+        toast.success("Object removed from application");
+      } else {
+        // Assign object to application
+        const { error } = await supabase
+          .from("object_application_assignments")
+          .insert({
+            application_id: applicationId,
+            object_type_id: objectTypeId,
+            owner_id: user.id
+          });
+          
+        if (error) throw error;
         
-      if (error) throw error;
-      
-      // Update local state
-      setAssignedObjectIds(prev => prev.filter(id => id !== objectTypeId));
-      toast.success("Object removed from application");
+        // Update local state
+        setAssignedObjectIds(prev => [...prev, objectTypeId]);
+        toast.success("Object assigned to application");
+      }
     } catch (error) {
-      console.error("Error removing object:", error);
-      toast.error("Failed to remove object");
+      console.error("Error toggling object assignment:", error);
+      toast.error("Failed to update object assignment");
     } finally {
-      setIsAssigning(false);
+      // Clear pending state for this toggle
+      setPendingToggles(prev => ({ ...prev, [objectTypeId]: false }));
     }
   };
 
@@ -149,7 +145,7 @@ export default function ApplicationObjectsPage() {
           </Button>
           <PageHeader 
             title={`Manage Objects for ${currentApplication.name}`}
-            description="Assign or remove objects from this application"
+            description="Turn on objects to add them to this application"
           />
         </div>
       </div>
@@ -166,7 +162,7 @@ export default function ApplicationObjectsPage() {
                 <TableHead>Object Name</TableHead>
                 <TableHead>API Name</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead className="text-right">Action</TableHead>
+                <TableHead className="text-right w-[100px]">Assigned</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -179,11 +175,12 @@ export default function ApplicationObjectsPage() {
               ) : (
                 availableObjects.map((obj) => {
                   const isAssigned = assignedObjectIds.includes(obj.id);
+                  const isPending = pendingToggles[obj.id] || false;
                   
                   return (
                     <TableRow key={obj.id}>
-                      <TableCell>{obj.name}</TableCell>
-                      <TableCell>{obj.api_name}</TableCell>
+                      <TableCell className="font-medium">{obj.name}</TableCell>
+                      <TableCell className="text-muted-foreground">{obj.api_name}</TableCell>
                       <TableCell>
                         {obj.is_system && (
                           <Badge variant="secondary" className="mr-1">System</Badge>
@@ -195,23 +192,15 @@ export default function ApplicationObjectsPage() {
                         )}
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button
-                          variant={isAssigned ? "destructive" : "outline"}
-                          size="sm"
-                          onClick={() => isAssigned ? handleRemoveObject(obj.id) : handleAssignObject(obj.id)}
-                          disabled={isAssigning}
-                        >
-                          {isAssigning ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : isAssigned ? (
-                            "Remove"
-                          ) : (
-                            <>
-                              <Plus className="h-4 w-4 mr-1" />
-                              Assign
-                            </>
-                          )}
-                        </Button>
+                        {isPending ? (
+                          <Loader2 className="h-4 w-4 animate-spin ml-auto" />
+                        ) : (
+                          <Switch
+                            checked={isAssigned}
+                            onCheckedChange={() => handleToggleObject(obj.id, isAssigned)}
+                            disabled={isPending}
+                          />
+                        )}
                       </TableCell>
                     </TableRow>
                   );
