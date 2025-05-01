@@ -1,42 +1,6 @@
 
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { useState } from "react";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -45,48 +9,40 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useToast } from "@/components/ui/use-toast";
-import { useObjectTypes } from "@/hooks/useObjectTypes";
-import { DuplicateRecord } from "@/types";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Progress } from "@/components/ui/progress";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { AlertTriangle } from "lucide-react";
 import { ObjectField } from "@/hooks/useObjectTypes";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2 } from "lucide-react";
-import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
-import * as z from "zod";
-
-interface ImportData {
-  headers: string[];
-  rows: string[][];
-}
-
-interface ColumnMapping {
-  sourceColumnIndex: number;
-  sourceColumnName: string;
-  targetField: ObjectField | null;
-}
+import { DuplicateRecord } from "@/types";
+import { ColumnMapping } from "@/hooks/useImportRecords";
 
 interface DuplicateRecordsResolverProps {
   duplicates: DuplicateRecord[];
   fields: ObjectField[];
   matchingFields: string[];
   columnMappings: ColumnMapping[];
-  importData: ImportData;
-  onSetAction: (rowIndex: number, action: 'create' | 'update') => void;
-  onUpdateMatchingFields: (fields: string[]) => void;
-  onUpdateDuplicateCheckIntensity: (intensity: 'strict' | 'moderate' | 'lenient') => void;
-  duplicateCheckIntensity: 'strict' | 'moderate' | 'lenient';
+  importData: { headers: string[]; rows: string[][] };
+  onSetAction: (rowIndex: number, action: "skip" | "update" | "create") => void;
+  onUpdateMatchingFields: (fieldApiNames: string[]) => void;
+  onUpdateDuplicateCheckIntensity: (intensity: "lenient" | "moderate" | "strict") => void;
+  duplicateCheckIntensity: "lenient" | "moderate" | "strict";
   onContinue: () => void;
   onBack: () => void;
-  onRecheck: () => Promise<boolean>;
+  onRecheck: () => void;
 }
-
-const formSchema = z.object({
-  resolutionStrategy: z.enum(["skip", "overwrite", "merge"]),
-  primaryKeyHeader: z.string().min(1, {
-    message: "Please select a primary key header.",
-  }),
-});
 
 export function DuplicateRecordsResolver({
   duplicates,
@@ -102,292 +58,276 @@ export function DuplicateRecordsResolver({
   onBack,
   onRecheck,
 }: DuplicateRecordsResolverProps) {
-  const [isResolving, setIsResolving] = useState(false);
-  const [selectedHeader, setSelectedHeader] = useState('');
-  const [isPrimaryKeySelectionOpen, setIsPrimaryKeySelectionOpen] = useState(true);
-  const { toast } = useToast();
-  const { objectTypes, isLoading: isLoadingObjectTypes } = useObjectTypes();
+  const [activeTab, setActiveTab] = useState<"review" | "settings">("review");
+  const [activeMatchFields, setActiveMatchFields] = useState<string[]>(matchingFields);
+  const [activeIntensity, setActiveIntensity] = useState<"lenient" | "moderate" | "strict">(
+    duplicateCheckIntensity
+  );
 
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      resolutionStrategy: "skip",
-      primaryKeyHeader: "",
-    },
-  });
+  // Calculate summary statistics
+  const totalDuplicates = duplicates.length;
+  const skipCount = duplicates.filter(d => d.action === "skip").length;
+  const updateCount = duplicates.filter(d => d.action === "update").length;
+  const createCount = duplicates.filter(d => d.action === "create").length;
 
-  useEffect(() => {
-    if (matchingFields.length > 0 && fields.length > 0) {
-      // Find a field name from matchingFields
-      const matchingField = fields.find(f => matchingFields.includes(f.api_name));
-      if (matchingField) {
-        form.setValue("primaryKeyHeader", matchingField.name);
-        setSelectedHeader(matchingField.name);
-      }
-    } else if (fields.length > 0) {
-      const firstField = fields[0];
-      form.setValue("primaryKeyHeader", firstField.name);
-      setSelectedHeader(firstField.name);
-    }
-  }, [matchingFields, fields, form]);
-
-  const onSubmit = async (values: z.infer<typeof formSchema>) => {
-    setIsResolving(true);
-    try {
-      // Apply the resolution strategy to all duplicates
-      const action = values.resolutionStrategy === "skip" ? "create" : 
-                    values.resolutionStrategy === "overwrite" ? "update" : "create";
-      
-      duplicates.forEach(duplicate => {
-        onSetAction(duplicate.importRowIndex, action);
-      });
-      
-      onContinue();
-      toast({
-        title: "Success",
-        description: "Duplicate records resolved successfully.",
-      });
-    } catch (error: any) {
-      console.error("Error resolving duplicates:", error);
-      toast({
-        title: "Error",
-        description:
-          error?.message || "Failed to resolve duplicate records. Try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsResolving(false);
-    }
+  const actionLabels = {
+    skip: "Skip (Don't Import)",
+    update: "Update Existing Record",
+    create: "Create New Record Anyway",
   };
 
-  const handleIntensityChange = (intensity: 'strict' | 'moderate' | 'lenient') => {
-    onUpdateDuplicateCheckIntensity(intensity);
+  const intensityLabels = {
+    lenient: "Low - Only exact matches",
+    moderate: "Medium - Close matches",
+    strict: "High - Loose matches",
   };
 
-  const handleUpdateMatchingFields = (fields: string[]) => {
-    onUpdateMatchingFields(fields);
+  const handleFieldToggle = (fieldApiName: string) => {
+    setActiveMatchFields(prev => 
+      prev.includes(fieldApiName)
+        ? prev.filter(f => f !== fieldApiName)
+        : [...prev, fieldApiName]
+    );
+  };
+
+  const handleApplySettings = () => {
+    // Apply the new settings
+    onUpdateMatchingFields(activeMatchFields);
+    onUpdateDuplicateCheckIntensity(activeIntensity);
+    
+    // Go back to review tab
+    setActiveTab("review");
+    
+    // Trigger recheck
+    onRecheck();
+  };
+
+  // Get field name from API name
+  const getFieldName = (apiName: string): string => {
+    const field = fields.find(f => f.api_name === apiName);
+    return field ? field.name : apiName;
+  };
+
+  // Get score label
+  const getScoreLabel = (score: number): string => {
+    if (score >= 0.9) return "High";
+    if (score >= 0.7) return "Medium";
+    return "Low";
+  };
+
+  // Get score color
+  const getScoreColor = (score: number): string => {
+    if (score >= 0.9) return "bg-red-500";
+    if (score >= 0.7) return "bg-yellow-500";
+    return "bg-green-500";
   };
 
   return (
     <div className="space-y-4">
-      <AlertDialogHeader>
-        <AlertDialogTitle>Resolve Duplicate Records</AlertDialogTitle>
-        <AlertDialogDescription>
-          We found {duplicates.length} potential duplicate records in your data. Please select how to handle these duplicates.
-        </AlertDialogDescription>
-      </AlertDialogHeader>
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-medium">Potential Duplicate Records</h3>
+        <div className="flex items-center gap-2">
+          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "review" | "settings")}>
+            <TabsList>
+              <TabsTrigger value="review">Review Duplicates</TabsTrigger>
+              <TabsTrigger value="settings">Matching Settings</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
+      </div>
 
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Duplicate Check Settings</CardTitle>
-              <CardDescription>
-                Adjust how strictly we check for duplicates
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label>Matching Fields</Label>
-                <div className="grid grid-cols-2 gap-2 mt-2">
-                  {fields.map((field) => (
-                    <div key={field.api_name} className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        id={field.api_name}
-                        checked={matchingFields.includes(field.api_name)}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            handleUpdateMatchingFields([...matchingFields, field.api_name]);
-                          } else {
-                            handleUpdateMatchingFields(
-                              matchingFields.filter((f) => f !== field.api_name)
-                            );
-                          }
-                        }}
-                        className="h-4 w-4 rounded border-gray-300"
-                      />
-                      <label htmlFor={field.api_name} className="text-sm font-medium">
-                        {field.name}
-                      </label>
-                    </div>
-                  ))}
-                </div>
-              </div>
+      <TabsContent value="review" className="space-y-4 mt-0">
+        <Alert>
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>
+            We found {totalDuplicates} potential duplicate{totalDuplicates !== 1 ? 's' : ''}. 
+            Please review and choose what to do with each one.
+          </AlertDescription>
+        </Alert>
 
-              <div>
-                <Label>Matching Strictness</Label>
-                <RadioGroup
-                  defaultValue={duplicateCheckIntensity}
-                  onValueChange={(value) => handleIntensityChange(value as any)}
-                  className="mt-2"
-                >
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="strict" id="strict" />
-                    <Label htmlFor="strict">Strict (exact matches only)</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="moderate" id="moderate" />
-                    <Label htmlFor="moderate">Moderate (substring matches)</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="lenient" id="lenient" />
-                    <Label htmlFor="lenient">Lenient (fuzzy matching)</Label>
-                  </div>
-                </RadioGroup>
-              </div>
-
-              <div className="flex justify-end">
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={onRecheck}
-                  className="mr-2"
-                >
-                  Recheck with New Settings
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Resolution Strategy</CardTitle>
-              <CardDescription>
-                Choose how to handle duplicate records.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <FormField
-                control={form.control}
-                name="resolutionStrategy"
-                render={({ field }) => (
-                  <FormItem className="space-y-3">
-                    <FormControl>
-                      <RadioGroup
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                        className="flex flex-col space-y-1"
-                      >
-                        <FormItem className="flex items-center space-x-3 space-y-0">
-                          <RadioGroupItem value="skip" id="skip" />
-                          <FormLabel htmlFor="skip">
-                            Skip Duplicates{" "}
-                            <Badge variant="secondary">Recommended</Badge>
-                            <p className="text-sm text-muted-foreground">
-                              Ignore the new record if a record with the same
-                              primary key already exists.
-                            </p>
-                          </FormLabel>
-                        </FormItem>
-                        <FormItem className="flex items-center space-x-3 space-y-0">
-                          <RadioGroupItem value="overwrite" id="overwrite" />
-                          <FormLabel htmlFor="overwrite">
-                            Overwrite Existing
-                            <p className="text-sm text-muted-foreground">
-                              Replace the existing record with the new record.
-                            </p>
-                          </FormLabel>
-                        </FormItem>
-                        <FormItem className="flex items-center space-x-3 space-y-0">
-                          <RadioGroupItem value="merge" id="merge" />
-                          <FormLabel htmlFor="merge">
-                            Merge Records
-                            <p className="text-sm text-muted-foreground">
-                              Combine the data from the new record with the
-                              existing record.
-                            </p>
-                          </FormLabel>
-                        </FormItem>
-                      </RadioGroup>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Duplicate Records Preview</CardTitle>
-              <CardDescription>
-                Found {duplicates.length} potential duplicate records
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ScrollArea className="h-[400px] w-full rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Row</TableHead>
-                      <TableHead>Matching Fields</TableHead>
-                      <TableHead>Existing Record Values</TableHead>
-                      <TableHead>Import Values</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {duplicates.map((duplicate) => {
-                      const row = importData.rows[duplicate.importRowIndex];
-                      return (
-                        <TableRow key={duplicate.importRowIndex}>
-                          <TableCell className="font-medium">
-                            {duplicate.importRowIndex + 1}
-                          </TableCell>
-                          <TableCell>
-                            {duplicate.matchingFields.map((fieldName) => {
-                              const field = fields.find(f => f.api_name === fieldName);
-                              return (
-                                <div key={fieldName} className="mb-1">
-                                  {field?.name || fieldName}
-                                </div>
-                              );
-                            })}
-                          </TableCell>
-                          <TableCell>
-                            {duplicate.matchingFields.map((fieldName) => {
-                              const value = duplicate.existingRecord.field_values?.[fieldName];
-                              return (
-                                <div key={fieldName} className="mb-1">
-                                  {value || "N/A"}
-                                </div>
-                              );
-                            })}
-                          </TableCell>
-                          <TableCell>
-                            {duplicate.matchingFields.map((fieldName) => {
-                              const field = fields.find(f => f.api_name === fieldName);
-                              const mapping = columnMappings.find(m => m.targetField?.api_name === fieldName);
-                              const value = mapping && row ? row[mapping.sourceColumnIndex] : "N/A";
-                              return (
-                                <div key={fieldName} className="mb-1">
-                                  {value || "N/A"}
-                                </div>
-                              );
-                            })}
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </ScrollArea>
-            </CardContent>
-          </Card>
-
-          <div className="flex justify-between">
-            <Button type="button" variant="outline" onClick={onBack}>
-              Back
-            </Button>
-            <Button type="submit" disabled={isResolving}>
-              {isResolving ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : null}
-              Continue
-            </Button>
+        <div className="flex items-center justify-between text-sm">
+          <div className="flex items-center gap-4">
+            <div>
+              <span className="font-medium">Skip:</span> {skipCount}
+            </div>
+            <div>
+              <span className="font-medium">Update:</span> {updateCount}
+            </div>
+            <div>
+              <span className="font-medium">Create:</span> {createCount}
+            </div>
           </div>
-        </form>
-      </Form>
+        </div>
+
+        <Card>
+          <CardContent className="p-0">
+            <ScrollArea className="h-[400px]">
+              <div className="p-4 space-y-6">
+                {duplicates.map((duplicate, index) => (
+                  <div key={index} className="border rounded-md p-4">
+                    <div className="flex justify-between items-center mb-4">
+                      <div className="flex-1">
+                        <h4 className="font-medium">Match #{index + 1}</h4>
+                        <div className="flex items-center gap-2">
+                          <div className="text-sm text-muted-foreground">
+                            Confidence: {getScoreLabel(duplicate.matchScore)}
+                          </div>
+                          <Progress 
+                            value={duplicate.matchScore * 100} 
+                            className={`w-24 h-2 ${getScoreColor(duplicate.matchScore)}`} 
+                          />
+                        </div>
+                      </div>
+                      <RadioGroup 
+                        value={duplicate.action} 
+                        onValueChange={(value) => onSetAction(duplicate.importRowIndex, value as any)}
+                        className="flex gap-4"
+                      >
+                        {Object.entries(actionLabels).map(([value, label]) => (
+                          <div key={value} className="flex items-center space-x-2">
+                            <RadioGroupItem value={value} id={`${index}-${value}`} />
+                            <Label htmlFor={`${index}-${value}`} className="text-sm">
+                              {label}
+                            </Label>
+                          </div>
+                        ))}
+                      </RadioGroup>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <div className="text-sm font-medium">Import Record</div>
+                        <Table>
+                          <TableBody>
+                            {Object.entries(duplicate.record).map(([field, value], idx) => {
+                              // Find the field name from the api name
+                              const fieldObj = fields.find(f => f.api_name === field);
+                              const fieldName = fieldObj ? fieldObj.name : field;
+                              
+                              return (
+                                <TableRow key={idx}>
+                                  <TableCell className="py-1 font-medium text-sm w-1/2">
+                                    {fieldName}
+                                  </TableCell>
+                                  <TableCell className="py-1 text-sm">
+                                    {value || <span className="text-muted-foreground italic">Empty</span>}
+                                  </TableCell>
+                                </TableRow>
+                              );
+                            })}
+                          </TableBody>
+                        </Table>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <div className="text-sm font-medium">Existing Record</div>
+                        <Table>
+                          <TableBody>
+                            {Object.entries(duplicate.existingRecord)
+                              .filter(([key]) => key !== 'id') // Filter out id field
+                              .map(([field, value], idx) => {
+                                // Find field name
+                                const fieldName = getFieldName(field);
+                                
+                                return (
+                                  <TableRow key={idx}>
+                                    <TableCell className="py-1 font-medium text-sm w-1/2">
+                                      {fieldName}
+                                    </TableCell>
+                                    <TableCell className="py-1 text-sm">
+                                      {value ? value.toString() : <span className="text-muted-foreground italic">Empty</span>}
+                                    </TableCell>
+                                  </TableRow>
+                                );
+                              })}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </ScrollArea>
+          </CardContent>
+        </Card>
+      </TabsContent>
+
+      <TabsContent value="settings" className="space-y-4 mt-0">
+        <div className="grid grid-cols-2 gap-6">
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-sm font-medium mb-2">Fields to Match On</h3>
+              <p className="text-sm text-muted-foreground mb-3">
+                Select which fields should be used to detect duplicate records
+              </p>
+              <div className="border rounded-md p-4 space-y-2">
+                {fields
+                  .filter(field => field.data_type !== 'lookup')
+                  .map(field => (
+                    <div key={field.id} className="flex items-center space-x-2">
+                      <Checkbox 
+                        id={`field-${field.id}`}
+                        checked={activeMatchFields.includes(field.api_name)}
+                        onCheckedChange={() => handleFieldToggle(field.api_name)}
+                      />
+                      <Label htmlFor={`field-${field.id}`}>{field.name}</Label>
+                    </div>
+                  ))
+                }
+              </div>
+            </div>
+          </div>
+          
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-sm font-medium mb-2">Match Sensitivity</h3>
+              <p className="text-sm text-muted-foreground mb-3">
+                Set how strict the matching should be
+              </p>
+              <Select 
+                value={activeIntensity} 
+                onValueChange={(val: "lenient" | "moderate" | "strict") => setActiveIntensity(val)}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select match sensitivity" />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(intensityLabels).map(([key, label]) => (
+                    <SelectItem key={key} value={key as string}>{label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              
+              <div className="mt-4">
+                <h3 className="text-sm font-medium mb-2">Sensitivity Explanation</h3>
+                <ul className="text-sm space-y-2 list-disc pl-5">
+                  <li><span className="font-medium">Low:</span> Only exact matches on all selected fields</li>
+                  <li><span className="font-medium">Medium:</span> Matches allowing some variation</li>
+                  <li><span className="font-medium">High:</span> Finds more potential matches with less certainty</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div className="flex justify-end">
+          <Button 
+            onClick={handleApplySettings}
+            disabled={activeMatchFields.length === 0}
+          >
+            Apply Settings & Recheck
+          </Button>
+        </div>
+      </TabsContent>
+
+      <div className="flex justify-between">
+        <Button variant="outline" onClick={onBack}>
+          Back to Mapping
+        </Button>
+        <Button onClick={onContinue}>
+          Continue
+        </Button>
+      </div>
     </div>
   );
 }

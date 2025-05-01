@@ -30,8 +30,7 @@ import { BatchFieldCreation } from "@/components/import/BatchFieldCreation";
 import { DuplicateRecordsResolver } from "@/components/import/DuplicateRecordsResolver";
 import { PreviewImportData } from "@/components/import/PreviewImportData";
 import { toast } from "sonner";
-import { ColumnMapping as UIColumnMapping } from "@/types"; 
-import { DuplicateRecord } from "@/hooks/useImportRecords"; // Import directly from the hooks file
+import { DuplicateRecord, ColumnMapping } from "@/types"; 
 
 // Map intensity values between different naming conventions
 const mapIntensity = (intensity: "low" | "medium" | "high"): "lenient" | "moderate" | "strict" => {
@@ -53,6 +52,12 @@ const mapReverseIntensity = (intensity: "lenient" | "moderate" | "strict"): "low
   return map[intensity];
 };
 
+interface FieldToCreate {
+  columnName: string;
+  columnIndex: number;
+  defaultType: string;
+}
+
 export default function ImportRecordsPage() {
   const { objectTypeId } = useParams<{ objectTypeId: string }>();
   const navigate = useNavigate();
@@ -63,6 +68,7 @@ export default function ImportRecordsPage() {
   const [unmappedColumns, setUnmappedColumns] = useState<string[]>([]);
   const [columnData, setColumnData] = useState<{ [columnName: string]: string[] }>({});
   const [selectedRows, setSelectedRows] = useState<number[]>([]);
+  const [fieldsToCreate, setFieldsToCreate] = useState<FieldToCreate[]>([]);
   
   const { objectTypes } = useObjectTypes();
   const { fields, isLoading: isLoadingFields } = useRecordFields(objectTypeId);
@@ -70,7 +76,7 @@ export default function ImportRecordsPage() {
 
   const { 
     importData, 
-    columnMappings, 
+    columnMappings: hookColumnMappings, 
     isImporting,
     duplicates,
     matchingFields,
@@ -86,13 +92,59 @@ export default function ImportRecordsPage() {
     updateDuplicateCheckIntensity: rawUpdateIntensity
   } = useImportRecords(objectTypeId!, fields || []);
 
+  // Convert hook column mappings to our ColumnMapping type
+  const columnMappings: ColumnMapping[] = hookColumnMappings.map(mapping => ({
+    sourceColumn: mapping.sourceColumnName,
+    targetField: mapping.targetField || { id: "", name: "", api_name: "" },
+    isMatched: !!mapping.targetField
+  }));
+
   const duplicateCheckIntensity = mapIntensity(rawIntensity);
   
   const updateDuplicateCheckIntensity = (intensity: "lenient" | "moderate" | "strict") => {
     rawUpdateIntensity(mapReverseIntensity(intensity));
   };
 
+  // Process the fields that need to be created when continuing
+  useEffect(() => {
+    if (hookColumnMappings.length > 0 && fields) {
+      // Identify unmapped columns and prepare them for potential field creation
+      const unmapped = hookColumnMappings
+        .filter(mapping => !mapping.targetField)
+        .map(mapping => ({
+          columnName: mapping.sourceColumnName,
+          columnIndex: mapping.sourceColumnIndex,
+          defaultType: "text" // Default to text type
+        }));
+      
+      setFieldsToCreate(unmapped);
+      setUnmappedColumns(unmapped.map(item => item.columnName));
+      
+      // Also collect sample data for each column to help with field type suggestions
+      if (importData) {
+        const data: { [columnName: string]: string[] } = {};
+        
+        hookColumnMappings.forEach(mapping => {
+          const values = importData.rows
+            .slice(0, 10) // Take up to 10 sample values
+            .map(row => row[mapping.sourceColumnIndex])
+            .filter(val => val !== null && val !== undefined && val.trim() !== '');
+          
+          data[mapping.sourceColumnName] = values;
+        });
+        
+        setColumnData(data);
+      }
+    }
+  }, [hookColumnMappings, fields, importData]);
+
   const handleCheckForDuplicates = async (): Promise<boolean> => {
+    // Check if there are unmapped columns that need field creation
+    if (fieldsToCreate.length > 0) {
+      setStep("batch-field-creation");
+      return false; // Don't proceed to duplicate check yet
+    }
+    
     // Clear any previous duplicate check results
     // Reset selected matching fields if none are selected
     if (matchingFields.length === 0 && fields) {
@@ -170,7 +222,7 @@ export default function ImportRecordsPage() {
   };
 
   const getMappedCount = () => {
-    return columnMappings.filter(m => m.targetField !== null).length;
+    return hookColumnMappings.filter(m => m.targetField !== null).length;
   };
 
   const getExampleData = () => {
@@ -187,6 +239,7 @@ export default function ImportRecordsPage() {
     return `${headers}\n${rows.join("\n")}`;
   };
 
+  // Handle creating new fields in batch
   const handleCreateBatchFields = () => {
     setStep("batch-field-creation");
   };
@@ -194,7 +247,7 @@ export default function ImportRecordsPage() {
   const handleBatchFieldCreationComplete = (createdFields: { columnName: string; fieldId: string }[]) => {
     // Update mappings for each created field
     createdFields.forEach(({ columnName, fieldId }) => {
-      const columnIndex = columnMappings.findIndex(
+      const columnIndex = hookColumnMappings.findIndex(
         mapping => mapping.sourceColumnName === columnName
       );
       
@@ -203,8 +256,12 @@ export default function ImportRecordsPage() {
       }
     });
     
-    // Return to mapping step
+    // Proceed to duplicate check after creating all fields
     setStep("mapping");
+    toast.success(`Created ${createdFields.length} fields successfully`);
+    
+    // Reset fields to create list since they've been processed
+    setFieldsToCreate([]);
   };
 
   const handleBatchFieldCreationCancel = () => {
@@ -217,7 +274,7 @@ export default function ImportRecordsPage() {
   };
 
   const handleCreateNewField = (columnIndex: number) => {
-    const columnName = columnMappings[columnIndex]?.sourceColumnName || "";
+    const columnName = hookColumnMappings[columnIndex]?.sourceColumnName || "";
     // Navigate to the field creation page, passing the column name as a URL parameter
     navigate(`/objects/${objectTypeId}/import/create-field/${encodeURIComponent(columnName)}`);
   };
@@ -318,7 +375,7 @@ export default function ImportRecordsPage() {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <p className="text-sm text-muted-foreground">
-                  {getMappedCount()} of {columnMappings.length} columns mapped
+                  {getMappedCount()} of {hookColumnMappings.length} columns mapped
                 </p>
                 {unmappedColumns.length > 0 && (
                   <div className="flex items-center">
@@ -333,7 +390,7 @@ export default function ImportRecordsPage() {
                 )}
               </div>
 
-              {getMappedCount() < columnMappings.length && (
+              {getMappedCount() < hookColumnMappings.length && (
                 <Alert variant="destructive" className="py-2">
                   <AlertCircle className="h-4 w-4" />
                   <AlertDescription>
@@ -352,7 +409,7 @@ export default function ImportRecordsPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {columnMappings.map((mapping, index) => (
+                    {hookColumnMappings.map((mapping, index) => (
                       <TableRow key={index}>
                         <TableCell className="font-medium">
                           <div className="flex items-center gap-2">
@@ -389,7 +446,7 @@ export default function ImportRecordsPage() {
                               <SelectItem value="divider" disabled>
                                 ───────────────────
                               </SelectItem>
-                              {fields.map((field) => (
+                              {fields?.map((field) => (
                                 <SelectItem key={field.id} value={field.id}>
                                   {field.name}
                                 </SelectItem>

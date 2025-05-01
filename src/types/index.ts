@@ -13,6 +13,16 @@ export interface LookupOption {
   label: string;
 }
 
+// Import for duplicate records
+export interface DuplicateRecord {
+  importRowIndex: number;
+  existingRecord: Record<string, any>;
+  matchingFields: string[];
+  matchScore: number;
+  action: 'skip' | 'update' | 'create';
+  record: Record<string, string>;
+}
+
 // For RecordFormData
 export type FieldValue = string | number | boolean | Date | null;
 
