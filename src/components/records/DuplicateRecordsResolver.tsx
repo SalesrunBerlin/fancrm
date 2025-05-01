@@ -12,7 +12,7 @@ import {
   SelectValue 
 } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { AlertCircle, WarningCircle, ArrowLeft, Loader2 } from "lucide-react";
+import { AlertCircle, AlertTriangle, ArrowLeft, Loader2 } from "lucide-react";
 
 interface DuplicateRecordsResolverProps {
   fields: ObjectField[];
@@ -62,7 +62,7 @@ export function DuplicateRecordsResolver({
     <Card className="mb-4">
       <CardContent className="pt-6 space-y-4">
         <div className="flex items-center gap-2 text-amber-600">
-          <AlertCircle className="h-5 w-5" />
+          <AlertTriangle className="h-5 w-5" />
           <h3 className="font-semibold">Potential Duplicate Records Detected</h3>
         </div>
         
