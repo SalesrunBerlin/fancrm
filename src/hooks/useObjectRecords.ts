@@ -93,10 +93,13 @@ export function useObjectRecords(objectTypeId?: string) {
       
       console.log("Creating record with data:", formData);
 
-      // First, create the record
+      // First, create the record - FIXED: Add owner_id to prevent RLS policy violation
       const { data: newRecord, error: recordError } = await supabase
         .from("object_records")
-        .insert([{ object_type_id: objectTypeId }])
+        .insert([{ 
+          object_type_id: objectTypeId,
+          owner_id: user.id, // Add owner_id to fix RLS policy issue
+        }])
         .select()
         .single();
 
