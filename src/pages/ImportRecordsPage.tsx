@@ -40,10 +40,10 @@ export default function ImportRecordsPage() {
   const [searchParams] = useSearchParams();
   const { objectTypes } = useObjectTypes();
   const { fields } = useRecordFields(objectTypeId);
-  const { parseImportText, columnMappings, updateColumnMapping, importData, clearImportData } = useImportRecords(objectTypeId!, fields || []);
+  const { parseImportText, columnMappings, updateColumnMapping, importData: importDataFromHook, clearImportData } = useImportRecords(objectTypeId!, fields || []);
   const objectType = objectTypes?.find(type => type.id === objectTypeId);
   const [excelData, setExcelData] = useState<any[]>([]);
-  const [importData, setImportData] = useState<any[]>([]);
+  const [parsedImportData, setParsedImportData] = useState<any[]>([]);
   const [uniqueKeyField, setUniqueKeyField] = useState<string>("");
   const [file, setFile] = useState<File | null>(null);
   const [fetchingRecords, setFetchingRecords] = useState(false);
@@ -118,7 +118,7 @@ export default function ImportRecordsPage() {
 
     // Use the parseImportText function from useImportRecords hook
     const parsedData = parseImportText(pastedText);
-    if (parsedData && parsedData.rows.length > 0) {
+    if (parsedData && parsedData.headers && parsedData.rows && parsedData.rows.length > 0) {
       // Convert the parsed data to a format similar to what excelData uses
       const convertedData = parsedData.rows.map(row => {
         const rowData: { [key: string]: string } = {};
@@ -149,7 +149,7 @@ export default function ImportRecordsPage() {
       return record;
     });
 
-    setImportData(preparedData);
+    setParsedImportData(preparedData);
   };
 
   useEffect(() => {
@@ -167,7 +167,7 @@ export default function ImportRecordsPage() {
   };
 
   const processImportData = async () => {
-    if (!importData || !objectTypeId) return;
+    if (!parsedImportData || !objectTypeId) return;
     
     setFetchingRecords(true);
     
@@ -211,7 +211,7 @@ export default function ImportRecordsPage() {
       let updatedCount = 0;
       let skippedCount = 0;
 
-      for (const record of importData) {
+      for (const record of parsedImportData) {
         if (!record[uniqueKeyField]) {
           skippedCount++;
           continue;
@@ -338,7 +338,7 @@ export default function ImportRecordsPage() {
                 Create Fields for All Columns
               </Button>
             )}
-            <Button onClick={processImportData} disabled={fetchingRecords || importData.length === 0 || needsFieldCreation}>
+            <Button onClick={processImportData} disabled={fetchingRecords || parsedImportData.length === 0 || needsFieldCreation}>
               {fetchingRecords ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -423,7 +423,7 @@ export default function ImportRecordsPage() {
           <CardContent className="pt-6">
             <h2 className="text-lg font-medium mb-4">Map Columns to Fields</h2>
             {needsFieldCreation && (
-              <Alert variant="warning" className="mb-4">
+              <Alert className="mb-4">
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>
                   Some columns couldn't be mapped to existing fields. Please map them or create new fields.
@@ -440,7 +440,7 @@ export default function ImportRecordsPage() {
         </Card>
       )}
 
-      {importData.length > 0 && !needsFieldCreation && (
+      {parsedImportData.length > 0 && !needsFieldCreation && (
         <Card>
           <CardContent className="overflow-x-auto pt-6">
             <Table>
@@ -453,7 +453,7 @@ export default function ImportRecordsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {importData.map((record, index) => (
+                {parsedImportData.map((record, index) => (
                   <TableRow key={index}>
                     {fields?.map(field => (
                       <TableCell key={field.id}>{record[field.api_name] || "—"}</TableCell>

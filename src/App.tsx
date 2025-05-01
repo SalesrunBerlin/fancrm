@@ -1,8 +1,9 @@
+
 import {
   createBrowserRouter,
   RouterProvider,
 } from "react-router-dom";
-import { Layout } from "@/components/Layout"
+import { Layout } from "@/components/layout";
 import ObjectRecordsList from "@/pages/ObjectRecordsList";
 import ObjectRecordDetail from "@/pages/ObjectRecordDetail";
 import ObjectRecordCreate from "@/pages/ObjectRecordCreate";

@@ -58,7 +58,7 @@ export function FieldMapperWithCreation({
   return (
     <div className="space-y-4">
       {unmappedColumns.length > 0 && (
-        <Alert variant="warning" className="mb-4">
+        <Alert className="mb-4">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
             {unmappedColumns.length} {unmappedColumns.length === 1 ? 'column' : 'columns'} could not be mapped to existing fields.
