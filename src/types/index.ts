@@ -1,3 +1,4 @@
+
 export type FieldValue = string | number | boolean | Date | null;
 
 export interface RecordFormData {
@@ -28,4 +29,33 @@ export interface ColumnMapping {
     name: string;
     api_name: string;
   } | null;
+}
+
+// Add types for Dashboard components to fix build errors
+export interface ContactType {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string;
+  company?: string;
+  lastActivity?: string;
+}
+
+export interface AccountType {
+  id: string;
+  name: string;
+  industry?: string;
+  website?: string;
+  location?: string;
+  employees?: number;
+}
+
+export interface DealType {
+  id: string;
+  name: string;
+  value: number;
+  stage: string;
+  closeDate?: string;
+  probability?: number;
+  account?: string;
 }

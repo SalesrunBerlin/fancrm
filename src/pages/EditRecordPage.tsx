@@ -9,12 +9,15 @@ import { useRecordFields } from "@/hooks/useRecordFields";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
 import { useObjectRecords } from "@/hooks/useObjectRecords";
 import { useRecordDetail } from "@/hooks/useRecordDetail";
-import type { RecordFormData } from "@/lib/types/records";
-import { Loader2, ArrowLeft } from "lucide-react";
+import type { RecordFormData } from "@/types";
+import { Loader2, ArrowLeft, Plus } from "lucide-react";
 import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/card";
+import { AddFieldSheet } from "@/components/records/AddFieldSheet";
+import { toast } from "sonner";
 
 export default function EditRecordPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [addFieldSheetOpen, setAddFieldSheetOpen] = useState(false);
   const navigate = useNavigate();
   const { objectTypeId, recordId } = useParams<{ objectTypeId: string; recordId: string }>();
   const { objectTypes } = useObjectTypes();
@@ -52,6 +55,17 @@ export default function EditRecordPage() {
     }
   };
 
+  const handleFieldCreated = () => {
+    toast.success("Field created successfully!");
+    // Re-fetch fields to include the newly created field
+    if (objectTypeId) {
+      // The useRecordFields hook uses useQuery internally which will automatically
+      // refetch when invalidated
+      const event = new CustomEvent('refetch-fields', { detail: { objectTypeId } });
+      window.dispatchEvent(event);
+    }
+  };
+
   if (!objectType) return null;
 
   const isLoading = isLoadingFields || isLoadingRecord;
@@ -85,6 +99,19 @@ export default function EditRecordPage() {
                       form={form}
                     />
                   ))}
+                  
+                  {/* Add New Field Button */}
+                  <div className="pt-4 border-t">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full border-dashed"
+                      onClick={() => setAddFieldSheetOpen(true)}
+                    >
+                      <Plus className="mr-2 h-4 w-4" />
+                      Add New Field
+                    </Button>
+                  </div>
                 </div>
               )}
             </CardContent>
@@ -107,6 +134,14 @@ export default function EditRecordPage() {
           </form>
         </Form>
       </Card>
+      
+      {/* Add Field Sheet */}
+      <AddFieldSheet
+        open={addFieldSheetOpen}
+        onOpenChange={setAddFieldSheetOpen}
+        objectTypeId={objectTypeId}
+        onFieldCreated={handleFieldCreated}
+      />
     </div>
   );
 }
