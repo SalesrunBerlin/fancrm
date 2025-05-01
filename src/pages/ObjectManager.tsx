@@ -2,7 +2,7 @@
 import { useObjectTypes } from "@/hooks/useObjectTypes";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
-import { Plus, Loader2, Building, User, Briefcase, Calendar, Box } from "lucide-react";
+import { Plus, Loader2, Building, User, Briefcase, Calendar, Box, Trash2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -48,37 +48,50 @@ export default function ObjectManager() {
           ) : objectTypes && objectTypes.length > 0 ? (
             <div className="space-y-4">
               {objectTypes.map((objectType: ObjectType) => (
-                <Link 
-                  to={`/settings/objects/${objectType.id}`} 
-                  key={objectType.id}
-                  className="block"
-                >
-                  <div className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent hover:text-accent-foreground transition-colors">
-                    <div className="flex items-center gap-3">
-                      {getIconComponent(objectType.icon)}
-                      <div>
-                        <h3 className="font-medium">{objectType.name}</h3>
-                        <p className="text-sm text-muted-foreground">
-                          {objectType.description || `API Name: ${objectType.api_name}`}
-                        </p>
+                <div key={objectType.id} className="block">
+                  <div className="flex items-center justify-between p-4 border rounded-lg">
+                    <Link 
+                      to={`/settings/objects/${objectType.id}`}
+                      className="flex-grow hover:bg-accent hover:text-accent-foreground transition-colors rounded-lg p-2 -m-2"
+                    >
+                      <div className="flex items-center gap-3">
+                        {getIconComponent(objectType.icon)}
+                        <div>
+                          <h3 className="font-medium">{objectType.name}</h3>
+                          <p className="text-sm text-muted-foreground">
+                            {objectType.description || `API Name: ${objectType.api_name}`}
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                    <div className="flex gap-2">
-                      {objectType.is_system && (
-                        <Badge variant="secondary">System</Badge>
-                      )}
-                      {objectType.is_published && (
-                        <Badge variant="outline">Published</Badge>
-                      )}
-                      {objectType.is_template && (
-                        <Badge variant="outline" className="bg-purple-100">Imported</Badge>
-                      )}
-                      {!objectType.is_active && (
-                        <Badge variant="outline" className="bg-red-50 text-red-700">Inactive</Badge>
-                      )}
+                    </Link>
+                    <div className="flex items-center gap-3">
+                      <div className="flex gap-2">
+                        {objectType.is_system && (
+                          <Badge variant="secondary">System</Badge>
+                        )}
+                        {objectType.is_published && (
+                          <Badge variant="outline">Published</Badge>
+                        )}
+                        {objectType.is_template && (
+                          <Badge variant="outline" className="bg-purple-100">Imported</Badge>
+                        )}
+                        {!objectType.is_active && (
+                          <Badge variant="outline" className="bg-red-50 text-red-700">Inactive</Badge>
+                        )}
+                      </div>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        className="ml-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+                        asChild
+                      >
+                        <Link to={`/settings/objects/${objectType.id}/delete`}>
+                          <Trash2 className="h-4 w-4" />
+                        </Link>
+                      </Button>
                     </div>
                   </div>
-                </Link>
+                </div>
               ))}
             </div>
           ) : (

@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -312,6 +311,178 @@ export function useObjectTypes() {
     }
   });
 
+  // Delete an object type and all related data
+  const deleteObjectType = useMutation({
+    mutationFn: async (objectTypeId: string) => {
+      if (!user) throw new Error("User must be logged in to delete object types");
+      
+      console.log("Starting deletion of object type:", objectTypeId);
+      
+      try {
+        // Step 1: Delete all records for this object type
+        console.log("Step 1: Deleting all records for object type");
+        
+        // First get all records of this object
+        const { data: records, error: recordsError } = await supabase
+          .from("object_records")
+          .select("id")
+          .eq("object_type_id", objectTypeId);
+        
+        if (recordsError) {
+          console.error("Error fetching records for deletion:", recordsError);
+          throw recordsError;
+        }
+        
+        console.log(`Found ${records?.length || 0} records to delete`);
+        
+        // Delete record field values for each record
+        for (const record of records || []) {
+          // Delete values from record_field_values
+          const { error: valueDeleteError } = await supabase
+            .from("record_field_values")
+            .delete()
+            .eq("record_id", record.id);
+          
+          if (valueDeleteError) {
+            console.error("Error deleting record field values:", valueDeleteError);
+          }
+          
+          // Also delete from object_field_values
+          const { error: objValueDeleteError } = await supabase
+            .from("object_field_values")
+            .delete()
+            .eq("record_id", record.id);
+          
+          if (objValueDeleteError) {
+            console.error("Error deleting object field values:", objValueDeleteError);
+          }
+        }
+        
+        // Now delete all the records
+        const { error: recordDeleteError } = await supabase
+          .from("object_records")
+          .delete()
+          .eq("object_type_id", objectTypeId);
+        
+        if (recordDeleteError) {
+          console.error("Error deleting records:", recordDeleteError);
+          throw recordDeleteError;
+        }
+        
+        console.log("All records deleted successfully");
+        
+        // Step 2: Delete all fields for this object type
+        console.log("Step 2: Deleting all fields for object type");
+        
+        // Get all fields for this object
+        const { data: fields, error: fieldsError } = await supabase
+          .from("object_fields")
+          .select("id, data_type")
+          .eq("object_type_id", objectTypeId);
+        
+        if (fieldsError) {
+          console.error("Error fetching fields for deletion:", fieldsError);
+          throw fieldsError;
+        }
+        
+        // Delete picklist values for any picklist fields
+        for (const field of fields || []) {
+          if (field.data_type === 'picklist') {
+            const { error: picklistDeleteError } = await supabase
+              .from("field_picklist_values")
+              .delete()
+              .eq("field_id", field.id);
+            
+            if (picklistDeleteError) {
+              console.error("Error deleting picklist values:", picklistDeleteError);
+            }
+          }
+          
+          // Delete field display configs if any
+          const { error: displayConfigError } = await supabase
+            .from("field_display_configs")
+            .delete()
+            .eq("field_id", field.id);
+          
+          if (displayConfigError) {
+            console.error("Error deleting field display configs:", displayConfigError);
+          }
+          
+          // Delete field publishing settings if any
+          const { error: publishingError } = await supabase
+            .from("object_field_publishing")
+            .delete()
+            .eq("field_id", field.id);
+          
+          if (publishingError) {
+            console.error("Error deleting field publishing settings:", publishingError);
+          }
+        }
+        
+        // Delete all fields
+        const { error: fieldDeleteError } = await supabase
+          .from("object_fields")
+          .delete()
+          .eq("object_type_id", objectTypeId);
+        
+        if (fieldDeleteError) {
+          console.error("Error deleting fields:", fieldDeleteError);
+          throw fieldDeleteError;
+        }
+        
+        console.log("All fields deleted successfully");
+        
+        // Step 3: Delete any relationships involving this object
+        console.log("Step 3: Deleting all relationships for object type");
+        
+        const { error: relDeleteError } = await supabase
+          .from("object_relationships")
+          .delete()
+          .or(`from_object_id.eq.${objectTypeId},to_object_id.eq.${objectTypeId}`);
+        
+        if (relDeleteError) {
+          console.error("Error deleting relationships:", relDeleteError);
+          // Continue with deletion even if relationships fail
+        }
+        
+        // Step 4: Finally delete the object type itself
+        console.log("Step 4: Deleting the object type");
+        
+        const { data, error } = await supabase
+          .from("object_types")
+          .delete()
+          .eq("id", objectTypeId)
+          .eq("owner_id", user.id) // Safety check: only delete objects owned by this user
+          .select()
+          .single();
+        
+        if (error) {
+          console.error("Error deleting object type:", error);
+          throw error;
+        }
+        
+        console.log("Object successfully deleted");
+        return data;
+        
+      } catch (error) {
+        console.error("Error in deleteObjectType mutation:", error);
+        throw error;
+      }
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["object-types"] });
+      console.log("Object deletion completed successfully:", data);
+    },
+    onError: (error) => {
+      console.error("Error deleting object:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete object: " + (error instanceof Error ? error.message : "Unknown error"),
+        variant: "destructive",
+      });
+    },
+  });
+
   // Delete system objects
   const deleteSystemObjects = useMutation({
     mutationFn: async () => {
@@ -384,6 +555,7 @@ export function useObjectTypes() {
     publishObjectType,
     unpublishObjectType,
     importObjectType,
+    deleteObjectType,
     deleteSystemObjects,
     refreshPublishedObjects
   };
