@@ -30,7 +30,8 @@ import { BatchFieldCreation } from "@/components/import/BatchFieldCreation";
 import { DuplicateRecordsResolver } from "@/components/import/DuplicateRecordsResolver";
 import { PreviewImportData } from "@/components/import/PreviewImportData";
 import { toast } from "sonner";
-import { DuplicateRecord, ColumnMapping } from "@/hooks/useImportRecords"; // Import directly from the hooks file
+import { ColumnMapping as UIColumnMapping } from "@/types"; 
+import { DuplicateRecord } from "@/hooks/useImportRecords"; // Import directly from the hooks file
 
 // Map intensity values between different naming conventions
 const mapIntensity = (intensity: "low" | "medium" | "high"): "lenient" | "moderate" | "strict" => {
@@ -91,7 +92,7 @@ export default function ImportRecordsPage() {
     rawUpdateIntensity(mapReverseIntensity(intensity));
   };
 
-  const handleCheckForDuplicates = async () => {
+  const handleCheckForDuplicates = async (): Promise<boolean> => {
     // Clear any previous duplicate check results
     // Reset selected matching fields if none are selected
     if (matchingFields.length === 0 && fields) {
@@ -119,7 +120,7 @@ export default function ImportRecordsPage() {
         setStep("preview");
         toast.info('No duplicate records found');
       }
-      return true;
+      return hasDuplicates;
     } catch (error) {
       toast.error('Failed to check for duplicates');
       console.error(error);
