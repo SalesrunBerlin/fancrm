@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -92,7 +91,7 @@ export function useObjectTypes(includeArchived = false) {
     enabled: !!user,
   });
 
-  // Fetch published objects from other users
+  // Fetch published objects from other users with additional logging
   const { 
     data: publishedObjects, 
     isLoading: isLoadingPublished,
@@ -107,26 +106,39 @@ export function useObjectTypes(includeArchived = false) {
       console.log("Fetching published objects. Current user:", user.id);
       
       try {
+        // More explicit query to debug the issue
         let query = supabase
           .from("object_types")
           .select("*")
-          .eq("is_published", true)
-          .neq("owner_id", user.id);
+          .eq("is_published", true);
           
+        // Don't filter by owner_id initially to see all published objects
+        console.log("Fetching all published objects to debug visibility");
+        
         // Only include non-archived objects by default
         if (!includeArchived) {
           query = query.eq("is_archived", false);
         }
   
-        const { data, error } = await query.order("name");
+        const { data: allPublished, error: allError } = await query;
   
-        if (error) {
-          console.error("Error fetching published objects:", error);
-          throw error;
+        if (allError) {
+          console.error("Error fetching all published objects:", allError);
+          throw allError;
         }
         
-        console.log(`Fetched ${data?.length || 0} published objects`);
-        return data;
+        console.log(`DEBUG: Found ${allPublished?.length || 0} total published objects`);
+        
+        // Log all published object IDs and their owners for debugging
+        allPublished?.forEach(obj => {
+          console.log(`Published object: ${obj.id}, owner: ${obj.owner_id}, name: ${obj.name}`);
+        });
+        
+        // Now filter to exclude user's own objects
+        const filtered = allPublished?.filter(obj => obj.owner_id !== user.id) || [];
+        console.log(`After filtering out user's own objects: ${filtered.length} objects remain`);
+        
+        return filtered;
       } catch (err) {
         console.error("Exception in published objects fetch:", err);
         throw err;
@@ -136,6 +148,42 @@ export function useObjectTypes(includeArchived = false) {
     refetchOnMount: true,
     refetchOnWindowFocus: true,
   });
+
+  // Manually refresh published objects with expanded logging
+  const refreshPublishedObjects = async () => {
+    console.log("Manually refreshing published objects...");
+    try {
+      // Force refresh the published objects view
+      const { error: refreshError } = await supabase.rpc('refresh_published_objects_view');
+      if (refreshError) {
+        console.warn("Error refreshing published objects view:", refreshError);
+      }
+      
+      // Explicitly invalidate both query keys
+      queryClient.invalidateQueries({ queryKey: ["published-objects"] });
+      queryClient.invalidateQueries({ queryKey: ["object-types"] });
+      
+      // Force refetch published objects
+      const result = await refetchPublished();
+      console.log("Published objects refetch result:", result.data?.length || 0, "objects");
+      
+      // Show success toast
+      toast({
+        title: "Refreshed",
+        description: "Published objects list has been refreshed",
+      });
+      
+      return result;
+    } catch (error) {
+      console.error("Error during manual refresh:", error);
+      toast({
+        title: "Error",
+        description: "Failed to refresh published objects",
+        variant: "destructive",
+      });
+      throw error;
+    }
+  };
 
   // Create a new object type
   const createObjectType = useMutation({
@@ -603,29 +651,6 @@ export function useObjectTypes(includeArchived = false) {
     }
   });
 
-  // Manually refresh published objects
-  const refreshPublishedObjects = async () => {
-    console.log("Manually refreshing published objects...");
-    try {
-      // Force refresh the published objects view
-      const { error: refreshError } = await supabase.rpc('refresh_published_objects_view');
-      if (refreshError) {
-        console.warn("Error refreshing published objects view:", refreshError);
-      }
-      
-      // Refetch the published objects
-      const result = await refetchPublished();
-      
-      // Also invalidate object types to ensure everything is in sync
-      queryClient.invalidateQueries({ queryKey: ["object-types"] });
-      
-      return result;
-    } catch (error) {
-      console.error("Error during manual refresh:", error);
-      throw error;
-    }
-  };
-
   return {
     objectTypes,
     isLoading,
@@ -633,8 +658,8 @@ export function useObjectTypes(includeArchived = false) {
     isLoadingPublished,
     createObjectType,
     updateObjectType,
-    archiveObjectType,      // New method for archiving
-    restoreObjectType,      // New method for restoring archived objects
+    archiveObjectType,
+    restoreObjectType,
     publishObjectType,
     unpublishObjectType,
     importObjectType,

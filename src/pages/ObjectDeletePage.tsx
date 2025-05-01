@@ -4,7 +4,6 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
 import { useObjectFields } from "@/hooks/useObjectFields";
 import { useObjectRecords } from "@/hooks/useObjectRecords";
-import { useObjectRelationships } from "@/hooks/useObjectRelationships";
 import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -24,7 +23,6 @@ export default function ObjectDeletePage() {
   const { objectTypes, deleteObjectType } = useObjectTypes();
   const { fields, isLoading: isLoadingFields } = useObjectFields(objectTypeId);
   const { records, isLoading: isLoadingRecords } = useObjectRecords(objectTypeId || "");
-  const { data: relationships, isLoading: isLoadingRelationships } = useObjectRelationships(objectTypeId);
 
   const objectType = objectTypes?.find(type => type.id === objectTypeId);
 
@@ -105,54 +103,6 @@ export default function ObjectDeletePage() {
               <p>{objectType.is_system ? "Ja" : "Nein"}</p>
             </div>
           </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Verknüpfte Objekte ({isLoadingRelationships ? "..." : relationships?.length || 0})</CardTitle>
-          <CardDescription>
-            Alle Beziehungen zu diesen Objekten werden gelöscht
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {isLoadingRelationships ? (
-            <div className="flex justify-center py-4">
-              <Loader2 className="h-6 w-6 animate-spin" />
-            </div>
-          ) : relationships && relationships.length > 0 ? (
-            <div className="border rounded-md overflow-hidden">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Beziehungsname</TableHead>
-                    <TableHead>Verknüpftes Objekt</TableHead>
-                    <TableHead>Beziehungstyp</TableHead>
-                    <TableHead>Richtung</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {relationships.map(relationship => (
-                    <TableRow key={relationship.id}>
-                      <TableCell>{relationship.name}</TableCell>
-                      <TableCell>
-                        {relationship.relatedObject.name}
-                        {relationship.relatedObject.is_system && 
-                          <span className="ml-2 text-xs bg-gray-100 px-2 py-0.5 rounded">System</span>
-                        }
-                      </TableCell>
-                      <TableCell>{relationship.relationship_type}</TableCell>
-                      <TableCell>
-                        {relationship.direction === 'from' ? 'Von diesem zu anderem' : 'Von anderem zu diesem'}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          ) : (
-            <p className="text-muted-foreground text-center py-4">Keine verknüpften Objekte gefunden</p>
-          )}
         </CardContent>
       </Card>
 
@@ -262,7 +212,7 @@ export default function ObjectDeletePage() {
         onClose={() => setIsDeleteDialogOpen(false)}
         onConfirm={handleDelete}
         title="Objekt wirklich löschen?"
-        description={`Sind Sie sicher, dass Sie das Objekt "${objectType.name}" mit allen ${records?.length || 0} Datensätzen, ${fields?.length || 0} Feldern und ${relationships?.length || 0} Verknüpfungen löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.`}
+        description={`Sind Sie sicher, dass Sie das Objekt "${objectType.name}" mit allen ${records?.length || 0} Datensätzen und ${fields?.length || 0} Feldern löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.`}
         deleteButtonText="Endgültig löschen"
       />
     </div>

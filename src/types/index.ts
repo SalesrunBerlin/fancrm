@@ -1,38 +1,53 @@
-// Common Types
-import { ColumnMapping as ImportColumnMapping, DuplicateRecord as ImportDuplicateRecord } from "@/hooks/useImportRecords";
 
-// Re-export the types from the hooks
-export type ColumnMapping = ImportColumnMapping;
-export type DuplicateRecord = ImportDuplicateRecord;
+import type { ObjectField } from "@/hooks/useObjectTypes";
 
-// Other types that might be useful
-export interface ObjectFieldType {
+export interface ColumnMapping {
+  sourceColumn: string;
+  targetField: ObjectField | { id: string; name: string; api_name: string; };
+  isMatched: boolean;
+}
+
+export interface LookupOption {
+  id: string;
+  label: string;
+}
+
+// Add missing type definitions
+export interface ContactType {
+  id: string;
+  first_name: string;
+  last_name: string;
+  email?: string;
+  phone?: string;
+  account_id?: string;
+  created_at?: string;
+}
+
+export interface AccountType {
   id: string;
   name: string;
-  api_name: string;
-  data_type: string;
-  is_required: boolean;
-  is_system: boolean;
-  object_type_id: string;
-  display_order?: number;
-  options?: Record<string, any>;
-  default_value?: any;
+  industry?: string;
+  website?: string;
+  created_at?: string;
 }
 
-// TypeScript interface for record field values
-export interface RecordFieldValue {
-  field_api_name: string;
-  value: string | null;
-}
-
-// TypeScript interface for object record
-export interface ObjectRecord {
+export interface DealType {
   id: string;
-  object_type_id: string;
-  created_at: string;
-  updated_at: string;
-  fieldValues: Record<string, string | null>;
-  displayName?: string | null;
+  name: string;
+  amount: number;
+  status: string;
+  close_date?: string;
+  account_id?: string;
+  contact_id?: string;
+  created_at?: string;
 }
 
-// Any additional common types would go here
+export interface RecordFormData {
+  [key: string]: any;
+}
+
+export interface DuplicateRecord {
+  id: string;
+  values: Record<string, any>;
+  sourceRowIndex?: number;
+}

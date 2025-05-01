@@ -1,10 +1,8 @@
-
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
 import { useObjectFields } from "@/hooks/useObjectFields";
 import { useObjectRecords } from "@/hooks/useObjectRecords";
-import { useObjectRelationships } from "@/hooks/useObjectRelationships";
 import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -24,7 +22,6 @@ export default function ObjectArchivePage() {
   const { objectTypes, archiveObjectType } = useObjectTypes();
   const { fields, isLoading: isLoadingFields } = useObjectFields(objectTypeId);
   const { records, isLoading: isLoadingRecords } = useObjectRecords(objectTypeId || "");
-  const { data: relationships, isLoading: isLoadingRelationships } = useObjectRelationships(objectTypeId);
 
   const objectType = objectTypes?.find(type => type.id === objectTypeId);
 
@@ -105,54 +102,6 @@ export default function ObjectArchivePage() {
               <p>{objectType.is_system ? "Ja" : "Nein"}</p>
             </div>
           </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Verknüpfte Objekte ({isLoadingRelationships ? "..." : relationships?.length || 0})</CardTitle>
-          <CardDescription>
-            Beziehungen zu anderen Objekten werden beibehalten, könnten aber in der Benutzeroberfläche ausgeblendet werden
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {isLoadingRelationships ? (
-            <div className="flex justify-center py-4">
-              <Loader2 className="h-6 w-6 animate-spin" />
-            </div>
-          ) : relationships && relationships.length > 0 ? (
-            <div className="border rounded-md overflow-hidden">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Beziehungsname</TableHead>
-                    <TableHead>Verknüpftes Objekt</TableHead>
-                    <TableHead>Beziehungstyp</TableHead>
-                    <TableHead>Richtung</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {relationships.map(relationship => (
-                    <TableRow key={relationship.id}>
-                      <TableCell>{relationship.name}</TableCell>
-                      <TableCell>
-                        {relationship.relatedObject.name}
-                        {relationship.relatedObject.is_system && 
-                          <span className="ml-2 text-xs bg-gray-100 px-2 py-0.5 rounded">System</span>
-                        }
-                      </TableCell>
-                      <TableCell>{relationship.relationship_type}</TableCell>
-                      <TableCell>
-                        {relationship.direction === 'from' ? 'Von diesem zu anderem' : 'Von anderem zu diesem'}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          ) : (
-            <p className="text-muted-foreground text-center py-4">Keine verknüpften Objekte gefunden</p>
-          )}
         </CardContent>
       </Card>
 

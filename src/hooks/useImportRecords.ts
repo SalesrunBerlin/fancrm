@@ -241,21 +241,17 @@ export function useImportRecords(objectTypeId: string, fields: any[]) {
         
         if (potentialDuplicates && potentialDuplicates.length > 0) {
           // Group by record_id
-          const recordMap = new Map<string, Array<{field_api_name: string, value: string}>>();
+          const recordMap = new Map<string, { field_api_name: string; value: string }[]>();
           
           for (const item of potentialDuplicates) {
-            // Fix: Cast to the appropriate type before accessing properties
-            const fieldValues = item.object_field_values as unknown as Array<{field_api_name: string, value: string}>;
-            
-            // Process each field value
-            if (Array.isArray(fieldValues)) {
-              fieldValues.forEach(fv => {
-                if (!recordMap.has(item.id)) {
-                  recordMap.set(item.id, [fv]);
-                } else {
-                  recordMap.get(item.id)!.push(fv);
-                }
-              });
+            const fieldValue = item.object_field_values as unknown as { field_api_name: string; value: string };
+            if (!recordMap.has(item.id)) {
+              recordMap.set(item.id, [fieldValue]);
+            } else {
+              const existingValues = recordMap.get(item.id);
+              if (existingValues) {
+                existingValues.push(fieldValue);
+              }
             }
           }
           
