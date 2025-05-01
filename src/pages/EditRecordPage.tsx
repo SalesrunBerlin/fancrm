@@ -12,12 +12,10 @@ import { useRecordDetail } from "@/hooks/useRecordDetail";
 import type { RecordFormData } from "@/types";
 import { Loader2, ArrowLeft, Plus } from "lucide-react";
 import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/card";
-import { AddFieldSheet } from "@/components/records/AddFieldSheet";
 import { toast } from "sonner";
 
 export default function EditRecordPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [addFieldSheetOpen, setAddFieldSheetOpen] = useState(false);
   const navigate = useNavigate();
   const { objectTypeId, recordId } = useParams<{ objectTypeId: string; recordId: string }>();
   const { objectTypes } = useObjectTypes();
@@ -66,6 +64,12 @@ export default function EditRecordPage() {
     }
   };
 
+  const navigateToCreateField = () => {
+    if (objectTypeId) {
+      navigate(`/settings/objects/${objectTypeId}/fields/new`);
+    }
+  };
+
   if (!objectType) return null;
 
   const isLoading = isLoadingFields || isLoadingRecord;
@@ -106,7 +110,7 @@ export default function EditRecordPage() {
                       type="button"
                       variant="outline"
                       className="w-full border-dashed"
-                      onClick={() => setAddFieldSheetOpen(true)}
+                      onClick={navigateToCreateField}
                     >
                       <Plus className="mr-2 h-4 w-4" />
                       Add New Field
@@ -134,14 +138,6 @@ export default function EditRecordPage() {
           </form>
         </Form>
       </Card>
-      
-      {/* Add Field Sheet */}
-      <AddFieldSheet
-        open={addFieldSheetOpen}
-        onOpenChange={setAddFieldSheetOpen}
-        objectTypeId={objectTypeId}
-        onFieldCreated={handleFieldCreated}
-      />
     </div>
   );
 }
