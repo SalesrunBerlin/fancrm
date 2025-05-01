@@ -107,11 +107,19 @@ export function ObjectCard({ objectType, onPublish, showPublishButton = false }:
       </CardContent>
       <CardFooter className="pt-2 mt-auto flex flex-col gap-2">
         <div className="flex w-full gap-2">
-          <Link to={`/settings/objects/${objectType.id}`} className="flex-1">
-            <Button variant="outline" className="w-full">
-              Manage
-            </Button>
-          </Link>
+          {objectType.is_published ? (
+            <Link to={`/structures/published/${objectType.id}`} className="flex-1">
+              <Button variant="outline" className="w-full">
+                Details
+              </Button>
+            </Link>
+          ) : (
+            <Link to={`/settings/objects/${objectType.id}`} className="flex-1">
+              <Button variant="outline" className="w-full">
+                Manage
+              </Button>
+            </Link>
+          )}
           {showPublishButton && !objectType.is_published && !objectType.is_template && (
             <Button 
               variant="outline" 
