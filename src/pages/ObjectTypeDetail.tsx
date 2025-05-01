@@ -6,9 +6,8 @@ import { useObjectFields } from "@/hooks/useObjectFields";
 import { ObjectFieldsList } from "@/components/settings/ObjectFieldsList";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
-import { ArrowLeft, List, Plus, Trash2, Loader2 } from "lucide-react";
+import { ArrowLeft, List, Plus, Archive, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
-import { DeleteDialog } from "@/components/common/DeleteDialog";
 import { toast } from "sonner";
 import { DefaultFieldSelector } from "@/components/settings/DefaultFieldSelector";
 
@@ -18,7 +17,6 @@ export default function ObjectTypeDetail() {
   const { objectTypes, updateObjectType, publishObjectType, unpublishObjectType, publishedObjects, isLoadingPublished } = useObjectTypes();
   const { fields, isLoading, createField, updateField, deleteField } = useObjectFields(objectTypeId);
   const [isPublishing, setIsPublishing] = useState(false);
-  const [isDeleteObjectDialogOpen, setIsDeleteObjectDialogOpen] = useState(false);
   
   // Find the current object type either from user's objects or from published objects
   const currentObjectType = objectTypes?.find(obj => obj.id === objectTypeId) || 
@@ -83,13 +81,6 @@ export default function ObjectTypeDetail() {
     }
   };
 
-  const handleDeleteObjectType = async () => {
-    // In a real implementation, this would call an API to delete the object type
-    // and all its related data (fields, records, etc.)
-    toast.error("Object type deletion is not implemented yet");
-    setIsDeleteObjectDialogOpen(false);
-  };
-
   const handleUpdateDefaultField = async (fieldApiName: string) => {
     if (!objectTypeId) return;
     
@@ -101,6 +92,7 @@ export default function ObjectTypeDetail() {
 
   // Check if the current user owns this object
   const isPublishedByOthers = publishedObjects?.some(obj => obj.id === objectTypeId) || false;
+  const isArchived = currentObjectType.is_archived;
 
   return (
     <div className="container mx-auto px-2 md:px-0 space-y-6 max-w-5xl">
@@ -115,7 +107,7 @@ export default function ObjectTypeDetail() {
                 Back to Object Manager
               </Link>
             </Button>
-            {!isPublishedByOthers && !currentObjectType.is_system && (
+            {!isPublishedByOthers && !currentObjectType.is_system && !isArchived && (
               <>
                 <Button 
                   variant="default"
@@ -132,13 +124,21 @@ export default function ObjectTypeDetail() {
                   {currentObjectType.is_published ? "Unpublish" : "Publish"}
                 </Button>
                 <Button 
-                  variant="destructive"
-                  onClick={() => setIsDeleteObjectDialogOpen(true)}
+                  variant="warning"
+                  onClick={() => navigate(`/settings/objects/${objectTypeId}/archive`)}
                 >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Delete
+                  <Archive className="mr-2 h-4 w-4" />
+                  Archive
                 </Button>
               </>
+            )}
+            {isArchived && (
+              <Button
+                variant="success" 
+                onClick={() => navigate(`/settings/objects/${objectTypeId}/restore`)}
+              >
+                Restore
+              </Button>
             )}
           </>
         }
@@ -159,14 +159,6 @@ export default function ObjectTypeDetail() {
         isLoading={isLoading}
         onManagePicklistValues={handleManagePicklistValues}
         onDeleteField={!currentObjectType.is_system && !isPublishedByOthers ? handleDeleteField : undefined}
-      />
-
-      <DeleteDialog
-        isOpen={isDeleteObjectDialogOpen}
-        onClose={() => setIsDeleteObjectDialogOpen(false)}
-        onConfirm={handleDeleteObjectType}
-        title={`Delete ${currentObjectType.name}`}
-        description={`Are you sure you want to delete the object type "${currentObjectType.name}"? This will delete all fields, records, and relationships associated with this object. This action cannot be undone.`}
       />
     </div>
   );

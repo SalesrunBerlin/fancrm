@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
@@ -70,7 +69,7 @@ export default function ObjectArchivePage() {
         }
       />
 
-      <Alert variant="warning">
+      <Alert>
         <AlertTriangle className="h-4 w-4" />
         <AlertTitle>Archivierungs-Information</AlertTitle>
         <AlertDescription>

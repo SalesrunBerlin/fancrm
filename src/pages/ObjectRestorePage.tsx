@@ -102,7 +102,7 @@ export default function ObjectRestorePage() {
 
       <div className="flex justify-end">
         <Button 
-          variant="default" 
+          variant="success" 
           size="lg"
           onClick={() => setIsRestoreDialogOpen(true)}
           disabled={isRestoring}
