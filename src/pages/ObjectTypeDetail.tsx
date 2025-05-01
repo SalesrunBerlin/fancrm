@@ -10,10 +10,12 @@ import { ArrowLeft, List, Plus, Archive, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { DefaultFieldSelector } from "@/components/settings/DefaultFieldSelector";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export default function ObjectTypeDetail() {
   const { objectTypeId } = useParams<{ objectTypeId: string }>();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const { objectTypes, updateObjectType, publishObjectType, unpublishObjectType, publishedObjects, isLoadingPublished } = useObjectTypes();
   const { fields, isLoading, createField, updateField, deleteField } = useObjectFields(objectTypeId);
   const [isPublishing, setIsPublishing] = useState(false);
@@ -95,13 +97,17 @@ export default function ObjectTypeDetail() {
   const isArchived = currentObjectType.is_archived;
 
   return (
-    <div className="container mx-auto px-2 md:px-0 space-y-6 max-w-5xl">
+    <div className="container mx-auto px-2 md:px-0 space-y-6 max-w-5xl overflow-x-hidden">
       <PageHeader
         title={currentObjectType.name}
         description={currentObjectType.description || `API Name: ${currentObjectType.api_name}`}
         actions={
-          <>
-            <Button variant="outline" asChild>
+          <div className={`flex ${isMobile ? 'flex-col w-full' : 'flex-row'} gap-2`}>
+            <Button 
+              variant="outline" 
+              asChild 
+              className={isMobile ? "w-full" : ""}
+            >
               <Link to="/settings/object-manager">
                 <ArrowLeft className="mr-2 h-4 w-4" />
                 Back to Object Manager
@@ -112,6 +118,7 @@ export default function ObjectTypeDetail() {
                 <Button 
                   variant="default"
                   onClick={() => navigate(`/settings/objects/${objectTypeId}/fields/new`)}
+                  className={isMobile ? "w-full" : ""}
                 >
                   <Plus className="mr-2 h-4 w-4" />
                   New Field
@@ -120,12 +127,14 @@ export default function ObjectTypeDetail() {
                   onClick={handleTogglePublish}
                   disabled={isPublishing}
                   variant={currentObjectType.is_published ? "outline" : "default"}
+                  className={isMobile ? "w-full" : ""}
                 >
                   {currentObjectType.is_published ? "Unpublish" : "Publish"}
                 </Button>
                 <Button 
                   variant="warning"
                   onClick={() => navigate(`/settings/objects/${objectTypeId}/archive`)}
+                  className={isMobile ? "w-full" : ""}
                 >
                   <Archive className="mr-2 h-4 w-4" />
                   Archive
@@ -136,11 +145,12 @@ export default function ObjectTypeDetail() {
               <Button
                 variant="success" 
                 onClick={() => navigate(`/settings/objects/${objectTypeId}/restore`)}
+                className={isMobile ? "w-full" : ""}
               >
                 Restore
               </Button>
             )}
-          </>
+          </div>
         }
       />
       
@@ -150,16 +160,19 @@ export default function ObjectTypeDetail() {
           objectType={currentObjectType}
           fields={fields}
           onUpdateDefaultField={handleUpdateDefaultField}
+          isMobile={isMobile}
         />
       )}
       
-      <ObjectFieldsList 
-        fields={fields || []} 
-        objectTypeId={objectTypeId as string} 
-        isLoading={isLoading}
-        onManagePicklistValues={handleManagePicklistValues}
-        onDeleteField={!currentObjectType.is_system && !isPublishedByOthers ? handleDeleteField : undefined}
-      />
+      <div className="overflow-x-auto">
+        <ObjectFieldsList 
+          fields={fields || []} 
+          objectTypeId={objectTypeId as string} 
+          isLoading={isLoading}
+          onManagePicklistValues={handleManagePicklistValues}
+          onDeleteField={!currentObjectType.is_system && !isPublishedByOthers ? handleDeleteField : undefined}
+        />
+      </div>
     </div>
   );
 }

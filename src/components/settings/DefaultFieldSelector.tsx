@@ -17,9 +17,10 @@ interface DefaultFieldSelectorProps {
   objectType: ObjectType;
   fields: ObjectField[];
   onUpdateDefaultField: (fieldApiName: string) => Promise<void>;
+  isMobile?: boolean;
 }
 
-export function DefaultFieldSelector({ objectType, fields, onUpdateDefaultField }: DefaultFieldSelectorProps) {
+export function DefaultFieldSelector({ objectType, fields, onUpdateDefaultField, isMobile }: DefaultFieldSelectorProps) {
   const [selectedField, setSelectedField] = useState<string>(objectType.default_field_api_name || "");
   const [isUpdating, setIsUpdating] = useState(false);
   
@@ -49,11 +50,11 @@ export function DefaultFieldSelector({ objectType, fields, onUpdateDefaultField 
   }
   
   return (
-    <div className="bg-muted/30 p-4 rounded-md mb-4">
+    <div className="bg-muted/30 p-4 rounded-md mb-4 overflow-x-auto">
       <h3 className="text-sm font-medium mb-2">Default Display Field</h3>
-      <div className="flex items-center gap-2">
+      <div className={`flex ${isMobile ? 'flex-col' : 'items-center'} gap-2`}>
         <Select value={selectedField} onValueChange={setSelectedField}>
-          <SelectTrigger className="w-full max-w-xs">
+          <SelectTrigger className={`${isMobile ? 'w-full' : 'max-w-xs'}`}>
             <SelectValue placeholder="Select a field to use as display name" />
           </SelectTrigger>
           <SelectContent>
@@ -72,6 +73,7 @@ export function DefaultFieldSelector({ objectType, fields, onUpdateDefaultField 
           disabled={isUpdating || selectedField === objectType.default_field_api_name}
           size="sm"
           variant="outline"
+          className={isMobile ? "w-full" : ""}
         >
           {isUpdating ? 
             "Saving..." : 

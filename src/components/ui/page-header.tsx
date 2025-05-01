@@ -17,18 +17,18 @@ export function PageHeader({
   className,
 }: PageHeaderProps) {
   return (
-    <div className={cn("flex flex-col md:flex-row md:items-center md:justify-between gap-4", className)}>
+    <div className={cn("flex flex-col space-y-4", className)}>
       <div className="space-y-1">
-        <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
+        <h1 className="text-2xl font-bold tracking-tight break-words">{title}</h1>
         {description && (
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground break-words">
             {description}
           </p>
         )}
         {children}
       </div>
       {actions && (
-        <div className="flex flex-shrink-0 items-center gap-2">
+        <div className="flex items-center flex-wrap gap-2 w-full">
           {actions}
         </div>
       )}

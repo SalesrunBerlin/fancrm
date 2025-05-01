@@ -30,17 +30,7 @@ import { BatchFieldCreation } from "@/components/import/BatchFieldCreation";
 import { DuplicateRecordsResolver } from "@/components/import/DuplicateRecordsResolver";
 import { PreviewImportData } from "@/components/import/PreviewImportData";
 import { toast } from "sonner";
-import { DuplicateRecord, ColumnMapping } from "@/types"; // Import from the types file
-
-// Type adapter to convert between DuplicateRecord types
-const adaptDuplicates = (duplicates: import("@/hooks/useImportRecords").DuplicateRecord[]): DuplicateRecord[] => {
-  return duplicates as unknown as DuplicateRecord[];
-};
-
-// Type adapter to convert between ColumnMapping types
-const adaptColumnMappings = (mappings: import("@/hooks/useImportRecords").ColumnMapping[]): ColumnMapping[] => {
-  return mappings as unknown as ColumnMapping[];
-};
+import { DuplicateRecord, ColumnMapping } from "@/hooks/useImportRecords"; // Import directly from the hooks file
 
 // Map intensity values between different naming conventions
 const mapIntensity = (intensity: "low" | "medium" | "high"): "lenient" | "moderate" | "strict" => {
@@ -79,9 +69,9 @@ export default function ImportRecordsPage() {
 
   const { 
     importData, 
-    columnMappings: rawColumnMappings, 
+    columnMappings, 
     isImporting,
-    duplicates: rawDuplicates,
+    duplicates,
     matchingFields,
     isDuplicateCheckCompleted,
     duplicateCheckIntensity: rawIntensity,
@@ -89,98 +79,16 @@ export default function ImportRecordsPage() {
     updateColumnMapping, 
     importRecords,
     clearImportData,
-    checkForDuplicates: rawCheckForDuplicates,
+    checkForDuplicates,
     updateMatchingFields,
     updateDuplicateAction,
     updateDuplicateCheckIntensity: rawUpdateIntensity
   } = useImportRecords(objectTypeId!, fields || []);
 
-  // Adapt types for the component
-  const duplicates = adaptDuplicates(rawDuplicates);
-  const columnMappings = adaptColumnMappings(rawColumnMappings);
   const duplicateCheckIntensity = mapIntensity(rawIntensity);
   
   const updateDuplicateCheckIntensity = (intensity: "lenient" | "moderate" | "strict") => {
     rawUpdateIntensity(mapReverseIntensity(intensity));
-  };
-
-  const checkForDuplicates = async (): Promise<boolean> => {
-    return await rawCheckForDuplicates();
-  };
-
-  // Check if we have import data and move to mapping step
-  useEffect(() => {
-    if (importData && step === "paste") {
-      setStep("mapping");
-      
-      // Extract column data for use in field creation
-      if (importData.headers && importData.rows) {
-        const extractedData: { [columnName: string]: string[] } = {};
-        
-        importData.headers.forEach((header, columnIndex) => {
-          // Get all values from this column
-          extractedData[header] = importData.rows.map(row => row[columnIndex] || '');
-        });
-        
-        setColumnData(extractedData);
-        
-        // Initially select all rows
-        setSelectedRows(Array.from({ length: importData.rows.length }, (_, i) => i));
-      }
-    }
-  }, [importData]);
-
-  // Check for newly created field from URL parameters
-  useEffect(() => {
-    const newFieldId = searchParams.get('newFieldId');
-    const columnName = searchParams.get('columnName');
-    
-    if (newFieldId && columnName && fields) {
-      // Find the column index that matches the column name
-      const columnIndex = columnMappings.findIndex(
-        mapping => mapping.sourceColumnName === decodeURIComponent(columnName)
-      );
-      
-      // Find the newly created field
-      const newField = fields.find(field => field.id === newFieldId);
-      
-      if (columnIndex >= 0 && newField) {
-        console.log("Updating mapping for new field:", newField.name, "at index", columnIndex);
-        // Update the mapping with the new field
-        updateColumnMapping(columnIndex, newFieldId);
-      } else {
-        console.warn("Could not map new field:", { 
-          newFieldId, columnName, 
-          columnFound: columnIndex >= 0, 
-          fieldFound: !!newField,
-          mappingsLength: columnMappings.length,
-          fieldsLength: fields.length
-        });
-      }
-    }
-  }, [searchParams, fields, columnMappings, updateColumnMapping]);
-
-  // Function to identify unmapped columns
-  useEffect(() => {
-    if (columnMappings && columnMappings.length > 0) {
-      const unmapped = columnMappings
-        .filter(mapping => mapping.targetField === null)
-        .map(mapping => mapping.sourceColumnName);
-      setUnmappedColumns(unmapped);
-    } else {
-      setUnmappedColumns([]);
-    }
-  }, [columnMappings]);
-
-  const handleTextPaste = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setPastedText(e.target.value);
-  };
-
-  const handleParseData = () => {
-    const data = parseImportText(pastedText);
-    if (data) {
-      setStep("mapping");
-    }
   };
 
   const handleCheckForDuplicates = async () => {
@@ -217,6 +125,8 @@ export default function ImportRecordsPage() {
         error: 'Failed to check for duplicates'
       }
     );
+    
+    return true; // Fix the return type to match Promise<boolean>
   };
 
   const handlePreviewContinue = () => {

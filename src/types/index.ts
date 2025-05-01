@@ -28,6 +28,13 @@ export interface ColumnMapping {
     id: string;
     name: string;
     api_name: string;
+    object_type_id?: string;
+    data_type?: string;
+    is_required?: boolean;
+    is_system?: boolean;
+    is_unique?: boolean;
+    is_searchable?: boolean;
+    description?: string;
   } | null;
 }
 
@@ -57,6 +64,7 @@ export interface AccountType {
   updatedAt?: string;
   contactCount?: number;
   tags?: string[];
+  ownerId?: string; // Add this to fix the type errors in mockData.ts
 }
 
 export interface DealType {
