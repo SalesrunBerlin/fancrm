@@ -1,5 +1,4 @@
 
-
 export type FieldValue = string | number | boolean | Date | null;
 
 export interface RecordFormData {
@@ -55,6 +54,7 @@ export interface AccountType {
   employees?: number;
   type?: string;
   createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface DealType {
@@ -69,4 +69,3 @@ export interface DealType {
   status?: string;
   accountName?: string;
 }
-

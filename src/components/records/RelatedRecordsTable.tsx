@@ -9,7 +9,7 @@ interface RelatedRecordsTableProps {
 
 export function RelatedRecordsTable({ section }: RelatedRecordsTableProps) {
   return (
-    <div className="overflow-x-auto">
+    <div className="rounded-md border overflow-hidden overflow-x-auto">
       <Table>
         <TableHeader>
           <TableRow>

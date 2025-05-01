@@ -83,7 +83,8 @@ export function ObjectFieldsList({
 
   return (
     <Card className="overflow-hidden">
-      <div className="overflow-x-auto">
+      {/* Replace the simple overflow-x-auto div with a properly constrained container */}
+      <div className="rounded-md border overflow-hidden overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
