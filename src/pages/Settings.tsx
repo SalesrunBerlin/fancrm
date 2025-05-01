@@ -33,7 +33,7 @@ export default function Settings() {
         </Link>
         
         <Link to="/applications">
-          <Card className="h-full hover:bg-accent/5 transition-colors">
+          <Card className="h-full hover:bg-accent/5 transition-colors border-2 border-primary/20">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <AppWindow className="h-5 w-5" />

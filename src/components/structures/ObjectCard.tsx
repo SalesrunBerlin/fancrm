@@ -1,3 +1,4 @@
+
 import { Card, CardHeader, CardTitle, CardContent, CardFooter, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -5,7 +6,7 @@ import { Link } from "react-router-dom";
 import { ObjectType } from "@/hooks/useObjectTypes";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Eye, Apps } from "lucide-react";
+import { Eye, AppWindow } from "lucide-react";
 
 interface ObjectCardProps {
   objectType: ObjectType;
@@ -92,7 +93,7 @@ export function ObjectCard({ objectType, onPublish, showPublishButton = false }:
         {applications.length > 0 && (
           <div className="mt-2">
             <div className="flex items-center gap-1 text-xs text-muted-foreground">
-              <Apps className="h-3 w-3" />
+              <AppWindow className="h-3 w-3" />
               <span>Applications:</span>
             </div>
             <div className="flex flex-wrap gap-1 mt-1">
