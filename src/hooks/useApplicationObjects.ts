@@ -11,6 +11,7 @@ export function useApplicationObjects(applicationId?: string) {
     data: applicationObjects,
     isLoading,
     error,
+    refetch,
   } = useQuery({
     queryKey: ["application-objects", applicationId],
     queryFn: async (): Promise<ObjectType[]> => {
@@ -45,6 +46,7 @@ export function useApplicationObjects(applicationId?: string) {
   return {
     applicationObjects,
     isLoading,
-    error
+    error,
+    refetch,
   };
 }

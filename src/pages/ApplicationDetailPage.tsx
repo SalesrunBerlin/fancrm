@@ -1,4 +1,3 @@
-
 import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { PageHeader } from "@/components/ui/page-header";
@@ -237,9 +236,9 @@ export default function ApplicationDetailPage() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Assigned Objects</CardTitle>
-              <Button onClick={() => setShowObjectAssignmentDialog(true)}>
+              <Button onClick={() => navigate(`/applications/${applicationId}/objects`)}>
                 <Plus className="h-4 w-4 mr-2" />
-                Add Objects
+                Manage Objects
               </Button>
             </CardHeader>
             <CardContent>
@@ -257,19 +256,6 @@ export default function ApplicationDetailPage() {
         description="Are you sure you want to delete this application? This action cannot be undone."
         deleteButtonText="Delete Application"
       />
-
-      {showObjectAssignmentDialog && (
-        <ObjectAssignmentDialog
-          applicationId={applicationId!}
-          applicationName={currentApplication.name}
-          open={showObjectAssignmentDialog}
-          onOpenChange={setShowObjectAssignmentDialog}
-          onComplete={() => {
-            // Refresh the assigned objects list
-            // This will trigger a re-fetch of the data
-          }}
-        />
-      )}
     </div>
   );
 }
