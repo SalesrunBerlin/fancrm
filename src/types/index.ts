@@ -57,3 +57,14 @@ export interface DealType {
 
 export type AccountType = Account;
 export type ContactType = Contact;
+
+// Add the DuplicateRecord type if it doesn't exist yet
+export interface DuplicateRecord {
+  rowIndex: number;
+  record: Record<string, any>;
+  matchingField: string;
+  matches: {
+    id: string;
+    values: Record<string, any>;
+  }[];
+}

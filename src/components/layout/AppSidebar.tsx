@@ -13,7 +13,9 @@ import {
 import { LayoutDashboard, Settings, FileText, Box, Database, AppWindow } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
-import { useEffect } from "react";
+import { useApplications } from "@/hooks/useApplications";
+import { useApplicationObjects } from "@/hooks/useApplicationObjects";
+import { useEffect, useState } from "react";
 
 const navigationItems = [
   {
@@ -46,17 +48,32 @@ const navigationItems = [
 export function AppSidebar() {
   const { pathname } = useLocation();
   const { openMobile, setOpenMobile } = useSidebar();
-  const { objectTypes } = useObjectTypes();
+  const { applications, isLoading: isLoadingApps } = useApplications();
+  const [defaultApplicationId, setDefaultApplicationId] = useState<string | null>(null);
+  const { applicationObjects, isLoading: isLoadingObjects } = useApplicationObjects(defaultApplicationId || undefined);
   const isAuthPage = pathname.startsWith("/auth");
   
   // Close sidebar on route change
   useEffect(() => {
     setOpenMobile(false);
   }, [pathname, setOpenMobile]);
+
+  // Find the default application
+  useEffect(() => {
+    if (applications) {
+      const defaultApp = applications.find(app => app.is_default);
+      if (defaultApp) {
+        setDefaultApplicationId(defaultApp.id);
+      }
+    }
+  }, [applications]);
   
   if (isAuthPage) return null;
   
-  const activeObjects = objectTypes?.filter(obj => obj.is_active) || [];
+  const isLoading = isLoadingApps || isLoadingObjects;
+  
+  // Filter active objects that are assigned to the default application
+  const activeObjects = applicationObjects?.filter(obj => obj.is_active) || [];
 
   return (
     <Sidebar variant="floating">
