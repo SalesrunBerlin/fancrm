@@ -175,18 +175,18 @@ export default function ImportRecordsPage() {
     }
   }, [fields, headers]);
 
-  // Modified function for checked change
+  // Modified function for checked change - Fixed type issue
   const handleHeaderSelection = (index: number) => {
     const newSelectedHeaders = [...selectedHeaders];
     newSelectedHeaders[index] = !newSelectedHeaders[index];
     setSelectedHeaders(newSelectedHeaders);
   };
 
-  // Modified function to handle duplicate check state changes
-  const handleDuplicateStateChange = (duplicateId: string, checked: boolean | string) => {
+  // Fixed function to handle duplicate check state changes
+  const handleDuplicateStateChange = (duplicateId: string, checked: boolean) => {
     setConfirmedUpdates((prev) => ({
       ...prev,
-      [duplicateId]: !!checked, // Convert to boolean to fix type error
+      [duplicateId]: checked,
     }));
   };
 

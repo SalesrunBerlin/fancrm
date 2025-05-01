@@ -2,16 +2,9 @@ import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { DuplicateRecord } from "@/types/index";
 
-// Update the interface to include 'skip' as an action option
-export interface DuplicateRecord {
-  importRowIndex: number;
-  existingRecord: Record<string, any>;
-  matchingFields: string[];
-  matchScore: number;
-  action: 'skip' | 'update' | 'create';
-  record: Record<string, string>;
-}
+// Use the consolidated DuplicateRecord interface from types/index.ts
 
 interface ImportResult {
   success: number;
@@ -294,6 +287,7 @@ export function useImportRecords(objectTypeId: string, fields: any[]) {
               });
               
               foundDuplicates.push({
+                id: recordId,
                 importRowIndex: rowIndex,
                 existingRecord: {
                   id: recordId,
@@ -302,7 +296,8 @@ export function useImportRecords(objectTypeId: string, fields: any[]) {
                 matchingFields: matchingFields,
                 matchScore: score,
                 action: 'skip', // Default action
-                record: importRecord
+                record: importRecord,
+                values: importRecord
               });
             }
           }
@@ -365,9 +360,9 @@ export function useImportRecords(objectTypeId: string, fields: any[]) {
       const processedRowIndices = new Set<number>();
       
       for (const duplicate of duplicates) {
-        if (!selectedRows.includes(duplicate.importRowIndex)) continue;
+        if (!selectedRows.includes(duplicate.importRowIndex!)) continue;
         
-        processedRowIndices.add(duplicate.importRowIndex);
+        processedRowIndices.add(duplicate.importRowIndex!);
         
         try {
           if (duplicate.action === 'skip') {
@@ -376,13 +371,13 @@ export function useImportRecords(objectTypeId: string, fields: any[]) {
           } else if (duplicate.action === 'update') {
             // Update existing record
             await updateRecord.mutateAsync({
-              id: duplicate.existingRecord.id,
-              data: duplicate.record
+              id: duplicate.existingRecord!.id,
+              data: duplicate.record!
             });
             successCount++;
           } else if (duplicate.action === 'create') {
             // Create new record
-            await createRecord.mutateAsync(duplicate.record);
+            await createRecord.mutateAsync(duplicate.record!);
             successCount++;
           }
         } catch (error) {

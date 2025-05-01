@@ -46,6 +46,7 @@ export interface RecordFormData {
   [key: string]: any;
 }
 
+// Consolidated DuplicateRecord interface to be used across the application
 export interface DuplicateRecord {
   id: string;
   values: Record<string, any>;
