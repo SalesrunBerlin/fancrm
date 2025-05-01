@@ -52,6 +52,7 @@ import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 
+// Fix the props interface to match what's expected in ImportRecordsPage
 interface DuplicateRecordsResolverProps {
   headers: string[];
   data: any[];
