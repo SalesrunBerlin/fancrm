@@ -1,3 +1,4 @@
+
 export interface Product {
   id: string;
   name: string;
@@ -58,13 +59,17 @@ export interface DealType {
 export type AccountType = Account;
 export type ContactType = Contact;
 
-// Add the DuplicateRecord type if it doesn't exist yet
+// Updated DuplicateRecord interface
 export interface DuplicateRecord {
-  rowIndex: number;
-  record: Record<string, any>;
-  matchingField: string;
-  matches: {
+  importRowIndex: number;
+  existingRecord: Record<string, any>;
+  matchingFields: string[];
+  action: 'create' | 'update';
+  rowIndex?: number; // Added for backward compatibility
+  record?: Record<string, any>; // Added for backward compatibility
+  matches?: {
     id: string;
     values: Record<string, any>;
-  }[];
+  }[]; // Added for backward compatibility
+  matchingField?: string; // Added for backward compatibility
 }

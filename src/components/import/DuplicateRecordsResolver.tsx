@@ -1,3 +1,4 @@
+
 import {
   AlertDialog,
   AlertDialogAction,
@@ -46,18 +47,38 @@ import {
 } from "@/components/ui/table";
 import { useToast } from "@/components/ui/use-toast";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
+import { DuplicateRecord } from "@/types";
+import { ObjectField } from "@/hooks/useObjectTypes";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 
-interface DuplicateRecordsResolverProps {
+interface ImportData {
   headers: string[];
-  data: any[];
-  onResolve: (resolvedData: any[]) => void;
-  onCancel: () => void;
-  objectTypeId: string;
+  rows: string[][];
+}
+
+interface ColumnMapping {
+  sourceColumnIndex: number;
+  sourceColumnName: string;
+  targetField: ObjectField | null;
+}
+
+interface DuplicateRecordsResolverProps {
+  duplicates: DuplicateRecord[];
+  fields: ObjectField[];
+  matchingFields: string[];
+  columnMappings: ColumnMapping[];
+  importData: ImportData;
+  onSetAction: (rowIndex: number, action: 'create' | 'update') => void;
+  onUpdateMatchingFields: (fields: string[]) => void;
+  onUpdateDuplicateCheckIntensity: (intensity: 'strict' | 'moderate' | 'lenient') => void;
+  duplicateCheckIntensity: 'strict' | 'moderate' | 'lenient';
+  onContinue: () => void;
+  onBack: () => void;
+  onRecheck: () => Promise<boolean>;
 }
 
 const formSchema = z.object({
@@ -68,101 +89,60 @@ const formSchema = z.object({
 });
 
 export function DuplicateRecordsResolver({
-  headers,
-  data,
-  onResolve,
-  onCancel,
-  objectTypeId,
+  duplicates,
+  fields,
+  matchingFields,
+  columnMappings,
+  importData,
+  onSetAction,
+  onUpdateMatchingFields,
+  onUpdateDuplicateCheckIntensity,
+  duplicateCheckIntensity,
+  onContinue,
+  onBack,
+  onRecheck,
 }: DuplicateRecordsResolverProps) {
   const [isResolving, setIsResolving] = useState(false);
-  const [selectedHeader, setSelectedHeader] = useState(headers[0]);
-  const [isPrimaryKeySelectionOpen, setIsPrimaryKeySelectionOpen] =
-    useState(true);
+  const [selectedHeader, setSelectedHeader] = useState('');
+  const [isPrimaryKeySelectionOpen, setIsPrimaryKeySelectionOpen] = useState(true);
   const { toast } = useToast();
   const { objectTypes, isLoading: isLoadingObjectTypes } = useObjectTypes();
-  const objectType = objectTypes?.find((type) => type.id === objectTypeId);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       resolutionStrategy: "skip",
-      primaryKeyHeader: selectedHeader,
+      primaryKeyHeader: "",
     },
   });
 
   useEffect(() => {
-    if (headers.length > 0) {
-      form.setValue("primaryKeyHeader", headers[0]);
-      setSelectedHeader(headers[0]);
+    if (matchingFields.length > 0 && fields.length > 0) {
+      // Find a field name from matchingFields
+      const matchingField = fields.find(f => matchingFields.includes(f.api_name));
+      if (matchingField) {
+        form.setValue("primaryKeyHeader", matchingField.name);
+        setSelectedHeader(matchingField.name);
+      }
+    } else if (fields.length > 0) {
+      const firstField = fields[0];
+      form.setValue("primaryKeyHeader", firstField.name);
+      setSelectedHeader(firstField.name);
     }
-  }, [headers, form]);
+  }, [matchingFields, fields, form]);
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setIsResolving(true);
     try {
-      const primaryKeyHeader = values.primaryKeyHeader;
-      const resolutionStrategy = values.resolutionStrategy;
-
-      // Group the new records by the primary key
-      const groupedNewRecords = data.reduce((acc: any, record: any) => {
-        const primaryKeyValue = record[primaryKeyHeader];
-        if (!acc[primaryKeyValue]) {
-          acc[primaryKeyValue] = [];
-        }
-        acc[primaryKeyValue].push(record);
-        return acc;
-      }, {});
-
-      // Fetch existing records based on the selected primary key
-      const existingRecords = await fetch(
-        `/api/objects/${objectTypeId}?field=${primaryKeyHeader}&values=${Object.keys(
-          groupedNewRecords
-        ).join(",")}`
-      ).then((res) => res.json());
-
-      // Create a map of existing records for easier lookup
-      const existingRecordsMap = existingRecords.reduce((acc: any, record: any) => {
-        acc[record[primaryKeyHeader]] = record;
-        return acc;
-      }, {});
-
-      let resolvedData = [];
-
-      switch (resolutionStrategy) {
-        case "skip":
-          // Skip duplicates, only add new records that don't exist
-          resolvedData = data.filter((record) => {
-            const primaryKeyValue = record[primaryKeyHeader];
-            return !existingRecordsMap[primaryKeyValue];
-          });
-          break;
-
-        case "overwrite":
-          // Overwrite existing records with new ones, add new records that don't exist
-          resolvedData = data.map((record) => {
-            const primaryKeyValue = record[primaryKeyHeader];
-            if (existingRecordsMap[primaryKeyValue]) {
-              return { ...existingRecordsMap[primaryKeyValue], ...record }; // Overwrite
-            } else {
-              return record; // Add new
-            }
-          });
-          break;
-
-        case "merge":
-          // Merge new records with existing ones, add new records that don't exist
-          resolvedData = data.map((record) => {
-            const primaryKeyValue = record[primaryKeyHeader];
-            if (existingRecordsMap[primaryKeyValue]) {
-              return { ...record, ...existingRecordsMap[primaryKeyValue] }; // Merge
-            } else {
-              return record; // Add new
-            }
-          });
-          break;
-      }
-
-      onResolve(resolvedData);
+      // Apply the resolution strategy to all duplicates
+      const action = values.resolutionStrategy === "skip" ? "create" : 
+                    values.resolutionStrategy === "overwrite" ? "update" : "create";
+      
+      duplicates.forEach(duplicate => {
+        onSetAction(duplicate.importRowIndex, action);
+      });
+      
+      onContinue();
       toast({
         title: "Success",
         description: "Duplicate records resolved successfully.",
@@ -180,169 +160,234 @@ export function DuplicateRecordsResolver({
     }
   };
 
+  const handleIntensityChange = (intensity: 'strict' | 'moderate' | 'lenient') => {
+    onUpdateDuplicateCheckIntensity(intensity);
+  };
+
+  const handleUpdateMatchingFields = (fields: string[]) => {
+    onUpdateMatchingFields(fields);
+  };
+
   return (
-    <AlertDialog open={true} onOpenChange={() => {}}>
-      <AlertDialogContent className="max-w-5xl">
-        <AlertDialogHeader>
-          <AlertDialogTitle>Resolve Duplicate Records</AlertDialogTitle>
-          <AlertDialogDescription>
-            We found potential duplicate records in your data. Please select a
-            resolution strategy to handle these duplicates.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Primary Key Selection</CardTitle>
-                <CardDescription>
-                  Select the header that uniquely identifies each record.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <FormField
-                  control={form.control}
-                  name="primaryKeyHeader"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Primary Key Header</FormLabel>
-                      <Select
-                        onValueChange={(value) => {
-                          field.onChange(value);
-                          setSelectedHeader(value);
+    <div className="space-y-4">
+      <AlertDialogHeader>
+        <AlertDialogTitle>Resolve Duplicate Records</AlertDialogTitle>
+        <AlertDialogDescription>
+          We found {duplicates.length} potential duplicate records in your data. Please select how to handle these duplicates.
+        </AlertDialogDescription>
+      </AlertDialogHeader>
+
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Duplicate Check Settings</CardTitle>
+              <CardDescription>
+                Adjust how strictly we check for duplicates
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label>Matching Fields</Label>
+                <div className="grid grid-cols-2 gap-2 mt-2">
+                  {fields.map((field) => (
+                    <div key={field.api_name} className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id={field.api_name}
+                        checked={matchingFields.includes(field.api_name)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            handleUpdateMatchingFields([...matchingFields, field.api_name]);
+                          } else {
+                            handleUpdateMatchingFields(
+                              matchingFields.filter((f) => f !== field.api_name)
+                            );
+                          }
                         }}
+                        className="h-4 w-4 rounded border-gray-300"
+                      />
+                      <label htmlFor={field.api_name} className="text-sm font-medium">
+                        {field.name}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <Label>Matching Strictness</Label>
+                <RadioGroup
+                  defaultValue={duplicateCheckIntensity}
+                  onValueChange={(value) => handleIntensityChange(value as any)}
+                  className="mt-2"
+                >
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="strict" id="strict" />
+                    <Label htmlFor="strict">Strict (exact matches only)</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="moderate" id="moderate" />
+                    <Label htmlFor="moderate">Moderate (substring matches)</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="lenient" id="lenient" />
+                    <Label htmlFor="lenient">Lenient (fuzzy matching)</Label>
+                  </div>
+                </RadioGroup>
+              </div>
+
+              <div className="flex justify-end">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={onRecheck}
+                  className="mr-2"
+                >
+                  Recheck with New Settings
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Resolution Strategy</CardTitle>
+              <CardDescription>
+                Choose how to handle duplicate records.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <FormField
+                control={form.control}
+                name="resolutionStrategy"
+                render={({ field }) => (
+                  <FormItem className="space-y-3">
+                    <FormControl>
+                      <RadioGroup
+                        onValueChange={field.onChange}
                         defaultValue={field.value}
+                        className="flex flex-col space-y-1"
                       >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select a header" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {headers.map((header) => (
-                            <SelectItem key={header} value={header}>
-                              {header}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </CardContent>
-            </Card>
+                        <FormItem className="flex items-center space-x-3 space-y-0">
+                          <RadioGroupItem value="skip" id="skip" />
+                          <FormLabel htmlFor="skip">
+                            Skip Duplicates{" "}
+                            <Badge variant="secondary">Recommended</Badge>
+                            <p className="text-sm text-muted-foreground">
+                              Ignore the new record if a record with the same
+                              primary key already exists.
+                            </p>
+                          </FormLabel>
+                        </FormItem>
+                        <FormItem className="flex items-center space-x-3 space-y-0">
+                          <RadioGroupItem value="overwrite" id="overwrite" />
+                          <FormLabel htmlFor="overwrite">
+                            Overwrite Existing
+                            <p className="text-sm text-muted-foreground">
+                              Replace the existing record with the new record.
+                            </p>
+                          </FormLabel>
+                        </FormItem>
+                        <FormItem className="flex items-center space-x-3 space-y-0">
+                          <RadioGroupItem value="merge" id="merge" />
+                          <FormLabel htmlFor="merge">
+                            Merge Records
+                            <p className="text-sm text-muted-foreground">
+                              Combine the data from the new record with the
+                              existing record.
+                            </p>
+                          </FormLabel>
+                        </FormItem>
+                      </RadioGroup>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </CardContent>
+          </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Resolution Strategy</CardTitle>
-                <CardDescription>
-                  Choose how to handle duplicate records based on the primary
-                  key.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <FormField
-                  control={form.control}
-                  name="resolutionStrategy"
-                  render={({ field }) => (
-                    <FormItem className="space-y-3">
-                      <FormControl>
-                        <RadioGroup
-                          onValueChange={field.onChange}
-                          defaultValue={field.value}
-                          className="flex flex-col space-y-1"
-                        >
-                          <FormItem className="flex items-center space-x-3 space-y-0">
-                            <RadioGroupItem value="skip" id="skip" />
-                            <FormLabel htmlFor="skip">
-                              Skip Duplicates{" "}
-                              <Badge variant="secondary">Recommended</Badge>
-                              <p className="text-sm text-muted-foreground">
-                                Ignore the new record if a record with the same
-                                primary key already exists.
-                              </p>
-                            </FormLabel>
-                          </FormItem>
-                          <FormItem className="flex items-center space-x-3 space-y-0">
-                            <RadioGroupItem value="overwrite" id="overwrite" />
-                            <FormLabel htmlFor="overwrite">
-                              Overwrite Existing
-                              <p className="text-sm text-muted-foreground">
-                                Replace the existing record with the new record.
-                              </p>
-                            </FormLabel>
-                          </FormItem>
-                          <FormItem className="flex items-center space-x-3 space-y-0">
-                            <RadioGroupItem value="merge" id="merge" />
-                            <FormLabel htmlFor="merge">
-                              Merge Records
-                              <p className="text-sm text-muted-foreground">
-                                Combine the data from the new record with the
-                                existing record.
-                              </p>
-                            </FormLabel>
-                          </FormItem>
-                        </RadioGroup>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </CardContent>
-            </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>Duplicate Records Preview</CardTitle>
+              <CardDescription>
+                Found {duplicates.length} potential duplicate records
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ScrollArea className="h-[400px] w-full rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Row</TableHead>
+                      <TableHead>Matching Fields</TableHead>
+                      <TableHead>Existing Record Values</TableHead>
+                      <TableHead>Import Values</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {duplicates.map((duplicate) => {
+                      const row = importData.rows[duplicate.importRowIndex];
+                      return (
+                        <TableRow key={duplicate.importRowIndex}>
+                          <TableCell className="font-medium">
+                            {duplicate.importRowIndex + 1}
+                          </TableCell>
+                          <TableCell>
+                            {duplicate.matchingFields.map((fieldName) => {
+                              const field = fields.find(f => f.api_name === fieldName);
+                              return (
+                                <div key={fieldName} className="mb-1">
+                                  {field?.name || fieldName}
+                                </div>
+                              );
+                            })}
+                          </TableCell>
+                          <TableCell>
+                            {duplicate.matchingFields.map((fieldName) => {
+                              const value = duplicate.existingRecord.field_values?.[fieldName];
+                              return (
+                                <div key={fieldName} className="mb-1">
+                                  {value || "N/A"}
+                                </div>
+                              );
+                            })}
+                          </TableCell>
+                          <TableCell>
+                            {duplicate.matchingFields.map((fieldName) => {
+                              const field = fields.find(f => f.api_name === fieldName);
+                              const mapping = columnMappings.find(m => m.targetField?.api_name === fieldName);
+                              const value = mapping && row ? row[mapping.sourceColumnIndex] : "N/A";
+                              return (
+                                <div key={fieldName} className="mb-1">
+                                  {value || "N/A"}
+                                </div>
+                              );
+                            })}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </ScrollArea>
+            </CardContent>
+          </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Data Preview</CardTitle>
-                <CardDescription>
-                  Preview of the data with potential duplicates highlighted.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ScrollArea className="h-[400px] w-full rounded-md border">
-                  <Table>
-                    <TableHeader>
-                      {headers.map((header) => (
-                        <TableHead key={header}>{header}</TableHead>
-                      ))}
-                      <TableHead className="w-[100px]">Status</TableHead>
-                    </TableHeader>
-                    <TableBody>
-                      {data.map((record, index) => {
-                        const primaryKeyValue = record[selectedHeader];
-                        return (
-                          <TableRow key={index}>
-                            {headers.map((header) => (
-                              <TableCell key={header}>
-                                {record[header] || "N/A"}
-                              </TableCell>
-                            ))}
-                            <TableCell className="w-[100px] font-medium">
-                              {/* <Alert variant="default">
-                                Duplicate Value
-                              </Alert> */}
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
-                </ScrollArea>
-              </CardContent>
-            </Card>
-            <AlertDialogFooter>
-              <AlertDialogCancel onClick={onCancel}>Cancel</AlertDialogCancel>
-              <AlertDialogAction disabled={isResolving}>
-                {isResolving ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : null}
-                Resolve Duplicates
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </form>
-        </Form>
-      </AlertDialogContent>
-    </AlertDialog>
+          <div className="flex justify-between">
+            <Button type="button" variant="outline" onClick={onBack}>
+              Back
+            </Button>
+            <Button type="submit" disabled={isResolving}>
+              {isResolving ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : null}
+              Continue
+            </Button>
+          </div>
+        </form>
+      </Form>
+    </div>
   );
 }
