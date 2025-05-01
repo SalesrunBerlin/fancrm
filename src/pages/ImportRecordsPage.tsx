@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { PageHeader } from "@/components/ui/page-header";
@@ -222,7 +221,7 @@ export default function ImportRecordsPage() {
         return (
           <BatchFieldCreation
             importData={importData}
-            objectTypeId={objectTypeId!}
+            objectTypeId={objectTypeId}
             onFieldCreation={handleFieldCreation}
             onBack={handleBack}
           />
@@ -232,7 +231,7 @@ export default function ImportRecordsPage() {
           <div>
             <h2>Matching Fields</h2>
             {/* Implement the UI for selecting matching fields */}
-            <Button onClick={() => handleMatchingFields(["id", "name"])}>Next</Button>
+            <Button onClick={() => handleMatchingFields([])}>Next</Button>
             <Button onClick={handleBack}>Back</Button>
           </div>
         );
@@ -241,25 +240,29 @@ export default function ImportRecordsPage() {
           <div>
             <h2>Column Mapping</h2>
             {/* Implement the UI for mapping columns to fields */}
-            <Button onClick={() => handleColumnMapping({"id": "id", "name": "name"})}>Next</Button>
+            <Button onClick={() => handleColumnMapping({})}>Next</Button>
             <Button onClick={handleBack}>Back</Button>
           </div>
         );
       case ImportStep.APPLICATION_SELECTION:
         return (
           <ApplicationSelector
-            objectTypeId={objectTypeId!}
-            onSelect={handleApplicationSelection}
+            onApplicationSelect={handleApplicationSelection}
+            onBack={handleBack}
           />
         );
       case ImportStep.RESOLVE_DUPLICATES:
         return (
           <DuplicateRecordsResolver
-            headers={Object.keys(importData[0] || {})}
-            data={importData}
-            onResolve={() => handleFinishImport()}
-            onCancel={handleBack}
-            objectTypeId={objectTypeId!}
+            fields={fields}
+            matchingFields={matchingFields}
+            columnMappings={columnMappings}
+            importData={importData}
+            onBack={handleBack}
+            onContinue={handleFinishImport}
+            onSkip={handleSkipDuplicateResolution}
+            onRecheck={recheckDuplicates}
+            objectTypeId={objectTypeId}
           />
         );
       case ImportStep.FINISH:

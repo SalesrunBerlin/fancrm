@@ -6,15 +6,13 @@ import { useApplications } from "@/hooks/useApplications";
 import { Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
 
 interface ApplicationSelectorProps {
   objectTypeId: string;
-  onSelect: (applicationId: string) => void;
-  onBack?: () => void;
+  onSelect: (applicationId: string | null) => void;
 }
 
-export function ApplicationSelector({ objectTypeId, onSelect, onBack }: ApplicationSelectorProps) {
+export function ApplicationSelector({ objectTypeId, onSelect }: ApplicationSelectorProps) {
   const { applications, isLoading } = useApplications();
   const [recommendedAppIds, setRecommendedAppIds] = useState<string[]>([]);
   const [selectedApplicationId, setSelectedApplicationId] = useState<string | null>(null);
@@ -43,6 +41,7 @@ export function ApplicationSelector({ objectTypeId, onSelect, onBack }: Applicat
           const defaultApp = applications.find(app => app.is_default && appIds.includes(app.id));
           if (defaultApp) {
             setSelectedApplicationId(defaultApp.id);
+            onSelect(defaultApp.id);
           }
         }
       } catch (error) {
@@ -62,18 +61,14 @@ export function ApplicationSelector({ objectTypeId, onSelect, onBack }: Applicat
       const defaultApp = applications.find(app => app.is_default);
       if (defaultApp) {
         setSelectedApplicationId(defaultApp.id);
+        onSelect(defaultApp.id);
       }
     }
   }, [applications, selectedApplicationId, recommendedAppIds]);
   
   const handleApplicationChange = (value: string) => {
     setSelectedApplicationId(value);
-  };
-
-  const handleContinue = () => {
-    if (selectedApplicationId) {
-      onSelect(selectedApplicationId);
-    }
+    onSelect(value);
   };
   
   const isLoaderShown = isLoading || isLoadingRecommendations;
@@ -83,7 +78,7 @@ export function ApplicationSelector({ objectTypeId, onSelect, onBack }: Applicat
       <CardHeader>
         <CardTitle className="text-lg">Assign to Application</CardTitle>
         <CardDescription>
-          Select which application these records should be assigned to
+          Select which application this object should be assigned to
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -124,20 +119,6 @@ export function ApplicationSelector({ objectTypeId, onSelect, onBack }: Applicat
                 Applications marked as "Recommended" were suggested by the publisher of this object.
               </p>
             )}
-
-            <div className="flex justify-end gap-2 pt-4">
-              {onBack && (
-                <Button variant="outline" onClick={onBack}>
-                  Back
-                </Button>
-              )}
-              <Button 
-                onClick={handleContinue}
-                disabled={!selectedApplicationId}
-              >
-                Continue
-              </Button>
-            </div>
           </div>
         )}
       </CardContent>
