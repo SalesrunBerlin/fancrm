@@ -241,14 +241,17 @@ export function useImportRecords(objectTypeId: string, fields: any[]) {
         
         if (potentialDuplicates && potentialDuplicates.length > 0) {
           // Group by record_id
-          const recordMap = new Map<string, Array<{field_api_name: string, value: string}>>();
+          const recordMap = new Map<string, { field_api_name: string; value: string }[]>();
           
           for (const item of potentialDuplicates) {
-            const fieldValue = item.object_field_values as {field_api_name: string, value: string};
+            const fieldValue = item.object_field_values as unknown as { field_api_name: string; value: string };
             if (!recordMap.has(item.id)) {
               recordMap.set(item.id, [fieldValue]);
             } else {
-              recordMap.get(item.id)!.push(fieldValue);
+              const existingValues = recordMap.get(item.id);
+              if (existingValues) {
+                existingValues.push(fieldValue);
+              }
             }
           }
           

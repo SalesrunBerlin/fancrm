@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { PageHeader } from "@/components/ui/page-header";
 import { TabsContent, TabsList, TabsTrigger, Tabs } from "@/components/ui/tabs";
@@ -39,7 +40,7 @@ export default function Structures() {
       />
 
       <Tabs defaultValue="active" className="space-y-4">
-        <TabsList>
+        <TabsList className="w-full sm:w-auto">
           <TabsTrigger value="active">Active</TabsTrigger>
           <TabsTrigger value="inactive">Inactive</TabsTrigger>
           <TabsTrigger value="published">Published</TabsTrigger>

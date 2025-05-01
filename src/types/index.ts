@@ -34,7 +34,7 @@ export interface ColumnMapping {
 // Update types for Dashboard components with correct properties
 export interface ContactType {
   id: string;
-  name: string;
+  name?: string;
   email: string;
   phone?: string;
   company?: string;
@@ -55,13 +55,15 @@ export interface AccountType {
   type?: string;
   createdAt?: string;
   updatedAt?: string;
+  contactCount?: number;
+  tags?: string[];
 }
 
 export interface DealType {
   id: string;
   name: string;
-  value: number;
-  stage: string;
+  value?: number;
+  stage?: string;
   closeDate?: string;
   probability?: number;
   account?: string;

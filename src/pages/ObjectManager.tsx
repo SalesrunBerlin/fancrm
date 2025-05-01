@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { 
   Plus, Loader2, Building, User, Briefcase, Calendar, Box, 
-  Archive, RefreshCw, Eye, Trash2
+  Archive, RefreshCw, Eye, Trash2, MoreHorizontal
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
@@ -14,6 +14,12 @@ import { ObjectType } from "@/hooks/useObjectTypes";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DeleteDialog } from "@/components/common/DeleteDialog";
 import { toast } from "sonner";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger
+} from "@/components/ui/dropdown-menu";
 
 export default function ObjectManager() {
   // Fetch all objects including archived ones
@@ -62,6 +68,59 @@ export default function ObjectManager() {
     return publishedObjects?.some(obj => obj.source_object_id === objectId) || false;
   };
 
+  // Function to render action buttons as a dropdown on mobile
+  const renderObjectActions = (objectType: ObjectType, isArchived: boolean = false) => {
+    // For mobile screens, render actions in dropdown
+    return (
+      <div className="flex sm:hidden">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm">
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            {isArchived ? (
+              <>
+                <DropdownMenuItem asChild>
+                  <Link to={`/settings/objects/${objectType.id}/restore`}>
+                    Restore
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to={`/settings/objects/${objectType.id}`}>
+                    View
+                  </Link>
+                </DropdownMenuItem>
+              </>
+            ) : (
+              <>
+                {!objectType.is_system && (
+                  <DropdownMenuItem asChild>
+                    <Link to={`/settings/objects/${objectType.id}/archive`}>
+                      Archive
+                    </Link>
+                  </DropdownMenuItem>
+                )}
+              </>
+            )}
+            {!objectType.is_system && !isSourceForPublishedObjects(objectType.id) && (
+              <DropdownMenuItem 
+                className="text-red-500"
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleDeleteObject(objectType, e as unknown as React.MouseEvent);
+                }}
+              >
+                Delete
+              </DropdownMenuItem>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -93,32 +152,36 @@ export default function ObjectManager() {
             <CardHeader className="pb-4">
               <CardTitle>Active Objects</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="overflow-hidden">
               {isLoading ? (
                 <div className="flex items-center justify-center p-4">
                   <Loader2 className="h-6 w-6 animate-spin" />
                 </div>
               ) : activeObjects.length > 0 ? (
-                <div className="space-y-4">
+                <div className="space-y-4 overflow-x-auto">
                   {activeObjects.map((objectType: ObjectType) => (
-                    <div key={objectType.id} className="block">
-                      <div className="flex items-center justify-between p-4 border rounded-lg">
+                    <div key={objectType.id} className="block min-w-0">
+                      <div className="flex flex-wrap md:flex-nowrap items-center justify-between p-4 border rounded-lg">
                         <Link 
                           to={`/settings/objects/${objectType.id}`}
-                          className="flex-grow hover:bg-accent hover:text-accent-foreground transition-colors rounded-lg p-2 -m-2"
+                          className="flex-grow min-w-0 hover:bg-accent hover:text-accent-foreground transition-colors rounded-lg p-2 -m-2"
                         >
                           <div className="flex items-center gap-3">
                             {getIconComponent(objectType.icon)}
-                            <div>
-                              <h3 className="font-medium">{objectType.name}</h3>
-                              <p className="text-sm text-muted-foreground">
+                            <div className="min-w-0 flex-shrink">
+                              <h3 className="font-medium truncate">{objectType.name}</h3>
+                              <p className="text-sm text-muted-foreground truncate">
                                 {objectType.description || `API Name: ${objectType.api_name}`}
                               </p>
                             </div>
                           </div>
                         </Link>
-                        <div className="flex items-center gap-3">
-                          <div className="flex gap-2">
+                        
+                        {/* Mobile actions dropdown */}
+                        {renderObjectActions(objectType)}
+                        
+                        <div className="flex flex-wrap items-center mt-2 w-full md:w-auto md:mt-0 gap-2 md:ml-4">
+                          <div className="flex flex-wrap gap-1">
                             {objectType.is_system && (
                               <Badge variant="secondary">System</Badge>
                             )}
@@ -132,7 +195,9 @@ export default function ObjectManager() {
                               <Badge variant="outline" className="bg-red-50 text-red-700">Inactive</Badge>
                             )}
                           </div>
-                          <div className="flex gap-2">
+                          
+                          {/* Desktop action buttons - hidden on mobile */}
+                          <div className="hidden sm:flex gap-2">
                             {!objectType.is_system && (
                               <>
                                 <Button 
@@ -185,27 +250,31 @@ export default function ObjectManager() {
             <CardHeader className="pb-4">
               <CardTitle>Archived Objects</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="overflow-hidden">
               {isLoading ? (
                 <div className="flex items-center justify-center p-4">
                   <Loader2 className="h-6 w-6 animate-spin" />
                 </div>
               ) : archivedObjects.length > 0 ? (
-                <div className="space-y-4">
+                <div className="space-y-4 overflow-x-auto">
                   {archivedObjects.map((objectType: ObjectType) => (
-                    <div key={objectType.id} className="block opacity-70 hover:opacity-100 transition-opacity">
-                      <div className="flex items-center justify-between p-4 border rounded-lg bg-muted/20">
-                        <div className="flex items-center gap-3">
+                    <div key={objectType.id} className="block opacity-70 hover:opacity-100 transition-opacity min-w-0">
+                      <div className="flex flex-wrap md:flex-nowrap items-center justify-between p-4 border rounded-lg bg-muted/20">
+                        <div className="flex items-center gap-3 min-w-0 flex-grow">
                           {getIconComponent(objectType.icon)}
-                          <div>
-                            <h3 className="font-medium">{objectType.name}</h3>
-                            <p className="text-sm text-muted-foreground">
+                          <div className="min-w-0 flex-shrink">
+                            <h3 className="font-medium truncate">{objectType.name}</h3>
+                            <p className="text-sm text-muted-foreground truncate">
                               {objectType.description || `API Name: ${objectType.api_name}`}
                             </p>
                           </div>
                         </div>
-                        <div className="flex items-center gap-3">
-                          <div className="flex gap-2">
+                        
+                        {/* Mobile actions dropdown */}
+                        {renderObjectActions(objectType, true)}
+                        
+                        <div className="flex flex-wrap items-center mt-2 w-full md:w-auto md:mt-0 gap-2 md:ml-4">
+                          <div className="flex flex-wrap gap-1">
                             <Badge variant="outline" className="bg-slate-100">Archiviert</Badge>
                             {objectType.is_system && (
                               <Badge variant="secondary">System</Badge>
@@ -214,7 +283,9 @@ export default function ObjectManager() {
                               <Badge variant="outline">Published</Badge>
                             )}
                           </div>
-                          <div className="flex items-center gap-2">
+                          
+                          {/* Desktop action buttons - hidden on mobile */}
+                          <div className="hidden sm:flex items-center gap-2">
                             <Button 
                               variant="outline" 
                               size="sm"

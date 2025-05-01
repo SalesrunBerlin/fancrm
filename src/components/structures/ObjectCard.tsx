@@ -51,7 +51,6 @@ export function ObjectCard({ objectType, onPublish, showPublishButton = false }:
   }, [objectType.id]);
 
   const getIconComponent = (iconName: string | null) => {
-    
     switch(iconName) {
       case 'user': return <Eye className="h-5 w-5" />;
       case 'building': return <Eye className="h-5 w-5" />;
@@ -64,12 +63,12 @@ export function ObjectCard({ objectType, onPublish, showPublishButton = false }:
   return (
     <Card className="flex flex-col">
       <CardHeader>
-        <div className="flex justify-between items-start">
+        <div className="flex flex-wrap justify-between items-start gap-2">
           <div className="flex items-center gap-2">
             {getIconComponent(objectType.icon)}
-            <CardTitle>{objectType.name}</CardTitle>
+            <CardTitle className="break-words">{objectType.name}</CardTitle>
           </div>
-          <div className="flex gap-1">
+          <div className="flex flex-wrap gap-1">
             {objectType.is_system && (
               <Badge variant="secondary">System</Badge>
             )}
@@ -81,7 +80,7 @@ export function ObjectCard({ objectType, onPublish, showPublishButton = false }:
             )}
           </div>
         </div>
-        <CardDescription>
+        <CardDescription className="break-words">
           {objectType.description || `API Name: ${objectType.api_name}`}
         </CardDescription>
       </CardHeader>

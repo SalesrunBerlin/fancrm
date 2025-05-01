@@ -140,14 +140,14 @@ export default function ApplicationsPage() {
           ))
         ) : applications && applications.length > 0 ? (
           applications.map((app) => (
-            <Card key={app.id} className={`h-full ${app.is_default ? 'border-primary border-2' : ''}`}>
+            <Card key={app.id} className={`h-full overflow-hidden ${app.is_default ? 'border-primary border-2' : ''}`}>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <AppWindow className="h-5 w-5" />
-                  {app.name}
+                <CardTitle className="flex items-center gap-2 flex-wrap">
+                  <AppWindow className="h-5 w-5 flex-shrink-0" />
+                  <span className="break-words">{app.name}</span>
                   {app.is_default && <span className="text-xs bg-primary/10 px-2 py-0.5 rounded-full text-primary">Default</span>}
                 </CardTitle>
-                <CardDescription>
+                <CardDescription className="break-words">
                   {app.description || "No description provided"}
                 </CardDescription>
               </CardHeader>
