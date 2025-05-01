@@ -45,18 +45,20 @@ export default function EditRecordPage() {
         id: recordId,
         field_values: data
       });
-      toast.success("Record updated successfully");
+      toast("Record updated successfully");
       navigate(`/objects/${objectTypeId}/${recordId}`);
     } catch (error) {
       console.error("Error updating record:", error);
-      toast.error("Failed to update record. Please try again.");
+      toast("Failed to update record. Please try again.", {
+        variant: "destructive"
+      });
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleFieldCreated = () => {
-    toast.success("Field created successfully!");
+    toast("Field created successfully!");
     // Re-fetch fields to include the newly created field
     if (objectTypeId) {
       // The useRecordFields hook uses useQuery internally which will automatically

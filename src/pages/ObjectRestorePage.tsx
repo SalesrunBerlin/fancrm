@@ -1,24 +1,20 @@
 
 import { useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
-import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Loader2, ArrowLeft, RefreshCw } from "lucide-react";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { DeleteDialog } from "@/components/common/DeleteDialog";
-import { useToast } from "@/hooks/use-toast";
+import { AlertCircle, ArrowLeft, Loader2 } from "lucide-react";
+import { toast } from "sonner";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function ObjectRestorePage() {
   const { objectTypeId } = useParams<{ objectTypeId: string }>();
   const navigate = useNavigate();
-  const { toast } = useToast();
-  const [isRestoreDialogOpen, setIsRestoreDialogOpen] = useState(false);
+  const { archivedObjects, restoreObjectType } = useObjectTypes();
   const [isRestoring, setIsRestoring] = useState(false);
-
-  const { objectTypes, restoreObjectType } = useObjectTypes(true); // Include archived objects
-  const objectType = objectTypes?.find(type => type.id === objectTypeId);
+  
+  const objectType = archivedObjects?.find(obj => obj.id === objectTypeId);
 
   const handleRestore = async () => {
     if (!objectTypeId) return;
@@ -26,17 +22,14 @@ export default function ObjectRestorePage() {
     setIsRestoring(true);
     try {
       await restoreObjectType.mutateAsync(objectTypeId);
-      toast({
-        title: "Objekt wiederhergestellt",
-        description: `Das Objekt "${objectType?.name}" wurde erfolgreich wiederhergestellt.`,
+      toast("Object restored", {
+        description: "The object has been restored successfully."
       });
       navigate("/settings/object-manager");
-    } catch (error) {
-      console.error("Error restoring object:", error);
-      toast({
-        title: "Fehler",
-        description: "Das Objekt konnte nicht wiederhergestellt werden.",
-        variant: "destructive",
+    } catch (error: any) {
+      toast("Restore failed", {
+        description: error.message || "There was an error restoring the object.",
+        variant: "destructive"
       });
     } finally {
       setIsRestoring(false);
@@ -45,85 +38,76 @@ export default function ObjectRestorePage() {
 
   if (!objectType) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin" />
+      <div className="max-w-3xl mx-auto p-6">
+        <Button variant="outline" asChild className="mb-6">
+          <Link to="/settings/object-manager">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Object Manager
+          </Link>
+        </Button>
+        
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            Object not found. It may have been deleted or you don't have access to it.
+          </AlertDescription>
+        </Alert>
       </div>
     );
   }
-
+  
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title={`${objectType.name} wiederherstellen`}
-        description="Stellen Sie dieses archivierte Objekt wieder her"
-        actions={
-          <Button variant="outline" onClick={() => navigate(`/settings/objects/${objectTypeId}`)}>
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Zurück
-          </Button>
-        }
-      />
-
-      <Alert>
-        <RefreshCw className="h-4 w-4" />
-        <AlertTitle>Wiederherstellungs-Information</AlertTitle>
-        <AlertDescription>
-          Das Wiederherstellen dieses Objekts macht es wieder in der Navigation und Listen sichtbar.
-          Alle zugehörigen Datensätze und Felder sind erhalten geblieben.
-        </AlertDescription>
-      </Alert>
-
+    <div className="max-w-3xl mx-auto p-6">
+      <Button variant="outline" asChild className="mb-6">
+        <Link to={`/settings/objects/${objectTypeId}`}>
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back to {objectType.name}
+        </Link>
+      </Button>
+      
       <Card>
         <CardHeader>
-          <CardTitle>Objektübersicht</CardTitle>
-          <CardDescription>Details zum Objekt, das wiederhergestellt werden soll</CardDescription>
+          <CardTitle>Restore {objectType.name}</CardTitle>
+          <CardDescription>
+            This will restore this archived object type and make it available for use again.
+          </CardDescription>
         </CardHeader>
+        
         <CardContent>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <p className="text-sm font-medium">Name:</p>
-              <p>{objectType.name}</p>
-            </div>
-            <div>
-              <p className="text-sm font-medium">API Name:</p>
-              <p>{objectType.api_name}</p>
-            </div>
-            <div>
-              <p className="text-sm font-medium">Beschreibung:</p>
-              <p>{objectType.description || "Keine Beschreibung"}</p>
-            </div>
-            <div>
-              <p className="text-sm font-medium">System Objekt:</p>
-              <p>{objectType.is_system ? "Ja" : "Nein"}</p>
-            </div>
-          </div>
+          <Alert className="mb-4">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              Restoring this object will make it visible in object lists again. 
+              All existing records will become accessible.
+            </AlertDescription>
+          </Alert>
+          
+          <p>
+            You are about to restore the <strong>{objectType.name}</strong> object type.
+            After restoration, you'll be able to create and manage records for this object again.
+          </p>
         </CardContent>
+        
+        <CardFooter className="flex justify-end space-x-4">
+          <Button variant="outline" onClick={() => navigate(`/settings/objects/${objectTypeId}`)}>
+            Cancel
+          </Button>
+          <Button 
+            variant="default" 
+            onClick={handleRestore}
+            disabled={isRestoring}
+          >
+            {isRestoring ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Restoring...
+              </>
+            ) : (
+              'Restore Object'
+            )}
+          </Button>
+        </CardFooter>
       </Card>
-
-      <div className="flex justify-end">
-        <Button 
-          variant="success" 
-          size="lg"
-          onClick={() => setIsRestoreDialogOpen(true)}
-          disabled={isRestoring}
-        >
-          {isRestoring ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          ) : (
-            <RefreshCw className="mr-2 h-4 w-4" />
-          )}
-          Objekt wiederherstellen
-        </Button>
-      </div>
-
-      <DeleteDialog
-        isOpen={isRestoreDialogOpen}
-        onClose={() => setIsRestoreDialogOpen(false)}
-        onConfirm={handleRestore}
-        title="Objekt wirklich wiederherstellen?"
-        description={`Sind Sie sicher, dass Sie das Objekt "${objectType.name}" wiederherstellen möchten? Es wird wieder in der Navigation und den Listen erscheinen.`}
-        deleteButtonText="Wiederherstellen"
-      />
     </div>
   );
 }

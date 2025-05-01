@@ -1,12 +1,11 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import { type ObjectField } from "./useObjectTypes";
+import { ObjectField } from "./useObjectTypes";
+import { toast } from "sonner";
 
-// Define the CreateFieldInput type for better type safety
-export interface CreateFieldInput {
+export type CreateFieldInput = {
   name: string;
   api_name: string;
   data_type: string;
@@ -15,261 +14,215 @@ export interface CreateFieldInput {
   options?: {
     target_object_type_id?: string;
     display_field_api_name?: string;
+    description?: string;
     [key: string]: any;
-  };
-}
+  } | null;
+};
 
 export function useObjectFields(objectTypeId?: string) {
   const { user } = useAuth();
-  const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: fields, isLoading, error } = useQuery({
+  const {
+    data: fields,
+    isLoading,
+    error,
+    refetch,
+  } = useQuery({
     queryKey: ["object-fields", objectTypeId],
     queryFn: async (): Promise<ObjectField[]> => {
-      if (!objectTypeId) {
-        console.log("No objectTypeId provided, skipping fields fetch");
+      if (!objectTypeId || !user) {
         return [];
       }
-      
-      console.log(`Fetching fields for object type: ${objectTypeId}`);
-      
-      try {
-        // First determine the object type status (template, published, ownership)
-        const { data: objectType, error: objectError } = await supabase
-          .from("object_types")
-          .select("is_template, source_object_id, is_published, owner_id")
-          .eq("id", objectTypeId)
-          .single();
-  
-        if (objectError) {
-          console.error("Error fetching object type:", objectError);
-          throw objectError;
-        }
-  
-        // Check if this is a published object
-        const isPublishedObject = objectType.is_published;
-        const isOwnedByOthers = objectType.owner_id !== user?.id;
-  
-        console.log("Object fields query for:", { 
-          objectTypeId, 
-          isPublishedObject, 
-          isOwnedByOthers,
-          userID: user?.id,
-          ownerID: objectType.owner_id 
-        });
-  
-        // Base query for fields - thanks to our new RLS policy, this will work for all published objects
-        let query = supabase
-          .from("object_fields")
-          .select("*")
-          .eq("object_type_id", objectTypeId);
-  
-        // For published objects, don't filter by owner_id - our RLS policy will handle this
-        // For all other scenarios (user's own objects or templates), use the original filter
-        if (!isPublishedObject && (user?.id || !isOwnedByOthers)) {
-          // For regular objects or objects owned by the current user,
-          // use the original filter logic
-          console.log("Using owner filter for fields");
-          query = query.or(`is_system.eq.true,owner_id.eq.${user?.id}`);
-        } else {
-          console.log("Using RLS policy for published object fields");
-        }
-  
-        // Execute query with order
-        const { data: fieldsData, error } = await query.order("display_order");
-  
-        if (error) {
-          console.error("Error fetching fields:", error);
-          throw error;
-        }
-  
-        console.log("Fields fetched:", fieldsData.length);
-  
-        // For published objects, check for field publishing settings
-        if (isPublishedObject) {
-          const { data: publishingSettings, error: publishingError } = await supabase
-            .from("object_field_publishing")
-            .select("*")
-            .eq("object_type_id", objectTypeId);
-  
-          if (publishingError) {
-            console.error("Warning - issue fetching publishing settings:", publishingError);
-            console.log("Continuing with all fields due to policy permission");
-            // Don't throw here, continue with all fields
-          }
-          
-          // Only apply publishing filters if we actually have settings
-          if (publishingSettings && publishingSettings.length > 0) {
-            console.log("Applying publishing filters to fields");
-            
-            // Create a map of field_id -> is_included
-            const publishingMap = new Map();
-            publishingSettings.forEach(setting => {
-              publishingMap.set(setting.field_id, setting.is_included);
-            });
-            
-            // Filter fields by publishing settings
-            const filteredData = fieldsData.filter(field => {
-              return publishingMap.has(field.id) ? publishingMap.get(field.id) : true;
-            });
-            
-            console.log("After publishing filter, fields count:", filteredData.length);
-            
-            // Transform the JSON options to match the expected type
-            return filteredData.map(field => ({
-              ...field,
-              options: field.options ? field.options : undefined
-            })) as ObjectField[];
-          }
-        }
-  
-        // Transform the JSON options to match the expected type
-        return fieldsData.map(field => ({
-          ...field,
-          options: field.options ? field.options : undefined
-        })) as ObjectField[];
-      } catch (err) {
-        console.error("Error in useObjectFields:", err);
-        throw err;
+
+      const { data, error } = await supabase
+        .from("object_fields")
+        .select("*")
+        .eq("object_type_id", objectTypeId)
+        .order("display_order");
+
+      if (error) {
+        console.error("Error fetching object fields:", error);
+        throw error;
       }
+
+      return data || [];
     },
-    enabled: !!objectTypeId,
+    enabled: !!objectTypeId && !!user,
   });
 
+  // Create a new field
   const createField = useMutation({
-    mutationFn: async (newField: CreateFieldInput) => {
-      if (!user) throw new Error("User must be logged in to create fields");
-
-      const fieldData = {
-        ...newField,
-        owner_id: user.id,
-        is_system: false,
-        display_order: fields?.length || 0,
-      };
-
-      const { data, error } = await supabase
-        .from("object_fields")
-        .insert([fieldData])
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["object-fields", objectTypeId] });
-      toast({
-        title: "Success",
-        description: "Field created successfully",
-      });
-    },
-    onError: (error) => {
-      console.error("Error creating field:", error);
-      toast({
-        title: "Error",
-        description: "Failed to create field: " + (error instanceof Error ? error.message : "Unknown error"),
-        variant: "destructive",
-      });
-    },
-  });
-
-  const updateField = useMutation({
-    mutationFn: async (updatedField: Partial<ObjectField> & { id: string }) => {
-      if (!user) throw new Error("User must be logged in to update fields");
-
-      // Allow updates to system fields' options, but not to their structure
-      const field = fields?.find(f => f.id === updatedField.id);
-      
-      // Prepare the update payload based on whether it's a system field
-      let updatePayload: any = {};
-      
-      if (field?.is_system) {
-        // For system fields, only allow updating options
-        updatePayload = {
-          options: updatedField.options
-        };
-      } else {
-        // For non-system fields, allow updating everything except system status
-        updatePayload = {
-          name: updatedField.name,
-          api_name: updatedField.api_name,
-          data_type: updatedField.data_type,
-          is_required: updatedField.is_required,
-          options: updatedField.options
-        };
+    mutationFn: async (fieldInput: CreateFieldInput): Promise<ObjectField> => {
+      if (!user) {
+        throw new Error("You must be logged in to create a field");
       }
 
+      // Get the current max display order
+      const { data: maxOrderResult, error: maxOrderError } = await supabase
+        .from("object_fields")
+        .select("display_order")
+        .eq("object_type_id", fieldInput.object_type_id)
+        .order("display_order", { ascending: false })
+        .limit(1);
+
+      if (maxOrderError) {
+        console.error("Error fetching max display order:", maxOrderError);
+      }
+
+      const maxOrder = maxOrderResult && maxOrderResult.length > 0 
+        ? maxOrderResult[0].display_order || 0 
+        : 0;
+
+      // Create the new field
       const { data, error } = await supabase
         .from("object_fields")
-        .update(updatePayload)
-        .eq("id", updatedField.id)
+        .insert([
+          {
+            ...fieldInput,
+            display_order: maxOrder + 1,
+            owner_id: user.id,
+          },
+        ])
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
+
       return data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["object-fields", objectTypeId] });
-      toast({
-        title: "Success",
-        description: "Field updated successfully",
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["object-fields", variables.object_type_id] });
+      toast("Field created successfully", {
+        description: "Your new field has been added to the object type."
       });
     },
-    onError: (error) => {
-      console.error("Error updating field:", error);
-      toast({
-        title: "Error",
-        description: "Failed to update field",
-        variant: "destructive",
+    onError: (error: any) => {
+      toast("Failed to create field", {
+        description: error.message || "An error occurred while creating the field.",
+        variant: "destructive"
       });
     },
   });
 
+  // Update a field
+  const updateField = useMutation({
+    mutationFn: async (field: Partial<ObjectField> & { id: string, object_type_id: string }) => {
+      if (!user) {
+        throw new Error("You must be logged in to update a field");
+      }
+
+      const { id, ...updateData } = field;
+
+      const { data, error } = await supabase
+        .from("object_fields")
+        .update(updateData)
+        .eq("id", id)
+        .select()
+        .single();
+
+      if (error) {
+        throw error;
+      }
+
+      return data;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["object-fields", variables.object_type_id] });
+      toast("Field updated successfully", {
+        description: "The field has been updated."
+      });
+    },
+    onError: (error: any) => {
+      toast("Failed to update field", {
+        description: error.message || "An error occurred while updating the field.",
+        variant: "destructive"
+      });
+    },
+  });
+
+  // Delete a field
   const deleteField = useMutation({
     mutationFn: async (fieldId: string) => {
-      if (!user) throw new Error("User must be logged in to delete fields");
-
-      // Check if field is a system field
-      const field = fields?.find(f => f.id === fieldId);
-      if (field?.is_system) {
-        throw new Error("Cannot delete a system field");
+      if (!user || !objectTypeId) {
+        throw new Error("You must be logged in to delete a field");
       }
 
       const { error } = await supabase
         .from("object_fields")
         .delete()
-        .eq("id", fieldId)
-        .eq("owner_id", user.id) // Ensure user can only delete their own fields
-        .eq("is_system", false); // Extra safety check
+        .eq("id", fieldId);
 
-      if (error) throw error;
-      return { id: fieldId };
+      if (error) {
+        throw error;
+      }
+
+      return fieldId;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["object-fields", objectTypeId] });
-      toast({
-        title: "Success",
-        description: "Field deleted successfully",
+      toast("Field deleted successfully", {
+        description: "The field has been removed from this object type."
       });
     },
-    onError: (error) => {
-      console.error("Error deleting field:", error);
-      toast({
-        title: "Error",
-        description: "Failed to delete field",
-        variant: "destructive",
+    onError: (error: any) => {
+      toast("Failed to delete field", {
+        description: error.message || "An error occurred while deleting the field.",
+        variant: "destructive"
+      });
+    },
+  });
+
+  // Utility function to update field orders
+  const updateFieldOrder = useMutation({
+    mutationFn: async (orderedFields: { id: string, display_order: number }[]) => {
+      if (!user || !objectTypeId) {
+        throw new Error("You must be logged in to reorder fields");
+      }
+
+      // Use upsert to update multiple fields at once
+      const { error } = await supabase
+        .from("object_fields")
+        .upsert(
+          orderedFields.map((field) => ({
+            id: field.id,
+            display_order: field.display_order,
+            // We need to include this to satisfy upsert requirements
+            object_type_id: objectTypeId,
+          })),
+          { onConflict: "id" }
+        );
+
+      if (error) {
+        throw error;
+      }
+
+      return orderedFields;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["object-fields", objectTypeId] });
+      toast("Field order updated", {
+        description: "The fields have been reordered successfully."
+      });
+    },
+    onError: (error: any) => {
+      toast("Failed to update field order", {
+        description: error.message || "An error occurred while reordering the fields.",
+        variant: "destructive"
       });
     },
   });
 
   return {
-    fields,
+    fields: fields || [],
     isLoading,
     error,
+    refetch,
     createField,
     updateField,
     deleteField,
+    updateFieldOrder,
   };
 }

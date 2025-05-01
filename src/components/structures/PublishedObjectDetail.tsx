@@ -16,13 +16,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { AlertCircle, ArrowLeft, Box, Download, Loader2, RefreshCw } from "lucide-react";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export function PublishedObjectDetail() {
   const { objectId } = useParams();
   const navigate = useNavigate();
-  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("details");
   const { importObjectType } = useObjectTypes();
   const [isImporting, setIsImporting] = useState(false);
@@ -145,14 +144,12 @@ export function PublishedObjectDetail() {
     setIsRefreshing(true);
     try {
       await refetchFields();
-      toast({
-        title: "Felder aktualisiert",
+      toast("Felder aktualisiert", {
         description: "Die Feldliste wurde aktualisiert."
       });
     } catch (error) {
       console.error("Error refreshing fields:", error);
-      toast({
-        title: "Fehler",
+      toast("Fehler", {
         description: "Fehler beim Aktualisieren der Felder",
         variant: "destructive"
       });
@@ -169,8 +166,7 @@ export function PublishedObjectDetail() {
     
     try {
       await importObjectType.mutateAsync(objectId);
-      toast({
-        title: "Objekt importiert",
+      toast("Objekt importiert", {
         description: "Das Objekt wurde erfolgreich importiert."
       });
       navigate("/structures", { replace: true });

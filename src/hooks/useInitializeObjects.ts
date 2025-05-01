@@ -1,38 +1,47 @@
 
+import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 
 export function useInitializeObjects() {
   const { user } = useAuth();
-  const { toast } = useToast();
+  const [isInitializing, setIsInitializing] = useState(false);
 
-  // We're not exposing this functionality anymore
-  // since we no longer want system objects
-  const initializeObjects = useMutation({
+  const initializeStandardObjects = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.rpc('initialize_standard_objects');
-      if (error) throw error;
-      return true;
+      if (!user) {
+        throw new Error("User must be logged in to initialize objects");
+      }
+      
+      setIsInitializing(true);
+      try {
+        const { data, error } = await supabase.rpc('initialize_standard_objects', {
+          owner_id: user.id
+        });
+        
+        if (error) throw error;
+        return data;
+      } catch (error: any) {
+        toast("Error initializing objects", {
+          description: error.message || "An unexpected error occurred",
+          variant: "destructive"
+        });
+        throw error;
+      } finally {
+        setIsInitializing(false);
+      }
     },
     onSuccess: () => {
-      toast({
-        title: "Success",
-        description: "Standard objects initialized successfully",
+      toast("Standard objects initialized", {
+        description: "The standard objects have been created in your account."
       });
-    },
-    onError: (error) => {
-      console.error("Error initializing objects:", error);
-      toast({
-        title: "Error",
-        description: "Failed to initialize standard objects",
-        variant: "destructive",
-      });
-    },
+    }
   });
 
   return {
-    initializeObjects,
+    initializeStandardObjects,
+    isInitializing
   };
 }

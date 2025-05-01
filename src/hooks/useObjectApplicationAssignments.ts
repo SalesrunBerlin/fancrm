@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -87,10 +88,12 @@ export function useObjectApplicationAssignments(objectTypeId?: string) {
       queryClient.invalidateQueries({ 
         queryKey: ["object-application-assignments", objectTypeId] 
       });
-      toast.success("Object assigned to application successfully");
+      toast("Object assigned to application successfully");
     },
     onError: (error) => {
-      toast.error("Failed to assign object to application: " + (error instanceof Error ? error.message : "Unknown error"));
+      toast("Failed to assign object to application: " + (error instanceof Error ? error.message : "Unknown error"), {
+        variant: "destructive"
+      });
     },
   });
 
@@ -116,10 +119,12 @@ export function useObjectApplicationAssignments(objectTypeId?: string) {
       queryClient.invalidateQueries({ 
         queryKey: ["object-application-assignments", objectTypeId] 
       });
-      toast.success("Object removed from application successfully");
+      toast("Object removed from application successfully");
     },
     onError: (error) => {
-      toast.error("Failed to remove object from application: " + (error instanceof Error ? error.message : "Unknown error"));
+      toast("Failed to remove object from application: " + (error instanceof Error ? error.message : "Unknown error"), {
+        variant: "destructive"
+      });
     },
   });
 

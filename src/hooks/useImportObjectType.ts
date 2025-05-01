@@ -48,11 +48,12 @@ export function useImportObjectType() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["object-types"] });
-      toast.success("Object structure imported successfully");
+      toast("Object structure imported successfully");
     },
     onError: (error: any) => {
-      toast.error("There was an error importing the object structure.", {
-        description: error.message || "Unknown error"
+      toast("There was an error importing the object structure.", {
+        description: error.message || "Unknown error",
+        variant: "destructive"
       });
     },
   });
