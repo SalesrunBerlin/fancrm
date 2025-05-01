@@ -1,8 +1,7 @@
 
 import { Link } from "react-router-dom";
-import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
-import { Plus } from "lucide-react";
+import { AppWindow, Database } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function Settings() {
@@ -17,7 +16,10 @@ export default function Settings() {
         <Link to="/settings/object-manager">
           <Card className="h-full hover:bg-accent/5 transition-colors">
             <CardHeader>
-              <CardTitle>Object Manager</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <Database className="h-5 w-5" />
+                Object Manager
+              </CardTitle>
               <CardDescription>
                 Define and customize your objects, fields, and relationships
               </CardDescription>
@@ -25,6 +27,25 @@ export default function Settings() {
             <CardContent>
               <p className="text-sm text-muted-foreground">
                 Create and manage custom objects, add fields, and define how your data is structured.
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
+        
+        <Link to="/applications">
+          <Card className="h-full hover:bg-accent/5 transition-colors">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <AppWindow className="h-5 w-5" />
+                Applications
+              </CardTitle>
+              <CardDescription>
+                Manage your applications and object assignments
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                Create and configure applications, and assign objects to specific applications.
               </p>
             </CardContent>
           </Card>

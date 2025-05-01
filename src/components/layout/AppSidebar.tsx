@@ -10,7 +10,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { LayoutDashboard, Settings, FileText, Box, Database, Apps } from "lucide-react";
+import { LayoutDashboard, Settings, FileText, Box, Database, AppWindow } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
 import { useEffect } from "react";
@@ -28,7 +28,7 @@ const navigationItems = [
   },
   {
     title: "Applications",
-    icon: Apps,
+    icon: AppWindow,
     path: "/applications"
   },
   {
