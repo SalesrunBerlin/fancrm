@@ -1,3 +1,4 @@
+
 import { useState, useCallback, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useDropzone } from "react-dropzone";
@@ -38,20 +39,18 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/use-toast";
 import { useObjectTypes, ObjectType, ObjectField } from "@/hooks/useObjectTypes";
 import { useObjectFields } from "@/hooks/useObjectFields";
 import { useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import {
-  ColumnMapping,
-  RecordFormData,
-  DuplicateRecord,
-} from "@/types/index";
+import { useImportRecords } from "@/hooks/useImportRecords";
 import { Loader2 } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { ArrowLeft } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
 
 interface HeaderMappingProps {
   header: string;
@@ -105,7 +104,6 @@ export default function ImportRecordsPage() {
   const { toast } = useToast();
   const [csvData, setCsvData] = useState<string[][]>([]);
   const [headers, setHeaders] = useState<string[]>([]);
-  const [columnMappings, setColumnMappings] = useState<ColumnMapping[]>([]);
   const [selectedHeaders, setSelectedHeaders] = useState<boolean[]>([]);
   const [isMatchingColumns, setIsMatchingColumns] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
@@ -117,15 +115,28 @@ export default function ImportRecordsPage() {
     "skip" | "update"
   >("skip");
   const [potentialDuplicates, setPotentialDuplicates] = useState<
-    DuplicateRecord[]
+    {
+      id: string;
+      values: Record<string, any>;
+      sourceRowIndex?: number;
+    }[]
   >([]);
   const [confirmedUpdates, setConfirmedUpdates] = useState<
     Record<string, boolean>
   >({});
   const [totalRecords, setTotalRecords] = useState(0);
+  const [importMethod, setImportMethod] = useState<"file" | "text">("text");
+  const [importText, setImportText] = useState<string>("");
 
   const { objectTypes } = useObjectTypes();
   const { fields, isLoading: isLoadingFields } = useObjectFields(objectTypeId);
+  const { 
+    parseImportText, 
+    columnMappings, 
+    updateColumnMapping,
+    importData,
+    importRecords
+  } = useImportRecords(objectTypeId || "", fields || []);
 
   const currentObjectType = objectTypes?.find((obj) => obj.id === objectTypeId);
 
@@ -164,16 +175,28 @@ export default function ImportRecordsPage() {
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop });
 
-  useEffect(() => {
-    if (fields && headers.length > 0) {
-      const initialMappings: ColumnMapping[] = headers.map((header) => ({
-        sourceColumn: header,
-        targetField: { id: "", name: "", api_name: "" },
-        isMatched: false,
-      }));
-      setColumnMappings(initialMappings);
+  const handleTextImport = () => {
+    if (importText.trim()) {
+      const result = parseImportText(importText);
+      if (result) {
+        setCsvData(result.rows);
+        setHeaders(result.headers);
+        setSelectedHeaders(result.headers.map(() => true));
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to parse the import data.",
+          variant: "destructive",
+        });
+      }
+    } else {
+      toast({
+        title: "Error",
+        description: "Please enter some data to import.",
+        variant: "destructive",
+      });
     }
-  }, [fields, headers]);
+  };
 
   // Modified function for checked change - Fixed type issue
   const handleHeaderSelection = (index: number) => {
@@ -195,24 +218,7 @@ export default function ImportRecordsPage() {
   };
 
   const handleColumnMappingChange = (index: number, fieldId: string) => {
-    const newMappings = [...columnMappings];
-    const field = fields?.find((f) => f.id === fieldId);
-
-    if (field) {
-      newMappings[index] = {
-        ...newMappings[index],
-        targetField: field,
-        isMatched: true,
-      };
-    } else {
-      newMappings[index] = {
-        ...newMappings[index],
-        targetField: { id: "", name: "", api_name: "" },
-        isMatched: false,
-      };
-    }
-
-    setColumnMappings(newMappings);
+    updateColumnMapping(index, fieldId);
   };
 
   const handleCreateBatchFields = async (): Promise<boolean> => {
@@ -225,9 +231,10 @@ export default function ImportRecordsPage() {
       return false;
     }
 
+    // Use columnMappings from useImportRecords hook
     const unmappedHeaders = columnMappings
-      .filter((mapping) => !mapping.isMatched)
-      .map((mapping) => mapping.sourceColumn);
+      .filter((mapping) => !mapping.targetField)
+      .map((mapping) => mapping.sourceColumnName);
 
     if (unmappedHeaders.length === 0) {
       toast({
@@ -280,10 +287,10 @@ export default function ImportRecordsPage() {
   };
 
   const handleConfirmImport = async () => {
-    if (!objectTypeId) {
+    if (!objectTypeId || !importData) {
       toast({
         title: "Error",
-        description: "Object Type ID is missing.",
+        description: "Object Type ID is missing or no data to import.",
         variant: "destructive",
       });
       return;
@@ -291,100 +298,24 @@ export default function ImportRecordsPage() {
 
     setIsConfirming(true);
 
-    // Prepare data for import
-    const headersToImport = headers.filter(
-      (_, index) => selectedHeaders[index]
-    );
-    const validRows = csvData.slice(skipFirstRow ? 1 : 0);
-    const totalRecordsToImport = validRows.length;
-    setTotalRecords(totalRecordsToImport);
-
-    // Check for potential duplicates
-    if (duplicateHandling === "update") {
-      const potentialDupes: DuplicateRecord[] = [];
-      for (let rowIndex = 0; rowIndex < validRows.length; rowIndex++) {
-        const row = validRows[rowIndex];
-        const recordData: RecordFormData = {};
-
-        headersToImport.forEach((header, index) => {
-          const mapping = columnMappings.find(
-            (m) => m.sourceColumn === header
-          );
-          if (mapping && mapping.targetField && "api_name" in mapping.targetField) {
-            recordData[mapping.targetField.api_name] = row[index];
-          }
-        });
-
-        // Basic duplicate check (e.g., by email)
-        if (recordData["email"]) {
-          const { data, error } = await supabase
-            .from("object_records")
-            .select("id")
-            .eq("object_type_id", objectTypeId)
-            .eq("email", recordData["email"]);
-
-          if (error) {
-            console.error("Error checking for duplicates:", error);
-            continue;
-          }
-
-          if (data && data.length > 0) {
-            potentialDupes.push({
-              id: data[0].id,
-              values: recordData,
-              sourceRowIndex: rowIndex,
-            });
-          }
-        }
-      }
-
-      setPotentialDuplicates(potentialDupes);
-      setIsConfirming(false);
-      return;
+    // Prepare selected rows for import
+    const selectedRows = [];
+    for (let i = skipFirstRow ? 1 : 0; i < csvData.length; i++) {
+      selectedRows.push(i);
     }
 
-    setIsConfirming(false);
-    setIsImporting(true);
-
-    // Proceed with import
     try {
-      let importedCount = 0;
-      for (let i = 0; i < totalRecordsToImport; i += batchSize) {
-        const batch = validRows.slice(i, i + batchSize);
-        const batchData = batch.map((row) => {
-          const recordData: RecordFormData = {};
-          headersToImport.forEach((header, index) => {
-            const mapping = columnMappings.find(
-              (m) => m.sourceColumn === header
-            );
-            if (mapping && mapping.targetField && "api_name" in mapping.targetField) {
-              recordData[mapping.targetField.api_name] = row[index];
-            }
-          });
-          return recordData;
+      setIsImporting(true);
+      
+      const result = await importRecords(selectedRows);
+      
+      if (result) {
+        toast({
+          title: "Success",
+          description: `Successfully imported ${result.success} records (${result.failures} failed)`,
         });
-
-        const { error } = await supabase
-          .from("object_records")
-          .insert(
-            batchData.map((recordData) => ({
-              object_type_id: objectTypeId,
-              ...recordData,
-            }))
-          );
-
-        if (error) {
-          throw new Error(`Batch import failed: ${error.message}`);
-        }
-
-        importedCount += batch.length;
+        navigate(`/objects/${objectTypeId}`);
       }
-
-      toast({
-        title: "Success",
-        description: `Successfully imported ${importedCount} records.`,
-      });
-      navigate(`/objects/${objectTypeId}`);
     } catch (error: any) {
       toast({
         title: "Error",
@@ -393,53 +324,7 @@ export default function ImportRecordsPage() {
       });
     } finally {
       setIsImporting(false);
-    }
-  };
-
-  const handleUpdateDuplicates = async () => {
-    if (!objectTypeId) {
-      toast({
-        title: "Error",
-        description: "Object Type ID is missing.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsImporting(true);
-
-    try {
-      let updatedCount = 0;
-      for (const recordId in confirmedUpdates) {
-        if (confirmedUpdates[recordId]) {
-          const duplicate = potentialDuplicates.find((d) => d.id === recordId);
-          if (duplicate) {
-            const { error } = await supabase
-              .from("object_records")
-              .update(duplicate.values)
-              .eq("id", recordId);
-
-            if (error) {
-              throw new Error(`Failed to update record ${recordId}: ${error.message}`);
-            }
-            updatedCount++;
-          }
-        }
-      }
-
-      toast({
-        title: "Success",
-        description: `Successfully updated ${updatedCount} duplicate records.`,
-      });
-      navigate(`/objects/${objectTypeId}`);
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: `Update failed: ${error.message}`,
-        variant: "destructive",
-      });
-    } finally {
-      setIsImporting(false);
+      setIsConfirming(false);
     }
   };
 
@@ -447,15 +332,11 @@ export default function ImportRecordsPage() {
     navigate(`/objects/${objectTypeId}/import/create-field/${columnName}`);
   };
 
-  const handleColumnsMatched = (mappings: ColumnMapping[]) => {
-    setColumnMappings(mappings);
-  };
-
   return (
     <div className="container mx-auto py-10">
       <PageHeader
         title="Import Records"
-        description="Import records from a CSV file"
+        description="Import records from a CSV file or paste data directly"
         actions={
           <Button variant="outline" asChild>
             <Link to={`/objects/${objectTypeId}`}>
@@ -468,58 +349,88 @@ export default function ImportRecordsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>CSV Upload</CardTitle>
+          <CardTitle>Import Data</CardTitle>
           <CardDescription>
-            Upload a CSV file to import records into this object.
+            Upload a CSV file or paste data directly to import records into this object.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div
-            {...getRootProps()}
-            className="border-2 border-dashed rounded-md p-4 cursor-pointer"
-          >
-            <input {...getInputProps()} />
-            {isDragActive ? (
-              <p>Drop the files here ...</p>
-            ) : (
-              <p>
-                Drag 'n' drop some files here, or click to select files
-              </p>
-            )}
-          </div>
+          <Tabs defaultValue="text" onValueChange={(value) => setImportMethod(value as "file" | "text")}>
+            <TabsList className="mb-4">
+              <TabsTrigger value="text">Paste Data</TabsTrigger>
+              <TabsTrigger value="file">Upload File</TabsTrigger>
+            </TabsList>
+            <TabsContent value="text">
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="import-text">Paste your CSV or Tab-separated data here</Label>
+                  <Textarea
+                    id="import-text"
+                    className="h-48 font-mono"
+                    placeholder="name,email,phone&#10;John Doe,john@example.com,123456789&#10;Jane Smith,jane@example.com,987654321"
+                    value={importText}
+                    onChange={(e) => setImportText(e.target.value)}
+                  />
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    First row should contain column headers. Values can be comma or tab separated.
+                  </p>
+                </div>
+                <Button onClick={handleTextImport}>
+                  Parse Data
+                </Button>
+              </div>
+            </TabsContent>
+            <TabsContent value="file">
+              <div
+                {...getRootProps()}
+                className="border-2 border-dashed rounded-md p-4 cursor-pointer"
+              >
+                <input {...getInputProps()} />
+                {isDragActive ? (
+                  <p>Drop the files here ...</p>
+                ) : (
+                  <p>
+                    Drag 'n' drop some files here, or click to select files
+                  </p>
+                )}
+              </div>
+            </TabsContent>
+          </Tabs>
 
           {csvData.length > 0 && (
             <div className="mt-4">
               <CardTitle>Data Preview</CardTitle>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <th>Select</th>
-                    {headers.map((header, index) => (
-                      <TableHead key={index}>{header}</TableHead>
-                    ))}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {csvData.map((row, rowIndex) => (
-                    <TableRow key={rowIndex}>
-                      <TableCell>
-                        {rowIndex === 0 ? (
-                          <div></div>
-                        ) : (
-                          <Checkbox
-                            checked={selectedHeaders[0]}
-                            onCheckedChange={() => handleHeaderSelection(0)}
-                          />
-                        )}
-                      </TableCell>
-                      {row.map((cell, cellIndex) => (
-                        <TableCell key={cellIndex}>{cell}</TableCell>
+              <ScrollArea className="h-64">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <th>Select</th>
+                      {headers.map((header, index) => (
+                        <TableHead key={index}>{header}</TableHead>
                       ))}
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {csvData.slice(0, 10).map((row, rowIndex) => (
+                      <TableRow key={rowIndex}>
+                        <TableCell>
+                          {rowIndex === 0 ? (
+                            <div></div>
+                          ) : (
+                            <Checkbox
+                              checked={selectedHeaders[0]}
+                              onCheckedChange={() => handleHeaderSelection(0)}
+                            />
+                          )}
+                        </TableCell>
+                        {row.map((cell, cellIndex) => (
+                          <TableCell key={cellIndex}>{cell}</TableCell>
+                        ))}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </ScrollArea>
 
               <div className="mt-4 flex items-center space-x-2">
                 <Checkbox
@@ -650,55 +561,17 @@ export default function ImportRecordsPage() {
             <DialogTitle>Confirm Import</DialogTitle>
             <DialogDescription>
               {duplicateHandling === "skip"
-                ? `Are you sure you want to import ${
-                    csvData.length - 1
-                  } records?`
+                ? `Are you sure you want to import ${csvData.length - (skipFirstRow ? 1 : 0)} records?`
                 : "Potential duplicates found. Review and confirm updates."}
             </DialogDescription>
           </DialogHeader>
-
-          {duplicateHandling === "update" && potentialDuplicates.length > 0 ? (
-            <ScrollArea className="max-h-[300px]">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Select</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Name</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {potentialDuplicates.map((duplicate) => (
-                    <TableRow key={duplicate.id}>
-                      <TableCell>
-                        <Checkbox
-                          checked={confirmedUpdates[duplicate.id] || false}
-                          onCheckedChange={(checked) =>
-                            handleDuplicateStateChange(duplicate.id, checked as boolean)
-                          }
-                        />
-                      </TableCell>
-                      <TableCell>{duplicate.values.email}</TableCell>
-                      <TableCell>{duplicate.values.name}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </ScrollArea>
-          ) : (
-            <p>No duplicates found.</p>
-          )}
 
           <div className="flex justify-end space-x-2">
             <Button variant="secondary" onClick={() => setIsConfirming(false)}>
               Cancel
             </Button>
             <Button
-              onClick={
-                duplicateHandling === "skip"
-                  ? handleConfirmImport
-                  : handleUpdateDuplicates
-              }
+              onClick={handleConfirmImport}
               disabled={isImporting}
             >
               {isImporting ? (
