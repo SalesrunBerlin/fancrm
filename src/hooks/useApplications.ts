@@ -1,7 +1,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 
 export interface Application {
@@ -23,7 +23,6 @@ interface ApplicationFormData {
 
 export function useApplications() {
   const { user } = useAuth();
-  const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const {
@@ -80,16 +79,13 @@ export function useApplications() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["applications"] });
-      toast({
-        title: "Success",
-        description: "Application created successfully",
+      toast.success("Success", {
+        description: "Application created successfully"
       });
     },
     onError: (error) => {
-      toast({
-        title: "Error",
-        description: "Failed to create application: " + (error instanceof Error ? error.message : "Unknown error"),
-        variant: "destructive",
+      toast.error("Error", {
+        description: "Failed to create application: " + (error instanceof Error ? error.message : "Unknown error")
       });
     },
   });
@@ -122,16 +118,13 @@ export function useApplications() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["applications"] });
-      toast({
-        title: "Success",
-        description: "Application updated successfully",
+      toast.success("Success", {
+        description: "Application updated successfully"
       });
     },
     onError: (error) => {
-      toast({
-        title: "Error",
-        description: "Failed to update application: " + (error instanceof Error ? error.message : "Unknown error"),
-        variant: "destructive",
+      toast.error("Error", {
+        description: "Failed to update application: " + (error instanceof Error ? error.message : "Unknown error")
       });
     },
   });
@@ -162,16 +155,13 @@ export function useApplications() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["applications"] });
-      toast({
-        title: "Success",
-        description: "Application deleted successfully",
+      toast.success("Success", {
+        description: "Application deleted successfully"
       });
     },
     onError: (error) => {
-      toast({
-        title: "Error",
-        description: "Failed to delete application: " + (error instanceof Error ? error.message : "Unknown error"),
-        variant: "destructive",
+      toast.error("Error", {
+        description: "Failed to delete application: " + (error instanceof Error ? error.message : "Unknown error")
       });
     },
   });
@@ -209,16 +199,13 @@ export function useApplications() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["applications"] });
-      toast({
-        title: "Success",
-        description: "Default application updated successfully",
+      toast.success("Success", {
+        description: "Default application updated successfully"
       });
     },
     onError: (error) => {
-      toast({
-        title: "Error",
-        description: "Failed to set default application: " + (error instanceof Error ? error.message : "Unknown error"),
-        variant: "destructive",
+      toast.error("Error", {
+        description: "Failed to set default application: " + (error instanceof Error ? error.message : "Unknown error")
       });
     },
   });

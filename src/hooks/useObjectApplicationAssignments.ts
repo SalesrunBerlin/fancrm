@@ -1,7 +1,6 @@
-
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { Application } from "@/hooks/useApplications";
 
@@ -17,7 +16,6 @@ export interface ObjectApplicationAssignment {
 
 export function useObjectApplicationAssignments(objectTypeId?: string) {
   const { user } = useAuth();
-  const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const {
@@ -89,16 +87,13 @@ export function useObjectApplicationAssignments(objectTypeId?: string) {
       queryClient.invalidateQueries({ 
         queryKey: ["object-application-assignments", objectTypeId] 
       });
-      toast({
-        title: "Success",
-        description: "Object assigned to application successfully",
+      toast.success("Success", {
+        description: "Object assigned to application successfully"
       });
     },
     onError: (error) => {
-      toast({
-        title: "Error",
-        description: "Failed to assign object to application: " + (error instanceof Error ? error.message : "Unknown error"),
-        variant: "destructive",
+      toast.error("Error", {
+        description: "Failed to assign object to application: " + (error instanceof Error ? error.message : "Unknown error")
       });
     },
   });
@@ -125,16 +120,13 @@ export function useObjectApplicationAssignments(objectTypeId?: string) {
       queryClient.invalidateQueries({ 
         queryKey: ["object-application-assignments", objectTypeId] 
       });
-      toast({
-        title: "Success",
-        description: "Object removed from application successfully",
+      toast.success("Success", {
+        description: "Object removed from application successfully"
       });
     },
     onError: (error) => {
-      toast({
-        title: "Error",
-        description: "Failed to remove object from application: " + (error instanceof Error ? error.message : "Unknown error"),
-        variant: "destructive",
+      toast.error("Error", {
+        description: "Failed to remove object from application: " + (error instanceof Error ? error.message : "Unknown error")
       });
     },
   });

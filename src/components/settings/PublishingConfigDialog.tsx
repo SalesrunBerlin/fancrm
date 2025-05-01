@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -8,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Loader2 } from "lucide-react";
 import { ObjectField } from "@/hooks/useObjectTypes";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useToast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useApplications } from "@/hooks/useApplications";
@@ -31,7 +30,6 @@ export function PublishingConfigDialog({
   const { applications, isLoading: isLoadingApps } = useApplications();
   const [selectedFields, setSelectedFields] = useState<Record<string, boolean>>({});
   const [selectedApplications, setSelectedApplications] = useState<string[]>([]);
-  const { toast } = useToast();
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -108,9 +106,8 @@ export function PublishingConfigDialog({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["object-types"] });
-      toast({
-        title: "Published Successfully",
-        description: "The object is now publicly available for import by other users.",
+      toast.success("Published Successfully", {
+        description: "The object is now publicly available for import by other users."
       });
       
       onOpenChange(false);
@@ -118,10 +115,8 @@ export function PublishingConfigDialog({
     },
     onError: (error: any) => {
       console.error("Error publishing object:", error);
-      toast({
-        title: "Publication Failed",
-        description: error.message || "There was an error publishing this object.",
-        variant: "destructive",
+      toast.error("Publication Failed", {
+        description: error.message || "There was an error publishing this object."
       });
     },
   });
