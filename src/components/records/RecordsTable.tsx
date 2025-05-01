@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import {
   Table,
   TableBody,
@@ -26,7 +26,6 @@ interface RecordsTableProps {
 }
 
 export function RecordsTable({ records, fields, objectTypeId, selectable = false, onSelectionChange }: RecordsTableProps) {
-  const navigate = useNavigate();
   const [selectedRecords, setSelectedRecords] = useState<string[]>([]);
 
   if (records.length === 0) {
@@ -95,10 +94,6 @@ export function RecordsTable({ records, fields, objectTypeId, selectable = false
     if (onSelectionChange) onSelectionChange(newSelectedRecords);
   };
 
-  const handleRowClick = (record: ObjectRecord) => {
-    navigate(`/objects/${objectTypeId}/${record.id}`);
-  };
-
   const allSelected = records.length > 0 && selectedRecords.length === records.length;
 
   return (
@@ -123,12 +118,9 @@ export function RecordsTable({ records, fields, objectTypeId, selectable = false
         </TableHeader>
         <TableBody>
           {records.map((record) => (
-            <TableRow 
-              key={record.id} 
-              className={`${selectedRecords.includes(record.id) ? "bg-muted/30" : ""} cursor-pointer hover:bg-muted/50`}
-            >
+            <TableRow key={record.id} className={selectedRecords.includes(record.id) ? "bg-muted/30" : undefined}>
               {selectable && (
-                <TableCell onClick={(e) => e.stopPropagation()}>
+                <TableCell>
                   <Checkbox
                     checked={selectedRecords.includes(record.id)}
                     onCheckedChange={(checked) => handleSelectRecord(record.id, !!checked)}
@@ -137,14 +129,11 @@ export function RecordsTable({ records, fields, objectTypeId, selectable = false
                 </TableCell>
               )}
               {fields.map((field) => (
-                <TableCell 
-                  key={`${record.id}-${field.id}`}
-                  onClick={() => handleRowClick(record)}
-                >
+                <TableCell key={`${record.id}-${field.id}`}>
                   {getFieldValue(record, field)}
                 </TableCell>
               ))}
-              <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+              <TableCell className="text-right">
                 <div className="flex justify-end gap-2">
                   <Button
                     variant="ghost"

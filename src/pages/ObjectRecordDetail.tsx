@@ -9,11 +9,11 @@ import { PageHeader } from "@/components/ui/page-header";
 import { Loader2, ArrowLeft, Edit, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { DeleteDialog } from "@/components/common/DeleteDialog";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RelatedRecordsList } from "@/components/records/RelatedRecordsList";
 import { LookupValueDisplay } from "@/components/records/LookupValueDisplay";
-import { RecordDeleteDialog } from "@/components/records/RecordDeleteDialog";
 
 export default function ObjectRecordDetail() {
   const navigate = useNavigate();
@@ -21,7 +21,7 @@ export default function ObjectRecordDetail() {
   const { objectTypes } = useObjectTypes();
   const { record, isLoading } = useRecordDetail(objectTypeId, recordId);
   const { fields } = useRecordFields(objectTypeId);
-  const { deleteRecord } = useObjectRecords(objectTypeId);
+  const { updateRecord } = useObjectRecords(objectTypeId);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("details");
 
@@ -30,7 +30,13 @@ export default function ObjectRecordDetail() {
   const handleDelete = async () => {
     if (!recordId) return;
     try {
-      await deleteRecord.mutateAsync(recordId);
+      // Direct API call to delete the record since we're not exposing this in the hook
+      const { data, error } = await fetch(`/api/records/${recordId}`, {
+        method: 'DELETE'
+      }).then(res => res.json());
+      
+      if (error) throw new Error(error.message);
+      
       toast.success("Record deleted successfully");
       navigate(`/objects/${objectTypeId}`);
     } catch (error) {
@@ -145,11 +151,12 @@ export default function ObjectRecordDetail() {
         </TabsContent>
       </Tabs>
 
-      <RecordDeleteDialog
+      <DeleteDialog
         isOpen={deleteDialogOpen}
         onClose={() => setDeleteDialogOpen(false)}
         onConfirm={handleDelete}
-        recordName={recordName}
+        title={`Delete ${objectType.name}`}
+        description={`Are you sure you want to delete this ${objectType.name.toLowerCase()}? This action cannot be undone.`}
       />
     </div>
   );

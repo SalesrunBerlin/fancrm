@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -6,7 +7,7 @@ import { type ObjectField } from "./useObjectTypes";
 
 // Define the CreateFieldInput type for better type safety
 export interface CreateFieldInput {
-  name: string; // Make sure this is required 
+  name: string;
   api_name: string;
   data_type: string;
   is_required: boolean;
@@ -16,7 +17,6 @@ export interface CreateFieldInput {
     display_field_api_name?: string;
     [key: string]: any;
   };
-  description?: string; // Optional
 }
 
 export function useObjectFields(objectTypeId?: string) {
@@ -264,32 +264,6 @@ export function useObjectFields(objectTypeId?: string) {
     },
   });
 
-  const deleteObjectType = useMutation({
-    mutationFn: async (objectId: string) => {
-      if (!user) throw new Error("User must be logged in to delete object types");
-      
-      // This function will just trigger invalidation of queries
-      // The actual deletion is handled in useObjectTypes.deleteObjectType
-      return objectId;
-    },
-    onSuccess: () => {
-      // Invalidate queries to refresh the UI
-      queryClient.invalidateQueries({ queryKey: ["object-fields", objectTypeId] });
-      toast({
-        title: "Success",
-        description: "Object and all its fields deleted successfully",
-      });
-    },
-    onError: (error) => {
-      console.error("Error deleting object:", error);
-      toast({
-        title: "Error",
-        description: "Failed to delete object",
-        variant: "destructive",
-      });
-    },
-  });
-
   return {
     fields,
     isLoading,
@@ -297,6 +271,5 @@ export function useObjectFields(objectTypeId?: string) {
     createField,
     updateField,
     deleteField,
-    deleteObjectType
   };
 }

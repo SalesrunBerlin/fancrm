@@ -22,7 +22,7 @@ export function useObjectRecords(objectTypeId?: string) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: records, isLoading, refetch } = useQuery({
+  const { data: records, isLoading } = useQuery({
     queryKey: ["object-records", objectTypeId],
     queryFn: async (): Promise<ObjectRecord[]> => {
       // First get the records
@@ -257,7 +257,6 @@ export function useObjectRecords(objectTypeId?: string) {
     createRecord,
     updateRecord,
     deleteRecord,
-    getRecord,
-    refetch // Export the refetch function
+    getRecord
   };
 }
