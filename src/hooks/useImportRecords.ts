@@ -3,7 +3,16 @@ import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { DuplicateRecord } from "@/types";
+
+// Update the interface to include 'skip' as an action option
+export interface DuplicateRecord {
+  importRowIndex: number;
+  existingRecord: Record<string, any>;
+  matchingFields: string[];
+  matchScore: number;
+  action: 'skip' | 'update' | 'create';
+  record: Record<string, string>;
+}
 
 interface ImportResult {
   success: number;
@@ -18,7 +27,7 @@ interface ImportDataType {
   rows: string[][];
 }
 
-interface ColumnMapping {
+export interface ColumnMapping {
   sourceColumnName: string;
   sourceColumnIndex: number;
   targetField: {
@@ -233,7 +242,7 @@ export function useImportRecords(objectTypeId: string, fields: any[]) {
         
         if (potentialDuplicates && potentialDuplicates.length > 0) {
           // Group by record_id
-          const recordMap = new Map<string, {field_api_name: string, value: string}[]>();
+          const recordMap = new Map<string, Array<{field_api_name: string, value: string}>>();
           
           for (const item of potentialDuplicates) {
             const fieldValue = item.object_field_values as {field_api_name: string, value: string};
@@ -366,12 +375,12 @@ export function useImportRecords(objectTypeId: string, fields: any[]) {
             // Update existing record
             await updateRecord.mutateAsync({
               id: duplicate.existingRecord.id,
-              data: duplicate.record as RecordFormData
+              data: duplicate.record
             });
             successCount++;
           } else if (duplicate.action === 'create') {
             // Create new record
-            await createRecord.mutateAsync(duplicate.record as RecordFormData);
+            await createRecord.mutateAsync(duplicate.record);
             successCount++;
           }
         } catch (error) {
@@ -398,7 +407,7 @@ export function useImportRecords(objectTypeId: string, fields: any[]) {
         }
         
         try {
-          await createRecord.mutateAsync(record as RecordFormData);
+          await createRecord.mutateAsync(record);
           successCount++;
         } catch (error) {
           console.error(`Error importing row ${rowIndex}:`, error);

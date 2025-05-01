@@ -10,9 +10,11 @@ import { Loader2, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Textarea } from "@/components/ui/textarea";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function CreateObjectFromFieldValuesPage() {
   const navigate = useNavigate();
+  const { user } = useAuth(); // Get the authenticated user
   const { objectTypeId, fieldApiName, fieldName } = useParams<{ 
     objectTypeId: string, 
     fieldApiName: string,
@@ -81,7 +83,10 @@ export default function CreateObjectFromFieldValuesPage() {
   };
 
   const createNewObjectFromValues = async () => {
-    if (!objectTypeId || !fieldApiName) return;
+    if (!objectTypeId || !fieldApiName || !user) {
+      toast.error(!user ? "You must be logged in to create objects" : "Missing required parameters");
+      return;
+    }
     
     if (!newObjectName.trim() || !newObjectDefaultField.trim()) {
       toast.error("Object name and default field name are required");
@@ -100,13 +105,24 @@ export default function CreateObjectFromFieldValuesPage() {
           api_name: newObjectName.toLowerCase().replace(/\s+/g, '_'),
           description: newObjectDescription || `Auto-generated from ${originalFieldName} field values`,
           is_active: true,
+          owner_id: user.id, // Add owner_id explicitly
+          is_system: false,
+          is_archived: false,
+          show_in_navigation: true,
           default_field_api_name: defaultFieldApiName,
-          show_in_navigation: true
+          is_published: false,
+          is_template: false,
+          source_object_id: null
         }])
         .select()
         .single();
       
-      if (objectError) throw objectError;
+      if (objectError) {
+        console.error("Error creating object type:", objectError);
+        throw objectError;
+      }
+      
+      console.log("Created new object type:", newObjectType);
       
       // 2. Create the default field for the new object
       const { data: nameField, error: nameFieldError } = await supabase
@@ -117,12 +133,19 @@ export default function CreateObjectFromFieldValuesPage() {
           api_name: defaultFieldApiName,
           data_type: 'text',
           is_required: true,
-          display_order: 1
+          is_system: false,
+          display_order: 1,
+          owner_id: user.id // Add owner_id explicitly
         }])
         .select()
         .single();
       
-      if (nameFieldError) throw nameFieldError;
+      if (nameFieldError) {
+        console.error("Error creating field:", nameFieldError);
+        throw nameFieldError;
+      }
+      
+      console.log("Created default field:", nameField);
       
       // 3. Create records for each unique value
       let createdCount = 0;
@@ -132,7 +155,10 @@ export default function CreateObjectFromFieldValuesPage() {
         // Create record
         const { data: newRecord, error: recordError } = await supabase
           .from('object_records')
-          .insert([{ object_type_id: newObjectType.id }])
+          .insert([{ 
+            object_type_id: newObjectType.id,
+            owner_id: user.id // Add owner_id explicitly
+          }])
           .select()
           .single();
         
@@ -171,18 +197,22 @@ export default function CreateObjectFromFieldValuesPage() {
             display_field_api_name: defaultFieldApiName
           },
           is_required: false,
-          display_order: 100 // Put at end
+          display_order: 100, // Put at end
+          owner_id: user.id // Add owner_id explicitly
         }])
         .select()
         .single();
       
-      if (lookupFieldError) throw lookupFieldError;
+      if (lookupFieldError) {
+        console.error("Error creating lookup field:", lookupFieldError);
+        throw lookupFieldError;
+      }
       
       toast.success(`Successfully created new object "${newObjectName}" with ${createdCount} of ${totalRecords} records and added lookup field`);
       navigate(`/settings/objects/${newObjectType.id}`);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error creating object:", error);
-      toast.error("Failed to create new object");
+      toast.error(`Failed to create new object: ${error?.message || 'Unknown error'}`);
     } finally {
       setIsProcessing(false);
     }
