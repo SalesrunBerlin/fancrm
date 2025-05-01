@@ -1,81 +1,13 @@
 
-export type FieldValue = string | number | boolean | Date | null;
+import type { ObjectField } from "@/hooks/useObjectTypes";
 
-export interface RecordFormData {
-  [key: string]: FieldValue;
-}
-
-export interface RecordUpdateData {
-  id: string;
-  field_values: RecordFormData;
-}
-
-// Add DuplicateRecord type to match the useImportRecords hook
-export interface DuplicateRecord {
-  importRowIndex: number;
-  existingRecord: Record<string, any>;
-  matchingFields: string[];
-  matchScore: number;
-  action: 'skip' | 'update' | 'create';
-  record: Record<string, string>;
-}
-
-// Add ColumnMapping type for the Import functionality
 export interface ColumnMapping {
-  sourceColumnName: string;
-  sourceColumnIndex: number;
-  targetField: {
-    id: string;
-    name: string;
-    api_name: string;
-    object_type_id?: string;
-    data_type?: string;
-    is_required?: boolean;
-    is_system?: boolean;
-    is_unique?: boolean;
-    is_searchable?: boolean;
-    description?: string;
-  } | null;
+  sourceColumn: string;
+  targetField: ObjectField | { id: string; name: string; api_name: string; };
+  isMatched: boolean;
 }
 
-// Update types for Dashboard components with correct properties
-export interface ContactType {
+export interface LookupOption {
   id: string;
-  name?: string;
-  email: string;
-  phone?: string;
-  company?: string;
-  lastActivity?: string;
-  firstName?: string;
-  lastName?: string;
-  accountName?: string;
-  tags?: string[];
-}
-
-export interface AccountType {
-  id: string;
-  name: string;
-  industry?: string;
-  website?: string;
-  location?: string;
-  employees?: number;
-  type?: string;
-  createdAt?: string;
-  updatedAt?: string;
-  contactCount?: number;
-  tags?: string[];
-  ownerId?: string; // Add this to fix the type errors in mockData.ts
-}
-
-export interface DealType {
-  id: string;
-  name: string;
-  value?: number;
-  stage?: string;
-  closeDate?: string;
-  probability?: number;
-  account?: string;
-  amount?: number;
-  status?: string;
-  accountName?: string;
+  label: string;
 }
