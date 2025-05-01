@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
@@ -25,12 +24,9 @@ import {
 } from "@/components/ui/table";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Loader2, FileSpreadsheet, Globe } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import * as XLSX from 'xlsx';
 import { supabase } from "@/integrations/supabase/client";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useUrlTableImport } from "@/hooks/useUrlTableImport";
-import { TableSelectionDialog } from "@/components/import/TableSelectionDialog";
 
 export default function ImportRecordsPage() {
   const { objectTypeId } = useParams<{ objectTypeId: string }>();
@@ -42,22 +38,7 @@ export default function ImportRecordsPage() {
   const [uniqueKeyField, setUniqueKeyField] = useState<string>("");
 	const [file, setFile] = useState<File | null>(null);
   const [fetchingRecords, setFetchingRecords] = useState(false);
-  const [importType, setImportType] = useState<string>("excel");
-  const [isTableDialogOpen, setIsTableDialogOpen] = useState(false);
   const navigate = useNavigate();
-  
-  const { 
-    url, 
-    setUrl, 
-    isLoading: isLoadingTables, 
-    tables, 
-    error: urlError, 
-    selectedTableIndex,
-    fetchTablesFromUrl, 
-    selectTable,
-    getSelectedTable,
-    convertToImportData
-  } = useUrlTableImport();
 
   useEffect(() => {
     if (fields && fields.length > 0) {
@@ -86,10 +67,10 @@ export default function ImportRecordsPage() {
     fileReader.readAsBinaryString(file);
   };
 
-  const prepareImportData = (data: any[]) => {
-    if (!fields || !data.length) return;
+  const prepareImportData = () => {
+    if (!fields) return;
 
-    const preparedData = data.map(item => {
+    const preparedData = excelData.map(item => {
       const record: { [key: string]: any } = {};
       fields.forEach(field => {
         const headerName = Object.keys(item).find(key => key.toLowerCase() === field.name.toLowerCase());
@@ -105,39 +86,9 @@ export default function ImportRecordsPage() {
 
   useEffect(() => {
     if (excelData.length > 0) {
-      prepareImportData(excelData);
+      prepareImportData();
     }
   }, [excelData, fields]);
-
-  const handleFetchTables = async () => {
-    const success = await fetchTablesFromUrl(url);
-    if (success) {
-      setIsTableDialogOpen(true);
-    }
-  };
-
-  const handleTableSelection = (index: number) => {
-    selectTable(index);
-  };
-
-  const handleTableDialogClose = () => {
-    setIsTableDialogOpen(false);
-    
-    // If a table was selected, convert it to import data
-    const selectedTable = getSelectedTable();
-    if (selectedTable) {
-      const tableData = selectedTable.rows.map((row, rowIndex) => {
-        const rowObj: { [key: string]: any } = {};
-        selectedTable.headers.forEach((header, colIndex) => {
-          rowObj[header] = row[colIndex] || "";
-        });
-        return rowObj;
-      });
-      
-      setExcelData(tableData);
-      prepareImportData(tableData);
-    }
-  };
 
   const handleUniqueKeyFieldChange = (value: string) => {
     setUniqueKeyField(value);
@@ -241,7 +192,7 @@ export default function ImportRecordsPage() {
         title={`Import ${objectType.name} Records`}
         description={`Import records into your ${objectType.name.toLowerCase()} object`}
         actions={
-          <Button onClick={processImportData} disabled={fetchingRecords || importData.length === 0}>
+          <Button onClick={processImportData} disabled={fetchingRecords}>
             {fetchingRecords ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -255,55 +206,11 @@ export default function ImportRecordsPage() {
       />
 
       <Card>
-        <CardContent className="pt-6 space-y-4">
-          <Tabs value={importType} onValueChange={setImportType}>
-            <TabsList className="mb-4">
-              <TabsTrigger value="excel" className="flex items-center gap-2">
-                <FileSpreadsheet className="h-4 w-4" />
-                Excel File
-              </TabsTrigger>
-              <TabsTrigger value="url" className="flex items-center gap-2">
-                <Globe className="h-4 w-4" />
-                Import from URL
-              </TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="excel" className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="file">Choose Excel File</Label>
-                <Input type="file" id="file" accept=".xlsx, .xls" onChange={handleFileChange} />
-              </div>
-            </TabsContent>
-            
-            <TabsContent value="url" className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="url">Enter Website URL</Label>
-                <div className="flex space-x-2">
-                  <Input 
-                    type="url" 
-                    id="url" 
-                    placeholder="https://example.com/page-with-table" 
-                    value={url}
-                    onChange={(e) => setUrl(e.target.value)}
-                  />
-                  <Button 
-                    type="button" 
-                    onClick={handleFetchTables}
-                    disabled={isLoadingTables || !url}
-                  >
-                    {isLoadingTables ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      "Fetch Tables"
-                    )}
-                  </Button>
-                </div>
-                {urlError && (
-                  <p className="text-sm text-destructive mt-1">{urlError}</p>
-                )}
-              </div>
-            </TabsContent>
-          </Tabs>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="file">Choose Excel File</Label>
+            <Input type="file" id="file" accept=".xlsx, .xls" onChange={handleFileChange} />
+          </div>
 
           {fields && fields.length > 0 && (
             <div className="space-y-2">
@@ -350,15 +257,6 @@ export default function ImportRecordsPage() {
           </CardContent>
         </Card>
       )}
-
-      <TableSelectionDialog
-        isOpen={isTableDialogOpen}
-        onClose={handleTableDialogClose}
-        tables={tables}
-        isLoading={isLoadingTables}
-        onSelectTable={handleTableSelection}
-        selectedTableIndex={selectedTableIndex}
-      />
     </div>
   );
 }
