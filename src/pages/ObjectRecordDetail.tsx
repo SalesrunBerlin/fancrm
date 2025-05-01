@@ -46,6 +46,7 @@ export default function ObjectRecordDetail() {
   const [createObjectDialogOpen, setCreateObjectDialogOpen] = useState(false);
   const [newObjectName, setNewObjectName] = useState("");
   const [newObjectDescription, setNewObjectDescription] = useState("");
+  const [newObjectDefaultField, setNewObjectDefaultField] = useState("name"); // Add state for default field name
   const [isProcessing, setIsProcessing] = useState(false);
 
   const objectType = objectTypes?.find(type => type.id === objectTypeId);
@@ -119,6 +120,7 @@ export default function ObjectRecordDetail() {
       });
       
       setNewObjectName(fieldName);
+      setNewObjectDefaultField("name"); // Reset to default value
       setCreateObjectDialogOpen(true);
     } catch (error) {
       console.error("Error analyzing field values:", error);
@@ -131,8 +133,15 @@ export default function ObjectRecordDetail() {
   const createNewObjectFromValues = async () => {
     if (!selectedFieldData || !objectTypeId) return;
     
+    if (!newObjectName.trim() || !newObjectDefaultField.trim()) {
+      toast.error("Object name and default field name are required");
+      return;
+    }
+    
     setIsProcessing(true);
     try {
+      const defaultFieldApiName = newObjectDefaultField.toLowerCase().replace(/\s+/g, '_');
+      
       // 1. Create new object type
       const { data: newObjectType, error: objectError } = await supabase
         .from('object_types')
@@ -141,6 +150,7 @@ export default function ObjectRecordDetail() {
           api_name: newObjectName.toLowerCase().replace(/\s+/g, '_'),
           description: newObjectDescription || `Auto-generated from ${selectedFieldData.fieldName} field values`,
           is_active: true,
+          default_field_api_name: defaultFieldApiName,
           show_in_navigation: true
         }])
         .select()
@@ -148,13 +158,13 @@ export default function ObjectRecordDetail() {
       
       if (objectError) throw objectError;
       
-      // 2. Create a name field for the new object
+      // 2. Create the default field for the new object
       const { data: nameField, error: nameFieldError } = await supabase
         .from('object_fields')
         .insert([{
           object_type_id: newObjectType.id,
-          name: 'Name',
-          api_name: 'name',
+          name: newObjectDefaultField,
+          api_name: defaultFieldApiName,
           data_type: 'text',
           is_required: true,
           display_order: 1
@@ -164,15 +174,7 @@ export default function ObjectRecordDetail() {
       
       if (nameFieldError) throw nameFieldError;
       
-      // 3. Update the object type to set name as the default field
-      const { error: updateObjectError } = await supabase
-        .from('object_types')
-        .update({ default_field_api_name: 'name' })
-        .eq('id', newObjectType.id);
-      
-      if (updateObjectError) throw updateObjectError;
-      
-      // 4. Create records for each unique value
+      // 3. Create records for each unique value
       for (const value of selectedFieldData.uniqueValues) {
         // Create record
         const { data: newRecord, error: recordError } = await supabase
@@ -191,7 +193,7 @@ export default function ObjectRecordDetail() {
           .from('object_field_values')
           .insert([{
             record_id: newRecord.id,
-            field_api_name: 'name',
+            field_api_name: defaultFieldApiName,
             value: value
           }]);
         
@@ -200,7 +202,7 @@ export default function ObjectRecordDetail() {
         }
       }
       
-      // 5. Create lookup field in the original object type
+      // 4. Create lookup field in the original object type
       const { data: lookupField, error: lookupFieldError } = await supabase
         .from('object_fields')
         .insert([{
@@ -210,7 +212,7 @@ export default function ObjectRecordDetail() {
           data_type: 'lookup',
           options: {
             target_object_type_id: newObjectType.id,
-            display_field_api_name: 'name'
+            display_field_api_name: defaultFieldApiName
           },
           is_required: false,
           display_order: 100 // Put at end
@@ -404,6 +406,19 @@ export default function ObjectRecordDetail() {
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="defaultFieldName" className="text-right">
+                Default Field Name
+              </Label>
+              <Input
+                id="defaultFieldName"
+                value={newObjectDefaultField}
+                onChange={(e) => setNewObjectDefaultField(e.target.value)}
+                className="col-span-3"
+                placeholder="Name"
+                required
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="objectDescription" className="text-right">
                 Description
               </Label>
@@ -423,7 +438,7 @@ export default function ObjectRecordDetail() {
             </Button>
             <Button 
               onClick={createNewObjectFromValues} 
-              disabled={!newObjectName.trim() || isProcessing}
+              disabled={!newObjectName.trim() || !newObjectDefaultField.trim() || isProcessing}
             >
               {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Create Object
