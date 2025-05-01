@@ -50,4 +50,10 @@ export interface DuplicateRecord {
   id: string;
   values: Record<string, any>;
   sourceRowIndex?: number;
+  importRowIndex?: number;
+  existingRecord?: Record<string, any>;
+  matchingFields?: string[];
+  matchScore?: number;
+  action?: 'skip' | 'update' | 'create';
+  record?: Record<string, string>;
 }

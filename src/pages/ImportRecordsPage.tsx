@@ -175,10 +175,19 @@ export default function ImportRecordsPage() {
     }
   }, [fields, headers]);
 
+  // Modified function for checked change
   const handleHeaderSelection = (index: number) => {
     const newSelectedHeaders = [...selectedHeaders];
     newSelectedHeaders[index] = !newSelectedHeaders[index];
     setSelectedHeaders(newSelectedHeaders);
+  };
+
+  // Modified function to handle duplicate check state changes
+  const handleDuplicateStateChange = (duplicateId: string, checked: boolean) => {
+    setConfirmedUpdates((prev) => ({
+      ...prev,
+      [duplicateId]: checked,
+    }));
   };
 
   const handleMatchColumns = () => {
@@ -665,10 +674,7 @@ export default function ImportRecordsPage() {
                         <Checkbox
                           checked={confirmedUpdates[duplicate.id] || false}
                           onCheckedChange={(checked) =>
-                            setConfirmedUpdates({
-                              ...confirmedUpdates,
-                              [duplicate.id]: checked,
-                            })
+                            handleDuplicateStateChange(duplicate.id, checked)
                           }
                         />
                       </TableCell>

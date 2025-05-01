@@ -25,11 +25,11 @@ export function RecentDeals({ deals }: RecentDealsProps) {
                 <div className="flex items-center justify-between hover:bg-muted/50 p-2 rounded-lg transition-colors">
                   <div>
                     <p className="font-medium">{deal.name}</p>
-                    <p className="text-sm text-muted-foreground">{deal.accountName || deal.account}</p>
+                    <p className="text-sm text-muted-foreground">{deal.account_id || ''}</p>
                   </div>
                   <div className="text-right">
-                    <p className="font-medium">{formatCurrency(deal.amount || deal.value)}</p>
-                    <p className="text-sm text-muted-foreground">{deal.status || deal.stage}</p>
+                    <p className="font-medium">{formatCurrency(deal.amount)}</p>
+                    <p className="text-sm text-muted-foreground">{deal.status}</p>
                   </div>
                 </div>
               </Link>

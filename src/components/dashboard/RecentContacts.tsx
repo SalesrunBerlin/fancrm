@@ -23,14 +23,14 @@ export function RecentContacts({ contacts }: RecentContactsProps) {
               <Link key={contact.id} to={`/contacts/${contact.id}`}>
                 <div className="flex items-center hover:bg-muted/50 p-2 rounded-lg transition-colors">
                   <div className="h-10 w-10 rounded-full bg-beauty-light flex items-center justify-center text-beauty-dark font-medium mr-3">
-                    {contact.firstName?.[0] || contact.name?.[0] || ''}
-                    {contact.lastName?.[0] || ''}
+                    {contact.first_name?.[0] || ''}
+                    {contact.last_name?.[0] || ''}
                   </div>
                   <div>
                     <p className="font-medium">
-                      {contact.firstName && contact.lastName 
-                        ? `${contact.firstName} ${contact.lastName}` 
-                        : contact.name}
+                      {contact.first_name && contact.last_name 
+                        ? `${contact.first_name} ${contact.last_name}` 
+                        : contact.id}
                     </p>
                     <p className="text-sm text-muted-foreground">{contact.email}</p>
                   </div>
