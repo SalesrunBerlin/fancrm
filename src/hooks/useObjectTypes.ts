@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -36,6 +37,7 @@ export interface ObjectType {
   owner_id: string;
   is_system: boolean;
   is_active: boolean;
+  is_archived: boolean; // New property for archive functionality
   show_in_navigation: boolean;
   default_field_api_name?: string;
   created_at: string;
@@ -45,7 +47,7 @@ export interface ObjectType {
   source_object_id: string | null;
 }
 
-export function useObjectTypes() {
+export function useObjectTypes(includeArchived = false) {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const { toast } = useToast();
@@ -59,7 +61,7 @@ export function useObjectTypes() {
 
   // Fetch user's object types
   const { data: objectTypes, isLoading } = useQuery({
-    queryKey: ["object-types"],
+    queryKey: ["object-types", includeArchived],
     queryFn: async () => {
       if (!user) {
         console.log("No user, skipping object types fetch");
@@ -67,11 +69,17 @@ export function useObjectTypes() {
       }
       console.log("Fetching object types for user:", user.id);
       
-      const { data, error } = await supabase
+      let query = supabase
         .from("object_types")
         .select("*")
-        .or(`is_system.eq.true,owner_id.eq.${user.id}`)
-        .order("name");
+        .or(`is_system.eq.true,owner_id.eq.${user.id}`);
+      
+      // Only include non-archived objects by default
+      if (!includeArchived) {
+        query = query.eq("is_archived", false);
+      }
+      
+      const { data, error } = await query.order("name");
 
       if (error) {
         console.error("Error fetching object types:", error);
@@ -90,7 +98,7 @@ export function useObjectTypes() {
     isLoading: isLoadingPublished,
     refetch: refetchPublished
   } = useQuery({
-    queryKey: ["published-objects"],
+    queryKey: ["published-objects", includeArchived],
     queryFn: async () => {
       if (!user) {
         console.log("No user, skipping published objects fetch");
@@ -99,12 +107,18 @@ export function useObjectTypes() {
       console.log("Fetching published objects. Current user:", user.id);
       
       try {
-        const { data, error } = await supabase
+        let query = supabase
           .from("object_types")
           .select("*")
           .eq("is_published", true)
-          .neq("owner_id", user.id)
-          .order("name");
+          .neq("owner_id", user.id);
+          
+        // Only include non-archived objects by default
+        if (!includeArchived) {
+          query = query.eq("is_archived", false);
+        }
+  
+        const { data, error } = await query.order("name");
   
         if (error) {
           console.error("Error fetching published objects:", error);
@@ -125,7 +139,7 @@ export function useObjectTypes() {
 
   // Create a new object type
   const createObjectType = useMutation({
-    mutationFn: async (newObjectType: Omit<ObjectType, "id" | "created_at" | "updated_at" | "owner_id">) => {
+    mutationFn: async (newObjectType: Omit<ObjectType, "id" | "created_at" | "updated_at" | "owner_id" | "is_archived">) => {
       if (!user) throw new Error("User must be logged in to create object types");
 
       const { data, error } = await supabase
@@ -133,6 +147,7 @@ export function useObjectTypes() {
         .insert([{
           ...newObjectType,
           owner_id: user.id,
+          is_archived: false, // Set default value for new objects
         }])
         .select()
         .single();
@@ -185,6 +200,72 @@ export function useObjectTypes() {
       toast({
         title: "Error",
         description: "Failed to update object type",
+        variant: "destructive",
+      });
+    }
+  });
+
+  // Archive an object type
+  const archiveObjectType = useMutation({
+    mutationFn: async (objectTypeId: string) => {
+      const { data, error } = await supabase
+        .from("object_types")
+        .update({ is_archived: true })
+        .eq("id", objectTypeId)
+        .select();
+
+      if (error) throw error;
+      if (!data || data.length === 0) {
+        throw new Error("No rows updated");
+      }
+      return data[0];
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["object-types"] });
+      queryClient.invalidateQueries({ queryKey: ["published-objects"] });
+      toast({
+        title: "Success",
+        description: `Object "${data.name}" archived successfully`,
+      });
+    },
+    onError: (error) => {
+      console.error("Error archiving object type:", error);
+      toast({
+        title: "Error",
+        description: "Failed to archive object type",
+        variant: "destructive",
+      });
+    }
+  });
+
+  // Restore an archived object type
+  const restoreObjectType = useMutation({
+    mutationFn: async (objectTypeId: string) => {
+      const { data, error } = await supabase
+        .from("object_types")
+        .update({ is_archived: false })
+        .eq("id", objectTypeId)
+        .select();
+
+      if (error) throw error;
+      if (!data || data.length === 0) {
+        throw new Error("No rows updated");
+      }
+      return data[0];
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["object-types"] });
+      queryClient.invalidateQueries({ queryKey: ["published-objects"] });
+      toast({
+        title: "Success",
+        description: `Object "${data.name}" restored successfully`,
+      });
+    },
+    onError: (error) => {
+      console.error("Error restoring object type:", error);
+      toast({
+        title: "Error",
+        description: "Failed to restore object type",
         variant: "destructive",
       });
     }
@@ -552,6 +633,8 @@ export function useObjectTypes() {
     isLoadingPublished,
     createObjectType,
     updateObjectType,
+    archiveObjectType,      // New method for archiving
+    restoreObjectType,      // New method for restoring archived objects
     publishObjectType,
     unpublishObjectType,
     importObjectType,
