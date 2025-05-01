@@ -35,6 +35,8 @@ import {
 } from "@/components/ui/table";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { ObjectAssignmentDialog } from "@/components/settings/ObjectAssignmentDialog";
+import { useApplicationObjects } from "@/hooks/useApplicationObjects";
 
 const applicationFormSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -53,9 +55,9 @@ export default function ApplicationDetailPage() {
     deleteApplication, 
     setDefaultApplication 
   } = useApplications();
-  const { objectTypes } = useObjectTypes();
   const [currentApplication, setCurrentApplication] = useState<any>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showObjectAssignmentDialog, setShowObjectAssignmentDialog] = useState(false);
   
   const form = useForm<ApplicationFormValues>({
     resolver: zodResolver(applicationFormSchema),
@@ -232,8 +234,12 @@ export default function ApplicationDetailPage() {
         
         <TabsContent value="objects">
           <Card>
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Assigned Objects</CardTitle>
+              <Button onClick={() => navigate(`/applications/${applicationId}/objects`)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Manage Objects
+              </Button>
             </CardHeader>
             <CardContent>
               <AssignedObjectsList applicationId={applicationId!} />
@@ -256,40 +262,8 @@ export default function ApplicationDetailPage() {
 
 // Component for displaying assigned objects
 function AssignedObjectsList({ applicationId }: { applicationId: string }) {
-  const { objectTypes } = useObjectTypes();
-  const [assignedObjects, setAssignedObjects] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { applicationObjects, isLoading } = useApplicationObjects(applicationId);
   
-  const fetchAssignedObjects = async () => {
-    try {
-      setIsLoading(true);
-      const { data, error } = await supabase
-        .from("object_application_assignments")
-        .select("object_type_id")
-        .eq("application_id", applicationId);
-        
-      if (error) throw error;
-      
-      // Map the object type IDs to actual object types
-      if (data && objectTypes) {
-        const assignedObjectIds = data.map(item => item.object_type_id);
-        const assignedObjs = objectTypes.filter(obj => assignedObjectIds.includes(obj.id));
-        setAssignedObjects(assignedObjs);
-      }
-    } catch (error) {
-      console.error("Error fetching assigned objects:", error);
-      toast.error("Failed to load assigned objects");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-  
-  useEffect(() => {
-    if (objectTypes) {
-      fetchAssignedObjects();
-    }
-  }, [applicationId, objectTypes]);
-
   if (isLoading) {
     return (
       <div className="flex justify-center p-4">
@@ -298,7 +272,7 @@ function AssignedObjectsList({ applicationId }: { applicationId: string }) {
     );
   }
 
-  if (assignedObjects.length === 0) {
+  if (!applicationObjects || applicationObjects.length === 0) {
     return (
       <div className="text-center py-4">
         <p className="text-muted-foreground">No objects assigned to this application.</p>
@@ -316,7 +290,7 @@ function AssignedObjectsList({ applicationId }: { applicationId: string }) {
         </TableRow>
       </TableHeader>
       <TableBody>
-        {assignedObjects.map(obj => (
+        {applicationObjects.map(obj => (
           <TableRow key={obj.id}>
             <TableCell>{obj.name}</TableCell>
             <TableCell>{obj.api_name}</TableCell>

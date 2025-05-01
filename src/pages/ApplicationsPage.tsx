@@ -1,45 +1,48 @@
 
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { PageHeader } from "@/components/ui/page-header";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useApplications } from "@/hooks/useApplications";
-import { Plus, Loader2, Star, Settings, StarOff } from "lucide-react";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useForm } from "react-hook-form";
+import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import { Badge } from "@/components/ui/badge";
+import { AppWindow, Plus, Settings } from "lucide-react";
 import { toast } from "sonner";
 
-const applicationFormSchema = z.object({
+const formSchema = z.object({
   name: z.string().min(1, "Name is required"),
-  description: z.string().optional(),
+  description: z.string().optional()
 });
 
-type ApplicationFormValues = z.infer<typeof applicationFormSchema>;
+type FormValues = z.infer<typeof formSchema>;
 
 export default function ApplicationsPage() {
-  const navigate = useNavigate();
+  const [open, setOpen] = useState(false);
   const { applications, isLoading, createApplication, setDefaultApplication } = useApplications();
-  const [showCreateDialog, setShowCreateDialog] = useState(false);
-
-  const form = useForm<ApplicationFormValues>({
-    resolver: zodResolver(applicationFormSchema),
+  
+  const form = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
-      description: "",
-    },
+      description: ""
+    }
   });
 
-  const onSubmit = async (values: ApplicationFormValues) => {
+  const onSubmit = async (values: FormValues) => {
     try {
-      await createApplication.mutateAsync(values);
-      setShowCreateDialog(false);
+      await createApplication.mutateAsync({
+        name: values.name,
+        description: values.description
+      });
+      
+      setOpen(false);
       form.reset();
     } catch (error) {
       console.error("Error creating application:", error);
@@ -49,145 +52,141 @@ export default function ApplicationsPage() {
   const handleSetDefault = async (id: string) => {
     try {
       await setDefaultApplication.mutateAsync(id);
-      toast.success("Default application updated");
+      toast.success("Default application set successfully");
     } catch (error) {
       console.error("Error setting default application:", error);
+      toast.error("Failed to set default application");
     }
   };
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <PageHeader 
-          title="Applications" 
-          description="Manage your applications"
-        />
-        <Button onClick={() => setShowCreateDialog(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          New Application
-        </Button>
-      </div>
-
-      {isLoading ? (
-        <div className="flex justify-center p-8">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        </div>
-      ) : applications && applications.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {applications.map((application) => (
-            <Card key={application.id} className="flex flex-col">
+      <PageHeader
+        title="Applications"
+        description="Manage your applications and object assignments"
+        actions={
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="mr-2 h-4 w-4" /> New Application
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Create New Application</DialogTitle>
+                <DialogDescription>
+                  Add a new application to organize your objects.
+                </DialogDescription>
+              </DialogHeader>
+              
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Name</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Application name" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="description"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Description (optional)</FormLabel>
+                        <FormControl>
+                          <Textarea placeholder="Describe what this application is for" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <DialogFooter>
+                    <Button type="submit" disabled={createApplication.isPending}>
+                      {createApplication.isPending ? "Creating..." : "Create Application"}
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </Form>
+              
+            </DialogContent>
+          </Dialog>
+        }
+      />
+      
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        {isLoading ? (
+          Array.from({ length: 3 }).map((_, i) => (
+            <Card key={i} className="h-full">
               <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle>{application.name}</CardTitle>
-                  {application.is_default && (
-                    <Badge variant="secondary" className="flex items-center gap-1">
-                      <Star className="h-3 w-3" />
-                      Default
-                    </Badge>
-                  )}
-                </div>
+                <Skeleton className="h-6 w-3/4" />
+                <Skeleton className="h-4 w-1/2 mt-2" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-4 w-full" />
+              </CardContent>
+              <CardFooter>
+                <Skeleton className="h-10 w-full" />
+              </CardFooter>
+            </Card>
+          ))
+        ) : applications && applications.length > 0 ? (
+          applications.map((app) => (
+            <Card key={app.id} className={`h-full ${app.is_default ? 'border-primary border-2' : ''}`}>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <AppWindow className="h-5 w-5" />
+                  {app.name}
+                  {app.is_default && <span className="text-xs bg-primary/10 px-2 py-0.5 rounded-full text-primary">Default</span>}
+                </CardTitle>
                 <CardDescription>
-                  {application.description || "No description"}
+                  {app.description || "No description provided"}
                 </CardDescription>
               </CardHeader>
-              <CardContent className="flex-grow">
+              <CardContent>
                 <p className="text-sm text-muted-foreground">
-                  Created: {new Date(application.created_at).toLocaleDateString()}
+                  Created: {new Date(app.created_at).toLocaleDateString()}
                 </p>
               </CardContent>
               <CardFooter className="flex gap-2">
-                <Button
-                  variant="outline"
-                  className="flex-1"
-                  onClick={() => navigate(`/applications/${application.id}`)}
-                >
-                  <Settings className="mr-2 h-4 w-4" />
-                  Manage
-                </Button>
-                {!application.is_default && (
-                  <Button
-                    variant="outline"
+                <Link to={`/applications/${app.id}`} className="flex-1">
+                  <Button variant="outline" className="w-full">
+                    <Settings className="mr-2 h-4 w-4" />
+                    Manage
+                  </Button>
+                </Link>
+                {!app.is_default && (
+                  <Button 
+                    variant="outline" 
                     className="flex-1"
-                    onClick={() => handleSetDefault(application.id)}
+                    onClick={() => handleSetDefault(app.id)}
+                    disabled={setDefaultApplication.isPending}
                   >
-                    <Star className="mr-2 h-4 w-4" />
-                    Make Default
+                    Set Default
                   </Button>
                 )}
               </CardFooter>
             </Card>
-          ))}
-        </div>
-      ) : (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center p-6">
-            <p className="text-muted-foreground mb-4">No applications found.</p>
-            <Button onClick={() => setShowCreateDialog(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              Create Application
-            </Button>
-          </CardContent>
-        </Card>
-      )}
-
-      <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Create New Application</DialogTitle>
-            <DialogDescription>
-              Add a new application to organize your objects.
-            </DialogDescription>
-          </DialogHeader>
-
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Name</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Application name" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Description</FormLabel>
-                    <FormControl>
-                      <Textarea placeholder="Describe your application" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <DialogFooter>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setShowCreateDialog(false)}
-                >
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={createApplication.isPending}>
-                  {createApplication.isPending && (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  )}
-                  Create
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
+          ))
+        ) : (
+          <Card className="col-span-full">
+            <CardHeader>
+              <CardTitle>No Applications Found</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p>Create your first application to get started.</p>
+            </CardContent>
+          </Card>
+        )}
+      </div>
     </div>
   );
 }
