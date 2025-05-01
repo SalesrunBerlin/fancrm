@@ -1,6 +1,6 @@
 
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import { Toaster } from "@/components/ui/toaster";
+import { Toaster } from "sonner"; // Use sonner's Toaster, not the custom one
 import { Layout } from "@/components/layout/Layout";
 import { AuthProvider } from "@/contexts/AuthContext";
 import Auth from "@/pages/Auth";
@@ -70,7 +70,7 @@ function App() {
               <Route path="/objects/:objectTypeId/:recordId/edit" element={<EditRecordPage />} />
             </Route>
           </Routes>
-          <Toaster />
+          <Toaster richColors position="top-right" />
         </AuthProvider>
       </Router>
     </QueryClientProvider>

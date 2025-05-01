@@ -6,6 +6,9 @@ export interface ColumnMapping {
   sourceColumn: string;
   targetField: ObjectField | { id: string; name: string; api_name: string; };
   isMatched: boolean;
+  // Add these properties to match the useImportRecords.ColumnMapping interface
+  sourceColumnName?: string;
+  sourceColumnIndex?: number;
 }
 
 export interface LookupOption {

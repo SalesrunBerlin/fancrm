@@ -30,7 +30,7 @@ import { BatchFieldCreation } from "@/components/import/BatchFieldCreation";
 import { DuplicateRecordsResolver } from "@/components/import/DuplicateRecordsResolver";
 import { PreviewImportData } from "@/components/import/PreviewImportData";
 import { toast } from "sonner";
-import { DuplicateRecord, ColumnMapping } from "@/types"; 
+import { DuplicateRecord } from "@/types"; 
 
 // Map intensity values between different naming conventions
 const mapIntensity = (intensity: "low" | "medium" | "high"): "lenient" | "moderate" | "strict" => {
@@ -92,12 +92,8 @@ export default function ImportRecordsPage() {
     updateDuplicateCheckIntensity: rawUpdateIntensity
   } = useImportRecords(objectTypeId!, fields || []);
 
-  // Convert hook column mappings to our ColumnMapping type
-  const columnMappings: ColumnMapping[] = hookColumnMappings.map(mapping => ({
-    sourceColumn: mapping.sourceColumnName,
-    targetField: mapping.targetField || { id: "", name: "", api_name: "" },
-    isMatched: !!mapping.targetField
-  }));
+  // Directly use the columnMappings from the hook without conversion
+  const columnMappings = hookColumnMappings;
 
   const duplicateCheckIntensity = mapIntensity(rawIntensity);
   
