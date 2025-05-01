@@ -183,10 +183,10 @@ export default function ImportRecordsPage() {
   };
 
   // Modified function to handle duplicate check state changes
-  const handleDuplicateStateChange = (duplicateId: string, checked: boolean) => {
+  const handleDuplicateStateChange = (duplicateId: string, checked: boolean | string) => {
     setConfirmedUpdates((prev) => ({
       ...prev,
-      [duplicateId]: checked,
+      [duplicateId]: !!checked, // Convert to boolean to fix type error
     }));
   };
 
@@ -674,7 +674,7 @@ export default function ImportRecordsPage() {
                         <Checkbox
                           checked={confirmedUpdates[duplicate.id] || false}
                           onCheckedChange={(checked) =>
-                            handleDuplicateStateChange(duplicate.id, checked)
+                            handleDuplicateStateChange(duplicate.id, checked as boolean)
                           }
                         />
                       </TableCell>
