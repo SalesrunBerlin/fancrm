@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
 import { Button } from "@/components/ui/button";
@@ -16,7 +15,8 @@ import {
   RefreshCw,
   AlertTriangle,
   Check,
-  Info
+  Info,
+  Apps
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { 
@@ -35,6 +35,9 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useAuth } from "@/contexts/AuthContext";
 import { DeleteDialog } from "@/components/common/DeleteDialog";
 import { toast } from "sonner";
+import { ApplicationSelector } from "@/components/import/ApplicationSelector";
+import { useImportObjectType } from "@/hooks/useImportObjectType";
+import { ObjectCard } from "@/components/structures/ObjectCard";
 
 export default function Structures() {
   const { user } = useAuth();
@@ -43,14 +46,15 @@ export default function Structures() {
     isLoading, 
     publishedObjects, 
     isLoadingPublished, 
-    importObjectType, 
     deleteSystemObjects,
     refreshPublishedObjects
   } = useObjectTypes();
+  const importObjectType = useImportObjectType();
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [showPublishDialog, setShowPublishDialog] = useState(false);
   const [selectedObjectId, setSelectedObjectId] = useState<string | null>(null);
   const [selectedObjectName, setSelectedObjectName] = useState<string | null>(null);
+  const [selectedApplicationId, setSelectedApplicationId] = useState<string | null>(null);
   const [showCleanupDialog, setShowCleanupDialog] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [cleanupStatus, setCleanupStatus] = useState<string | null>(null);
@@ -96,7 +100,11 @@ export default function Structures() {
     setImportInProgress(true);
     
     try {
-      const newObjectId = await importObjectType.mutateAsync(selectedObjectId);
+      const newObjectId = await importObjectType.mutateAsync({ 
+        sourceObjectId: selectedObjectId,
+        applicationId: selectedApplicationId
+      });
+      
       console.log("Import successful, new object ID:", newObjectId);
       
       // Set success state to show success message
@@ -107,6 +115,7 @@ export default function Structures() {
         setShowImportDialog(false);
         setSelectedObjectId(null);
         setSelectedObjectName(null);
+        setSelectedApplicationId(null);
         setImportInProgress(false);
         
         // Navigate to the newly imported object
@@ -181,58 +190,12 @@ export default function Structures() {
               </Card>
             ) : objectTypes && objectTypes.length > 0 ? (
               objectTypes.map((objectType: ObjectType) => (
-                <Card key={objectType.id} className="flex flex-col">
-                  <CardHeader>
-                    <div className="flex justify-between items-start">
-                      <div className="flex items-center gap-2">
-                        {getIconComponent(objectType.icon)}
-                        <CardTitle>{objectType.name}</CardTitle>
-                      </div>
-                      <div className="flex gap-1">
-                        {objectType.is_system && (
-                          <Badge variant="secondary">System</Badge>
-                        )}
-                        {objectType.is_published && (
-                          <Badge variant="outline">Published</Badge>
-                        )}
-                        {objectType.is_template && (
-                          <Badge variant="outline" className="bg-purple-100">Imported</Badge>
-                        )}
-                      </div>
-                    </div>
-                    <CardDescription>
-                      {objectType.description || `API Name: ${objectType.api_name}`}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-muted-foreground">
-                      {objectType.is_active ? "Active" : "Inactive"}
-                    </p>
-                    {objectType.source_object_id && (
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Imported from another object
-                      </p>
-                    )}
-                  </CardContent>
-                  <CardFooter className="pt-2 mt-auto flex flex-col gap-2">
-                    <div className="flex w-full gap-2">
-                      <Link to={`/settings/objects/${objectType.id}`} className="flex-1">
-                        <Button variant="outline" className="w-full">
-                          Manage
-                        </Button>
-                      </Link>
-                      {!objectType.is_published && !objectType.is_template && (
-                        <Button 
-                          variant="outline" 
-                          className="flex-1"
-                          onClick={() => handlePublish(objectType.id)}
-                        >
-                          Publish
-                        </Button>
-                      )}
-                    </div>
-                  </CardFooter>
-                </Card>
+                <ObjectCard 
+                  key={objectType.id} 
+                  objectType={objectType}
+                  onPublish={handlePublish}
+                  showPublishButton={true}
+                />
               ))
             ) : (
               <Card className="col-span-full">
@@ -308,6 +271,7 @@ export default function Structures() {
                         setSelectedObjectName(objectType.name);
                         setImportError(null);
                         setImportSuccess(false);
+                        setSelectedApplicationId(null);
                         setShowImportDialog(true);
                       }}
                     >
@@ -378,6 +342,13 @@ export default function Structures() {
             </Alert>
           )}
           
+          {!importSuccess && !importError && selectedObjectId && (
+            <ApplicationSelector 
+              objectTypeId={selectedObjectId}
+              onSelect={setSelectedApplicationId}
+            />
+          )}
+          
           <DialogFooter>
             <Button 
               variant="outline" 
@@ -385,6 +356,7 @@ export default function Structures() {
                 setShowImportDialog(false);
                 setSelectedObjectId(null);
                 setSelectedObjectName(null);
+                setSelectedApplicationId(null);
                 setImportSuccess(false);
                 setImportError(null);
               }} 

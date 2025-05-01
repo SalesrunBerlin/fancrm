@@ -1,233 +1,251 @@
 
 import { useState, useEffect } from "react";
-import { useToast } from "@/hooks/use-toast";
-import { useObjectFields } from "@/hooks/useObjectFields";
-import { supabase } from "@/integrations/supabase/client";
-import { ObjectField } from "@/hooks/useObjectTypes";
-import { Loader2, Check } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useObjectTypes } from "@/hooks/useObjectTypes";
+import { useObjectFields } from "@/hooks/useObjectFields";
+import { Label } from "@/components/ui/label";
+import { Loader2 } from "lucide-react";
+import { ObjectField } from "@/hooks/useObjectTypes";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/components/ui/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useApplications } from "@/hooks/useApplications";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
-interface PublishingConfigProps {
+interface PublishingConfigDialogProps {
   objectTypeId: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onComplete: () => void;
+  onComplete?: () => void;
 }
 
-type FieldPublishStatus = {
-  fieldId: string;
-  name: string;
-  apiName: string;
-  isIncluded: boolean;
-};
-
-export function PublishingConfigDialog({ 
-  objectTypeId, 
-  open, 
+export function PublishingConfigDialog({
+  objectTypeId,
+  open,
   onOpenChange,
-  onComplete 
-}: PublishingConfigProps) {
+  onComplete
+}: PublishingConfigDialogProps) {
+  const { fields, isLoading: isLoadingFields } = useObjectFields(objectTypeId);
+  const { applications, isLoading: isLoadingApps } = useApplications();
+  const [selectedFields, setSelectedFields] = useState<Record<string, boolean>>({});
+  const [selectedApplications, setSelectedApplications] = useState<string[]>([]);
   const { toast } = useToast();
-  const { fields } = useObjectFields(objectTypeId);
-  const [fieldPublishStatus, setFieldPublishStatus] = useState<FieldPublishStatus[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
-  const { publishObjectType } = useObjectTypes();
+  const queryClient = useQueryClient();
 
-  // Load existing publishing settings
   useEffect(() => {
-    if (!open || !objectTypeId || !fields) return;
-    
-    const loadPublishingSettings = async () => {
-      setIsLoading(true);
+    if (fields) {
+      const initialSelection: Record<string, boolean> = {};
+      fields.forEach((field) => {
+        initialSelection[field.id] = true; // Default all fields to selected
+      });
+      setSelectedFields(initialSelection);
+    }
+  }, [fields]);
+  
+  const toggleField = (fieldId: string) => {
+    setSelectedFields((prev) => ({
+      ...prev,
+      [fieldId]: !prev[fieldId],
+    }));
+  };
+  
+  const toggleApplication = (applicationId: string) => {
+    setSelectedApplications(prev => {
+      const exists = prev.includes(applicationId);
+      if (exists) {
+        return prev.filter(id => id !== applicationId);
+      } else {
+        return [...prev, applicationId];
+      }
+    });
+  };
+
+  const publishMutation = useMutation({
+    mutationFn: async () => {
+      // First, update the object_type
+      const { data: updatedObject, error: objectError } = await supabase
+        .from("object_types")
+        .update({ is_published: true })
+        .eq("id", objectTypeId)
+        .select()
+        .single();
+
+      if (objectError) throw objectError;
+
+      // Then, create the field publishing settings
+      const fieldPublishingData = Object.entries(selectedFields).map(
+        ([fieldId, isIncluded]) => ({
+          object_type_id: objectTypeId,
+          field_id: fieldId,
+          is_included: isIncluded,
+        })
+      );
+
+      const { error: publishingError } = await supabase
+        .from("object_field_publishing")
+        .upsert(fieldPublishingData, { onConflict: 'object_type_id,field_id' });
+
+      if (publishingError) throw publishingError;
       
-      try {
-        // Get existing publishing settings
-        const { data: existingSettings, error } = await supabase
-          .from('object_field_publishing')
-          .select('*')
-          .eq('object_type_id', objectTypeId);
-          
-        if (error) throw error;
-        
-        // Map fields with their publishing status
-        const statusMap = new Map();
-        existingSettings?.forEach(setting => {
-          statusMap.set(setting.field_id, setting.is_included);
-        });
-        
-        const fieldStatuses = fields.map(field => ({
-          fieldId: field.id,
-          name: field.name,
-          apiName: field.api_name,
-          isIncluded: statusMap.has(field.id) ? statusMap.get(field.id) : true
+      // Create recommended application assignments if selected
+      if (selectedApplications.length > 0) {
+        const recommendationData = selectedApplications.map(appId => ({
+          object_type_id: objectTypeId,
+          application_id: appId,
+          owner_id: updatedObject.owner_id,
         }));
         
-        setFieldPublishStatus(fieldStatuses);
-      } catch (error) {
-        console.error("Error loading publishing settings:", error);
-        toast({
-          title: "Error",
-          description: "Failed to load publishing settings",
-          variant: "destructive",
-        });
-      } finally {
-        setIsLoading(false);
+        const { error: recommendationError } = await supabase
+          .from("object_application_assignments")
+          .upsert(recommendationData, { onConflict: 'object_type_id,application_id' });
+          
+        if (recommendationError) throw recommendationError;
       }
-    };
-    
-    loadPublishingSettings();
-  }, [objectTypeId, fields, open, toast]);
 
-  // Toggle field inclusion
-  const toggleFieldInclusion = (fieldId: string) => {
-    setFieldPublishStatus(current => 
-      current.map(field => 
-        field.fieldId === fieldId 
-          ? { ...field, isIncluded: !field.isIncluded } 
-          : field
-      )
-    );
-  };
-
-  // Toggle all fields
-  const toggleAllFields = (value: boolean) => {
-    setFieldPublishStatus(current => 
-      current.map(field => ({ ...field, isIncluded: value }))
-    );
-  };
-
-  // Save publishing settings
-  const savePublishingSettings = async () => {
-    setIsSaving(true);
-    
-    try {
-      // Upsert publishing settings
-      const upsertData = fieldPublishStatus.map(field => ({
-        object_type_id: objectTypeId,
-        field_id: field.fieldId,
-        is_included: field.isIncluded
-      }));
-      
-      const { error } = await supabase
-        .from('object_field_publishing')
-        .upsert(upsertData, { onConflict: 'object_type_id,field_id' });
-      
-      if (error) throw error;
-      
-      // Publish the object type
-      await publishObjectType.mutateAsync(objectTypeId);
-      
+      return updatedObject;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["object-types"] });
       toast({
-        title: "Success",
-        description: "Object type published successfully",
+        title: "Published Successfully",
+        description: "The object is now publicly available for import by other users.",
       });
       
-      onComplete();
       onOpenChange(false);
-    } catch (error) {
-      console.error("Error saving publishing settings:", error);
+      if (onComplete) onComplete();
+    },
+    onError: (error: any) => {
+      console.error("Error publishing object:", error);
       toast({
-        title: "Error",
-        description: "Failed to save publishing settings",
+        title: "Publication Failed",
+        description: error.message || "There was an error publishing this object.",
         variant: "destructive",
       });
-    } finally {
-      setIsSaving(false);
-    }
-  };
+    },
+  });
 
-  // Check if all fields are included
-  const allFieldsIncluded = fieldPublishStatus.length > 0 && 
-    fieldPublishStatus.every(field => field.isIncluded);
-
-  // Check if some fields are included
-  const someFieldsIncluded = fieldPublishStatus.some(field => field.isIncluded);
+  const isLoading = isLoadingFields || isLoadingApps || publishMutation.isPending;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[80vh] overflow-auto">
+    <Dialog open={open} onOpenChange={(value) => {
+      // Don't allow closing the dialog while the publish operation is in progress
+      if (!publishMutation.isPending) {
+        onOpenChange(value);
+      }
+    }}>
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Configure Publishing Settings</DialogTitle>
+          <DialogTitle>Publish Object Structure</DialogTitle>
           <DialogDescription>
-            Select which fields to include when publishing this object type.
+            Configure which fields to include in the published structure. Published objects can be imported by any user.
           </DialogDescription>
         </DialogHeader>
-        
+
         {isLoading ? (
-          <div className="flex justify-center p-8">
+          <div className="flex justify-center p-4">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>
         ) : (
           <div className="space-y-4">
-            <div className="flex items-center space-x-2">
-              <Checkbox 
-                id="select-all"
-                checked={allFieldsIncluded}
-                onCheckedChange={checked => toggleAllFields(!!checked)}
-              />
-              <label 
-                htmlFor="select-all" 
-                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-              >
-                Select All Fields
-              </label>
+            <div>
+              <div className="flex justify-between items-center mb-2">
+                <Label className="text-sm font-medium">Fields to Include</Label>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    const allFieldIds = fields?.map(field => field.id) || [];
+                    const areAllSelected = allFieldIds.every(id => selectedFields[id]);
+                    
+                    const updatedSelection = {...selectedFields};
+                    allFieldIds.forEach(fieldId => {
+                      updatedSelection[fieldId] = !areAllSelected;
+                    });
+                    
+                    setSelectedFields(updatedSelection);
+                  }}
+                >
+                  {fields && Object.values(selectedFields).filter(Boolean).length === fields.length 
+                    ? "Deselect All"
+                    : "Select All"
+                  }
+                </Button>
+              </div>
+              <ScrollArea className="h-[200px]">
+                <div className="space-y-2">
+                  {fields?.map((field: ObjectField) => (
+                    <div key={field.id} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`field-${field.id}`}
+                        checked={selectedFields[field.id] || false}
+                        onCheckedChange={() => toggleField(field.id)}
+                      />
+                      <Label
+                        htmlFor={`field-${field.id}`}
+                        className="text-sm flex-1"
+                      >
+                        {field.name} ({field.api_name})
+                        {field.is_system && (
+                          <span className="ml-1 text-xs text-muted-foreground">(System)</span>
+                        )}
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
             </div>
             
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[50px]">Include</TableHead>
-                  <TableHead>Field Name</TableHead>
-                  <TableHead>API Name</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {fieldPublishStatus.map((field) => (
-                  <TableRow key={field.fieldId}>
-                    <TableCell>
-                      <Checkbox 
-                        checked={field.isIncluded}
-                        onCheckedChange={() => toggleFieldInclusion(field.fieldId)}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Recommended Applications</Label>
+              <ScrollArea className="h-[150px]">
+                <div className="space-y-2">
+                  {applications?.map((app) => (
+                    <div key={app.id} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`app-${app.id}`}
+                        checked={selectedApplications.includes(app.id)}
+                        onCheckedChange={() => toggleApplication(app.id)}
                       />
-                    </TableCell>
-                    <TableCell>{field.name}</TableCell>
-                    <TableCell>{field.apiName}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                      <Label htmlFor={`app-${app.id}`} className="text-sm flex-1">
+                        {app.name}
+                        {app.is_default && (
+                          <span className="ml-1 text-xs text-muted-foreground">(Default)</span>
+                        )}
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
+              <p className="text-xs text-muted-foreground">
+                Recommended applications will be suggested to users when they import this object.
+              </p>
+            </div>
           </div>
         )}
-        
+
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={publishMutation.isPending}
+          >
             Cancel
           </Button>
-          <Button 
-            onClick={savePublishingSettings}
-            disabled={isSaving || !someFieldsIncluded || isLoading}
+          <Button
+            type="button"
+            onClick={() => publishMutation.mutate()}
+            disabled={
+              isLoading || 
+              Object.values(selectedFields).filter(Boolean).length === 0 ||
+              publishMutation.isPending
+            }
           >
-            {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {isSaving ? "Publishing..." : "Publish Object Type"}
+            {publishMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Publish Object
           </Button>
         </DialogFooter>
       </DialogContent>

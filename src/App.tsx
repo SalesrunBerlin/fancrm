@@ -23,6 +23,8 @@ import ImportCreateFieldPage from "@/pages/ImportCreateFieldPage";
 import ObjectDeletePage from "@/pages/ObjectDeletePage";
 import ObjectArchivePage from "@/pages/ObjectArchivePage";
 import ObjectRestorePage from "@/pages/ObjectRestorePage";
+import ApplicationsPage from "@/pages/ApplicationsPage";
+import ApplicationDetailPage from "@/pages/ApplicationDetailPage";
 
 // Create a client
 const queryClient = new QueryClient({
@@ -54,6 +56,8 @@ function App() {
               <Route path="/settings/objects/:objectTypeId/fields/new" element={<CreateFieldPage />} />
               <Route path="/settings/objects/:objectTypeId/fields/:fieldId/edit" element={<ObjectFieldEditPage />} />
               <Route path="/structures/*" element={<Structures />} />
+              <Route path="/applications" element={<ApplicationsPage />} />
+              <Route path="/applications/:applicationId" element={<ApplicationDetailPage />} />
               <Route path="/objects/:objectTypeId" element={<ObjectRecordsList />} />
               <Route path="/objects/:objectTypeId/import" element={<ImportRecordsPage />} />
               <Route path="/objects/:objectTypeId/import/create-field/:columnName" element={<ImportCreateFieldPage />} />
