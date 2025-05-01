@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { PageHeader } from "@/components/ui/page-header";
@@ -27,21 +26,24 @@ enum ImportStep {
   FINISH,
 }
 
+// Define the type for column mapping
+type ColumnMapping = {
+  [columnName: string]: string | null;
+};
+
 export default function ImportRecordsPage() {
   const { objectTypeId } = useParams<{ objectTypeId: string }>();
   const navigate = useNavigate();
   const { objectTypes } = useObjectTypes();
   const { mutate: importObjectType } = useImportObjectType();
-  
-  // We need to get the fields to use the useImportRecords hook
-  const [fields, setFields] = useState<any[]>([]);
-  const importRecordsHook = useImportRecords(objectTypeId || '', fields);
+  const { mutate: importRecords } = useImportRecords();
 
   // Local state for the import process
   const [currentStep, setCurrentStep] = useState<ImportStep>(ImportStep.UPLOAD);
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [importData, setImportData] = useState<any[]>([]);
-  const [columnMappings, setColumnMappings] = useState<{[key: string]: string | null}>({});
+  const [fields, setFields] = useState<any[]>([]);
+  const [columnMappings, setColumnMappings] = useState<ColumnMapping>({});
   const [matchingFields, setMatchingFields] = useState<string[]>([]);
   const [selectedApplicationId, setSelectedApplicationId] = useState<string | null>(null);
   const [duplicates, setDuplicates] = useState<any[]>([]);
@@ -58,15 +60,13 @@ export default function ImportRecordsPage() {
 
   // Function to handle data preview
   const handleDataPreview = (data: any[]) => {
-    console.log("Preview data received:", data);
     setImportData(data);
     setCurrentStep(ImportStep.FIELD_CREATION);
   };
 
   // Function to handle field creation
-  const handleFieldCreation = (newFields: any[]) => {
-    console.log("Fields created:", newFields);
-    setFields(newFields);
+  const handleFieldCreation = (fields: any[]) => {
+    setFields(fields);
     setCurrentStep(ImportStep.MATCHING_FIELDS);
   };
 
@@ -77,7 +77,7 @@ export default function ImportRecordsPage() {
   };
 
   // Function to handle column mapping
-  const handleColumnMapping = (columnMappings: {[key: string]: string | null}) => {
+  const handleColumnMapping = (columnMappings: ColumnMapping) => {
     setColumnMappings(columnMappings);
     setCurrentStep(ImportStep.APPLICATION_SELECTION);
   };
@@ -184,15 +184,20 @@ export default function ImportRecordsPage() {
       return record;
     });
 
-    // Call the importRecords function from the hook
-    try {
-      await importRecordsHook.importRecords(records);
-      toast.success("Records imported successfully!");
-      navigate(`/objects/${objectTypeId}`);
-    } catch (error: any) {
-      console.error("Error importing records:", error);
-      toast.error(error.message || "Failed to import records.");
-    }
+    // Call the importRecords mutation
+    importRecords({
+      objectTypeId: objectTypeId,
+      records: records,
+    }, {
+      onSuccess: () => {
+        toast.success("Records imported successfully!");
+        navigate(`/objects/${objectTypeId}`);
+      },
+      onError: (error: any) => {
+        console.error("Error importing records:", error);
+        toast.error(error.message || "Failed to import records.");
+      },
+    });
   };
 
   // Render content based on current step
@@ -207,17 +212,17 @@ export default function ImportRecordsPage() {
       case ImportStep.PREVIEW:
         return (
           <PreviewImportData
-            file={csvFile}
-            onPreview={handleDataPreview}
+            csvFile={csvFile}
+            onDataPreview={handleDataPreview}
             onBack={handleBack}
           />
         );
       case ImportStep.FIELD_CREATION:
         return (
           <BatchFieldCreation
-            data={importData}
-            objectTypeId={objectTypeId || ''}
-            onComplete={handleFieldCreation}
+            importData={importData}
+            objectTypeId={objectTypeId}
+            onFieldCreation={handleFieldCreation}
             onBack={handleBack}
           />
         );
@@ -242,18 +247,22 @@ export default function ImportRecordsPage() {
       case ImportStep.APPLICATION_SELECTION:
         return (
           <ApplicationSelector
-            objectTypeId={objectTypeId || ''}
-            onSelect={handleApplicationSelection}
+            onApplicationSelect={handleApplicationSelection}
+            onBack={handleBack}
           />
         );
       case ImportStep.RESOLVE_DUPLICATES:
         return (
           <DuplicateRecordsResolver
-            headers={importData.length > 0 ? Object.keys(importData[0]) : []}
-            data={importData}
-            onResolve={handleFinishImport}
-            onCancel={handleBack}
-            objectTypeId={objectTypeId || ''}
+            fields={fields}
+            matchingFields={matchingFields}
+            columnMappings={columnMappings}
+            importData={importData}
+            onBack={handleBack}
+            onContinue={handleFinishImport}
+            onSkip={handleSkipDuplicateResolution}
+            onRecheck={recheckDuplicates}
+            objectTypeId={objectTypeId}
           />
         );
       case ImportStep.FINISH:
