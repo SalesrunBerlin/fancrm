@@ -1,4 +1,3 @@
-
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -16,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
 import { Loader2 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import {
   Select,
   SelectContent,
@@ -56,7 +55,6 @@ interface ObjectTypeFormProps {
 
 export function ObjectTypeForm({ onComplete }: ObjectTypeFormProps) {
   const { createObjectType } = useObjectTypes();
-  const { toast } = useToast();
   const { user } = useAuth();
   const [selectedApplications, setSelectedApplications] = useState<string[]>([]);
   const [isCreatingApplicationAssignments, setIsCreatingApplicationAssignments] = useState(false);
@@ -271,16 +269,11 @@ export function ObjectTypeForm({ onComplete }: ObjectTypeFormProps) {
             await createApplicationAssignments(result.id);
           }
           
-          toast({
-            title: "Success",
-            description: "Object type created successfully"
-          });
+          toast.success("Object type created successfully");
         } catch (fieldError: any) {
           console.error("Error creating fields:", fieldError);
-          toast({
-            title: "Warning",
-            description: `Object type was created, but there was an issue creating the fields: ${fieldError?.message || 'Unknown error'}`,
-            variant: "destructive",
+          toast.error("Object type was created, but there was an issue creating the fields", {
+            description: fieldError?.message || 'Unknown error'
           });
         }
       }
@@ -293,10 +286,8 @@ export function ObjectTypeForm({ onComplete }: ObjectTypeFormProps) {
       }
     } catch (error: any) {
       console.error("Error creating object type:", error);
-      toast({
-        title: "Error",
-        description: `Object type could not be created: ${error?.message || 'Unknown error'}`,
-        variant: "destructive",
+      toast.error("Object type could not be created", {
+        description: error?.message || 'Unknown error'
       });
     }
   };

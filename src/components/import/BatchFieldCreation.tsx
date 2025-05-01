@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { useObjectFields } from "@/hooks/useObjectFields";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
 import { usePicklistCreation } from "@/hooks/usePicklistCreation";
@@ -58,7 +58,6 @@ export function BatchFieldCreation({
 }: BatchFieldCreationProps) {
   const [fieldConfigs, setFieldConfigs] = useState<FieldConfig[]>([]);
   const [isCreating, setIsCreating] = useState(false);
-  const { toast } = useToast();
   const { createField } = useObjectFields(objectTypeId);
   const { objectTypes } = useObjectTypes();
   const { addBatchPicklistValues } = usePicklistCreation(null);
@@ -153,11 +152,7 @@ export function BatchFieldCreation({
 
   const handleCreateFields = async () => {
     if (!validateFields()) {
-      toast({
-        title: "Validation Error",
-        description: "Please fix the errors before continuing",
-        variant: "destructive",
-      });
+      toast.error("Please fix the errors before continuing");
       return;
     }
     
@@ -204,26 +199,15 @@ export function BatchFieldCreation({
               
               if (success) {
                 newConfigs[i].picklistValuesStatus = "success";
-                toast({
-                  title: "Success",
-                  description: `Created ${config.uniqueValues.length} picklist values for '${config.name}'`,
-                });
+                toast.success(`Created ${config.uniqueValues.length} picklist values for '${config.name}'`);
               } else {
                 newConfigs[i].picklistValuesStatus = "error";
-                toast({
-                  title: "Warning",
-                  description: `Some picklist values for '${config.name}' could not be created`,
-                  variant: "destructive",
-                });
+                toast.error(`Some picklist values for '${config.name}' could not be created`);
               }
             } catch (error) {
               console.error("Error creating picklist values:", error);
               newConfigs[i].picklistValuesStatus = "error";
-              toast({
-                title: "Error",
-                description: `Failed to create picklist values for '${config.name}'`,
-                variant: "destructive",
-              });
+              toast.error(`Failed to create picklist values for '${config.name}'`);
             }
             
             setFieldConfigs([...newConfigs]);
@@ -236,11 +220,7 @@ export function BatchFieldCreation({
           setFieldConfigs([...newConfigs]);
           
           // Show toast for the error
-          toast({
-            title: "Error",
-            description: `Failed to create field '${config.name}'`,
-            variant: "destructive",
-          });
+          toast.error(`Failed to create field '${config.name}'`);
         }
       }
       
@@ -248,10 +228,7 @@ export function BatchFieldCreation({
       const hasErrors = newConfigs.some(config => config.status === "error");
       
       if (!hasErrors) {
-        toast({
-          title: "Success",
-          description: `Created ${createdFields.length} fields for ${objectType?.name || 'object'}`,
-        });
+        toast.success(`Created ${createdFields.length} fields for ${objectType?.name || 'object'}`);
         onComplete(createdFields);
       }
     } finally {

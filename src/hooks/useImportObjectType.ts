@@ -1,12 +1,11 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 
 export function useImportObjectType() {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
   const { user } = useAuth();
 
   const importObjectType = useMutation({
@@ -49,16 +48,11 @@ export function useImportObjectType() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["object-types"] });
-      toast({
-        title: "Success",
-        description: "Object structure imported successfully",
-      });
+      toast.success("Object structure imported successfully");
     },
     onError: (error: any) => {
-      toast({
-        title: "Import Failed",
-        description: error.message || "There was an error importing the object structure.",
-        variant: "destructive",
+      toast.error("There was an error importing the object structure.", {
+        description: error.message || "Unknown error"
       });
     },
   });

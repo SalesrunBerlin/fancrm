@@ -8,6 +8,5 @@ export { toast };
 export function useToast() {
   return {
     toast,
-    dismiss: () => {},
   };
 }
