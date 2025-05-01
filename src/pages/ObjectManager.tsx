@@ -5,18 +5,22 @@ import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { 
   Plus, Loader2, Building, User, Briefcase, Calendar, Box, 
-  Archive, RefreshCw, Eye
+  Archive, RefreshCw, Eye, Trash2
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { ObjectType } from "@/hooks/useObjectTypes";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { DeleteDialog } from "@/components/common/DeleteDialog";
+import { toast } from "sonner";
 
 export default function ObjectManager() {
   // Fetch all objects including archived ones
-  const { objectTypes: allObjectTypes, isLoading } = useObjectTypes(true);
+  const { objectTypes: allObjectTypes, isLoading, deleteObjectType, publishedObjects } = useObjectTypes(true);
   const [activeTab, setActiveTab] = useState("all");
+  const [objectToDelete, setObjectToDelete] = useState<ObjectType | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   // Split objects into active and archived
   const activeObjects = allObjectTypes?.filter(obj => !obj.is_archived) || [];
@@ -30,6 +34,32 @@ export default function ObjectManager() {
       case 'calendar': return <Calendar className="h-5 w-5" />;
       default: return <Box className="h-5 w-5" />;
     }
+  };
+
+  const handleDeleteObject = (object: ObjectType, event: React.MouseEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setObjectToDelete(object);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!objectToDelete) return;
+    
+    try {
+      await deleteObjectType.mutateAsync(objectToDelete.id);
+      setIsDeleteDialogOpen(false);
+      setObjectToDelete(null);
+      toast.success(`${objectToDelete.name} was deleted successfully`);
+    } catch (error) {
+      console.error("Error deleting object type:", error);
+      toast.error("Failed to delete object");
+    }
+  };
+
+  // Check if an object is a source for published objects
+  const isSourceForPublishedObjects = (objectId: string) => {
+    return publishedObjects?.some(obj => obj.source_object_id === objectId) || false;
   };
 
   return (
@@ -102,18 +132,32 @@ export default function ObjectManager() {
                               <Badge variant="outline" className="bg-red-50 text-red-700">Inactive</Badge>
                             )}
                           </div>
-                          {!objectType.is_system && (
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              className="text-amber-500 hover:text-amber-600 hover:bg-amber-50"
-                              asChild
-                            >
-                              <Link to={`/settings/objects/${objectType.id}/archive`}>
-                                <Archive className="h-4 w-4" />
-                              </Link>
-                            </Button>
-                          )}
+                          <div className="flex gap-2">
+                            {!objectType.is_system && (
+                              <>
+                                <Button 
+                                  variant="outline" 
+                                  size="sm"
+                                  className="text-amber-500 hover:text-amber-600 hover:bg-amber-50"
+                                  asChild
+                                >
+                                  <Link to={`/settings/objects/${objectType.id}/archive`}>
+                                    <Archive className="h-4 w-4" />
+                                  </Link>
+                                </Button>
+                                {!isSourceForPublishedObjects(objectType.id) && (
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm"
+                                    className="text-red-500 hover:text-red-600 hover:bg-red-50"
+                                    onClick={(e) => handleDeleteObject(objectType, e)}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                )}
+                              </>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -190,6 +234,16 @@ export default function ObjectManager() {
                                 <Eye className="h-4 w-4" />
                               </Link>
                             </Button>
+                            {!objectType.is_system && !isSourceForPublishedObjects(objectType.id) && (
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                className="text-red-500 hover:text-red-600 hover:bg-red-50"
+                                onClick={(e) => handleDeleteObject(objectType, e)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -207,6 +261,14 @@ export default function ObjectManager() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <DeleteDialog
+        isOpen={isDeleteDialogOpen}
+        onClose={() => setIsDeleteDialogOpen(false)}
+        onConfirm={confirmDelete}
+        title={`Delete ${objectToDelete?.name}`}
+        description={`Are you sure you want to delete "${objectToDelete?.name}"? This action cannot be undone and will permanently delete this object and all of its records.`}
+      />
     </div>
   );
 }
