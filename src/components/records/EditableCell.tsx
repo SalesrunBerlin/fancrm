@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { TableCell } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
@@ -42,8 +41,6 @@ export function EditableCell({
       setError("This field is required");
     } else {
       setError(null);
-      // Ensure we're properly passing the value up to the parent component
-      console.log(`EditableCell: Field type ${fieldType} changing to:`, newValue);
       onChange(newValue);
     }
   };

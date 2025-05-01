@@ -12,7 +12,6 @@ import { useRecordDetail } from "@/hooks/useRecordDetail";
 import type { RecordFormData } from "@/lib/types/records";
 import { Loader2, ArrowLeft } from "lucide-react";
 import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/card";
-import { toast } from "sonner";
 
 export default function EditRecordPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -37,23 +36,17 @@ export default function EditRecordPage() {
   }, [record, isLoadingRecord, form]);
 
   const onSubmit = async (data: RecordFormData) => {
-    if (!recordId || !objectTypeId) return;
+    if (!recordId) return;
     
     try {
       setIsSubmitting(true);
-      console.log("Submitting edited record data:", data);
-      
-      // Ensure we're passing the correct data format to the updateRecord function
       await updateRecord.mutateAsync({
         id: recordId,
         field_values: data
       });
-      
-      toast.success("Record updated successfully");
       navigate(`/objects/${objectTypeId}/${recordId}`);
     } catch (error) {
       console.error("Error updating record:", error);
-      toast.error("Failed to update record");
     } finally {
       setIsSubmitting(false);
     }

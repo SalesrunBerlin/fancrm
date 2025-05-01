@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -20,7 +19,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { useObjectFields } from "@/hooks/useObjectFields";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
 import { usePicklistCreation } from "@/hooks/usePicklistCreation";
@@ -29,12 +28,12 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
-// Reorganize props to match the component usage
-export interface BatchFieldCreationProps {
+interface BatchFieldCreationProps {
   objectTypeId: string;
-  data: any[]; // Renamed from importData
-  onComplete: (createdFields: any[]) => void; // Changed from onFieldCreation
-  onBack: () => void;
+  columnNames: string[];
+  columnData?: { [columnName: string]: string[] };
+  onComplete: (createdFields: { columnName: string; fieldId: string }[]) => void;
+  onCancel: () => void;
 }
 
 interface FieldConfig {
@@ -52,9 +51,10 @@ interface FieldConfig {
 
 export function BatchFieldCreation({ 
   objectTypeId,
-  data,
+  columnNames,
+  columnData = {},
   onComplete,
-  onBack
+  onCancel
 }: BatchFieldCreationProps) {
   const [fieldConfigs, setFieldConfigs] = useState<FieldConfig[]>([]);
   const [isCreating, setIsCreating] = useState(false);
@@ -64,62 +64,33 @@ export function BatchFieldCreation({
   const { addBatchPicklistValues } = usePicklistCreation(null);
   const objectType = objectTypes?.find(type => type.id === objectTypeId);
 
-  // Extract column names and unique values from the data
+  // Initialize field configs when component mounts or column data changes
   useEffect(() => {
-    if (!data || data.length === 0) {
-      console.warn("No data available for field creation");
-      return;
-    }
+    const configs = columnNames.map(name => {
+      // Extract unique values for this column if available
+      let uniqueValues: string[] = [];
+      if (columnData[name]) {
+        // Filter out empty values and get unique values
+        uniqueValues = Array.from(new Set(columnData[name].filter(val => val?.trim() !== '')));
+      }
+      
+      // Create properly typed field config
+      const config: FieldConfig = {
+        columnName: name,
+        name: name,
+        apiName: name.toLowerCase().replace(/[^a-z0-9_]/g, '_'),
+        dataType: "text",
+        isRequired: false,
+        status: "pending",
+        uniqueValues,
+        createPicklistValues: uniqueValues.length > 0
+      };
+      
+      return config;
+    });
     
-    try {
-      // Extract column names from the first record
-      const firstRecord = data[0];
-      const columnNames = Object.keys(firstRecord);
-      
-      // Create a map of column names to their unique values
-      const columnDataMap: { [columnName: string]: string[] } = {};
-      
-      // Collect all unique values per column
-      columnNames.forEach(columnName => {
-        const valuesSet = new Set<string>();
-        data.forEach(item => {
-          if (item[columnName] && typeof item[columnName] === 'string' && item[columnName].trim() !== '') {
-            valuesSet.add(item[columnName].trim());
-          }
-        });
-        columnDataMap[columnName] = Array.from(valuesSet);
-      });
-      
-      // Initialize field configs
-      const configs = columnNames.map(name => {
-        // Get unique values for this column
-        const uniqueValues = columnDataMap[name] || [];
-        
-        // Create properly typed field config
-        const config: FieldConfig = {
-          columnName: name,
-          name: name,
-          apiName: name.toLowerCase().replace(/[^a-z0-9_]/g, '_'),
-          dataType: "text",
-          isRequired: false,
-          status: "pending",
-          uniqueValues,
-          createPicklistValues: uniqueValues.length > 0
-        };
-        
-        return config;
-      });
-      
-      setFieldConfigs(configs);
-    } catch (error) {
-      console.error("Error initializing field configs:", error);
-      toast({
-        title: "Error",
-        description: "Failed to process import data for field creation",
-        variant: "destructive",
-      });
-    }
-  }, [data, toast]);
+    setFieldConfigs(configs);
+  }, [columnNames, columnData]);
 
   const handleFieldChange = (index: number, field: Partial<FieldConfig>) => {
     const newConfigs = [...fieldConfigs];
@@ -193,7 +164,7 @@ export function BatchFieldCreation({
     setIsCreating(true);
     
     // Create fields one by one
-    const createdFields: any[] = [];
+    const createdFields: { columnName: string; fieldId: string }[] = [];
     const newConfigs = [...fieldConfigs];
     
     try {
@@ -212,7 +183,10 @@ export function BatchFieldCreation({
           });
           
           newConfigs[i].status = "success";
-          createdFields.push(field);
+          createdFields.push({
+            columnName: config.columnName,
+            fieldId: field.id
+          });
           
           // If it's a picklist field and we need to create picklist values
           if (config.dataType === "picklist" && 
@@ -364,18 +338,6 @@ export function BatchFieldCreation({
     );
   };
 
-  // Show loading message if we're waiting for data to process
-  if (!data || data.length === 0) {
-    return (
-      <div className="flex justify-center items-center p-8">
-        <p>No data available to create fields. Please go back and try again.</p>
-        <Button onClick={onBack} variant="outline" className="ml-2">
-          Back
-        </Button>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -478,7 +440,7 @@ export function BatchFieldCreation({
       </Card>
       
       <div className="flex justify-end space-x-2">
-        <Button variant="outline" onClick={onBack} disabled={isCreating}>
+        <Button variant="outline" onClick={onCancel} disabled={isCreating}>
           Cancel
         </Button>
         <Button 

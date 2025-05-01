@@ -1,114 +1,94 @@
-import {
-  Archive,
-  ArrowLeft,
-  Box,
-  ExternalLink,
-  MoreVertical,
-  Trash,
-  AppWindow,
-  Download
-} from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+
 import { Button } from "@/components/ui/button";
-import { Link, useNavigate, useParams } from "react-router-dom";
-import { useObjectTypes } from "@/hooks/useObjectTypes";
-import { toast } from "sonner";
-import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { Archive, Edit, MoreHorizontal, PackageOpen, Trash } from "lucide-react";
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuTrigger, 
+  DropdownMenuSeparator 
+} from "@/components/ui/dropdown-menu";
+import { Badge } from "@/components/ui/badge";
+import { ObjectType } from "@/hooks/useObjectTypes";
 import { ApplicationAssignmentDialog } from "@/components/settings/ApplicationAssignmentDialog";
+import { useState } from "react";
+import { Apps } from "lucide-react";
 
 interface ObjectTypeDetailHeaderProps {
-  objectTypeId: string;
-  objectName: string;
+  objectType: ObjectType;
 }
 
-export function ObjectTypeDetailHeader({ objectTypeId, objectName }: ObjectTypeDetailHeaderProps) {
+export function ObjectTypeDetailHeader({ objectType }: ObjectTypeDetailHeaderProps) {
   const navigate = useNavigate();
-  const { archiveObjectType, unpublishObjectType, deleteObjectType } = useObjectTypes();
-  const [showAppAssignmentDialog, setShowAppAssignmentDialog] = useState(false);
-
-  const handleArchive = async () => {
-    try {
-      await archiveObjectType.mutateAsync(objectTypeId);
-      navigate("/settings/object-manager");
-    } catch (error) {
-      console.error("Error archiving object type:", error);
-      toast.error("Failed to archive object type");
-    }
-  };
-
-  const handleUnpublish = async () => {
-    try {
-      await unpublishObjectType.mutateAsync(objectTypeId);
-      toast.success("Object type unpublished successfully");
-    } catch (error) {
-      console.error("Error unpublishing object type:", error);
-      toast.error("Failed to unpublish object type");
-    }
-  };
-
-  const handleDelete = async () => {
-    try {
-      await deleteObjectType.mutateAsync(objectTypeId);
-      navigate("/settings/object-manager");
-    } catch (error) {
-      console.error("Error deleting object type:", error);
-      toast.error("Failed to delete object type");
-    }
-  };
+  const [showAssignDialog, setShowAssignDialog] = useState(false);
 
   return (
-    <div className="md:flex md:items-center md:justify-between">
-      <div className="mb-4 flex items-center justify-between md:mb-0">
-        <div className="flex items-center">
-          <Link to="/settings/object-manager">
-            <Button variant="ghost" size="sm" className="mr-2 px-0">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back
-            </Button>
-          </Link>
-          <h1 className="font-semibold text-lg">{objectName}</h1>
-        </div>
-        <div className="flex items-center">
-          <Button size="sm" onClick={() => setShowAppAssignmentDialog(true)}>
-            <AppWindow className="mr-2 h-4 w-4" />
-            Applications
-          </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm">
-                <MoreVertical className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={handleArchive}>
-                <Archive className="mr-2 h-4 w-4" />
-                Archive
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleUnpublish}>
-                <ExternalLink className="mr-2 h-4 w-4" />
-                Unpublish
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleDelete}>
-                <Trash className="mr-2 h-4 w-4" />
-                Delete
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+    <div className="flex justify-between items-center">
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight">{objectType.name}</h1>
+        <p className="text-sm text-muted-foreground">API Name: {objectType.api_name}</p>
+        <div className="flex mt-2 gap-2">
+          {objectType.is_system && (
+            <Badge variant="outline">System Object</Badge>
+          )}
+          {objectType.is_template && (
+            <Badge variant="outline" className="bg-purple-100">Imported</Badge>
+          )}
+          {objectType.is_published && (
+            <Badge variant="outline" className="bg-blue-100">Published</Badge>
+          )}
+          {!objectType.is_active && (
+            <Badge variant="destructive">Inactive</Badge>
+          )}
         </div>
       </div>
-
+      <div className="flex gap-2">
+        <Button 
+          variant="outline" 
+          onClick={() => setShowAssignDialog(true)}
+          className="flex items-center gap-1"
+        >
+          <Apps className="h-4 w-4 mr-1" />
+          Assign to Applications
+        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline">
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            {!objectType.is_active ? (
+              <DropdownMenuItem onClick={() => navigate(`/settings/objects/${objectType.id}/restore`)}>
+                <PackageOpen className="h-4 w-4 mr-2" />
+                Restore Object
+              </DropdownMenuItem>
+            ) : (
+              <>
+                <DropdownMenuItem onClick={() => navigate(`/settings/objects/${objectType.id}/archive`)}>
+                  <Archive className="h-4 w-4 mr-2" />
+                  Archive Object
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem 
+                  className="text-destructive focus:text-destructive"
+                  onClick={() => navigate(`/settings/objects/${objectType.id}/delete`)}
+                >
+                  <Trash className="h-4 w-4 mr-2" />
+                  Delete Object
+                </DropdownMenuItem>
+              </>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+      
       <ApplicationAssignmentDialog
-        objectTypeId={objectTypeId}
-        objectName={objectName}
-        open={showAppAssignmentDialog}
-        onOpenChange={setShowAppAssignmentDialog}
+        objectTypeId={objectType.id}
+        objectName={objectType.name}
+        open={showAssignDialog}
+        onOpenChange={setShowAssignDialog}
       />
     </div>
   );
