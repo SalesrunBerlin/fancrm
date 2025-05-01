@@ -1,71 +1,38 @@
+// Common Types
+import { ColumnMapping as ImportColumnMapping, DuplicateRecord as ImportDuplicateRecord } from "@/hooks/useImportRecords";
 
-export type FieldValue = string | number | boolean | Date | null;
+// Re-export the types from the hooks
+export type ColumnMapping = ImportColumnMapping;
+export type DuplicateRecord = ImportDuplicateRecord;
 
-export interface RecordFormData {
-  [key: string]: FieldValue;
-}
-
-export interface RecordUpdateData {
-  id: string;
-  field_values: RecordFormData;
-}
-
-// Add DuplicateRecord type to match the useImportRecords hook
-export interface DuplicateRecord {
-  importRowIndex: number;
-  existingRecord: Record<string, any>;
-  matchingFields: string[];
-  matchScore: number;
-  action: 'skip' | 'update' | 'create';
-  record: Record<string, string>;
-}
-
-// Add ColumnMapping type for the Import functionality
-export interface ColumnMapping {
-  sourceColumnName: string;
-  sourceColumnIndex: number;
-  targetField: {
-    id: string;
-    name: string;
-    api_name: string;
-  } | null;
-}
-
-// Update types for Dashboard components with correct properties
-export interface ContactType {
+// Other types that might be useful
+export interface ObjectFieldType {
   id: string;
   name: string;
-  email: string;
-  phone?: string;
-  company?: string;
-  lastActivity?: string;
-  firstName?: string;
-  lastName?: string;
-  accountName?: string;
-  tags?: string[];
+  api_name: string;
+  data_type: string;
+  is_required: boolean;
+  is_system: boolean;
+  object_type_id: string;
+  display_order?: number;
+  options?: Record<string, any>;
+  default_value?: any;
 }
 
-export interface AccountType {
-  id: string;
-  name: string;
-  industry?: string;
-  website?: string;
-  location?: string;
-  employees?: number;
-  type?: string;
-  createdAt?: string;
-  updatedAt?: string;
+// TypeScript interface for record field values
+export interface RecordFieldValue {
+  field_api_name: string;
+  value: string | null;
 }
 
-export interface DealType {
+// TypeScript interface for object record
+export interface ObjectRecord {
   id: string;
-  name: string;
-  value: number;
-  stage: string;
-  closeDate?: string;
-  probability?: number;
-  account?: string;
-  amount?: number;
-  status?: string;
-  accountName?: string;
+  object_type_id: string;
+  created_at: string;
+  updated_at: string;
+  fieldValues: Record<string, string | null>;
+  displayName?: string | null;
 }
+
+// Any additional common types would go here

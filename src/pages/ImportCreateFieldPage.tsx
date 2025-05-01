@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { useNavigate, Link, useParams, useSearchParams } from "react-router-dom";
+import { useNavigate, Link, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { ArrowLeft } from "lucide-react";
@@ -12,7 +12,6 @@ import { toast } from "sonner";
 export default function ImportCreateFieldPage() {
   const navigate = useNavigate();
   const { objectTypeId, columnName } = useParams<{ objectTypeId: string; columnName: string }>();
-  const [searchParams] = useSearchParams();
   const { objectTypes } = useObjectTypes();
   
   // Get the current object type for display

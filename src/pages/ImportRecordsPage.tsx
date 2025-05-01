@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { PageHeader } from "@/components/ui/page-header";
@@ -7,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2, AlertCircle, CheckCircle, ArrowLeft, Plus } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
-import { useImportRecords } from "@/hooks/useImportRecords";
+import { useImportRecords, ColumnMapping as ImportColumnMapping, DuplicateRecord as ImportDuplicateRecord } from "@/hooks/useImportRecords";
 import {
   Table,
   TableBody,
@@ -30,17 +31,10 @@ import { BatchFieldCreation } from "@/components/import/BatchFieldCreation";
 import { DuplicateRecordsResolver } from "@/components/import/DuplicateRecordsResolver";
 import { PreviewImportData } from "@/components/import/PreviewImportData";
 import { toast } from "sonner";
-import { DuplicateRecord, ColumnMapping } from "@/types"; // Import from the types file
 
-// Type adapter to convert between DuplicateRecord types
-const adaptDuplicates = (duplicates: import("@/hooks/useImportRecords").DuplicateRecord[]): DuplicateRecord[] => {
-  return duplicates as unknown as DuplicateRecord[];
-};
-
-// Type adapter to convert between ColumnMapping types
-const adaptColumnMappings = (mappings: import("@/hooks/useImportRecords").ColumnMapping[]): ColumnMapping[] => {
-  return mappings as unknown as ColumnMapping[];
-};
+// Use the types directly from the useImportRecords hook to avoid type conflicts
+type DuplicateRecord = ImportDuplicateRecord;
+type ColumnMapping = ImportColumnMapping;
 
 // Map intensity values between different naming conventions
 const mapIntensity = (intensity: "low" | "medium" | "high"): "lenient" | "moderate" | "strict" => {
@@ -79,9 +73,9 @@ export default function ImportRecordsPage() {
 
   const { 
     importData, 
-    columnMappings: rawColumnMappings, 
+    columnMappings, 
     isImporting,
-    duplicates: rawDuplicates,
+    duplicates,
     matchingFields,
     isDuplicateCheckCompleted,
     duplicateCheckIntensity: rawIntensity,
@@ -94,10 +88,8 @@ export default function ImportRecordsPage() {
     updateDuplicateAction,
     updateDuplicateCheckIntensity: rawUpdateIntensity
   } = useImportRecords(objectTypeId!, fields || []);
-
+  
   // Adapt types for the component
-  const duplicates = adaptDuplicates(rawDuplicates);
-  const columnMappings = adaptColumnMappings(rawColumnMappings);
   const duplicateCheckIntensity = mapIntensity(rawIntensity);
   
   const updateDuplicateCheckIntensity = (intensity: "lenient" | "moderate" | "strict") => {
@@ -408,6 +400,7 @@ export default function ImportRecordsPage() {
                     <Button 
                       variant="secondary" 
                       onClick={handleCreateBatchFields}
+                      className="flex items-center"
                     >
                       <Plus className="mr-2 h-4 w-4" />
                       Create {unmappedColumns.length} Missing Fields
