@@ -93,12 +93,12 @@ export function useObjectRecords(objectTypeId?: string) {
       
       console.log("Creating record with data:", formData);
 
-      // First, create the record - FIXED: Add owner_id to prevent RLS policy violation
+      // First, create the record - CRITICAL: Must include owner_id to prevent RLS policy violation
       const { data: newRecord, error: recordError } = await supabase
         .from("object_records")
         .insert([{ 
           object_type_id: objectTypeId,
-          owner_id: user.id, // Add owner_id to fix RLS policy issue
+          owner_id: user.id // This is critical for RLS policy
         }])
         .select()
         .single();
@@ -108,6 +108,8 @@ export function useObjectRecords(objectTypeId?: string) {
         throw recordError;
       }
 
+      console.log("Successfully created record:", newRecord);
+
       // Then, create the field values
       const fieldValues = Object.entries(formData).map(([key, value]) => ({
         record_id: newRecord.id,
@@ -116,6 +118,7 @@ export function useObjectRecords(objectTypeId?: string) {
       }));
 
       if (fieldValues.length > 0) {
+        console.log("Creating field values:", fieldValues);
         const { error: fieldValuesError } = await supabase
           .from("object_field_values")
           .insert(fieldValues);
