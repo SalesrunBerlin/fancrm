@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { PageHeader } from "@/components/ui/page-header";
@@ -890,3 +891,78 @@ export default function ImportRecordsPage() {
                   {importData.rows.length} records will be imported
                 </p>
               </div>
+
+              <div className="flex justify-end gap-2">
+                <Button 
+                  variant="outline" 
+                  onClick={handleClearImportData}
+                  disabled={isProcessingAction}
+                >
+                  Back
+                </Button>
+                <Button 
+                  onClick={handleCheckForDuplicates} 
+                  disabled={getMappedCount() === 0 || isProcessingAction || isUpdatingMappings || isRestoringState || isApplyingUrlParams}
+                >
+                  {isProcessingAction ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Processing...
+                    </>
+                  ) : "Continue"}
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {step === "duplicate-check" && duplicates.length > 0 && importData && (
+            <DuplicateRecordsResolver 
+              duplicates={duplicates}
+              fields={fields || []}
+              matchingFields={matchingFields}
+              columnMappings={columnMappings}
+              importData={importData}
+              onSetAction={updateDuplicateAction}
+              onUpdateMatchingFields={updateMatchingFields}
+              onUpdateDuplicateCheckIntensity={updateDuplicateCheckIntensity}
+              duplicateCheckIntensity={duplicateCheckIntensity}
+              onContinue={handleDuplicateResolutionContinue}
+              onBack={() => setStep("mapping")}
+              onRecheck={handleRecheckDuplicates}
+            />
+          )}
+
+          {step === "preview" && importData && (
+            <PreviewImportData 
+              importData={importData}
+              columnMappings={columnMappings}
+              selectedRows={selectedRows}
+              duplicateRows={duplicateRowIndices}
+              onSelectRow={handleSelectRow}
+              onSelectAll={handleSelectAll}
+              onContinue={handlePreviewContinue}
+              onBack={() => setStep(duplicates.length > 0 ? "duplicate-check" : "mapping")}
+            />
+          )}
+
+          {step === "batch-field-creation" && unmappedColumns.length > 0 && (
+            <BatchFieldCreation
+              objectTypeId={objectTypeId!}
+              columnNames={unmappedColumns}
+              columnData={columnData}
+              onComplete={handleBatchFieldCreationComplete}
+              onCancel={handleBatchFieldCreationCancel}
+            />
+          )}
+
+          {step === "importing" && (
+            <div className="flex flex-col items-center justify-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin mb-4" />
+              <p>Importing your records...</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
