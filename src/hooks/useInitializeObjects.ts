@@ -17,9 +17,7 @@ export function useInitializeObjects() {
       
       setIsInitializing(true);
       try {
-        const { data, error } = await supabase.rpc('initialize_standard_objects', {
-          owner_id: user.id
-        });
+        const { data, error } = await supabase.rpc('initialize_standard_objects');
         
         if (error) throw error;
         return data;
