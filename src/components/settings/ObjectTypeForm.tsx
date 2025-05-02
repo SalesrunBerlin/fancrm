@@ -1,3 +1,4 @@
+
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -186,21 +187,15 @@ export function ObjectTypeForm({ onComplete }: ObjectTypeFormProps) {
 
         if (descriptionError) {
           console.error("Error creating description field:", descriptionError);
-          toast({
-            title: "Warning",
-            description: `Default field created, but failed to create the description field: ${descriptionError.message}`,
-            variant: "destructive",
+          toast.error("Warning: Default field created, but failed to create the description field", {
+            description: descriptionError.message
           });
         } else {
           console.log(`Successfully created description field: ${descriptionName}`, descriptionField);
         }
       } catch (descriptionError) {
         console.error("Exception creating description field:", descriptionError);
-        toast({
-          title: "Warning",
-          description: "Default field was created, but there was an error creating the description field",
-          variant: "destructive",
-        });
+        toast.error("Warning: Default field was created, but there was an error creating the description field");
       }
       
       return field;
@@ -232,11 +227,7 @@ export function ObjectTypeForm({ onComplete }: ObjectTypeFormProps) {
       console.log(`Created ${assignments.length} application assignments for object type ${objectTypeId}`);
     } catch (error) {
       console.error("Error creating application assignments:", error);
-      toast({
-        title: "Warning",
-        description: "Object type was created, but there was an issue assigning it to applications",
-        variant: "destructive",
-      });
+      toast.error("Warning: Object type was created, but there was an issue assigning it to applications");
     } finally {
       setIsCreatingApplicationAssignments(false);
     }
@@ -329,6 +320,9 @@ export function ObjectTypeForm({ onComplete }: ObjectTypeFormProps) {
                   onClick={generateApiName}
                 />
               </FormControl>
+              <FormDescription>
+                Used in API calls and as database identifier. Must be unique.
+              </FormDescription>
               <FormMessage />
             </FormItem>
           )}
@@ -356,6 +350,9 @@ export function ObjectTypeForm({ onComplete }: ObjectTypeFormProps) {
                   <SelectItem value="calendar">Calendar</SelectItem>
                 </SelectContent>
               </Select>
+              <FormDescription>
+                Icon to represent this object in the UI
+              </FormDescription>
               <FormMessage />
             </FormItem>
           )}

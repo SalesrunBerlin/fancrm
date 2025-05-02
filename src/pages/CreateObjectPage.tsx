@@ -1,7 +1,7 @@
 
 import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/card";
+import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { ArrowLeft } from "lucide-react";
 import { ObjectTypeForm } from "@/components/settings/ObjectTypeForm";
 
