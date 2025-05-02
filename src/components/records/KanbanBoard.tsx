@@ -169,8 +169,7 @@ export function KanbanBoard({
           isRequired: fieldDef.is_required
         };
       })
-      .filter(Boolean)
-      .slice(0, 3); // Limit to 3 visible fields
+      .filter(Boolean); // Remove any null values
   };
   
   if (loading || isLoadingPicklist) {
