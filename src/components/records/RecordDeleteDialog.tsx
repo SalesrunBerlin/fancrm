@@ -31,12 +31,6 @@ export function RecordDeleteDialog({ open, onOpenChange, onConfirm }: RecordDele
       onConfirm={handleConfirm}
       isDeleting={isDeleting}
       deleteButtonText="Delete"
-    >
-      {isDeleting ? (
-        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-      ) : (
-        <Trash2 className="mr-2 h-4 w-4" />
-      )}
-    </DeleteDialog>
+    />
   );
 }

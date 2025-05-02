@@ -45,10 +45,15 @@ export function DeleteDialog({
     if (onOpenChange) onOpenChange(false);
   };
 
-  const handleConfirm = () => {
-    if (onConfirm) onConfirm();
-    if (onDelete) onDelete();
+  const handleConfirm = async () => {
+    if (onConfirm) await onConfirm();
+    if (onDelete) await onDelete();
   };
+
+  // Ensure the deleteButtonText is always a React node (string or element)
+  const buttonText = typeof deleteButtonText === 'string' 
+    ? deleteButtonText 
+    : deleteButtonText;
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
@@ -71,9 +76,7 @@ export function DeleteDialog({
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Deleting...
               </>
-            ) : (
-              deleteButtonText
-            )}
+            ) : buttonText}
             {children}
           </Button>
         </AlertDialogFooter>

@@ -14,6 +14,9 @@ import { Loader2, PlayCircle } from "lucide-react";
 import { Action, useActions } from "@/hooks/useActions";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
+import { getAlertVariantClass } from "@/patches/FixAlertVariants";
 
 interface ObjectActionsSectionProps {
   objectTypeId: string;
@@ -29,30 +32,36 @@ export function ObjectActionsSection({ objectTypeId, objectTypeName }: ObjectAct
   const [initialized, setInitialized] = useState(false);
   
   useEffect(() => {
+    console.log(`ObjectActionsSection: Effect running for objectTypeId: ${objectTypeId}`);
+    console.log(`ObjectActionsSection: Current initialized state: ${initialized}`);
+    
+    // Prevent fetch if no objectTypeId is provided
+    if (!objectTypeId) {
+      console.log("ObjectActionsSection: No objectTypeId provided, skipping fetch");
+      setLoading(false);
+      return;
+    }
+    
     // Prevent multiple fetches for the same objectTypeId
-    if (!objectTypeId || initialized) {
+    if (initialized) {
+      console.log("ObjectActionsSection: Already initialized, skipping fetch");
       return;
     }
     
     const fetchActions = async () => {
-      if (!objectTypeId) {
-        console.log("ObjectActionsSection: No objectTypeId provided");
-        setLoading(false);
-        return;
-      }
-      
+      console.log(`ObjectActionsSection: Starting fetch for objectTypeId: ${objectTypeId}`);
       setLoading(true);
       setError(null);
       
       try {
-        console.log(`ObjectActionsSection: Fetching actions for objectTypeId: ${objectTypeId}`);
+        console.log(`ObjectActionsSection: Calling getActionsByObjectId for ${objectTypeId}`);
         const objectActions = await getActionsByObjectId(objectTypeId);
         
         // Log the actual response for debugging
         console.log(`ObjectActionsSection: Raw response:`, objectActions);
         
         if (!objectActions || objectActions.length === 0) {
-          console.log(`ObjectActionsSection: No actions found for objectTypeId: ${objectTypeId}, hiding section`);
+          console.log(`ObjectActionsSection: No actions found for objectTypeId: ${objectTypeId}`);
           setActions([]);
         } else {
           console.log(`ObjectActionsSection: Found ${objectActions.length} actions for objectTypeId: ${objectTypeId}`);
@@ -99,7 +108,6 @@ export function ObjectActionsSection({ objectTypeId, objectTypeName }: ObjectAct
   }
 
   if (error) {
-    console.error("Error loading actions:", error);
     return (
       <Card className="mb-6">
         <CardHeader>
@@ -107,7 +115,12 @@ export function ObjectActionsSection({ objectTypeId, objectTypeName }: ObjectAct
           <CardDescription className="text-destructive">Failed to load actions</CardDescription>
         </CardHeader>
         <CardContent>
-          <p>There was a problem loading actions. Please try refreshing the page.</p>
+          <Alert className={getAlertVariantClass("destructive")}>
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              {error.message || "There was a problem loading actions. Please try refreshing the page."}
+            </AlertDescription>
+          </Alert>
         </CardContent>
       </Card>
     );
