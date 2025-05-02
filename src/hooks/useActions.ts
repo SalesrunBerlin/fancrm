@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -5,7 +6,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 
 export type ActionType = 'new_record' | 'linked_record';
-export type ActionColor = 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link' | 'warning' | 'success';
 
 export interface Action {
   id: string;
@@ -17,7 +17,6 @@ export interface Action {
   owner_id: string;
   created_at: string;
   updated_at: string;
-  color?: ActionColor;
 }
 
 export interface ActionField {
@@ -38,7 +37,6 @@ export interface ActionCreateInput {
   action_type: ActionType;
   target_object_id: string;
   source_field_id?: string | null;
-  color?: ActionColor;
 }
 
 export function useActions() {

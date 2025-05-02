@@ -76,7 +76,6 @@ export type Database = {
       actions: {
         Row: {
           action_type: Database["public"]["Enums"]["action_type"]
-          color: string | null
           created_at: string
           description: string | null
           id: string
@@ -88,7 +87,6 @@ export type Database = {
         }
         Insert: {
           action_type: Database["public"]["Enums"]["action_type"]
-          color?: string | null
           created_at?: string
           description?: string | null
           id?: string
@@ -100,7 +98,6 @@ export type Database = {
         }
         Update: {
           action_type?: Database["public"]["Enums"]["action_type"]
-          color?: string | null
           created_at?: string
           description?: string | null
           id?: string
