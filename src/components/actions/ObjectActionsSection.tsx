@@ -32,7 +32,9 @@ export function ObjectActionsSection({ objectTypeId, objectTypeName }: ObjectAct
         setLoading(true);
         setError(null);
         try {
+          console.log(`Fetching actions for objectTypeId: ${objectTypeId}`);
           const objectActions = await getActionsByObjectId(objectTypeId);
+          console.log(`Fetched actions:`, objectActions);
           setActions(objectActions);
         } catch (err) {
           console.error("Error fetching actions:", err);

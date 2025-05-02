@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -67,6 +68,7 @@ export function useActions() {
     if (!user || !objectTypeId) return [];
     
     try {
+      console.log(`useActions: Fetching actions for objectTypeId: ${objectTypeId}`);
       const { data, error } = await supabase
         .from("actions")
         .select("*")
@@ -78,6 +80,7 @@ export function useActions() {
         throw error;
       }
 
+      console.log(`useActions: Found ${data?.length || 0} actions for objectTypeId: ${objectTypeId}`);
       return data as Action[];
     } catch (error) {
       console.error("Exception in getActionsByObjectId:", error);
