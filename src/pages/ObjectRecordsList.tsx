@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
@@ -5,25 +6,31 @@ import { useObjectRecords } from "@/hooks/useObjectRecords";
 import { useEnhancedFields } from "@/hooks/useEnhancedFields";
 import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
-import { Loader2, Plus, Upload, Trash2 } from "lucide-react";
+import { Loader2, Plus, Upload, Trash2, Table, KanbanSquare, Settings } from "lucide-react";
 import { RecordsTable } from "@/components/records/RecordsTable";
 import { Card } from "@/components/ui/card";
-import { FieldsConfigDialog } from "@/components/records/FieldsConfigDialog";
-import { useUserFieldSettings } from "@/hooks/useUserFieldSettings";
-import { ObjectField } from "@/hooks/useObjectTypes";
 import { DeleteDialog } from "@/components/common/DeleteDialog";
 import { toast } from "sonner";
 import { EnhancedObjectField, toSafeObjectField } from "@/patches/FixObjectFieldType";
 import { ObjectActionsSection } from "@/components/actions/ObjectActionsSection";
+import { useUserFieldSettings, ViewMode } from "@/hooks/useUserFieldSettings";
+import { KanbanBoard } from "@/components/records/KanbanBoard";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 export default function ObjectRecordsList() {
   const { objectTypeId } = useParams<{ objectTypeId: string }>();
   const { objectTypes } = useObjectTypes();
-  const { records, isLoading, deleteRecord } = useObjectRecords(objectTypeId);
+  const { records, isLoading, deleteRecord, updateRecord } = useObjectRecords(objectTypeId);
   const { fields, isLoading: isLoadingFields } = useEnhancedFields(objectTypeId);
   const objectType = objectTypes?.find(type => type.id === objectTypeId);
   const [allRecords, setAllRecords] = useState<any[]>([]);
-  const { visibleFields, updateVisibleFields } = useUserFieldSettings(objectTypeId);
+  const { 
+    visibleFields, 
+    viewMode, 
+    kanbanField,
+    updateVisibleFields,
+    updateViewMode 
+  } = useUserFieldSettings(objectTypeId);
   const [selectedRecords, setSelectedRecords] = useState<string[]>([]);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   
@@ -80,10 +87,6 @@ export default function ObjectRecordsList() {
     }
   }, [records]);
 
-  const handleVisibilityChange = (fieldApiNames: string[]) => {
-    updateVisibleFields(fieldApiNames);
-  };
-
   const handleRecordSelectionChange = (selectedIds: string[]) => {
     setSelectedRecords(selectedIds);
   };
@@ -103,6 +106,27 @@ export default function ObjectRecordsList() {
     } catch (error) {
       console.error("Error deleting records:", error);
       toast.error("Failed to delete some records");
+    }
+  };
+  
+  // Handle view mode change
+  const handleViewModeChange = (value: string) => {
+    if (value === 'table' || value === 'kanban') {
+      updateViewMode(value as ViewMode);
+    }
+  };
+  
+  // Handle Kanban record update
+  const handleKanbanRecordUpdate = async (id: string, updates: Record<string, any>) => {
+    try {
+      await updateRecord.mutateAsync({
+        id,
+        field_values: updates
+      });
+      return Promise.resolve();
+    } catch (error) {
+      console.error("Error updating record:", error);
+      return Promise.reject(error);
     }
   };
 
@@ -138,10 +162,32 @@ export default function ObjectRecordsList() {
         description={objectType.description || `Manage your ${objectType.name.toLowerCase()}`}
         actions={
           <>
-            <FieldsConfigDialog
-              objectTypeId={objectTypeId!}
-              onVisibilityChange={handleVisibilityChange}
-            />
+            <ToggleGroup 
+              type="single" 
+              value={viewMode} 
+              onValueChange={(value) => value && handleViewModeChange(value)}
+              className="bg-background border rounded-md"
+            >
+              <ToggleGroupItem value="table">
+                <Table className="h-4 w-4" />
+                <span className="sr-only sm:not-sr-only sm:ml-1.5">Table</span>
+              </ToggleGroupItem>
+              <ToggleGroupItem value="kanban">
+                <KanbanSquare className="h-4 w-4" />
+                <span className="sr-only sm:not-sr-only sm:ml-1.5">Kanban</span>
+              </ToggleGroupItem>
+            </ToggleGroup>
+            
+            <Button 
+              variant="outline"
+              asChild
+            >
+              <Link to={`/objects/${objectTypeId}/configure`}>
+                <Settings className="mr-1.5 h-4 w-4" />
+                Configure View
+              </Link>
+            </Button>
+            
             <Button 
               variant="outline"
               asChild
@@ -181,13 +227,22 @@ export default function ObjectRecordsList() {
           <div className="flex justify-center py-8">
             <Loader2 className="h-8 w-8 animate-spin" />
           </div>
-        ) : (
+        ) : viewMode === 'table' ? (
           <RecordsTable 
             records={allRecords} 
             fields={getFieldsToDisplay()} 
             objectTypeId={objectTypeId!}
             selectable={true}
             onSelectionChange={handleRecordSelectionChange}
+          />
+        ) : (
+          <KanbanBoard
+            records={allRecords}
+            loading={isLoading || isLoadingFields}
+            objectTypeId={objectTypeId!}
+            kanbanFieldApiName={kanbanField}
+            visibleFields={visibleFields}
+            onUpdateRecord={handleKanbanRecordUpdate}
           />
         )}
       </Card>
