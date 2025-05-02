@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   Table,
   TableBody,
@@ -50,13 +50,15 @@ export function PreviewImportData({
 }: PreviewImportDataProps) {
   const [filterMode, setFilterMode] = useState<'all' | 'duplicates' | 'clean'>('all');
   
-  // Compute mapped columns to display
-  const mappedColumns = columnMappings
-    .filter(mapping => mapping.targetField !== null)
-    .sort((a, b) => {
-      // Sort by original column order
-      return a.sourceColumnIndex - b.sourceColumnIndex;
-    });
+  // Compute mapped columns to display - memoize to prevent recalculation on every render
+  const mappedColumns = useMemo(() => {
+    return columnMappings
+      .filter(mapping => mapping.targetField !== null)
+      .sort((a, b) => {
+        // Sort by original column order
+        return a.sourceColumnIndex - b.sourceColumnIndex;
+      });
+  }, [columnMappings]);
 
   // Check if all rows are selected
   const allSelected = selectedRows.length === importData.rows.length;
@@ -76,8 +78,8 @@ export function PreviewImportData({
   // Calculate counts for UI display
   const duplicateCount = duplicateRows.length;
   
-  // Filter rows based on the selected filter mode
-  const filteredRowIndices = React.useMemo(() => {
+  // Filter rows based on the selected filter mode - memoize to prevent recalculation on every render
+  const filteredRowIndices = useMemo(() => {
     switch (filterMode) {
       case 'duplicates':
         return importData.rows.map((_, index) => index).filter(index => duplicateRows.includes(index));
@@ -165,65 +167,66 @@ export function PreviewImportData({
                   </TableHead>
                   <TableHead className="w-[70px] text-center">Row #</TableHead>
                   {mappedColumns.map((column, idx) => (
-                    <TableHead key={idx}>
+                    <TableHead key={`header-${idx}`}>
                       {column.targetField?.name || column.sourceColumnName}
                     </TableHead>
                   ))}
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredRowIndices.map(rowIndex => {
-                  const isSelected = selectedRows.includes(rowIndex);
-                  const isDuplicate = duplicateRows.includes(rowIndex);
-                  
-                  return (
-                    <TableRow 
-                      key={rowIndex}
-                      className={`
-                        ${isSelected ? "" : "opacity-60"} 
-                        ${isDuplicate ? "bg-amber-50 dark:bg-amber-900/20 border-l-4 border-l-amber-500" : ""}
-                      `}
-                    >
-                      <TableCell>
-                        <div className="flex items-center justify-center">
-                          <Checkbox 
-                            checked={isSelected}
-                            onCheckedChange={(checked) => onSelectRow(rowIndex, !!checked)}
-                            aria-label={`Select row ${rowIndex + 1}`}
-                          />
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-center font-medium">
-                        <div className="flex items-center justify-center gap-2">
-                          {isDuplicate && (
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <span>
-                                    <AlertTriangle className="h-4 w-4 text-amber-500" />
-                                  </span>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>Potential duplicate record</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          )}
-                          {rowIndex + 1}
-                        </div>
-                      </TableCell>
-                      {mappedColumns.map((column, colIndex) => (
-                        <TableCell 
-                          key={colIndex}
-                          className={isDuplicate ? "relative" : ""}
-                        >
-                          {getCellValue(rowIndex, column)}
+                {filteredRowIndices.length > 0 ? (
+                  filteredRowIndices.map(rowIndex => {
+                    const isSelected = selectedRows.includes(rowIndex);
+                    const isDuplicate = duplicateRows.includes(rowIndex);
+                    
+                    return (
+                      <TableRow 
+                        key={`row-${rowIndex}`}
+                        className={`
+                          ${isSelected ? "" : "opacity-60"} 
+                          ${isDuplicate ? "bg-amber-50 dark:bg-amber-900/20 border-l-4 border-l-amber-500" : ""}
+                        `}
+                      >
+                        <TableCell>
+                          <div className="flex items-center justify-center">
+                            <Checkbox 
+                              checked={isSelected}
+                              onCheckedChange={(checked) => onSelectRow(rowIndex, !!checked)}
+                              aria-label={`Select row ${rowIndex + 1}`}
+                            />
+                          </div>
                         </TableCell>
-                      ))}
-                    </TableRow>
-                  );
-                })}
-                {filteredRowIndices.length === 0 && (
+                        <TableCell className="text-center font-medium">
+                          <div className="flex items-center justify-center gap-2">
+                            {isDuplicate && (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <span>
+                                      <AlertTriangle className="h-4 w-4 text-amber-500" />
+                                    </span>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Potential duplicate record</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )}
+                            {rowIndex + 1}
+                          </div>
+                        </TableCell>
+                        {mappedColumns.map((column, colIndex) => (
+                          <TableCell 
+                            key={`cell-${rowIndex}-${colIndex}`}
+                            className={isDuplicate ? "relative" : ""}
+                          >
+                            {getCellValue(rowIndex, column)}
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    );
+                  })
+                ) : (
                   <TableRow>
                     <TableCell colSpan={mappedColumns.length + 2} className="h-32 text-center">
                       <div className="flex flex-col items-center justify-center text-muted-foreground">

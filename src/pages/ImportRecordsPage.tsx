@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from "react";
+
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { PageHeader } from "@/components/ui/page-header";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
@@ -69,11 +70,16 @@ export default function ImportRecordsPage() {
   const [columnData, setColumnData] = useState<{ [columnName: string]: string[] }>({});
   const [selectedRows, setSelectedRows] = useState<number[]>([]);
   const [fieldsToCreate, setFieldsToCreate] = useState<FieldToCreate[]>([]);
+  
+  // State flags to prevent race conditions and infinite render loops
   const [isRestoringState, setIsRestoringState] = useState(false);
   const [isApplyingUrlParams, setIsApplyingUrlParams] = useState(false);
   const [isUpdatingMappings, setIsUpdatingMappings] = useState(false);
+  const [isProcessingAction, setIsProcessingAction] = useState(false);
+  
   const isInitialMount = useRef(true);
-  const mappingUpdateTimeout = useRef<NodeJS.Timeout | null>(null);
+  const mappingUpdateTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const stateUpdateLock = useRef(false);
   
   const { objectTypes } = useObjectTypes();
   const { fields, isLoading: isLoadingFields } = useRecordFields(objectTypeId);
@@ -106,19 +112,33 @@ export default function ImportRecordsPage() {
     updateDuplicateCheckIntensity: rawUpdateIntensity
   } = useImportRecords(objectTypeId!, fields || []);
 
-  // Check for URL parameters first - with added stabilization
+  // Safe update function with debouncing to prevent race conditions
+  const safeUpdateStorage = useCallback((data: any) => {
+    if (stateUpdateLock.current) return;
+    
+    if (mappingUpdateTimeout.current) {
+      clearTimeout(mappingUpdateTimeout.current);
+    }
+    
+    mappingUpdateTimeout.current = setTimeout(() => {
+      storeImportData(data);
+    }, 300);
+  }, [storeImportData]);
+  
+  // Check for URL parameters - with improved safety
   useEffect(() => {
     const newFieldId = searchParams.get('newFieldId');
     const columnName = searchParams.get('columnName');
     
-    if (newFieldId && columnName && fields && !isUpdatingMappings) {
+    if (newFieldId && columnName && fields && !isApplyingUrlParams && !isProcessingAction) {
       setIsApplyingUrlParams(true);
+      setIsProcessingAction(true);
       
       // Find the new field
       const newField = fields.find(field => field.id === newFieldId);
       
       if (newField && storedData) {
-        // Flag in storage that we're processing a new field to prevent flicker
+        // Flag in storage that we're processing a new field
         updateProcessingState(true);
         
         // Find the mapping index for this column
@@ -132,27 +152,42 @@ export default function ImportRecordsPage() {
           // Update the storage first
           updateStorageColumnMapping(columnIndex, newFieldId);
           
-          // Then update the hook state
-          updateColumnMapping(columnIndex, newFieldId);
-          
-          // Show success message
-          toast.success(`Field "${newField.name}" mapped to column "${decodeURIComponent(columnName)}"`);
-        }
-        
-        // Clear URL params after applying them
-        setTimeout(() => {
-          navigate(`/objects/${objectTypeId}/import`, { replace: true });
+          // Then update the hook state after a small delay
+          setTimeout(() => {
+            updateColumnMapping(columnIndex, newFieldId);
+            
+            // Show success message
+            toast.success(`Field "${newField.name}" mapped to column "${decodeURIComponent(columnName)}"`);
+            
+            // Clear URL params after applying them
+            navigate(`/objects/${objectTypeId}/import`, { replace: true });
+            
+            setTimeout(() => {
+              setIsApplyingUrlParams(false);
+              setIsProcessingAction(false);
+              updateProcessingState(false);
+            }, 100);
+          }, 100);
+        } else {
           setIsApplyingUrlParams(false);
+          setIsProcessingAction(false);
           updateProcessingState(false);
-        }, 100);
+        }
+      } else {
+        setIsApplyingUrlParams(false);
+        setIsProcessingAction(false);
       }
     }
-  }, [searchParams, fields, navigate, objectTypeId, updateStorageColumnMapping, storedData, updateProcessingState]);
+  }, [searchParams, fields, navigate, objectTypeId, updateStorageColumnMapping, storedData, updateProcessingState, updateColumnMapping]);
 
-  // Restore state from storage when component mounts - with added stabilization
+  // Restore state from storage when component mounts - with improved safety
   useEffect(() => {
-    if (storedData && fields && !isRestoringState && !isApplyingUrlParams && !isUpdatingMappings) {
+    if (storedData && fields && !isRestoringState && !isApplyingUrlParams && !isProcessingAction) {
       setIsRestoringState(true);
+      setIsProcessingAction(true);
+      stateUpdateLock.current = true;
+      
+      console.log("Restoring import state from storage");
       
       // Restore import data
       parseImportText(storedData.rawText);
@@ -163,68 +198,57 @@ export default function ImportRecordsPage() {
       // Restore pastedText
       setPastedText(storedData.rawText);
       
-      // We'll handle column mappings after importData is restored in the next useEffect
-    }
-  }, [storedData, fields, parseImportText, isApplyingUrlParams, isUpdatingMappings]);
-
-  // Restore column mappings after importData is loaded - with debouncing to prevent flickering
-  useEffect(() => {
-    if (importData && storedData && fields && isRestoringState && !isApplyingUrlParams) {
-      // Only restore mappings if we're not in the middle of processing a new field
-      if (!storedData.processingNewField && !isUpdatingMappings) {
-        setIsUpdatingMappings(true);
-        
-        // Clear any pending timeout
-        if (mappingUpdateTimeout.current) {
-          clearTimeout(mappingUpdateTimeout.current);
+      // After a delay, restore mappings to ensure importData is properly set first
+      setTimeout(() => {
+        if (storedData.columnMappings && storedData.columnMappings.length > 0 && 
+            !storedData.processingNewField) {
+          storedData.columnMappings.forEach((mapping, index) => {
+            if (mapping.targetField?.id) {
+              const field = fields.find(f => f.id === mapping.targetField?.id);
+              if (field) {
+                updateColumnMapping(index, field.id);
+              }
+            }
+          });
         }
         
-        // Use timeout to debounce multiple rapid mapping updates
-        mappingUpdateTimeout.current = setTimeout(() => {
-          // Restore column mappings
-          if (storedData.columnMappings && storedData.columnMappings.length > 0) {
-            storedData.columnMappings.forEach((mapping, index) => {
-              if (mapping.targetField?.id) {
-                const field = fields.find(f => f.id === mapping.targetField?.id);
-                if (field) {
-                  updateColumnMapping(index, field.id);
-                }
-              }
-            });
-          }
-          
+        // Release locks after restoration is complete
+        setTimeout(() => {
           setIsRestoringState(false);
-          setIsUpdatingMappings(false);
+          setIsProcessingAction(false);
+          stateUpdateLock.current = false;
         }, 300);
-      }
+      }, 300);
     }
-  }, [importData, storedData, fields, updateColumnMapping, isRestoringState, isApplyingUrlParams, isUpdatingMappings]);
+  }, [storedData, fields, parseImportText, isApplyingUrlParams, isProcessingAction]);
 
-  // Store current state whenever important values change - with stabilization
+  // Store current state whenever important values change - with improved safety
   useEffect(() => {
     if (isInitialMount.current) {
       isInitialMount.current = false;
       return;
     }
     
-    if (importData && !isRestoringState && !isApplyingUrlParams && !isUpdatingMappings) {
-      // Clear any pending timeout to avoid multiple rapid updates
-      if (mappingUpdateTimeout.current) {
-        clearTimeout(mappingUpdateTimeout.current);
-      }
-      
-      mappingUpdateTimeout.current = setTimeout(() => {
-        storeImportData({
-          rawText: pastedText,
-          headers: importData.headers,
-          rows: importData.rows,
-          columnMappings: hookColumnMappings,
-          step: step,
-          processingNewField: false
-        });
-      }, 200);
+    if (importData && !isRestoringState && !isApplyingUrlParams && !isProcessingAction && !stateUpdateLock.current) {
+      safeUpdateStorage({
+        rawText: pastedText,
+        headers: importData.headers,
+        rows: importData.rows,
+        columnMappings: hookColumnMappings,
+        step: step,
+        processingNewField: false
+      });
     }
-  }, [importData, hookColumnMappings, step, pastedText, storeImportData, isRestoringState, isApplyingUrlParams, isUpdatingMappings]);
+  }, [
+    importData, 
+    hookColumnMappings, 
+    step, 
+    pastedText, 
+    safeUpdateStorage, 
+    isRestoringState, 
+    isApplyingUrlParams,
+    isProcessingAction
+  ]);
 
   // Cleanup timeout on unmount
   useEffect(() => {
@@ -232,21 +256,22 @@ export default function ImportRecordsPage() {
       if (mappingUpdateTimeout.current) {
         clearTimeout(mappingUpdateTimeout.current);
       }
+      stateUpdateLock.current = false;
     };
   }, []);
 
-  // Directly use the columnMappings from the hook without conversion
+  // For use in the component without conversion
   const columnMappings = hookColumnMappings;
-
   const duplicateCheckIntensity = mapIntensity(rawIntensity);
   
-  const updateDuplicateCheckIntensity = (intensity: "lenient" | "moderate" | "strict") => {
+  const updateDuplicateCheckIntensity = useCallback((intensity: "lenient" | "moderate" | "strict") => {
     rawUpdateIntensity(mapReverseIntensity(intensity));
-  };
+  }, [rawUpdateIntensity]);
 
-  // Process the fields that need to be created when continuing
+  // Process the fields that need to be created when continuing - with improved safety
   useEffect(() => {
-    if (hookColumnMappings.length > 0 && fields && !isRestoringState && !isApplyingUrlParams && !isUpdatingMappings) {
+    if (hookColumnMappings.length > 0 && fields && !isRestoringState && 
+        !isApplyingUrlParams && !isUpdatingMappings && !isProcessingAction) {
       // Identify unmapped columns and prepare them for potential field creation
       const unmapped = hookColumnMappings
         .filter(mapping => !mapping.targetField)
@@ -275,32 +300,37 @@ export default function ImportRecordsPage() {
         setColumnData(data);
       }
     }
-  }, [hookColumnMappings, fields, importData, isRestoringState, isApplyingUrlParams, isUpdatingMappings]);
+  }, [hookColumnMappings, fields, importData, isRestoringState, isApplyingUrlParams, isUpdatingMappings, isProcessingAction]);
 
   const handleCheckForDuplicates = async (): Promise<boolean> => {
-    // Check if there are unmapped columns that need field creation
-    if (fieldsToCreate.length > 0) {
-      setStep("batch-field-creation");
-      return false; // Don't proceed to duplicate check yet
-    }
+    // Don't proceed if we're in the middle of an operation
+    if (isProcessingAction) return false;
     
-    // Clear any previous duplicate check results
-    // Reset selected matching fields if none are selected
-    if (matchingFields.length === 0 && fields) {
-      // Find potential matching fields - prioritize text and email fields
-      const potentialMatchFields = fields.filter(f => 
-        ["text", "email"].includes(f.data_type)
-      ).slice(0, 2); // Take up to 2 fields for initial matching
-      
-      if (potentialMatchFields.length > 0) {
-        const fieldApiNames = potentialMatchFields.map(field => field.api_name);
-        toast.info(`Selected ${potentialMatchFields.map(f => f.name).join(", ")} as default fields for duplicate checking`);
-        updateMatchingFields(fieldApiNames);
-      }
-    }
+    setIsProcessingAction(true);
     
-    // Run duplicate check
     try {
+      // Check if there are unmapped columns that need field creation
+      if (fieldsToCreate.length > 0) {
+        setStep("batch-field-creation");
+        setIsProcessingAction(false);
+        return false; // Don't proceed to duplicate check yet
+      }
+      
+      // Reset selected matching fields if none are selected
+      if (matchingFields.length === 0 && fields) {
+        // Find potential matching fields - prioritize text and email fields
+        const potentialMatchFields = fields.filter(f => 
+          ["text", "email"].includes(f.data_type)
+        ).slice(0, 2); // Take up to 2 fields for initial matching
+        
+        if (potentialMatchFields.length > 0) {
+          const fieldApiNames = potentialMatchFields.map(field => field.api_name);
+          toast.info(`Selected ${potentialMatchFields.map(f => f.name).join(", ")} as default fields for duplicate checking`);
+          updateMatchingFields(fieldApiNames);
+        }
+      }
+      
+      // Run duplicate check
       const hasDuplicates = await checkForDuplicates();
       
       // Move to appropriate step based on result
@@ -316,15 +346,25 @@ export default function ImportRecordsPage() {
       toast.error('Failed to check for duplicates');
       console.error(error);
       return false;
+    } finally {
+      setIsProcessingAction(false);
     }
   };
 
   const handlePreviewContinue = () => {
+    if (isProcessingAction) return;
+    setIsProcessingAction(true);
+    
     setStep("importing");
     importSelectedRecords();
   };
 
   const handleRecheckDuplicates = async () => {
+    // Don't proceed if we're in the middle of an operation
+    if (isProcessingAction) return;
+    
+    setIsProcessingAction(true);
+    
     // Run duplicate check again with updated settings
     toast.promise(
       checkForDuplicates(),
@@ -332,13 +372,18 @@ export default function ImportRecordsPage() {
         loading: 'Rechecking with new settings...',
         success: (hasDuplicates) => {
           if (hasDuplicates) {
+            setIsProcessingAction(false);
             return `Found ${duplicates.length} potential duplicate records with new settings`;
           } else {
             setStep("preview");
+            setIsProcessingAction(false);
             return 'No duplicate records found with new settings';
           }
         },
-        error: 'Failed to recheck for duplicates'
+        error: (err) => {
+          setIsProcessingAction(false);
+          return 'Failed to recheck for duplicates';
+        }
       }
     );
   };
@@ -353,11 +398,16 @@ export default function ImportRecordsPage() {
             // Clear stored import data when import is complete
             clearStoredImportData();
             navigate(`/objects/${objectTypeId}`);
+            setIsProcessingAction(false);
             return `Successfully imported ${result.success} records`;
           }
+          setIsProcessingAction(false);
           return 'Import completed';
         },
-        error: 'Failed to import records'
+        error: (err) => {
+          setIsProcessingAction(false);
+          return 'Failed to import records';
+        }
       }
     );
   };
@@ -382,49 +432,78 @@ export default function ImportRecordsPage() {
 
   // Handle creating new fields in batch
   const handleCreateBatchFields = () => {
+    if (isProcessingAction) return;
+    setIsProcessingAction(true);
+    
     setStep("batch-field-creation");
+    setIsProcessingAction(false);
   };
 
   const handleBatchFieldCreationComplete = (createdFields: { columnName: string; fieldId: string }[]) => {
-    // Block any other updates while we're processing batch field creation
+    // Don't proceed if we're in the middle of an operation
+    if (isProcessingAction) return;
+    
+    setIsProcessingAction(true);
     setIsUpdatingMappings(true);
     
+    // Block any other updates while we're processing batch field creation
+    stateUpdateLock.current = true;
+    
     // Update mappings for each created field
-    createdFields.forEach(({ columnName, fieldId }) => {
-      const columnIndex = hookColumnMappings.findIndex(
-        mapping => mapping.sourceColumnName === columnName
-      );
-      
-      if (columnIndex >= 0) {
-        updateColumnMapping(columnIndex, fieldId);
-        // Also update storage
-        updateStorageColumnMapping(columnIndex, fieldId);
-      }
+    const updatePromises = createdFields.map(({ columnName, fieldId }, index) => {
+      return new Promise<void>(resolve => {
+        setTimeout(() => {
+          const columnIndex = hookColumnMappings.findIndex(
+            mapping => mapping.sourceColumnName === columnName
+          );
+          
+          if (columnIndex >= 0) {
+            updateColumnMapping(columnIndex, fieldId);
+            // Also update storage
+            updateStorageColumnMapping(columnIndex, fieldId);
+          }
+          resolve();
+        }, index * 50); // Stagger updates to prevent race conditions
+      });
     });
     
-    // Proceed to duplicate check after creating all fields
-    setStep("mapping");
-    toast.success(`Created ${createdFields.length} fields successfully`);
-    
-    // Reset fields to create list since they've been processed
-    setFieldsToCreate([]);
-    
-    // Allow other updates after a short delay
-    setTimeout(() => {
-      setIsUpdatingMappings(false);
-    }, 300);
+    // Process all updates before proceeding
+    Promise.all(updatePromises).then(() => {
+      // Proceed to mapping step after creating all fields
+      setStep("mapping");
+      toast.success(`Created ${createdFields.length} fields successfully`);
+      
+      // Reset fields to create list since they've been processed
+      setFieldsToCreate([]);
+      
+      // Allow other updates after a short delay
+      setTimeout(() => {
+        stateUpdateLock.current = false;
+        setIsUpdatingMappings(false);
+        setIsProcessingAction(false);
+      }, 300);
+    });
   };
 
   const handleBatchFieldCreationCancel = () => {
+    if (isProcessingAction) return;
+    
     setStep("mapping");
   };
 
   const handleDuplicateResolutionContinue = () => {
+    if (isProcessingAction) return;
+    
     // Move to preview step after duplicate resolution
     setStep("preview");
   };
 
   const handleCreateNewField = (columnIndex: number) => {
+    // Don't proceed if we're in the middle of an operation
+    if (isProcessingAction) return;
+    
+    setIsProcessingAction(true);
+    
     // Store the current state before navigating
     if (importData) {
       // Set the flag that we're about to create a new field
@@ -464,9 +543,16 @@ export default function ImportRecordsPage() {
 
   // Handle clearing import data (both in state and storage)
   const handleClearImportData = () => {
+    // Don't proceed if we're in the middle of an operation
+    if (isProcessingAction) return;
+    
+    setIsProcessingAction(true);
+    
     clearImportData();
     clearStoredImportData();
     setStep("paste");
+    
+    setIsProcessingAction(false);
   };
 
   if (!objectType || isLoadingFields) {
@@ -479,6 +565,12 @@ export default function ImportRecordsPage() {
 
   // Extract duplicate row indices from the duplicates array
   const duplicateRowIndices = duplicates.map(duplicate => duplicate.importRowIndex);
+
+  // Generate stable select component keys
+  const getSelectKey = (mapping: any) => {
+    const targetId = mapping.targetField?.id || 'none';
+    return `select-${mapping.sourceColumnName}-${targetId}-${isUpdatingMappings ? 'updating' : 'stable'}`;
+  };
 
   return (
     <div className="space-y-6">
@@ -519,12 +611,14 @@ export default function ImportRecordsPage() {
                   <div className="flex justify-end">
                     <Button 
                       onClick={() => {
-                        if (pastedText.trim()) {
+                        if (pastedText.trim() && !isProcessingAction) {
+                          setIsProcessingAction(true);
                           parseImportText(pastedText);
                           setStep("mapping");
+                          setIsProcessingAction(false);
                         }
                       }} 
-                      disabled={!pastedText.trim()}
+                      disabled={!pastedText.trim() || isProcessingAction}
                     >
                       Continue
                     </Button>
@@ -555,6 +649,7 @@ export default function ImportRecordsPage() {
                     <Button 
                       variant="secondary" 
                       onClick={handleCreateBatchFields}
+                      disabled={isProcessingAction}
                     >
                       <Plus className="mr-2 h-4 w-4" />
                       Create {unmappedColumns.length} Missing Fields
@@ -583,7 +678,7 @@ export default function ImportRecordsPage() {
                   </TableHeader>
                   <TableBody>
                     {hookColumnMappings.map((mapping, index) => (
-                      <TableRow key={index}>
+                      <TableRow key={`row-${mapping.sourceColumnName}-${index}`}>
                         <TableCell className="font-medium">
                           <div className="flex items-center gap-2">
                             {mapping.sourceColumnName}
@@ -596,17 +691,22 @@ export default function ImportRecordsPage() {
                         </TableCell>
                         <TableCell>
                           <Select
-                            key={`${mapping.sourceColumnName}-${mapping.targetField?.id || 'none'}`}
+                            key={getSelectKey(mapping)}
                             value={mapping.targetField?.id || "none"}
                             onValueChange={(value) => {
+                              if (isProcessingAction) return;
+                              
+                              setIsProcessingAction(true);
                               if (value === "create_new") {
                                 handleCreateNewField(index);
                               } else {
                                 updateColumnMapping(index, value === "none" ? null : value);
                                 // Also update in storage to keep them in sync
                                 updateStorageColumnMapping(index, value === "none" ? null : value);
+                                setIsProcessingAction(false);
                               }
                             }}
+                            disabled={isProcessingAction || isUpdatingMappings}
                           >
                             <SelectTrigger className="w-full">
                               <SelectValue placeholder="Select a field" />
@@ -633,7 +733,7 @@ export default function ImportRecordsPage() {
                         <TableCell>
                           <div className="max-h-20 overflow-y-auto">
                             {importData.rows.slice(0, 3).map((row, rowIndex) => (
-                              <div key={rowIndex} className="text-sm py-0.5">
+                              <div key={`preview-${index}-${rowIndex}`} className="text-sm py-0.5">
                                 {row[mapping.sourceColumnIndex] || <span className="text-muted-foreground italic">Empty</span>}
                               </div>
                             ))}
@@ -652,14 +752,23 @@ export default function ImportRecordsPage() {
               </div>
 
               <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={handleClearImportData}>
+                <Button 
+                  variant="outline" 
+                  onClick={handleClearImportData}
+                  disabled={isProcessingAction}
+                >
                   Back
                 </Button>
                 <Button 
                   onClick={handleCheckForDuplicates} 
-                  disabled={getMappedCount() === 0}
+                  disabled={getMappedCount() === 0 || isProcessingAction}
                 >
-                  Continue
+                  {isProcessingAction ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Processing...
+                    </>
+                  ) : "Continue"}
                 </Button>
               </div>
             </div>

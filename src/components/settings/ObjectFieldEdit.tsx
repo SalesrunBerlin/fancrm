@@ -1,4 +1,5 @@
 
+import React, { useEffect, useState } from "react";
 import { ObjectField } from "@/hooks/useObjectTypes";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
 import { useObjectFields } from "@/hooks/useObjectFields";
@@ -44,7 +45,7 @@ export function ObjectFieldEdit({ field, isOpen, onClose }: ObjectFieldEditProps
   });
   
   // Update form values when field changes
-  React.useEffect(() => {
+  useEffect(() => {
     form.reset({
       name: field.name,
       api_name: field.api_name,
@@ -53,13 +54,13 @@ export function ObjectFieldEdit({ field, isOpen, onClose }: ObjectFieldEditProps
     });
   }, [field, form]);
   
-  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   const onSubmit = async (data: FieldEditFormData) => {
     setIsSubmitting(true);
     try {
       // Prepare field options based on field type
-      let options = { ...field.options } || {};
+      let options = field.options || {};
       
       if (field.data_type === 'lookup') {
         options = {
