@@ -5,7 +5,7 @@ import { useObjectTypes } from "@/hooks/useObjectTypes";
 import { useRecordFields } from "@/hooks/useRecordFields";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, AlertCircle, CheckCircle, ArrowLeft, Plus } from "lucide-react";
+import { Loader2, AlertCircle, CheckCircle, ArrowLeft, Plus, AlertTriangle, Badge } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { useImportRecords } from "@/hooks/useImportRecords";
 import { useImportStorage } from "@/hooks/useImportStorage";
@@ -31,6 +31,7 @@ import { BatchFieldCreation } from "@/components/import/BatchFieldCreation";
 import { DuplicateRecordsResolver } from "@/components/import/DuplicateRecordsResolver";
 import { PreviewImportData } from "@/components/import/PreviewImportData";
 import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
 
 // Map intensity values between different naming conventions
 const mapIntensity = (intensity: "low" | "medium" | "high"): "lenient" | "moderate" | "strict" => {
@@ -266,19 +267,21 @@ export default function ImportRecordsPage() {
         .map(mapping => ({
           columnName: mapping.sourceColumnName,
           columnIndex: mapping.sourceColumnIndex,
-          defaultType: "text" // Default to text type
+          defaultType: guessDataTypeForColumn(mapping.sourceColumnIndex) // Enhanced data type detection
         }));
       
       setFieldsToCreate(unmapped);
       setUnmappedColumns(unmapped.map(item => item.columnName));
       
-      // Also collect sample data for each column to help with field type suggestions
+      // Show notification if there are unmapped columns
+      setShowUnmappedAlert(unmapped.length > 0);
+      
+      // Collect sample data for each column to help with field type suggestions
       if (importData) {
         const data: { [columnName: string]: string[] } = {};
         
         hookColumnMappings.forEach(mapping => {
           const values = importData.rows
-            .slice(0, 10) // Take up to 10 sample values
             .map(row => row[mapping.sourceColumnIndex])
             .filter(val => val !== null && val !== undefined && val.trim() !== '');
           
@@ -289,6 +292,57 @@ export default function ImportRecordsPage() {
       }
     }
   }, [hookColumnMappings, fields, importData, isRestoringState, isApplyingUrlParams, isUpdatingMappings, isProcessingAction, objectTypeId]);
+
+  // Enhanced function to guess data type based on column content
+  const guessDataTypeForColumn = (columnIndex: number): string => {
+    if (!importData) return "text";
+    
+    // Get the column name
+    const columnName = hookColumnMappings[columnIndex]?.sourceColumnName || "";
+    const lowercaseColumnName = columnName.toLowerCase();
+    
+    // Get sample data from the column (up to 20 rows)
+    const sampleValues = importData.rows
+      .slice(0, 20)
+      .map(row => row[columnIndex])
+      .filter(val => val !== null && val !== undefined && val.trim() !== '');
+    
+    // First check name patterns
+    if (lowercaseColumnName.includes('email')) return 'email';
+    if (lowercaseColumnName.includes('phone')) return 'phone';
+    if (lowercaseColumnName.includes('date')) return 'date';
+    if (lowercaseColumnName.includes('url') || lowercaseColumnName.includes('website')) return 'url';
+    if (lowercaseColumnName.includes('description') || lowercaseColumnName.includes('note')) return 'textarea';
+    
+    // Check data patterns
+    if (sampleValues.length > 0) {
+      // Check if all values are numbers
+      if (sampleValues.every(val => !isNaN(Number(val)) && val.trim() !== '')) {
+        return 'number';
+      }
+      
+      // Check if it looks like an email pattern
+      if (sampleValues.some(val => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val))) {
+        return 'email';
+      }
+      
+      // Check if it looks like a URL pattern
+      if (sampleValues.some(val => /^https?:\/\//.test(val))) {
+        return 'url';
+      }
+      
+      // Check if it could be a picklist (few unique values compared to total)
+      if (sampleValues.length >= 5) {
+        const uniqueValues = new Set(sampleValues);
+        if (uniqueValues.size <= Math.min(10, sampleValues.length * 0.5)) {
+          return 'picklist';
+        }
+      }
+    }
+    
+    // Default to text
+    return 'text';
+  };
 
   const handleCheckForDuplicates = async (): Promise<boolean> => {
     // Don't proceed if we're in the middle of an operation
@@ -429,7 +483,22 @@ export default function ImportRecordsPage() {
     if (isProcessingAction) return;
     setIsProcessingAction(true);
     
-    setStep("batch-field-creation");
+    if (unmappedColumns.length > 0) {
+      setStep("batch-field-creation");
+      
+      // Update stored data to preserve state during field creation
+      if (importData) {
+        storeImportData({
+          rawText: pastedText,
+          headers: importData.headers,
+          rows: importData.rows,
+          columnMappings: hookColumnMappings,
+          step: "batch-field-creation",
+          processingNewField: true
+        });
+      }
+    }
+    
     setIsProcessingAction(false);
   };
 
@@ -442,6 +511,9 @@ export default function ImportRecordsPage() {
     
     // Block any other updates while we're processing batch field creation
     stateUpdateLock.current = true;
+    
+    // Show creation success message
+    toast.success(`${createdFields.length} fields created successfully!`);
     
     // Update mappings for each created field
     const updatePromises = createdFields.map(({ columnName, fieldId }, index) => {
@@ -457,25 +529,27 @@ export default function ImportRecordsPage() {
             updateStorageColumnMapping(columnIndex, fieldId);
           }
           resolve();
-        }, index * 50); // Stagger updates to prevent race conditions
+        }, index * 100); // Stagger updates to prevent race conditions
       });
     });
     
     // Process all updates before proceeding
     Promise.all(updatePromises).then(() => {
+      // Clear unmapped alert after successful field creation
+      setShowUnmappedAlert(false);
+      
       // Proceed to mapping step after creating all fields
       setStep("mapping");
-      toast.success(`Created ${createdFields.length} fields successfully`);
       
       // Reset fields to create list since they've been processed
       setFieldsToCreate([]);
       
-      // Allow other updates after a short delay
+      // Allow other updates after a delay
       setTimeout(() => {
         stateUpdateLock.current = false;
         setIsUpdatingMappings(false);
         setIsProcessingAction(false);
-      }, 300);
+      }, 500);
     });
   };
 
@@ -584,6 +658,9 @@ export default function ImportRecordsPage() {
     }, 300);
   };
 
+  // Add a prominent notification state for unmapped columns
+  const [showUnmappedAlert, setShowUnmappedAlert] = useState(false);
+
   if (!objectType || isLoadingFields) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -667,26 +744,34 @@ export default function ImportRecordsPage() {
                 <p className="text-sm text-muted-foreground">
                   {getMappedCount()} of {hookColumnMappings.length} columns mapped
                 </p>
+                
+                {/* Enhanced batch field creation button */}
                 {unmappedColumns.length > 0 && (
-                  <div className="flex items-center">
-                    <Button 
-                      variant="secondary" 
-                      onClick={handleCreateBatchFields}
-                      disabled={isProcessingAction || isRestoringState || isUpdatingMappings}
-                    >
-                      <Plus className="mr-2 h-4 w-4" />
-                      Create {unmappedColumns.length} Missing Fields
-                    </Button>
-                  </div>
+                  <Button 
+                    variant="default" 
+                    onClick={handleCreateBatchFields}
+                    disabled={isProcessingAction || isRestoringState || isUpdatingMappings}
+                    className="bg-primary"
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    Create {unmappedColumns.length} Missing Fields
+                  </Button>
                 )}
               </div>
 
-              {getMappedCount() < hookColumnMappings.length && (
-                <Alert variant="destructive" className="py-2">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>
-                    Some columns couldn't be matched automatically. Please map them manually or create new fields.
-                  </AlertDescription>
+              {/* Enhanced unmapped columns alert */}
+              {showUnmappedAlert && (
+                <Alert variant="warning" className="py-3">
+                  <AlertTriangle className="h-5 w-5" />
+                  <div className="ml-2">
+                    <AlertDescription className="font-medium">
+                      {unmappedColumns.length} columns need to be mapped
+                    </AlertDescription>
+                    <p className="text-sm mt-1">
+                      Create all missing fields at once by clicking "Create Missing Fields" 
+                      or map them manually to existing fields.
+                    </p>
+                  </div>
                 </Alert>
               )}
 
@@ -748,6 +833,9 @@ export default function ImportRecordsPage() {
                                 {row[mapping.sourceColumnIndex] || <span className="text-muted-foreground italic">Empty</span>}
                               </div>
                             ))}
+                            {importData.rows.length > 3 && (
+                              <Badge variant="outline" className="mt-1">+{importData.rows.length - 3} more rows</Badge>
+                            )}
                           </div>
                         </TableCell>
                       </TableRow>

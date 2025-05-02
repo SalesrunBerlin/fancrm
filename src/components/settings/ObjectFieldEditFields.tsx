@@ -1,130 +1,94 @@
 
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { ObjectField } from "@/hooks/useObjectTypes";
-import { Input } from "@/components/ui/input";
+import { useObjectFieldEdit } from "@/hooks/useObjectFieldEdit";
 import {
+  Form,
+  FormControl,
   FormField,
   FormItem,
   FormLabel,
-  FormControl,
   FormMessage,
 } from "@/components/ui/form";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { UseFormReturn } from "react-hook-form";
-import { FieldEditFormData } from "./schemas/fieldEditSchema";
-import { PicklistValuesManager } from "./PicklistValuesManager";
-import { useObjectTypes } from "@/hooks/useObjectTypes";
-import { useEffect, useState } from "react";
+import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Star } from "lucide-react";
-import { PicklistSuggestionsDialog } from "./PicklistSuggestionsDialog";
+import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Loader2 } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 
-interface ObjectFieldEditFieldsProps {
-  form: UseFormReturn<FieldEditFormData>;
+// Define the form schema based on the field data
+const fieldFormSchema = z.object({
+  name: z.string().min(2, { message: "Field name must be at least 2 characters" }),
+  api_name: z.string().min(2, { message: "API name must be at least 2 characters" })
+    .refine(value => /^[a-z0-9_]+$/.test(value), {
+      message: "API name must only contain lowercase letters, numbers, and underscores"
+    }),
+  is_required: z.boolean().default(false),
+  data_type: z.string(),
+  options: z.record(z.any()).optional(),
+});
+
+export interface ObjectFieldEditFieldsProps {
   field: ObjectField;
-  targetFields?: ObjectField[];
 }
 
-export function ObjectFieldEditFields({ form, field, targetFields }: ObjectFieldEditFieldsProps) {
-  const { objectTypes } = useObjectTypes();
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  
-  // Ensure target_object_type_id is set in form when editing a lookup field
-  useEffect(() => {
-    if (field.data_type === "lookup" && field.options?.target_object_type_id && !form.getValues("target_object_type_id")) {
-      form.setValue("target_object_type_id", field.options.target_object_type_id);
+export function ObjectFieldEditFields({ field }: ObjectFieldEditFieldsProps) {
+  const { updateField } = useObjectFieldEdit(field.id);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Initialize the form with the field data
+  const form = useForm<z.infer<typeof fieldFormSchema>>({
+    resolver: zodResolver(fieldFormSchema),
+    defaultValues: {
+      name: field.name,
+      api_name: field.api_name,
+      is_required: field.is_required || false,
+      data_type: field.data_type,
+      options: field.options || {},
+    },
+  });
+
+  const isSystemField = field.is_system === true;
+
+  async function onSubmit(values: z.infer<typeof fieldFormSchema>) {
+    try {
+      setIsSubmitting(true);
+      await updateField.mutateAsync(values);
+    } finally {
+      setIsSubmitting(false);
     }
-  }, [field, form]);
-  
+  }
+
   return (
     <div className="space-y-4">
-      <FormField
-        control={form.control}
-        name="name"
-        render={({ field: formField }) => (
-          <FormItem>
-            <FormLabel>Field Name</FormLabel>
-            <FormControl>
-              <Input {...formField} disabled={field.is_system} />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
-
-      <FormField
-        control={form.control}
-        name="api_name"
-        render={({ field: formField }) => (
-          <FormItem>
-            <FormLabel>API Name</FormLabel>
-            <FormControl>
-              <Input {...formField} disabled />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
-
-      {field.data_type === "picklist" && (
-        <div className="mt-4 border-t pt-4">
-          <div className="flex justify-between items-center mb-2">
-            <h3 className="text-sm font-medium">Picklist Values</h3>
-            <Button 
-              type="button" 
-              variant="ghost" 
-              size="sm" 
-              onClick={() => setShowSuggestions(true)}
-              className="flex items-center gap-1 text-xs"
-            >
-              <Star className="h-3.5 w-3.5" />
-              Suggest Values
-            </Button>
-          </div>
-          <PicklistValuesManager fieldId={field.id} />
-          
-          {/* Suggestions dialog */}
-          <PicklistSuggestionsDialog 
-            isOpen={showSuggestions} 
-            onClose={() => setShowSuggestions(false)} 
-            objectTypeId={field.object_type_id}
-            fieldId={field.id}
-          />
-        </div>
+      {isSystemField && (
+        <Alert variant="warning">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            This is a system field. Some properties cannot be modified.
+          </AlertDescription>
+        </Alert>
       )}
 
-      {field.data_type === "lookup" && (
-        <>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
           <FormField
             control={form.control}
-            name="target_object_type_id"
-            render={({ field: targetField }) => (
+            name="name"
+            render={({ field }) => (
               <FormItem>
-                <FormLabel>Target Object</FormLabel>
+                <FormLabel>Field Name</FormLabel>
                 <FormControl>
-                  <Select
-                    value={targetField.value || ""}
-                    onValueChange={targetField.onChange}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select target object" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {objectTypes?.filter(t => t.id !== field.object_type_id).map((type) => (
-                        <SelectItem
-                          key={type.id}
-                          value={type.id}
-                        >
-                          {type.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Input 
+                    placeholder="Field Name" 
+                    {...field} 
+                    disabled={isSystemField} 
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -133,37 +97,84 @@ export function ObjectFieldEditFields({ form, field, targetFields }: ObjectField
 
           <FormField
             control={form.control}
-            name="display_field_api_name"
-            render={({ field: displayField }) => (
+            name="api_name"
+            render={({ field }) => (
               <FormItem>
-                <FormLabel>Display Field</FormLabel>
+                <FormLabel>API Name</FormLabel>
                 <FormControl>
-                  <Select
-                    value={displayField.value || ""}
-                    onValueChange={displayField.onChange}
-                    disabled={!form.getValues("target_object_type_id")}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select display field" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {targetFields?.map((targetField) => (
-                        <SelectItem
-                          key={targetField.api_name}
-                          value={targetField.api_name}
-                        >
-                          {targetField.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Input 
+                    placeholder="API Name" 
+                    {...field} 
+                    disabled={true} // API name cannot be changed
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
-        </>
-      )}
+
+          <FormField
+            control={form.control}
+            name="data_type"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Data Type</FormLabel>
+                <Select
+                  value={field.value}
+                  onValueChange={field.onChange}
+                  disabled={true} // Data type cannot be changed
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="text">Text</SelectItem>
+                    <SelectItem value="textarea">Text Area</SelectItem>
+                    <SelectItem value="number">Number</SelectItem>
+                    <SelectItem value="email">Email</SelectItem>
+                    <SelectItem value="phone">Phone</SelectItem>
+                    <SelectItem value="url">URL</SelectItem>
+                    <SelectItem value="date">Date</SelectItem>
+                    <SelectItem value="datetime">Date/Time</SelectItem>
+                    <SelectItem value="checkbox">Checkbox</SelectItem>
+                    <SelectItem value="picklist">Picklist</SelectItem>
+                    <SelectItem value="lookup">Lookup</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="is_required"
+            render={({ field }) => (
+              <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                <div className="space-y-0.5">
+                  <FormLabel>Required Field</FormLabel>
+                </div>
+                <FormControl>
+                  <Switch
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                    disabled={isSystemField}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <Button 
+            type="submit" 
+            disabled={isSubmitting || isSystemField}
+          >
+            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Save Changes
+          </Button>
+        </form>
+      </Form>
     </div>
   );
 }

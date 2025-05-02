@@ -1,4 +1,5 @@
 
+import React from "react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -9,60 +10,46 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Loader2, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Loader2 } from "lucide-react";
 
-interface DeleteDialogProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onConfirm: () => Promise<void> | void;
+export interface DeleteDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   title: string;
   description: string;
-  deleteButtonText?: string;
+  onDelete: () => void;
+  isDeleting?: boolean;
 }
 
 export function DeleteDialog({
-  isOpen,
-  onClose,
-  onConfirm,
+  open,
+  onOpenChange,
   title,
   description,
-  deleteButtonText = "Delete",
+  onDelete,
+  isDeleting = false,
 }: DeleteDialogProps) {
-  const [isDeleting, setIsDeleting] = useState(false);
-
-  const handleConfirm = async () => {
-    try {
-      setIsDeleting(true);
-      await onConfirm();
-    } finally {
-      setIsDeleting(false);
-      onClose();
-    }
-  };
-
   return (
-    <AlertDialog open={isOpen} onOpenChange={onClose}>
+    <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>{title}</AlertDialogTitle>
           <AlertDialogDescription>{description}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel onClick={onClose}>Cancel</AlertDialogCancel>
+          <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
           <AlertDialogAction
+            asChild
             onClick={(e) => {
               e.preventDefault();
-              handleConfirm();
+              onDelete();
             }}
-            className="bg-destructive hover:bg-destructive/90"
           >
-            {isDeleting ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <Trash2 className="mr-2 h-4 w-4" />
-            )}
-            {deleteButtonText}
+            <Button variant="destructive" disabled={isDeleting}>
+              {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Delete
+            </Button>
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

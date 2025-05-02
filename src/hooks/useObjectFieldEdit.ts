@@ -81,7 +81,7 @@ export const useObjectFieldEdit = (fieldId: string) => {
     },
     onError: (error: Error) => {
       safeErrorToast("Error updating field", {
-        description: error.message,
+        description: error.message
       });
     },
   });
@@ -116,7 +116,7 @@ export const useObjectFieldEdit = (fieldId: string) => {
     },
     onError: (error: Error) => {
       safeErrorToast("Error deleting field", {
-        description: error.message,
+        description: error.message
       });
     },
   });

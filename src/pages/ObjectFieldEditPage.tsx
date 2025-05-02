@@ -23,6 +23,7 @@ export default function ObjectFieldEditPage() {
   const { field, isLoading, deleteField } = useObjectFieldEdit(fieldId || "");
   const { objectTypes } = useObjectTypes();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const objectType = objectTypes?.find((t) => t.id === objectTypeId);
 
@@ -57,8 +58,13 @@ export default function ObjectFieldEditPage() {
   }
 
   const handleDelete = async () => {
-    await deleteField.mutateAsync();
-    navigate(`/settings/objects/${objectTypeId}`);
+    setIsDeleting(true);
+    try {
+      await deleteField.mutateAsync();
+      navigate(`/settings/objects/${objectTypeId}`);
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   const isSystemField = field.is_system === true;
@@ -105,6 +111,7 @@ export default function ObjectFieldEditPage() {
         title={`Delete Field: ${field.name}`}
         description="Are you sure you want to delete this field? This action cannot be undone and will remove this field from all records."
         onDelete={handleDelete}
+        isDeleting={isDeleting}
       />
     </div>
   );

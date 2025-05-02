@@ -24,7 +24,7 @@ import { toast } from "sonner";
 import { useObjectFields } from "@/hooks/useObjectFields";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
 import { usePicklistCreation } from "@/hooks/usePicklistCreation";
-import { AlertCircle, Loader2, Check, AlertTriangle } from "lucide-react";
+import { AlertCircle, Loader2, Check, AlertTriangle, Save } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -59,6 +59,8 @@ export function BatchFieldCreation({
 }: BatchFieldCreationProps) {
   const [fieldConfigs, setFieldConfigs] = useState<FieldConfig[]>([]);
   const [isCreating, setIsCreating] = useState(false);
+  const [createdCount, setCreatedCount] = useState(0);
+  const [totalFields, setTotalFields] = useState(0);
   const { createField } = useObjectFields(objectTypeId);
   const { objectTypes } = useObjectTypes();
   const { addBatchPicklistValues } = usePicklistCreation(null);
@@ -67,6 +69,8 @@ export function BatchFieldCreation({
   // Initialize field configs when component mounts or column data changes
   useEffect(() => {
     if (!columnNames || columnNames.length === 0) return;
+    
+    setTotalFields(columnNames.length);
     
     const configs = columnNames.map(name => {
       // Extract unique values for this column if available
@@ -77,7 +81,7 @@ export function BatchFieldCreation({
       }
       
       // Generate API name from column name
-      const apiName = name.toLowerCase().replace(/[^a-z0-9_]/g, '_');
+      const apiName = generateApiName(name);
       
       // Create properly typed field config
       const config: FieldConfig = {
@@ -88,7 +92,7 @@ export function BatchFieldCreation({
         isRequired: false,
         status: "pending",
         uniqueValues,
-        createPicklistValues: uniqueValues.length > 0
+        createPicklistValues: uniqueValues.length > 0 && uniqueValues.length <= 50
       };
       
       return config;
@@ -96,6 +100,16 @@ export function BatchFieldCreation({
     
     setFieldConfigs(configs);
   }, [columnNames, columnData]);
+
+  // Function to generate a valid API name
+  const generateApiName = (name: string): string => {
+    return name
+      .toLowerCase()
+      .replace(/[^a-z0-9_\s]/g, '')  // Remove special characters except spaces
+      .replace(/\s+/g, '_')           // Replace spaces with underscores
+      .replace(/^[0-9]/, 'f$&')       // If starts with number, prefix with 'f'
+      .substring(0, 255);             // Limit length
+  };
 
   // Function to guess data type based on field name and values
   const guessDataType = (fieldName: string, values: string[]): string => {
@@ -106,14 +120,29 @@ export function BatchFieldCreation({
     if (lowercaseName.includes('phone')) return 'phone';
     if (lowercaseName.includes('date')) return 'date';
     if (lowercaseName.includes('url') || lowercaseName.includes('website')) return 'url';
+    if (lowercaseName.includes('description') || lowercaseName.includes('notes')) return 'textarea';
+    if (lowercaseName.includes('address')) return 'textarea';
     
     // Check if all values are numbers
     if (values.length > 0 && values.every(val => !isNaN(Number(val)))) {
       return 'number';
     }
     
+    // Check data patterns
+    if (values.length > 0) {
+      // Check if looks like email pattern
+      if (values.some(val => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val))) {
+        return 'email';
+      }
+      
+      // Check if looks like URL pattern
+      if (values.some(val => /^https?:\/\//.test(val))) {
+        return 'url';
+      }
+    }
+    
     // Check if it could be a picklist (few unique values compared to total)
-    if (values.length >= 5 && values.length <= 20 && new Set(values).size <= values.length * 0.5) {
+    if (values.length >= 5 && values.length <= 50 && new Set(values).size <= Math.min(20, values.length * 0.5)) {
       return 'picklist';
     }
     
@@ -125,9 +154,15 @@ export function BatchFieldCreation({
     const newConfigs = [...fieldConfigs];
     newConfigs[index] = { ...newConfigs[index], ...field };
     
-    // If name is updated, suggest an API name
+    // If name is updated, suggest an API name unless it was manually modified
     if (field.name) {
-      newConfigs[index].apiName = field.name.toLowerCase().replace(/[^a-z0-9_]/g, '_');
+      const currentApiName = newConfigs[index].apiName;
+      const currentName = newConfigs[index].name;
+      
+      // Only auto-generate API name if it wasn't manually edited
+      if (currentApiName === generateApiName(currentName)) {
+        newConfigs[index].apiName = generateApiName(field.name);
+      }
     }
     
     // Reset picklist values creation flag when data type changes
@@ -136,7 +171,8 @@ export function BatchFieldCreation({
     } else if (field.dataType === 'picklist') {
       // Enable picklist values creation by default if there are unique values
       newConfigs[index].createPicklistValues = newConfigs[index].uniqueValues && 
-        newConfigs[index].uniqueValues.length > 0;
+        newConfigs[index].uniqueValues.length > 0 && 
+        newConfigs[index].uniqueValues.length <= 50;
     }
     
     setFieldConfigs(newConfigs);
@@ -146,6 +182,7 @@ export function BatchFieldCreation({
     let valid = true;
     const newConfigs = [...fieldConfigs];
     const apiNames = new Set<string>();
+    const names = new Set<string>();
     
     // Validate each field
     newConfigs.forEach((config, index) => {
@@ -156,10 +193,24 @@ export function BatchFieldCreation({
         valid = false;
       }
       
+      // Check for duplicate names
+      else if (names.has(config.name)) {
+        newConfigs[index].status = "error";
+        newConfigs[index].error = "Field name must be unique";
+        valid = false;
+      }
+      
       // Check for empty API names
       else if (!config.apiName.trim()) {
         newConfigs[index].status = "error";
         newConfigs[index].error = "API name cannot be empty";
+        valid = false;
+      }
+      
+      // Check API name format
+      else if (!/^[a-z][a-z0-9_]*$/.test(config.apiName)) {
+        newConfigs[index].status = "error";
+        newConfigs[index].error = "API name must start with a letter and contain only lowercase letters, numbers, and underscores";
         valid = false;
       }
       
@@ -171,6 +222,7 @@ export function BatchFieldCreation({
       }
       else {
         apiNames.add(config.apiName);
+        names.add(config.name);
         newConfigs[index].status = "pending";
         newConfigs[index].error = undefined;
       }
@@ -187,6 +239,7 @@ export function BatchFieldCreation({
     }
     
     setIsCreating(true);
+    setCreatedCount(0);
     
     // Create fields one by one
     const createdFields: { columnName: string; fieldId: string }[] = [];
@@ -213,6 +266,7 @@ export function BatchFieldCreation({
           });
           
           newConfigs[i].status = "success";
+          setCreatedCount(prev => prev + 1);
           createdFields.push({
             columnName: config.columnName,
             fieldId: field.id
@@ -361,6 +415,12 @@ export function BatchFieldCreation({
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-semibold">Create Fields for {objectType?.name || 'Import'}</h2>
+        {isCreating && (
+          <div className="flex items-center gap-2">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <span>Creating fields: {createdCount} of {totalFields}</span>
+          </div>
+        )}
       </div>
       
       <Alert>
@@ -424,6 +484,17 @@ export function BatchFieldCreation({
                       
                       {/* Render picklist values section if applicable */}
                       {renderPicklistValuesSection(config, index)}
+                      
+                      {/* Sample data preview for non-picklist fields */}
+                      {config.uniqueValues && config.uniqueValues.length > 0 && config.dataType !== 'picklist' && (
+                        <div className="mt-2">
+                          <p className="text-xs text-muted-foreground">Sample data:</p>
+                          <div className="text-xs text-muted-foreground truncate max-w-[200px]">
+                            {config.uniqueValues.slice(0, 3).join(', ')}
+                            {config.uniqueValues.length > 3 ? '...' : ''}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </TableCell>
                   <TableCell>
@@ -444,7 +515,12 @@ export function BatchFieldCreation({
                         <span>Creating...</span>
                       </div>
                     )}
-                    {config.status === "success" && <span className="text-green-500">Created</span>}
+                    {config.status === "success" && (
+                      <div className="flex items-center space-x-2 text-green-500">
+                        <Check className="h-4 w-4" />
+                        <span>Created</span>
+                      </div>
+                    )}
                     {config.status === "error" && (
                       <div className="text-destructive text-sm">
                         Error: {config.error}
@@ -473,6 +549,7 @@ export function BatchFieldCreation({
             </>
           ) : (
             <>
+              <Save className="mr-2 h-4 w-4" />
               Create {fieldConfigs.length} Fields
             </>
           )}
