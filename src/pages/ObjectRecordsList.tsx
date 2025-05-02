@@ -6,16 +6,15 @@ import { useObjectRecords } from "@/hooks/useObjectRecords";
 import { useEnhancedFields } from "@/hooks/useEnhancedFields";
 import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
-import { Loader2, Plus, Upload, Trash2, Table, KanbanSquare, Settings } from "lucide-react";
+import { Loader2, Plus, Upload, Trash2, Settings } from "lucide-react";
 import { RecordsTable } from "@/components/records/RecordsTable";
 import { Card } from "@/components/ui/card";
 import { DeleteDialog } from "@/components/common/DeleteDialog";
 import { toast } from "sonner";
 import { EnhancedObjectField, toSafeObjectField } from "@/patches/FixObjectFieldType";
 import { ObjectActionsSection } from "@/components/actions/ObjectActionsSection";
-import { useUserFieldSettings, ViewMode } from "@/hooks/useUserFieldSettings";
+import { useUserFieldSettings } from "@/hooks/useUserFieldSettings";
 import { KanbanBoard } from "@/components/records/KanbanBoard";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 export default function ObjectRecordsList() {
   const { objectTypeId } = useParams<{ objectTypeId: string }>();
@@ -28,8 +27,7 @@ export default function ObjectRecordsList() {
     visibleFields, 
     viewMode, 
     kanbanField,
-    updateVisibleFields,
-    updateViewMode 
+    updateVisibleFields 
   } = useUserFieldSettings(objectTypeId);
   const [selectedRecords, setSelectedRecords] = useState<string[]>([]);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -109,13 +107,6 @@ export default function ObjectRecordsList() {
     }
   };
   
-  // Handle view mode change
-  const handleViewModeChange = (value: string) => {
-    if (value === 'table' || value === 'kanban') {
-      updateViewMode(value as ViewMode);
-    }
-  };
-  
   // Handle Kanban record update
   const handleKanbanRecordUpdate = async (id: string, updates: Record<string, any>) => {
     try {
@@ -162,29 +153,14 @@ export default function ObjectRecordsList() {
         description={objectType.description || `Manage your ${objectType.name.toLowerCase()}`}
         actions={
           <>
-            <ToggleGroup 
-              type="single" 
-              value={viewMode} 
-              onValueChange={(value) => value && handleViewModeChange(value)}
-              className="bg-background border rounded-md"
-            >
-              <ToggleGroupItem value="table">
-                <Table className="h-4 w-4" />
-                <span className="sr-only sm:not-sr-only sm:ml-1.5">Table</span>
-              </ToggleGroupItem>
-              <ToggleGroupItem value="kanban">
-                <KanbanSquare className="h-4 w-4" />
-                <span className="sr-only sm:not-sr-only sm:ml-1.5">Kanban</span>
-              </ToggleGroupItem>
-            </ToggleGroup>
-            
             <Button 
-              variant="outline"
+              variant="ghost"
+              size="icon"
               asChild
             >
               <Link to={`/objects/${objectTypeId}/configure`}>
-                <Settings className="mr-1.5 h-4 w-4" />
-                Configure View
+                <Settings className="h-5 w-5" />
+                <span className="sr-only">Configure View</span>
               </Link>
             </Button>
             

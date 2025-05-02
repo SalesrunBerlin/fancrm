@@ -23,7 +23,7 @@ export function useInitializeObjects() {
         
         if (error) throw error;
         return data;
-      } catch (error) {
+      } catch (error: any) {
         // Fix the error handling to properly type the error
         let errorMessage = "An unexpected error occurred";
         if (error instanceof Error) {

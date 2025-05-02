@@ -14,7 +14,6 @@ import { useUserFieldSettings, ViewMode } from "@/hooks/useUserFieldSettings";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 import { 
-  LayoutDashboard, 
   Table, 
   KanbanSquare, 
   Save, 
@@ -54,8 +53,8 @@ export default function FieldsConfigPage() {
   
   // Initialize local state
   useEffect(() => {
-    setLocalVisibleFields(visibleFields);
-    setLocalViewMode(viewMode);
+    setLocalVisibleFields(visibleFields || []);
+    setLocalViewMode(viewMode || 'table');
     setLocalKanbanField(kanbanField);
   }, [visibleFields, viewMode, kanbanField]);
 
