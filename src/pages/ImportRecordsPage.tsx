@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { PageHeader } from "@/components/ui/page-header";
@@ -80,6 +79,7 @@ export default function ImportRecordsPage() {
   const isInitialMount = useRef(true);
   const mappingUpdateTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const stateUpdateLock = useRef(false);
+  const selectUpdateCounter = useRef(0);
   
   const { objectTypes } = useObjectTypes();
   const { fields, isLoading: isLoadingFields } = useRecordFields(objectTypeId);
@@ -122,17 +122,21 @@ export default function ImportRecordsPage() {
     
     mappingUpdateTimeout.current = setTimeout(() => {
       storeImportData(data);
-    }, 300);
+      console.log("Storage updated with debounce");
+    }, 500);
   }, [storeImportData]);
   
   // Check for URL parameters - with improved safety
   useEffect(() => {
+    if (!objectTypeId || !fields || fields.length === 0) return;
+    
     const newFieldId = searchParams.get('newFieldId');
     const columnName = searchParams.get('columnName');
     
     if (newFieldId && columnName && fields && !isApplyingUrlParams && !isProcessingAction) {
       setIsApplyingUrlParams(true);
       setIsProcessingAction(true);
+      console.log(`Handling URL parameters: newFieldId=${newFieldId}, columnName=${columnName}`);
       
       // Find the new field
       const newField = fields.find(field => field.id === newFieldId);
@@ -166,8 +170,8 @@ export default function ImportRecordsPage() {
               setIsApplyingUrlParams(false);
               setIsProcessingAction(false);
               updateProcessingState(false);
-            }, 100);
-          }, 100);
+            }, 300);
+          }, 300);
         } else {
           setIsApplyingUrlParams(false);
           setIsProcessingAction(false);
@@ -182,6 +186,8 @@ export default function ImportRecordsPage() {
 
   // Restore state from storage when component mounts - with improved safety
   useEffect(() => {
+    if (!objectTypeId || !fields || fields.length === 0) return;
+    
     if (storedData && fields && !isRestoringState && !isApplyingUrlParams && !isProcessingAction) {
       setIsRestoringState(true);
       setIsProcessingAction(true);
@@ -198,7 +204,7 @@ export default function ImportRecordsPage() {
       // Restore pastedText
       setPastedText(storedData.rawText);
       
-      // After a delay, restore mappings to ensure importData is properly set first
+      // After a delay to ensure importData is parsed
       setTimeout(() => {
         if (storedData.columnMappings && storedData.columnMappings.length > 0 && 
             !storedData.processingNewField) {
@@ -217,10 +223,10 @@ export default function ImportRecordsPage() {
           setIsRestoringState(false);
           setIsProcessingAction(false);
           stateUpdateLock.current = false;
-        }, 300);
-      }, 300);
+        }, 500);
+      }, 500);
     }
-  }, [storedData, fields, parseImportText, isApplyingUrlParams, isProcessingAction]);
+  }, [storedData, fields, parseImportText, isApplyingUrlParams, isProcessingAction, objectTypeId]);
 
   // Store current state whenever important values change - with improved safety
   useEffect(() => {
@@ -270,6 +276,8 @@ export default function ImportRecordsPage() {
 
   // Process the fields that need to be created when continuing - with improved safety
   useEffect(() => {
+    if (!objectTypeId || !fields || fields.length === 0) return;
+    
     if (hookColumnMappings.length > 0 && fields && !isRestoringState && 
         !isApplyingUrlParams && !isUpdatingMappings && !isProcessingAction) {
       // Identify unmapped columns and prepare them for potential field creation
@@ -300,13 +308,14 @@ export default function ImportRecordsPage() {
         setColumnData(data);
       }
     }
-  }, [hookColumnMappings, fields, importData, isRestoringState, isApplyingUrlParams, isUpdatingMappings, isProcessingAction]);
+  }, [hookColumnMappings, fields, importData, isRestoringState, isApplyingUrlParams, isUpdatingMappings, isProcessingAction, objectTypeId]);
 
   const handleCheckForDuplicates = async (): Promise<boolean> => {
     // Don't proceed if we're in the middle of an operation
     if (isProcessingAction) return false;
     
     setIsProcessingAction(true);
+    toast.info("Checking for duplicates...");
     
     try {
       // Check if there are unmapped columns that need field creation
@@ -389,8 +398,13 @@ export default function ImportRecordsPage() {
   };
 
   const importSelectedRecords = async () => {
+    // Make sure we have rows selected, defaulting to all rows if none selected
+    if (selectedRows.length === 0 && importData) {
+      setSelectedRows(Array.from({ length: importData.rows.length }, (_, i) => i));
+    }
+    
     toast.promise(
-      importRecords(selectedRows),
+      importRecords(selectedRows.length > 0 ? selectedRows : Array.from({ length: importData?.rows.length || 0 }, (_, i) => i)),
       {
         loading: 'Importing records...',
         success: (result) => {
@@ -551,8 +565,40 @@ export default function ImportRecordsPage() {
     clearImportData();
     clearStoredImportData();
     setStep("paste");
+    setPastedText("");
     
     setIsProcessingAction(false);
+  };
+
+  // Generate unique stable key for select components
+  const getSelectKey = (mapping: any) => {
+    const targetId = mapping.targetField?.id || 'none';
+    const counter = selectUpdateCounter.current;
+    return `select-${mapping.sourceColumnName}-${targetId}-${counter}`;
+  };
+
+  // Handle select change
+  const handleFieldSelect = (value: string, index: number) => {
+    if (isProcessingAction || isUpdatingMappings) return;
+    
+    setIsProcessingAction(true);
+    
+    if (value === "create_new") {
+      handleCreateNewField(index);
+      return;
+    }
+    
+    const fieldId = value === "none" ? null : value;
+    updateColumnMapping(index, fieldId);
+    // Also update in storage to keep them in sync
+    updateStorageColumnMapping(index, fieldId);
+    
+    // Increment counter to force new keys on next render
+    selectUpdateCounter.current += 1;
+    
+    setTimeout(() => {
+      setIsProcessingAction(false);
+    }, 300);
   };
 
   if (!objectType || isLoadingFields) {
@@ -565,12 +611,6 @@ export default function ImportRecordsPage() {
 
   // Extract duplicate row indices from the duplicates array
   const duplicateRowIndices = duplicates.map(duplicate => duplicate.importRowIndex);
-
-  // Generate stable select component keys
-  const getSelectKey = (mapping: any) => {
-    const targetId = mapping.targetField?.id || 'none';
-    return `select-${mapping.sourceColumnName}-${targetId}-${isUpdatingMappings ? 'updating' : 'stable'}`;
-  };
 
   return (
     <div className="space-y-6">
@@ -678,7 +718,7 @@ export default function ImportRecordsPage() {
                   </TableHeader>
                   <TableBody>
                     {hookColumnMappings.map((mapping, index) => (
-                      <TableRow key={`row-${mapping.sourceColumnName}-${index}`}>
+                      <TableRow key={`row-${mapping.sourceColumnName}-${index}-${selectUpdateCounter.current}`}>
                         <TableCell className="font-medium">
                           <div className="flex items-center gap-2">
                             {mapping.sourceColumnName}
@@ -693,25 +733,13 @@ export default function ImportRecordsPage() {
                           <Select
                             key={getSelectKey(mapping)}
                             value={mapping.targetField?.id || "none"}
-                            onValueChange={(value) => {
-                              if (isProcessingAction) return;
-                              
-                              setIsProcessingAction(true);
-                              if (value === "create_new") {
-                                handleCreateNewField(index);
-                              } else {
-                                updateColumnMapping(index, value === "none" ? null : value);
-                                // Also update in storage to keep them in sync
-                                updateStorageColumnMapping(index, value === "none" ? null : value);
-                                setIsProcessingAction(false);
-                              }
-                            }}
-                            disabled={isProcessingAction || isUpdatingMappings}
+                            onValueChange={(value) => handleFieldSelect(value, index)}
+                            disabled={isProcessingAction || isUpdatingMappings || isRestoringState || isApplyingUrlParams}
                           >
                             <SelectTrigger className="w-full">
                               <SelectValue placeholder="Select a field" />
                             </SelectTrigger>
-                            <SelectContent>
+                            <SelectContent className="z-50 bg-background">
                               <SelectItem value="none">-- Not mapped --</SelectItem>
                               <SelectItem value="create_new" className="font-medium text-primary">
                                 <div className="flex items-center">
@@ -761,7 +789,7 @@ export default function ImportRecordsPage() {
                 </Button>
                 <Button 
                   onClick={handleCheckForDuplicates} 
-                  disabled={getMappedCount() === 0 || isProcessingAction}
+                  disabled={getMappedCount() === 0 || isProcessingAction || isUpdatingMappings || isRestoringState || isApplyingUrlParams}
                 >
                   {isProcessingAction ? (
                     <>

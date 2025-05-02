@@ -46,12 +46,14 @@ export function ObjectFieldEdit({ field, isOpen, onClose }: ObjectFieldEditProps
   
   // Update form values when field changes
   useEffect(() => {
-    form.reset({
-      name: field.name,
-      api_name: field.api_name,
-      target_object_type_id: field.options?.target_object_type_id,
-      display_field_api_name: field.options?.display_field_api_name,
-    });
+    if (field) {
+      form.reset({
+        name: field.name,
+        api_name: field.api_name,
+        target_object_type_id: field.options?.target_object_type_id,
+        display_field_api_name: field.options?.display_field_api_name,
+      });
+    }
   }, [field, form]);
   
   const [isSubmitting, setIsSubmitting] = useState(false);
