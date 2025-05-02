@@ -72,19 +72,23 @@ export default function ActionExecutePage() {
             
             let targetObjectTypeId = '';
             
-            if (fieldData.options) {
+            if (fieldData && fieldData.options) {
+              // Handle options as string
               if (typeof fieldData.options === 'string') {
                 try {
                   const parsedOptions = JSON.parse(fieldData.options);
-                  if (parsedOptions && typeof parsedOptions === 'object' && parsedOptions.target_object_type_id) {
+                  if (parsedOptions && typeof parsedOptions === 'object' && 'target_object_type_id' in parsedOptions) {
                     targetObjectTypeId = String(parsedOptions.target_object_type_id);
                   }
                 } catch (e) {
                   console.error("Error parsing field options:", e);
                 }
-              } else if (typeof fieldData.options === 'object') {
-                if (fieldData.options.target_object_type_id) {
-                  targetObjectTypeId = String(fieldData.options.target_object_type_id);
+              } 
+              // Handle options as object
+              else if (typeof fieldData.options === 'object' && fieldData.options !== null) {
+                const options = fieldData.options as Record<string, any>;
+                if ('target_object_type_id' in options) {
+                  targetObjectTypeId = String(options.target_object_type_id);
                 }
               }
             }

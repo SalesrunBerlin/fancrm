@@ -106,15 +106,22 @@ export function ActionForm({
               
               try {
                 let options = field.options;
+                // Handle options as string
                 if (typeof options === 'string') {
-                  options = JSON.parse(options);
-                }
-                // Safely access the target_object_type_id
-                if (options && typeof options === 'object' && options.target_object_type_id) {
-                  targetObjectTypeId = String(options.target_object_type_id);
+                  const parsedOptions = JSON.parse(options);
+                  if (parsedOptions && typeof parsedOptions === 'object' && 'target_object_type_id' in parsedOptions) {
+                    targetObjectTypeId = String(parsedOptions.target_object_type_id);
+                  }
+                } 
+                // Handle options as object
+                else if (typeof options === 'object' && options !== null) {
+                  const optionsObj = options as Record<string, any>;
+                  if ('target_object_type_id' in optionsObj) {
+                    targetObjectTypeId = String(optionsObj.target_object_type_id);
+                  }
                 }
               } catch (e) {
-                console.error("Error parsing field options:", e);
+                console.error("Error processing field options:", e);
               }
               
               return {
@@ -249,7 +256,7 @@ export function ActionForm({
                   </FormControl>
                   <SelectContent>
                     {lookupFields.length === 0 ? (
-                      <SelectItem value="no-fields" disabled>
+                      <SelectItem value="no-fields-available" disabled>
                         No lookup fields available
                       </SelectItem>
                     ) : (

@@ -29,7 +29,7 @@ export function useInitializeObjects() {
         if (error instanceof Error) {
           errorMessage = error.message;
         } else if (typeof error === 'object' && error !== null) {
-          errorMessage = String(error);
+          errorMessage = JSON.stringify(error);
         }
         
         toast.error("Error initializing objects", {
