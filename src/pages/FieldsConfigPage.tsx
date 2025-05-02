@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
@@ -85,11 +85,14 @@ export default function FieldsConfigPage() {
     });
   };
   
+  // Update view mode immediately when tab is clicked
+  const handleViewModeChange = useCallback((value: ViewMode) => {
+    setLocalViewMode(value);
+    updateViewMode(value);
+  }, [updateViewMode]);
+  
   const handleSave = () => {
     setIsSaving(true);
-    
-    // Save view mode
-    updateViewMode(localViewMode);
     
     // Save visible fields
     updateVisibleFields(localVisibleFields);
@@ -141,7 +144,7 @@ export default function FieldsConfigPage() {
       <Card className="p-6">
         <Tabs 
           defaultValue={localViewMode} 
-          onValueChange={(value) => setLocalViewMode(value as ViewMode)}
+          onValueChange={(value) => handleViewModeChange(value as ViewMode)}
           className="w-full"
         >
           <TabsList className="grid w-full max-w-md grid-cols-2 mb-6">
@@ -223,7 +226,10 @@ export default function FieldsConfigPage() {
                 
                 <Select
                   value={localKanbanField}
-                  onValueChange={setLocalKanbanField}
+                  onValueChange={(value) => {
+                    setLocalKanbanField(value);
+                    updateKanbanField(value); // Update kanban field immediately
+                  }}
                   disabled={picklistFields.length === 0}
                 >
                   <SelectTrigger className="w-full">
