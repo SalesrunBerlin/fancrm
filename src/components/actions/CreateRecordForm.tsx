@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -59,6 +59,7 @@ export function CreateRecordForm({
   const [error, setError] = useState<string | null>(null);
   const [lookupFieldsValues, setLookupFieldsValues] = useState<Record<string, Record<string, any>>>({});
   const [enhancedFields, setEnhancedFields] = useState<ObjectField[]>([]);
+  const hasInitializedFormulas = useRef(false);
   
   // Filter only enabled fields or fields that are required by the object
   const enabledActionFields = actionFields.filter(af => 
@@ -129,8 +130,8 @@ export function CreateRecordForm({
 
   // Important: Initialize formula-based default values when the form first loads
   useEffect(() => {
-    if (enabledActionFields.length > 0 && objectFields.length > 0) {
-      console.log("Evaluating formula-based default values on form load");
+    if (!hasInitializedFormulas.current && enabledActionFields.length > 0 && objectFields.length > 0) {
+      console.log("Evaluating formula-based default values on initial form load");
       
       const formulaDefaults: Record<string, any> = {};
       let hasFormulaValues = false;
@@ -140,10 +141,14 @@ export function CreateRecordForm({
         const field = objectFields.find(f => f.id === actionField.field_id);
         if (field) {
           // Skip if we already have an initial value for this field
-          if (defaultValues[field.api_name]) return;
+          if (defaultValues[field.api_name]) {
+            console.log(`Skipping formula evaluation for ${field.api_name} as it has an initial value:`, defaultValues[field.api_name]);
+            return;
+          }
           
           // Check if this field has a formula
           if (actionField.formula_type === 'dynamic' && actionField.formula_expression) {
+            // Get the current timestamp for {Now} and {Today} formulas
             const formulaValue = evaluateFormula(
               actionField.formula_expression,
               { 
@@ -173,9 +178,13 @@ export function CreateRecordForm({
           form.setValue(fieldName, value);
         });
       }
+      
+      // Mark that formulas have been initialized
+      hasInitializedFormulas.current = true;
     }
-  }, [enabledActionFields, objectFields, form]);
+  }, [enabledActionFields, objectFields, form, defaultValues, lookupFieldsValues]);
   
+  // Fetch data for lookup fields when their values change
   useEffect(() => {
     // First, collect all lookup fields that have values
     const lookupFields = enabledObjectFields
@@ -243,27 +252,6 @@ export function CreateRecordForm({
       fetchLookupFieldsValues();
     }
   }, [objectFields, actionFields, form, enabledObjectFields]);
-
-  // Update form values when lookup values change
-  useEffect(() => {
-    if (Object.keys(lookupFieldsValues).length > 0) {
-      // Re-evaluate formulas with the new lookup values
-      enabledActionFields.forEach(actionField => {
-        const field = objectFields.find(f => f.id === actionField.field_id);
-        if (field && actionField.formula_type === 'dynamic' && actionField.formula_expression) {
-          const newValue = evaluateFormula(
-            actionField.formula_expression, 
-            { 
-              fieldValues: form.getValues(), 
-              lookupFieldsValues 
-            }
-          );
-          
-          form.setValue(field.api_name, newValue);
-        }
-      });
-    }
-  }, [lookupFieldsValues, enabledActionFields, objectFields, form]);
 
   // Get pre-selected fields
   const preselectedFields = enabledActionFields
