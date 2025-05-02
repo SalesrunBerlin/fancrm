@@ -24,14 +24,26 @@ export function useFieldPicklistValues(fieldId: string) {
   const { data: picklistValues, isLoading, refetch } = useQuery({
     queryKey: ["picklist-values", fieldId],
     queryFn: async (): Promise<PicklistValue[]> => {
+      if (!fieldId) {
+        console.log("No fieldId provided for picklist values");
+        return [];
+      }
+
+      console.log("Fetching picklist values for field:", fieldId);
+      
       // First check if this is a system field
       const { data: fieldInfo, error: fieldError } = await supabase
         .from("object_fields")
-        .select("is_system, owner_id")
+        .select("is_system, owner_id, api_name, object_type_id")
         .eq("id", fieldId)
         .maybeSingle();
       
-      if (fieldError) throw fieldError;
+      if (fieldError) {
+        console.error("Error fetching field info:", fieldError);
+        throw fieldError;
+      }
+      
+      console.log("Field info:", fieldInfo);
       
       // Query picklist values with appropriate filtering
       let query = supabase
@@ -39,18 +51,20 @@ export function useFieldPicklistValues(fieldId: string) {
         .select("*")
         .eq("field_id", fieldId);
       
-      // If it's not a system field, or if the current user is not the owner,
-      // only show picklist values that the current user owns
-      if (!fieldInfo?.is_system && fieldInfo?.owner_id !== user?.id) {
-        query = query.eq("owner_id", user?.id);
-      }
+      // Removed the owner_id restriction to allow seeing all picklist values regardless of owner
+      // This ensures system fields with picklist values are visible to all users
       
       const { data, error } = await query.order("order_position");
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching picklist values:", error);
+        throw error;
+      }
+      
+      console.log(`Found ${data.length} picklist values for field ${fieldId}`);
       return data;
     },
-    enabled: !!user && !!fieldId,
+    enabled: !!fieldId,
   });
 
   const addValue = useMutation({
