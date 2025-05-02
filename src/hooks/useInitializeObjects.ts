@@ -36,7 +36,7 @@ export function useInitializeObjects() {
         safeErrorToast("Error initializing objects", {
           description: errorMessage
         });
-        throw error;
+        throw new Error(errorMessage);
       } finally {
         setIsInitializing(false);
       }

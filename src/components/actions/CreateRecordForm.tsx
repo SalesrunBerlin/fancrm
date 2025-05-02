@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -56,14 +57,24 @@ export function CreateRecordForm({
   const [error, setError] = useState<string | null>(null);
   const [lookupFieldsValues, setLookupFieldsValues] = useState<Record<string, Record<string, any>>>({});
   
+  // Filter only enabled fields or fields that are required by the object
+  const enabledActionFields = actionFields.filter(af => 
+    af.is_enabled || af.is_required
+  );
+  
+  // Get the corresponding object fields that are enabled
+  const enabledObjectFields = objectFields.filter(objField => 
+    enabledActionFields.some(af => af.field_id === objField.id) || objField.is_required
+  );
+  
   // Build form schema based on fields
-  const formSchema = buildFormSchema(objectFields);
+  const formSchema = buildFormSchema(enabledObjectFields);
   
   // Prepare default values from action fields
   const defaultValues: Record<string, any> = {};
   
   // Process action fields to set default values
-  actionFields.forEach(actionField => {
+  enabledActionFields.forEach(actionField => {
     const field = objectFields.find(f => f.id === actionField.field_id);
     if (field) {
       // Check if this field has a formula
@@ -88,7 +99,7 @@ export function CreateRecordForm({
   
   useEffect(() => {
     // First, collect all lookup fields that have values
-    const lookupFields = objectFields
+    const lookupFields = enabledObjectFields
       .filter(field => field.data_type === 'lookup');
       
     const lookupFieldsWithValues = new Set<string>();
@@ -152,13 +163,13 @@ export function CreateRecordForm({
       
       fetchLookupFieldsValues();
     }
-  }, [objectFields, actionFields, form]);
+  }, [objectFields, actionFields, form, enabledObjectFields]);
 
   // Update form values when lookup values change
   useEffect(() => {
     if (Object.keys(lookupFieldsValues).length > 0) {
       // Re-evaluate formulas with the new lookup values
-      actionFields.forEach(actionField => {
+      enabledActionFields.forEach(actionField => {
         const field = objectFields.find(f => f.id === actionField.field_id);
         if (field && actionField.formula_type === 'dynamic' && actionField.formula_expression) {
           const newValue = evaluateFormula(
@@ -173,10 +184,10 @@ export function CreateRecordForm({
         }
       });
     }
-  }, [lookupFieldsValues, actionFields, objectFields]);
+  }, [lookupFieldsValues, enabledActionFields, objectFields, form]);
 
   // Get pre-selected fields
-  const preselectedFields = actionFields
+  const preselectedFields = enabledActionFields
     .filter(f => f.is_preselected)
     .map(actionField => {
       const field = objectFields.find(f => f.id === actionField.field_id);
@@ -185,7 +196,7 @@ export function CreateRecordForm({
     .filter(Boolean) as ObjectField[];
   
   // Get the remaining fields
-  const remainingFields = objectFields.filter(field => 
+  const remainingFields = enabledObjectFields.filter(field => 
     !preselectedFields.some(pf => pf.id === field.id)
   );
 

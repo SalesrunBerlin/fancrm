@@ -10,6 +10,7 @@ export interface ActionFieldCreateInput {
   action_id: string;
   field_id: string;
   is_preselected?: boolean;
+  is_enabled?: boolean;
   default_value?: string | null;
   display_order?: number;
   formula_type?: 'static' | 'dynamic';
@@ -22,6 +23,7 @@ export interface ActionFieldWithDetails extends ActionField {
   data_type?: string;
   formula_type?: 'static' | 'dynamic';
   formula_expression?: string | null;
+  is_required?: boolean;
 }
 
 export function useActionFields(actionId?: string) {
@@ -39,7 +41,7 @@ export function useActionFields(actionId?: string) {
         .from("action_field_settings")
         .select(`
           *,
-          object_fields:field_id (id, name, api_name, data_type, options)
+          object_fields:field_id (id, name, api_name, data_type, options, is_required)
         `)
         .eq("action_id", actionId)
         .order("display_order", { ascending: true });
@@ -55,6 +57,7 @@ export function useActionFields(actionId?: string) {
         field_name: item.object_fields?.name,
         api_name: item.object_fields?.api_name,
         data_type: item.object_fields?.data_type,
+        is_required: item.object_fields?.is_required,
         options: item.object_fields?.options,
       })) as ActionFieldWithDetails[];
     },
@@ -123,6 +126,40 @@ export function useActionFields(actionId?: string) {
     onError: (error) => {
       toast.error("Failed to update field");
       console.error("Error updating field:", error);
+    },
+    onSettled: () => {
+      setIsLoading(false);
+    },
+  });
+
+  // Toggle field enabled state
+  const toggleFieldEnabled = useMutation({
+    mutationFn: async ({ id, is_enabled }: { id: string; is_enabled: boolean }) => {
+      if (!user) throw new Error("User not authenticated");
+      
+      setIsLoading(true);
+      
+      const { data: updatedData, error } = await supabase
+        .from("action_field_settings")
+        .update({ is_enabled })
+        .eq("id", id)
+        .select()
+        .single();
+
+      if (error) {
+        throw error;
+      }
+
+      return updatedData as ActionField;
+    },
+    onSuccess: (_data, _variables) => {
+      if (actionId) {
+        queryClient.invalidateQueries({ queryKey: ["action-fields", actionId] });
+      }
+    },
+    onError: (error) => {
+      toast.error("Failed to update field visibility");
+      console.error("Error updating field visibility:", error);
     },
     onSettled: () => {
       setIsLoading(false);
@@ -199,6 +236,7 @@ export function useActionFields(actionId?: string) {
     updateField,
     removeField,
     updateFieldsOrder,
+    toggleFieldEnabled,
     isLoading,
   };
 }

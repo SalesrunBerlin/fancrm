@@ -19,6 +19,7 @@ export type Database = {
           formula_expression: string | null
           formula_type: string
           id: string
+          is_enabled: boolean
           is_preselected: boolean
           updated_at: string
         }
@@ -31,6 +32,7 @@ export type Database = {
           formula_expression?: string | null
           formula_type?: string
           id?: string
+          is_enabled?: boolean
           is_preselected?: boolean
           updated_at?: string
         }
@@ -43,6 +45,7 @@ export type Database = {
           formula_expression?: string | null
           formula_type?: string
           id?: string
+          is_enabled?: boolean
           is_preselected?: boolean
           updated_at?: string
         }

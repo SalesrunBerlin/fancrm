@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -22,6 +23,7 @@ export interface ActionField {
   action_id: string;
   field_id: string;
   is_preselected: boolean;
+  is_enabled: boolean;
   default_value?: string | null;
   display_order: number;
   created_at: string;
