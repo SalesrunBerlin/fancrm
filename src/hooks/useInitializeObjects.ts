@@ -4,6 +4,7 @@ import { useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { safeErrorToast } from "@/patches/FixToastVariants";
 
 export function useInitializeObjects() {
   const { user } = useAuth();
@@ -24,9 +25,8 @@ export function useInitializeObjects() {
         if (error) throw error;
         return data;
       } catch (error: any) {
-        toast("Error initializing objects", {
-          description: error.message || "An unexpected error occurred",
-          variant: "destructive"
+        safeErrorToast("Error initializing objects", {
+          description: error.message || "An unexpected error occurred"
         });
         throw error;
       } finally {

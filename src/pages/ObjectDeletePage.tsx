@@ -27,9 +27,8 @@ export default function ObjectDeletePage() {
       });
       navigate("/settings/object-manager");
     } catch (error: any) {
-      toast("Deletion failed", {
-        description: error.message || "There was an error deleting the object.",
-        variant: "destructive"
+      toast.error("Deletion failed", {
+        description: error.message || "There was an error deleting the object."
       });
     } finally {
       setIsDeleting(false);

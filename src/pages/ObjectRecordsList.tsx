@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
@@ -14,6 +13,7 @@ import { useUserFieldSettings } from "@/hooks/useUserFieldSettings";
 import { ObjectField } from "@/hooks/useObjectTypes";
 import { DeleteDialog } from "@/components/common/DeleteDialog";
 import { toast } from "sonner";
+import { EnhancedObjectField, toSafeObjectField } from "@/patches/FixObjectFieldType";
 
 export default function ObjectRecordsList() {
   const { objectTypeId } = useParams<{ objectTypeId: string }>();
@@ -27,7 +27,7 @@ export default function ObjectRecordsList() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   
   // System fields definition
-  const systemFields: ObjectField[] = [
+  const systemFields: EnhancedObjectField[] = [
     { 
       id: "sys_created_at", 
       api_name: "created_at", 
@@ -38,8 +38,7 @@ export default function ObjectRecordsList() {
       object_type_id: objectTypeId || "",
       display_order: 1000,
       owner_id: "",
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
+      created_at: new Date().toISOString()
     },
     { 
       id: "sys_updated_at", 
@@ -51,8 +50,7 @@ export default function ObjectRecordsList() {
       object_type_id: objectTypeId || "",
       display_order: 1001,
       owner_id: "",
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
+      created_at: new Date().toISOString()
     },
     { 
       id: "sys_record_id", 
@@ -64,8 +62,7 @@ export default function ObjectRecordsList() {
       object_type_id: objectTypeId || "",
       display_order: 1002,
       owner_id: "",
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
+      created_at: new Date().toISOString()
     }
   ];
   
@@ -126,7 +123,11 @@ export default function ObjectRecordsList() {
       field => visibleFields.includes(field.api_name)
     );
     
-    return [...displayFields, ...selectedSystemFields];
+    // Convert enhanced fields to standard fields for display
+    return [
+      ...displayFields, 
+      ...selectedSystemFields.map(field => toSafeObjectField(field))
+    ];
   };
 
   return (

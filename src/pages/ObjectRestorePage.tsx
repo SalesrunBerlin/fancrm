@@ -27,9 +27,8 @@ export default function ObjectRestorePage() {
       });
       navigate("/settings/object-manager");
     } catch (error: any) {
-      toast("Restore failed", {
-        description: error.message || "There was an error restoring the object.",
-        variant: "destructive"
+      toast.error("Restore failed", {
+        description: error.message || "There was an error restoring the object."
       });
     } finally {
       setIsRestoring(false);

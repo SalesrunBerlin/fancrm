@@ -53,7 +53,7 @@ export default function ObjectFieldEditPage() {
   });
   
   useEffect(() => {
-    if (!isLoading && !field) {
+    if (!isLoading && !field && fieldId) {
       navigate(`/settings/objects/${objectTypeId}`);
     }
     
@@ -65,7 +65,7 @@ export default function ObjectFieldEditPage() {
         display_field_api_name: field.options?.display_field_api_name,
       });
     }
-  }, [isLoading, field, navigate, objectTypeId, form]);
+  }, [isLoading, field, navigate, objectTypeId, form, fieldId]);
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   

@@ -11,6 +11,7 @@ import { ObjectField } from "@/hooks/useObjectTypes";
 // Enhanced ObjectField type with created_at
 export interface EnhancedObjectField extends ObjectField {
   created_at?: string;
+  updated_at?: string;
 }
 
 // Safe conversion utility to handle the created_at field

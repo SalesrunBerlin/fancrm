@@ -108,7 +108,7 @@ export function useObjectFieldEdit(fieldId: string, objectTypeId: string) {
   });
 
   const onSubmit = async (data: FieldEditFormData) => {
-    if (!field) return;
+    if (!field) return undefined;
     
     // Prepare field options based on field type
     let options = { ...field.options } || {};

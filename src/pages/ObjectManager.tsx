@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
 import { Button } from "@/components/ui/button";
@@ -20,17 +19,18 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
+import { isArchived } from "@/patches/ObjectTypePatches";
 
 export default function ObjectManager() {
   // Fetch all objects including archived ones
-  const { objectTypes: allObjectTypes, isLoading, deleteObjectType, publishedObjects } = useObjectTypes(true);
+  const { objectTypes: allObjectTypes, isLoading, deleteObjectType, publishedObjects } = useObjectTypes();
   const [activeTab, setActiveTab] = useState("all");
   const [objectToDelete, setObjectToDelete] = useState<ObjectType | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   // Split objects into active and archived
-  const activeObjects = allObjectTypes?.filter(obj => !obj.is_archived) || [];
-  const archivedObjects = allObjectTypes?.filter(obj => obj.is_archived) || [];
+  const activeObjects = allObjectTypes?.filter(obj => !isArchived(obj)) || [];
+  const archivedObjects = allObjectTypes?.filter(obj => isArchived(obj)) || [];
 
   const getIconComponent = (iconName: string | null) => {
     switch(iconName) {

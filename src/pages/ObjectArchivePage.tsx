@@ -27,9 +27,8 @@ export default function ObjectArchivePage() {
       });
       navigate("/settings/object-manager");
     } catch (error: any) {
-      toast("Archive failed", {
-        description: error.message || "There was an error archiving the object.",
-        variant: "destructive"
+      toast.error("Archive failed", {
+        description: error.message || "There was an error archiving the object."
       });
     } finally {
       setIsArchiving(false);
@@ -74,7 +73,7 @@ export default function ObjectArchivePage() {
         </CardHeader>
         
         <CardContent>
-          <Alert variant="warning" className="mb-4">
+          <Alert className="mb-4">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
               Archiving this object will hide it from object lists and prevent new records from being created. 
