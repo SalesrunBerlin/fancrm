@@ -77,6 +77,7 @@ function App() {
               <Route path="/actions/new" element={<ActionCreatePage />} />
               <Route path="/actions/:actionId" element={<ActionDetailPage />} />
               <Route path="/actions/execute/:actionId" element={<ActionExecutePage />} />
+              <Route path="/actions/execute/:actionId/from/:sourceRecordId" element={<ActionExecutePage />} />
             </Route>
           </Routes>
           <Toaster richColors position="top-right" />

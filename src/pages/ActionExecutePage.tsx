@@ -35,6 +35,9 @@ export default function ActionExecutePage() {
 
   const targetObject = objectTypes?.find(obj => obj.id === action?.target_object_id);
 
+  console.log("ActionExecutePage: Current params:", { actionId, sourceRecordId });
+  console.log("ActionExecutePage: Source object ID:", sourceObjectId);
+  
   // Aktion laden
   useEffect(() => {
     const fetchAction = async () => {
@@ -45,43 +48,60 @@ export default function ActionExecutePage() {
       }
 
       try {
+        console.log("ActionExecutePage: Fetching action with ID:", actionId);
+        
         const { data, error } = await supabase
           .from("actions")
           .select("*, object_fields(options)")
           .eq("id", actionId)
           .single();
 
-        if (error) throw error;
+        if (error) {
+          console.error("ActionExecutePage: Error fetching action:", error);
+          throw error;
+        }
         
         const actionData = data as Action & { 
           object_fields?: { options: any } 
         };
         
+        console.log("ActionExecutePage: Action data loaded:", actionData);
         setAction(actionData);
         
         // Wenn es sich um eine verknüpfte Aktion handelt, müssen wir die Quell-Objekttyp-ID abrufen
-        if (actionData.action_type === "linked_record" && actionData.source_field_id) {
+        if (actionData.action_type === "linked_record" && actionData.source_field_id && sourceRecordId) {
+          console.log("ActionExecutePage: Linked action detected, fetching source field details");
           try {
             const { data: fieldData, error: fieldError } = await supabase
               .from("object_fields")
-              .select("options")
+              .select("options, api_name, name")
               .eq("id", actionData.source_field_id)
               .single();
               
-            if (fieldError) throw fieldError;
+            if (fieldError) {
+              console.error("ActionExecutePage: Error fetching source field:", fieldError);
+              throw fieldError;
+            }
             
-            let targetObjectTypeId = '';
+            console.log("ActionExecutePage: Source field data:", fieldData);
+            
+            let targetObjectTypeId: string = '';
             
             if (fieldData && fieldData.options) {
+              console.log("ActionExecutePage: Processing field options:", 
+                typeof fieldData.options, fieldData.options);
+                
               // Handle options as string
               if (typeof fieldData.options === 'string') {
                 try {
                   const parsedOptions = JSON.parse(fieldData.options);
+                  console.log("ActionExecutePage: Parsed options:", parsedOptions);
                   if (parsedOptions && typeof parsedOptions === 'object' && 'target_object_type_id' in parsedOptions) {
                     targetObjectTypeId = String(parsedOptions.target_object_type_id);
+                    console.log("ActionExecutePage: Found target object type ID in parsed options:", targetObjectTypeId);
                   }
                 } catch (e) {
-                  console.error("Error parsing field options:", e);
+                  console.error("ActionExecutePage: Error parsing field options:", e);
                 }
               } 
               // Handle options as object
@@ -89,19 +109,23 @@ export default function ActionExecutePage() {
                 const options = fieldData.options as Record<string, any>;
                 if ('target_object_type_id' in options) {
                   targetObjectTypeId = String(options.target_object_type_id);
+                  console.log("ActionExecutePage: Found target object type ID in options object:", targetObjectTypeId);
                 }
               }
             }
             
             if (targetObjectTypeId) {
+              console.log("ActionExecutePage: Setting source object ID to:", targetObjectTypeId);
               setSourceObjectId(targetObjectTypeId);
+            } else {
+              console.error("ActionExecutePage: Could not determine target object type ID from field options");
             }
           } catch (err) {
-            console.error("Error getting source field details:", err);
+            console.error("ActionExecutePage: Error getting source field details:", err);
           }
         }
       } catch (err: any) {
-        console.error("Error fetching action:", err);
+        console.error("ActionExecutePage: Error fetching action:", err);
         setError(err.message || "Failed to load action");
       } finally {
         setLoading(false);
@@ -109,11 +133,12 @@ export default function ActionExecutePage() {
     };
 
     fetchAction();
-  }, [actionId]);
+  }, [actionId, sourceRecordId]);
 
   // Warten, bis alle benötigten Daten geladen sind
   useEffect(() => {
     if (!loadingActionFields && actionFields && objectFields && action) {
+      console.log("ActionExecutePage: All required data loaded");
       setLoading(false);
     }
   }, [actionFields, objectFields, loadingActionFields, action]);
@@ -154,21 +179,33 @@ export default function ActionExecutePage() {
   }
 
   // Für verknüpfte Aktionen prüfen, ob der Quelldatensatz vorhanden ist
-  if (action.action_type === "linked_record" && sourceRecordId && !sourceRecord) {
-    if (!sourceObjectId) {
+  if (action.action_type === "linked_record" && sourceRecordId && !sourceObjectId) {
+    console.log("ActionExecutePage: Missing source object ID for linked record action");
+    return (
+      <div className="space-y-4">
+        <PageHeader
+          title="Aktionsfehler"
+          description="Es gab ein Problem beim Laden des Quelldatensatzes"
+          backTo="/actions"
+        />
+        <Alert className={getAlertVariantClass("destructive")}>
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            Informationen zum Quellobjekt fehlen
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
+
+  // Für verknüpfte Aktionen prüfen, ob der Quelldatensatz geladen werden konnte
+  if (action.action_type === "linked_record" && sourceRecordId && sourceObjectId && !sourceRecord) {
+    console.log("ActionExecutePage: Source record not loaded for linked action");
+    if (loading) {
       return (
-        <div className="space-y-4">
-          <PageHeader
-            title="Aktionsfehler"
-            description="Es gab ein Problem beim Laden des Quelldatensatzes"
-            backTo="/actions"
-          />
-          <Alert className={getAlertVariantClass("destructive")}>
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              Informationen zum Quellobjekt fehlen
-            </AlertDescription>
-          </Alert>
+        <div className="flex justify-center items-center h-64">
+          <Loader2 className="h-8 w-8 animate-spin" />
+          <span className="ml-2">Lade Quelldatensatz...</span>
         </div>
       );
     }
@@ -193,6 +230,7 @@ export default function ActionExecutePage() {
     // Das entsprechende Objektfeld finden
     const sourceField = objectFields?.find(field => field.id === action.source_field_id);
     if (sourceField) {
+      console.log(`ActionExecutePage: Setting initial value for ${sourceField.api_name} to ${sourceRecordId}`);
       initialValues[sourceField.api_name] = sourceRecordId;
     }
   }

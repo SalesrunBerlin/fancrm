@@ -77,11 +77,14 @@ export function ObjectActionsSection({
   }, [objectTypeId, getActionsByObjectId]);
 
   const handleExecuteAction = (action: Action) => {
+    // Update the navigation paths to use the new route format
     if (action.action_type === "linked_record" && recordId) {
-      // For linked records, we need to pass both actionId and recordId
+      // For linked records, navigate to the new route format with "from" parameter
+      console.log(`ObjectActionsSection: Executing linked action ${action.id} with record ${recordId}`);
       navigate(`/actions/execute/${action.id}/from/${recordId}`);
     } else {
       // For global actions, just pass the actionId
+      console.log(`ObjectActionsSection: Executing global action ${action.id}`);
       navigate(`/actions/execute/${action.id}`);
     }
   };
