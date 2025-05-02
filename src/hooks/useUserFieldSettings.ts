@@ -24,21 +24,21 @@ export function useUserFieldSettings(objectTypeId: string | undefined) {
   );
 
   const updateVisibleFields = useCallback((fieldApiNames: string[]) => {
-    setSettings(prev => ({
+    setSettings((prev: UserFieldSettings) => ({
       ...prev,
       visibleFields: fieldApiNames
     }));
   }, [setSettings]);
   
   const updateViewMode = useCallback((mode: ViewMode) => {
-    setSettings(prev => ({
+    setSettings((prev: UserFieldSettings) => ({
       ...prev,
       viewMode: mode
     }));
   }, [setSettings]);
   
   const updateKanbanField = useCallback((fieldApiName: string | undefined) => {
-    setSettings(prev => ({
+    setSettings((prev: UserFieldSettings) => ({
       ...prev,
       kanbanField: fieldApiName
     }));

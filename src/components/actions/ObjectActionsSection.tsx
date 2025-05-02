@@ -151,4 +151,3 @@ function formatActionType(type: string): string {
       return type.replace(/_/g, ' ');
   }
 }
-

@@ -117,7 +117,7 @@ export function useActions() {
           // Get field details to check which object type they reference
           const { data: fields, error: fieldsError } = await supabase
             .from("object_fields")
-            .select("id, options")
+            .select("id, options, object_type_id")
             .in("id", fieldIds)
             .filter("data_type", "eq", "lookup");
             
@@ -129,20 +129,25 @@ export function useActions() {
               const field = fields.find(f => f.id === action.source_field_id);
               if (!field) return false;
               
-              let options = field.options;
-              if (typeof options === 'string') {
-                try {
-                  options = JSON.parse(options);
-                } catch (e) {
-                  console.error("Error parsing field options:", e);
-                  return false;
+              // First check if the field's own object_type_id matches our current objectTypeId
+              // This means we're on the source object page where the linked action should appear
+              if (field.object_type_id === objectTypeId) {
+                let options = field.options;
+                if (typeof options === 'string') {
+                  try {
+                    options = JSON.parse(options);
+                  } catch (e) {
+                    console.error("Error parsing field options:", e);
+                    return false;
+                  }
                 }
-              }
-              
-              // Check if the field references our object type - fixed TypeScript error by checking type
-              if (options && typeof options === 'object' && !Array.isArray(options)) {
-                const typedOptions = options as Record<string, any>;
-                return typedOptions.target_object_type_id === objectTypeId;
+                
+                // Check if the field references our object type - fixed TypeScript error by checking type
+                if (options && typeof options === 'object' && !Array.isArray(options)) {
+                  const typedOptions = options as Record<string, any>;
+                  // We want to include this action because we're on the source object page
+                  return true;
+                }
               }
               
               return false;
