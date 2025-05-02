@@ -15,7 +15,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ActionExecutionDialog } from "@/components/actions/ActionExecutionDialog";
 
 export default function ActionsPage() {
   const navigate = useNavigate();
@@ -23,8 +22,6 @@ export default function ActionsPage() {
   const { objectTypes } = useObjectTypes();
   const [actionToDelete, setActionToDelete] = useState<Action | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [actionToExecute, setActionToExecute] = useState<Action | null>(null);
-  const [isExecuteDialogOpen, setIsExecuteDialogOpen] = useState(false);
 
   const handleDeleteAction = async () => {
     if (!actionToDelete) return;
@@ -103,10 +100,7 @@ export default function ActionsPage() {
                   <div className="flex items-center gap-2">
                     <Button 
                       size="sm" 
-                      onClick={() => {
-                        setActionToExecute(action);
-                        setIsExecuteDialogOpen(true);
-                      }}
+                      onClick={() => navigate(`/actions/execute/${action.id}`)}
                     >
                       <Play className="h-4 w-4 mr-1" /> Execute
                     </Button>
@@ -160,14 +154,6 @@ export default function ActionsPage() {
         onConfirm={handleDeleteAction}
         deleteButtonText="Delete Action"
       />
-
-      {actionToExecute && (
-        <ActionExecutionDialog
-          action={actionToExecute}
-          open={isExecuteDialogOpen}
-          onOpenChange={setIsExecuteDialogOpen}
-        />
-      )}
     </div>
   );
 }

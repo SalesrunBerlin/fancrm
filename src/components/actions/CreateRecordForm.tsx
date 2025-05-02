@@ -29,12 +29,14 @@ const buildFormSchema = (fields: ObjectField[]) => {
   const schemaObj: Record<string, any> = {};
 
   fields.forEach((field) => {
+    // Start with a base string validator
     let validator = z.string();
 
     if (field.is_required) {
       validator = validator.min(1, { message: `${field.name} is required` });
     } else {
-      validator = validator.optional();
+      // For optional fields, use .optional() on the string validator
+      validator = z.string().optional();
     }
 
     schemaObj[field.api_name] = validator;
@@ -85,7 +87,7 @@ export function CreateRecordForm({
     !preselectedFields.some(pf => pf.id === field.id)
   );
 
-  const handleSubmit = async (data: any) => {
+  const handleSubmit = async (data: Record<string, any>) => {
     if (!user) {
       setError("You must be logged in to create records");
       return;
@@ -111,7 +113,7 @@ export function CreateRecordForm({
       const fieldValues = Object.entries(data).map(([api_name, value]) => ({
         record_id: record.id,
         field_api_name: api_name,
-        value: value || null,
+        value: value === undefined ? null : String(value),
       }));
       
       const { error: valuesError } = await supabase
@@ -152,7 +154,6 @@ export function CreateRecordForm({
                   key={field.id}
                   field={field}
                   form={form}
-                  objectTypeId={objectTypeId}
                 />
               ))}
             </div>
@@ -175,7 +176,6 @@ export function CreateRecordForm({
                   key={field.id}
                   field={field}
                   form={form}
-                  objectTypeId={objectTypeId}
                 />
               ))}
             </div>

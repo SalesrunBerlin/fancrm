@@ -1,3 +1,4 @@
+
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { Toaster } from "sonner"; 
 import { Layout } from "@/components/layout/Layout";
@@ -29,6 +30,7 @@ import CreateObjectFromFieldValuesPage from "@/pages/CreateObjectFromFieldValues
 import ActionsPage from "./pages/ActionsPage";
 import ActionCreatePage from "./pages/ActionCreatePage";
 import ActionDetailPage from "./pages/ActionDetailPage";
+import ActionExecutePage from "./pages/ActionExecutePage";
 
 // Create a client
 const queryClient = new QueryClient({
@@ -74,6 +76,7 @@ function App() {
               <Route path="/actions" element={<ActionsPage />} />
               <Route path="/actions/new" element={<ActionCreatePage />} />
               <Route path="/actions/:actionId" element={<ActionDetailPage />} />
+              <Route path="/actions/execute/:actionId" element={<ActionExecutePage />} />
             </Route>
           </Routes>
           <Toaster richColors position="top-right" />
