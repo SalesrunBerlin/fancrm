@@ -1,8 +1,8 @@
-
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
 
 // Update the interface to include 'skip' as an action option
 export interface DuplicateRecord {
@@ -52,6 +52,7 @@ const removeSquareBrackets = (text: string): string => {
 
 export function useImportRecords(objectTypeId: string, fields: any[]) {
   const queryClient = useQueryClient();
+  const { user } = useAuth(); // Get the current authenticated user
   const [isImporting, setIsImporting] = useState(false);
   const [importData, setImportData] = useState<ImportDataType | null>(null);
   const [columnMappings, setColumnMappings] = useState<ColumnMapping[]>([]);
@@ -62,14 +63,28 @@ export function useImportRecords(objectTypeId: string, fields: any[]) {
 
   const createRecord = useMutation({
     mutationFn: async (data: RecordFormData) => {
-      // Create record
+      if (!user) {
+        throw new Error("User not authenticated");
+      }
+      
+      console.log("Creating record with data:", data);
+      
+      // Create record with owner_id set to current user
       const { data: newRecord, error: recordError } = await supabase
         .from("object_records")
-        .insert([{ object_type_id: objectTypeId }])
+        .insert([{ 
+          object_type_id: objectTypeId,
+          owner_id: user.id, // Add owner_id to comply with RLS policies
+          created_by: user.id, // Also track who created the record
+          last_modified_by: user.id
+        }])
         .select()
         .single();
       
-      if (recordError) throw recordError;
+      if (recordError) {
+        console.error("Error creating record:", recordError);
+        throw recordError;
+      }
       
       // Create field values
       const fieldValues = [];
@@ -89,9 +104,13 @@ export function useImportRecords(objectTypeId: string, fields: any[]) {
           .from("object_field_values")
           .insert(fieldValues);
         
-        if (valuesError) throw valuesError;
+        if (valuesError) {
+          console.error("Error creating field values:", valuesError);
+          throw valuesError;
+        }
       }
       
+      console.log("Successfully created record with ID:", newRecord.id);
       return newRecord;
     },
     onSuccess: () => {
@@ -101,7 +120,39 @@ export function useImportRecords(objectTypeId: string, fields: any[]) {
 
   const updateRecord = useMutation({
     mutationFn: async ({ id, data }: { id: string, data: RecordFormData }) => {
-      // Update field values
+      if (!user) {
+        throw new Error("User not authenticated");
+      }
+      
+      console.log("Updating record:", id, "with data:", data);
+
+      // Update the record to set last_modified_by and ensure owner_id is set
+      const { error: recordError } = await supabase
+        .from("object_records")
+        .update({ 
+          updated_at: new Date().toISOString(),
+          owner_id: user.id, // Set owner_id to current user to comply with RLS policies
+          last_modified_by: user.id
+        })
+        .eq("id", id);
+      
+      if (recordError) {
+        console.error("Error updating record:", recordError);
+        throw recordError;
+      }
+      
+      // Delete existing values
+      const { error: deleteError } = await supabase
+        .from("object_field_values")
+        .delete()
+        .eq("record_id", id);
+      
+      if (deleteError) {
+        console.error("Error deleting field values:", deleteError);
+        throw deleteError;
+      }
+      
+      // Insert new values
       const fieldValues = [];
       
       for (const [fieldApiName, value] of Object.entries(data)) {
@@ -114,21 +165,15 @@ export function useImportRecords(objectTypeId: string, fields: any[]) {
         }
       }
       
-      // Delete existing values
-      const { error: deleteError } = await supabase
-        .from("object_field_values")
-        .delete()
-        .eq("record_id", id);
-      
-      if (deleteError) throw deleteError;
-      
-      // Insert new values
       if (fieldValues.length > 0) {
         const { error: valuesError } = await supabase
           .from("object_field_values")
           .insert(fieldValues);
         
-        if (valuesError) throw valuesError;
+        if (valuesError) {
+          console.error("Error creating field values:", valuesError);
+          throw valuesError;
+        }
       }
       
       return { id };
@@ -364,12 +409,19 @@ export function useImportRecords(objectTypeId: string, fields: any[]) {
       return null;
     }
     
+    if (!user) {
+      toast.error("You must be logged in to import records");
+      return null;
+    }
+    
     setIsImporting(true);
     let successCount = 0;
     let failureCount = 0;
     
     try {
       const selectedRowData = importData.rows.filter((_, idx) => selectedRows.includes(idx));
+      
+      console.log(`Starting import of ${selectedRowData.length} records as user ${user.id}`);
       
       // Process duplicates first based on their action
       const processedRowIndices = new Set<number>();
@@ -382,9 +434,11 @@ export function useImportRecords(objectTypeId: string, fields: any[]) {
         try {
           if (duplicate.action === 'skip') {
             // Skip this record
+            console.log(`Skipping duplicate at row ${duplicate.importRowIndex}`);
             continue;
           } else if (duplicate.action === 'update') {
             // Update existing record
+            console.log(`Updating record ${duplicate.existingRecord.id} at row ${duplicate.importRowIndex}`);
             await updateRecord.mutateAsync({
               id: duplicate.existingRecord.id,
               data: duplicate.record
@@ -392,6 +446,7 @@ export function useImportRecords(objectTypeId: string, fields: any[]) {
             successCount++;
           } else if (duplicate.action === 'create') {
             // Create new record
+            console.log(`Creating new record for duplicate at row ${duplicate.importRowIndex}`);
             await createRecord.mutateAsync(duplicate.record);
             successCount++;
           }
@@ -419,6 +474,7 @@ export function useImportRecords(objectTypeId: string, fields: any[]) {
         }
         
         try {
+          console.log(`Creating record for row ${rowIndex}`);
           await createRecord.mutateAsync(record);
           successCount++;
         } catch (error) {

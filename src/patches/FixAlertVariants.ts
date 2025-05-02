@@ -5,10 +5,10 @@
  */
 
 import { cn } from "@/lib/utils";
-import { AlertProps } from "@/components/ui/alert";
 
-export interface ExtendedAlertProps extends AlertProps {
+export interface ExtendedAlertProps {
   variant?: "default" | "destructive" | "warning";
+  className?: string;
 }
 
 export function getAlertVariantClass(variant?: "default" | "destructive" | "warning") {
