@@ -171,7 +171,7 @@ export default function ObjectRecordsList() {
         }
       />
 
-      {/* New Actions section */}
+      {/* Actions section - now will only show when actions exist */}
       <ObjectActionsSection 
         objectTypeId={objectTypeId!} 
         objectTypeName={objectType.name}

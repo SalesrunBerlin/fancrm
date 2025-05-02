@@ -24,16 +24,19 @@ export function ObjectActionsSection({ objectTypeId, objectTypeName }: ObjectAct
   const { getActionsByObjectId } = useActions();
   const [actions, setActions] = useState<Action[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
     const fetchActions = async () => {
       if (objectTypeId) {
         setLoading(true);
+        setError(null);
         try {
           const objectActions = await getActionsByObjectId(objectTypeId);
           setActions(objectActions);
-        } catch (error) {
-          console.error("Error fetching actions:", error);
+        } catch (err) {
+          console.error("Error fetching actions:", err);
+          setError(err instanceof Error ? err : new Error("Failed to fetch actions"));
         } finally {
           setLoading(false);
         }
@@ -46,6 +49,11 @@ export function ObjectActionsSection({ objectTypeId, objectTypeName }: ObjectAct
   const handleExecuteAction = (actionId: string) => {
     navigate(`/actions/execute/${actionId}`);
   };
+
+  // Don't render anything if there are no actions and we're not loading
+  if (!loading && actions.length === 0) {
+    return null;
+  }
 
   if (loading) {
     return (
@@ -61,15 +69,9 @@ export function ObjectActionsSection({ objectTypeId, objectTypeName }: ObjectAct
     );
   }
 
-  if (actions.length === 0) {
-    return (
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle>Actions</CardTitle>
-          <CardDescription>No actions available for this {objectTypeName || "object"}.</CardDescription>
-        </CardHeader>
-      </Card>
-    );
+  if (error) {
+    console.error("Error loading actions:", error);
+    return null; // Hide completely on error
   }
 
   return (
