@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { useNavigate, useLocation, useParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Loader2, PlayCircle } from "lucide-react";
 import { Action, useActions } from "@/hooks/useActions";
@@ -18,21 +18,11 @@ export function ObjectActionsSection({
   recordId
 }: ObjectActionsSectionProps) {
   const navigate = useNavigate();
-  const location = useLocation();
-  const params = useParams();
   const { getActionsByObjectId } = useActions();
   const [actions, setActions] = useState<Action[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const [initialized, setInitialized] = useState(false);
-  
-  // Determine if we're on a target object page by checking URL
-  // When we access through an action execution, the URL will contain '/from/'
-  const isFromActionExecution = location.pathname.includes('/from/') || location.pathname.includes('/actions/execute/');
-  
-  // If record page URL has format like '/objects/targetObjectId/recordId',
-  // check if this is a target object for any linked_record action
-  const currentObjectTypeId = params.objectTypeId;
   
   useEffect(() => {
     console.log(`ObjectActionsSection: Effect running for objectTypeId: ${objectTypeId}`);
@@ -97,13 +87,6 @@ export function ObjectActionsSection({
       navigate(`/actions/execute/${action.id}`);
     }
   };
-
-  // Add additional check for target objects - if we're on a target object page, don't show any actions
-  // This prevents the action buttons from appearing on target object records
-  if (isFromActionExecution) {
-    console.log("ObjectActionsSection: On target object page, not displaying actions");
-    return null;
-  }
 
   // Filter actions based on context
   const filteredActions = actions.filter(action => {

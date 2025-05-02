@@ -6,22 +6,17 @@ import { useAuth } from "@/contexts/AuthContext";
 
 export function useLookupFieldData(
   recordId: string | null | undefined,
-  fieldApiName: string | null | undefined,
-  options?: {
-    enabled?: boolean;
-  }
+  fieldApiName: string | null | undefined
 ) {
   const { user } = useAuth();
   const [lookupData, setLookupData] = useState<Record<string, any> | null>(null);
-  const enabled = options?.enabled !== false && !!user && !!recordId && !!fieldApiName;
 
   // Get the lookup field value (which should be another record's ID)
-  const { data: lookupValue, isLoading: isLoadingLookupValue } = useQuery({
+  const { data: lookupValue } = useQuery({
     queryKey: ["lookup-field-value", recordId, fieldApiName],
     queryFn: async () => {
       if (!recordId || !fieldApiName) return null;
 
-      console.log(`Fetching lookup value for record ${recordId}, field ${fieldApiName}`);
       const { data, error } = await supabase
         .from("object_field_values")
         .select("value")
@@ -34,56 +29,50 @@ export function useLookupFieldData(
         return null;
       }
 
-      console.log(`Lookup value for ${fieldApiName}:`, data?.value);
       return data?.value;
     },
-    enabled
+    enabled: !!user && !!recordId && !!fieldApiName
   });
 
   // When we have a lookup value (target record ID), fetch its field values
-  const { data: fieldValues, isLoading: isLoadingFieldValues } = useQuery({
-    queryKey: ["lookup-field-data", lookupValue],
-    queryFn: async () => {
-      if (!lookupValue) {
-        return null;
-      }
-
-      console.log(`Fetching field values for lookup record ${lookupValue}`);
-      const { data, error } = await supabase
-        .from("object_field_values")
-        .select("field_api_name, value")
-        .eq("record_id", lookupValue);
-
-      if (error) {
-        console.error("Error fetching lookup field data:", error);
-        return null;
-      }
-
-      // Convert to object format
-      const fieldData = data.reduce((acc, field) => {
-        acc[field.field_api_name] = field.value;
-        return acc;
-      }, {} as Record<string, any>);
-
-      console.log(`Lookup field data loaded:`, fieldData);
-      return fieldData;
-    },
-    enabled: enabled && !!lookupValue
-  });
-
-  // Set the lookupData state when fieldValues change
   useEffect(() => {
-    if (fieldValues) {
-      setLookupData(fieldValues);
-    } else {
-      setLookupData(null);
-    }
-  }, [fieldValues]);
+    const fetchLookupData = async () => {
+      if (!lookupValue) {
+        setLookupData(null);
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from("object_field_values")
+          .select("field_api_name, value")
+          .eq("record_id", lookupValue);
+
+        if (error) {
+          console.error("Error fetching lookup field data:", error);
+          setLookupData(null);
+          return;
+        }
+
+        // Convert to object format
+        const fieldData = data.reduce((acc, field) => {
+          acc[field.field_api_name] = field.value;
+          return acc;
+        }, {} as Record<string, any>);
+
+        setLookupData(fieldData);
+      } catch (err) {
+        console.error("Error in lookup data fetch:", err);
+        setLookupData(null);
+      }
+    };
+
+    fetchLookupData();
+  }, [lookupValue]);
 
   return {
     lookupValue,
     lookupData,
-    isLoading: enabled && (isLoadingLookupValue || (!!lookupValue && isLoadingFieldValues)),
-    isError: !lookupData && !!lookupValue && !isLoadingFieldValues
+    isLoading: lookupValue && !lookupData
   };
 }
