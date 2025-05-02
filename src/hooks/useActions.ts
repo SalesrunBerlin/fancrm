@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -6,7 +5,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 
 export type ActionType = 'new_record' | 'linked_record';
-export type ActionColor = 'default' | 'destructive' | 'secondary' | 'warning' | 'success';
+export type ActionColor = 
+  // Default colors
+  'default' | 'destructive' | 'secondary' | 'warning' | 'success' |
+  // Extended color palette
+  'purple' | 'indigo' | 'cyan' | 'teal' | 'emerald' | 'lime' | 'yellow' | 'orange' | 'rose' | 'pink' |
+  'violet' | 'fuchsia' | 'sky' | 'cobalt' | 'navy' | 'olive' | 'forest' | 'maroon' | 'brown' | 'coral' |
+  'turquoise' | 'lavender' | 'magenta' | 'slate' | 'charcoal' | 'gold' | 'bronze' | 'silver' | 'mint' |
+  'seafoam' | 'burgundy' | 'ochre' | 'sienna' | 'plum' | 'crimson' | 'mauve' | 'auburn' | 'azure' | 'brick' | 'sage';
 
 export interface Action {
   id: string;
@@ -66,7 +72,13 @@ export function useActions() {
       }
 
       console.log(`useActions: Fetched ${data?.length || 0} actions`);
-      return data as (Action & { object_types: { name: string; api_name: string } })[];
+      // Convert all color values to ActionColor type to fix the type error
+      const typedData = data.map(item => ({
+        ...item,
+        color: (item.color || 'default') as ActionColor
+      }));
+      
+      return typedData as (Action & { object_types: { name: string; api_name: string } })[];
     },
     enabled: !!user,
   });
@@ -154,10 +166,17 @@ export function useActions() {
         }
       }
 
-      // Combine and return all actions
+      // Combine and return all actions with proper type conversion
       const allActions = [...(targetActions || []), ...validSourceActions];
       console.log(`useActions.getActionsByObjectId: Found ${allActions.length} actions total for ${objectTypeId}`);
-      return allActions as Action[];
+      
+      // Fix the type error by ensuring the color property is of type ActionColor
+      const typedActions = allActions.map(action => ({
+        ...action,
+        color: (action.color || 'default') as ActionColor
+      }));
+      
+      return typedActions as Action[];
     } catch (error) {
       console.error("Exception in getActionsByObjectId:", error);
       throw error;
