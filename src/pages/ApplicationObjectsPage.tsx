@@ -1,4 +1,3 @@
-
 import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { PageHeader } from "@/components/ui/page-header";
@@ -114,10 +113,9 @@ export default function ApplicationObjectsPage() {
     }
   };
 
-  // Filter objects to show only active ones that the user has access to
+  // Filter objects to show objects that the user has access to, removing the is_active filter
   const availableObjects = objectTypes?.filter(obj => 
     (obj.owner_id === user?.id || obj.is_system) && 
-    obj.is_active && 
     !obj.is_archived
   ) || [];
 

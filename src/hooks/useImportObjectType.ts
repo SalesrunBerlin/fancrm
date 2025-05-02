@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
 import { toast } from "sonner";
@@ -21,9 +22,8 @@ export function useImportObjectType(onClose: () => void) {
       onClose();
     } catch (error: any) {
       console.error("Import error:", error);
-      toast("Failed to import object", {
-        description: error?.message || "Unknown error occurred",
-        variant: "destructive"
+      toast.error("Failed to import object", {
+        description: error?.message || "Unknown error occurred"
       });
     } finally {
       setIsImporting(false);

@@ -91,9 +91,7 @@ export function useObjectApplicationAssignments(objectTypeId?: string) {
       toast("Object assigned to application successfully");
     },
     onError: (error) => {
-      toast("Failed to assign object to application: " + (error instanceof Error ? error.message : "Unknown error"), {
-        variant: "destructive"
-      });
+      toast.error("Failed to assign object to application: " + (error instanceof Error ? error.message : "Unknown error"));
     },
   });
 
@@ -122,9 +120,7 @@ export function useObjectApplicationAssignments(objectTypeId?: string) {
       toast("Object removed from application successfully");
     },
     onError: (error) => {
-      toast("Failed to remove object from application: " + (error instanceof Error ? error.message : "Unknown error"), {
-        variant: "destructive"
-      });
+      toast.error("Failed to remove object from application: " + (error instanceof Error ? error.message : "Unknown error"));
     },
   });
 

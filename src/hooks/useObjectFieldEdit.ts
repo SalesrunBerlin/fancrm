@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -71,8 +72,7 @@ export function useObjectFieldEdit(fieldId: string, objectTypeId: string) {
     },
     onError: (error: any) => {
       toast("Failed to update field", {
-        description: error?.message || "An error occurred while updating the field",
-        variant: "destructive"
+        description: error?.message || "An error occurred while updating the field"
       });
     },
   });

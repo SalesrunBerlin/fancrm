@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -108,10 +107,9 @@ export function ObjectAssignmentDialog({
     }
   };
 
-  // Filter objects to show only active ones that the user has access to
+  // Filter objects to show only non-archived ones that the user has access to, removed is_active filter
   const availableObjects = objectTypes?.filter(obj => 
     (obj.owner_id === user?.id || obj.is_system) && 
-    obj.is_active && 
     !obj.is_archived
   ) || [];
 

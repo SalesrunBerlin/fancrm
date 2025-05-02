@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -169,14 +168,13 @@ export function useObjectTypes() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["object-types"] });
-      toast("Object created successfully", {
+      toast.success("Object created successfully", {
         description: "Your new object has been created."
       });
     },
     onError: (error: any) => {
-      toast("Failed to create object", {
-        description: error.message || "An error occurred while creating the object type.",
-        variant: "destructive"
+      toast.error("Failed to create object", {
+        description: error.message || "An error occurred while creating the object type."
       });
     },
   });
@@ -206,14 +204,13 @@ export function useObjectTypes() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["object-types"] });
-      toast("Object updated successfully", {
+      toast.success("Object updated successfully", {
         description: "Your object has been updated."
       });
     },
     onError: (error: any) => {
-      toast("Failed to update object", {
-        description: error.message || "An error occurred while updating the object type.",
-        variant: "destructive"
+      toast.error("Failed to update object", {
+        description: error.message || "An error occurred while updating the object type."
       });
     },
   });
@@ -242,14 +239,13 @@ export function useObjectTypes() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["object-types"] });
       queryClient.invalidateQueries({ queryKey: ["archived-object-types"] });
-      toast("Object archived successfully", {
+      toast.success("Object archived successfully", {
         description: "Your object has been archived."
       });
     },
     onError: (error: any) => {
-      toast("Failed to archive object", {
-        description: error.message || "An error occurred while archiving the object type.",
-        variant: "destructive"
+      toast.error("Failed to archive object", {
+        description: error.message || "An error occurred while archiving the object type."
       });
     },
   });
@@ -278,14 +274,13 @@ export function useObjectTypes() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["object-types"] });
       queryClient.invalidateQueries({ queryKey: ["archived-object-types"] });
-      toast("Object restored successfully", {
+      toast.success("Object restored successfully", {
         description: "Your object has been restored from the archive."
       });
     },
     onError: (error: any) => {
-      toast("Failed to restore object", {
-        description: error.message || "An error occurred while restoring the object type.",
-        variant: "destructive"
+      toast.error("Failed to restore object", {
+        description: error.message || "An error occurred while restoring the object type."
       });
     },
   });
@@ -312,14 +307,13 @@ export function useObjectTypes() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["object-types"] });
       queryClient.invalidateQueries({ queryKey: ["archived-object-types"] });
-      toast("Object deleted successfully", {
+      toast.success("Object deleted successfully", {
         description: "Your object has been permanently deleted."
       });
     },
     onError: (error: any) => {
-      toast("Failed to delete object", {
-        description: error.message || "An error occurred while deleting the object type.",
-        variant: "destructive"
+      toast.error("Failed to delete object", {
+        description: error.message || "An error occurred while deleting the object type."
       });
     },
   });
@@ -381,14 +375,13 @@ export function useObjectTypes() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["object-types"] });
-      toast("Object published", {
+      toast.success("Object published", {
         description: "Your object type is now available in the structure library."
       });
     },
     onError: (error: any) => {
-      toast("Failed to publish object", {
-        description: error.message || "An error occurred while publishing the object type.",
-        variant: "destructive"
+      toast.error("Failed to publish object", {
+        description: error.message || "An error occurred while publishing the object type."
       });
     },
   });
@@ -416,14 +409,13 @@ export function useObjectTypes() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["object-types"] });
-      toast("Object unpublished", {
+      toast.success("Object unpublished", {
         description: "Your object type is no longer available in the structure library."
       });
     },
     onError: (error: any) => {
-      toast("Failed to unpublish object", {
-        description: error.message || "An error occurred while unpublishing the object type.",
-        variant: "destructive"
+      toast.error("Failed to unpublish object", {
+        description: error.message || "An error occurred while unpublishing the object type."
       });
     },
   });
@@ -453,14 +445,13 @@ export function useObjectTypes() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["object-types"] });
-      toast("Object structure imported", {
+      toast.success("Object structure imported", {
         description: "The object structure has been imported successfully to your account."
       });
     },
     onError: (error: any) => {
-      toast("Import failed", {
-        description: error.message || "There was an error importing the object structure.",
-        variant: "destructive"
+      toast.error("Import failed", {
+        description: error.message || "There was an error importing the object structure."
       });
     },
   });
