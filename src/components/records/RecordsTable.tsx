@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   Table,
   TableBody,
@@ -27,6 +27,7 @@ interface RecordsTableProps {
 
 export function RecordsTable({ records, fields, objectTypeId, selectable = false, onSelectionChange }: RecordsTableProps) {
   const [selectedRecords, setSelectedRecords] = useState<string[]>([]);
+  const navigate = useNavigate();
 
   if (records.length === 0) {
     return (
@@ -93,6 +94,10 @@ export function RecordsTable({ records, fields, objectTypeId, selectable = false
     setSelectedRecords(newSelectedRecords);
     if (onSelectionChange) onSelectionChange(newSelectedRecords);
   };
+  
+  const handleRowClick = (recordId: string) => {
+    navigate(`/objects/${objectTypeId}/${recordId}`);
+  };
 
   const allSelected = records.length > 0 && selectedRecords.length === records.length;
 
@@ -118,9 +123,20 @@ export function RecordsTable({ records, fields, objectTypeId, selectable = false
         </TableHeader>
         <TableBody>
           {records.map((record) => (
-            <TableRow key={record.id} className={selectedRecords.includes(record.id) ? "bg-muted/30" : undefined}>
+            <TableRow 
+              key={record.id} 
+              className={`${selectedRecords.includes(record.id) ? "bg-muted/30" : ""} cursor-pointer`}
+              onClick={(e) => {
+                // Only navigate if the click was not on a checkbox or action button
+                const target = e.target as HTMLElement;
+                const isActionArea = target.closest('[data-action-area="true"]');
+                if (!isActionArea) {
+                  handleRowClick(record.id);
+                }
+              }}
+            >
               {selectable && (
-                <TableCell>
+                <TableCell onClick={(e) => e.stopPropagation()} data-action-area="true">
                   <Checkbox
                     checked={selectedRecords.includes(record.id)}
                     onCheckedChange={(checked) => handleSelectRecord(record.id, !!checked)}
@@ -133,7 +149,7 @@ export function RecordsTable({ records, fields, objectTypeId, selectable = false
                   {getFieldValue(record, field)}
                 </TableCell>
               ))}
-              <TableCell className="text-right">
+              <TableCell className="text-right" onClick={(e) => e.stopPropagation()} data-action-area="true">
                 <div className="flex justify-end gap-2">
                   <Button
                     variant="ghost"
@@ -166,3 +182,4 @@ export function RecordsTable({ records, fields, objectTypeId, selectable = false
     </div>
   );
 }
+

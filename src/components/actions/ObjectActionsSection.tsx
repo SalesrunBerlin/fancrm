@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Loader2, PlayCircle } from "lucide-react";
 import { Action, useActions } from "@/hooks/useActions";
@@ -18,11 +18,20 @@ export function ObjectActionsSection({
   recordId
 }: ObjectActionsSectionProps) {
   const navigate = useNavigate();
+  const location = useLocation();
   const { getActionsByObjectId } = useActions();
   const [actions, setActions] = useState<Action[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const [initialized, setInitialized] = useState(false);
+  
+  // Check if we're on a target object page
+  const isTargetObject = location.pathname.includes('/from/');
+  
+  // Don't render anything if we're on a target object
+  if (isTargetObject) {
+    return null;
+  }
   
   useEffect(() => {
     console.log(`ObjectActionsSection: Effect running for objectTypeId: ${objectTypeId}`);
@@ -142,3 +151,4 @@ function formatActionType(type: string): string {
       return type.replace(/_/g, ' ');
   }
 }
+
