@@ -77,7 +77,8 @@ export function useActions() {
       }
 
       console.log(`useActions: Fetched ${data?.length || 0} actions`);
-      // Ensure color is a valid ActionColor
+      
+      // Ensure color is a valid ActionColor by explicit type assertion
       const typedData = data.map(item => ({
         ...item,
         color: (item.color || 'default') as ActionColor
@@ -175,13 +176,13 @@ export function useActions() {
       const allActions = [...(targetActions || []), ...validSourceActions];
       console.log(`useActions.getActionsByObjectId: Found ${allActions.length} actions total for ${objectTypeId}`);
       
-      // Ensure color is a valid ActionColor
+      // Fix the type error by explicitly casting colors to ActionColor
       const typedActions = allActions.map(action => ({
         ...action,
         color: (action.color || 'default') as ActionColor
       }));
       
-      return typedActions as Action[];
+      return typedActions;
     } catch (error) {
       console.error("Exception in getActionsByObjectId:", error);
       throw error;

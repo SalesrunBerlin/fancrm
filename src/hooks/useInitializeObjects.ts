@@ -30,7 +30,7 @@ export function useInitializeObjects() {
         if (error instanceof Error) {
           errorMessage = error.message;
         } else if (typeof error === 'object' && error !== null && 'message' in error) {
-          errorMessage = (error as { message: string }).message;
+          errorMessage = String((error as { message: string }).message);
         } else if (typeof error === 'string') {
           errorMessage = error;
         } else if (typeof error === 'object' && error !== null) {

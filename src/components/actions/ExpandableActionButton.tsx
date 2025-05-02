@@ -13,17 +13,22 @@ interface ExpandableActionButtonProps {
 
 export function ExpandableActionButton({ actionName, color, onExecute }: ExpandableActionButtonProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [canExecute, setCanExecute] = useState(false);
 
-  const handleClick = () => {
-    if (canExecute) {
-      onExecute();
-      setCanExecute(false);
-      setIsOpen(false); // Close after execution
+  const handleButtonClick = () => {
+    // Toggle open state when button is clicked
+    if (!isOpen) {
+      setIsOpen(true);
     } else {
-      setIsOpen(!isOpen);
-      setCanExecute(true);
+      // If already open, execute the action
+      onExecute();
+      setIsOpen(false); // Close after execution
     }
+  };
+
+  const handleNameClick = () => {
+    // When action name is clicked, execute the action
+    onExecute();
+    setIsOpen(false); // Close after execution
   };
 
   return (
@@ -37,26 +42,20 @@ export function ExpandableActionButton({ actionName, color, onExecute }: Expanda
           variant={color}
           size="icon"
           className="h-8 w-8 rounded-full transition-all"
-          onClick={() => {
-            // Only toggle initially - first click just expands
-            if (!isOpen) {
-              setIsOpen(true);
-              setCanExecute(false);
-            }
-          }}
+          onClick={handleButtonClick}
         >
           <PlayCircle className="h-4 w-4" />
         </Button>
       </CollapsibleTrigger>
       
-      <CollapsibleContent className="absolute left-0 top-0 z-10">
+      <CollapsibleContent className="absolute left-10 top-0 z-10">
+        {/* Action name in a separate clickable element that doesn't overlap with the button */}
         <Button 
           variant={color}
           size="default"
           className="h-8 transition-all"
-          onClick={handleClick}
+          onClick={handleNameClick}
         >
-          <PlayCircle className="mr-1.5 h-4 w-4" />
           {actionName}
         </Button>
       </CollapsibleContent>
