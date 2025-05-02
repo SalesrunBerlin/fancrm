@@ -249,8 +249,8 @@ export default function ApplicationDetailPage() {
       </Tabs>
 
       <DeleteDialog
-        isOpen={showDeleteDialog}
-        onClose={() => setShowDeleteDialog(false)}
+        open={showDeleteDialog}
+        onOpenChange={setShowDeleteDialog}
         onConfirm={handleDelete}
         title="Delete Application"
         description="Are you sure you want to delete this application? This action cannot be undone."

@@ -204,8 +204,8 @@ export default function ObjectRecordDetail() {
       </Tabs>
 
       <DeleteDialog
-        isOpen={deleteDialogOpen}
-        onClose={() => setDeleteDialogOpen(false)}
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
         onConfirm={handleDelete}
         title={`Delete ${objectType.name}`}
         description={`Are you sure you want to delete this ${objectType.name.toLowerCase()}? This action cannot be undone.`}

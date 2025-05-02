@@ -334,8 +334,8 @@ export default function ObjectManager() {
       </Tabs>
 
       <DeleteDialog
-        isOpen={isDeleteDialogOpen}
-        onClose={() => setIsDeleteDialogOpen(false)}
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
         onConfirm={confirmDelete}
         title={`Delete ${objectToDelete?.name}`}
         description={`Are you sure you want to delete "${objectToDelete?.name}"? This action cannot be undone and will permanently delete this object and all of its records.`}

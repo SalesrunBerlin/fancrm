@@ -28,20 +28,25 @@ export function ObjectActionsSection({ objectTypeId, objectTypeName }: ObjectAct
 
   useEffect(() => {
     const fetchActions = async () => {
-      if (objectTypeId) {
-        setLoading(true);
-        setError(null);
-        try {
-          console.log(`Fetching actions for objectTypeId: ${objectTypeId}`);
-          const objectActions = await getActionsByObjectId(objectTypeId);
-          console.log(`Fetched actions:`, objectActions);
-          setActions(objectActions);
-        } catch (err) {
-          console.error("Error fetching actions:", err);
-          setError(err instanceof Error ? err : new Error("Failed to fetch actions"));
-        } finally {
-          setLoading(false);
-        }
+      if (!objectTypeId) {
+        console.log("No objectTypeId provided to ObjectActionsSection");
+        setLoading(false);
+        return;
+      }
+      
+      setLoading(true);
+      setError(null);
+      
+      try {
+        console.log(`ObjectActionsSection: Fetching actions for objectTypeId: ${objectTypeId}`);
+        const objectActions = await getActionsByObjectId(objectTypeId);
+        console.log(`ObjectActionsSection: Fetched ${objectActions?.length || 0} actions:`, objectActions);
+        setActions(objectActions || []);
+      } catch (err) {
+        console.error("Error fetching actions in ObjectActionsSection:", err);
+        setError(err instanceof Error ? err : new Error("Failed to fetch actions"));
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -53,7 +58,8 @@ export function ObjectActionsSection({ objectTypeId, objectTypeName }: ObjectAct
   };
 
   // Don't render anything if there are no actions and we're not loading
-  if (!loading && actions.length === 0) {
+  if (!loading && (!actions || actions.length === 0)) {
+    console.log(`ObjectActionsSection: No actions found for objectTypeId: ${objectTypeId}, hiding section`);
     return null;
   }
 

@@ -4,12 +4,12 @@ import { Loader2, Trash2 } from "lucide-react";
 import { useState } from "react";
 
 interface RecordDeleteDialogProps {
-  isOpen: boolean;
-  onClose: () => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   onConfirm: () => Promise<void>;
 }
 
-export function RecordDeleteDialog({ isOpen, onClose, onConfirm }: RecordDeleteDialogProps) {
+export function RecordDeleteDialog({ open, onOpenChange, onConfirm }: RecordDeleteDialogProps) {
   const [isDeleting, setIsDeleting] = useState(false);
 
   const handleConfirm = async () => {
@@ -18,12 +18,12 @@ export function RecordDeleteDialog({ isOpen, onClose, onConfirm }: RecordDeleteD
       await onConfirm();
     } finally {
       setIsDeleting(false);
-      onClose();
+      onOpenChange(false);
     }
   };
 
   return (
-    <AlertDialog open={isOpen} onOpenChange={onClose}>
+    <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Are you sure?</AlertDialogTitle>

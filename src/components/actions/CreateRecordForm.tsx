@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -62,6 +61,30 @@ export function CreateRecordForm({
   
   // Prepare default values from action fields
   const defaultValues: Record<string, any> = {};
+  
+  // Process action fields to set default values
+  actionFields.forEach(actionField => {
+    const field = objectFields.find(f => f.id === actionField.field_id);
+    if (field) {
+      // Check if this field has a formula
+      if (actionField.formula_type === 'dynamic' && actionField.formula_expression) {
+        defaultValues[field.api_name] = evaluateFormula(
+          actionField.formula_expression,
+          { lookupFieldsValues }
+        );
+      } 
+      // Otherwise use the static default value
+      else if (actionField.default_value) {
+        defaultValues[field.api_name] = actionField.default_value;
+      }
+    }
+  });
+  
+  // Create form with the schema and default values
+  const form = useForm({
+    resolver: zodResolver(formSchema),
+    defaultValues,
+  });
   
   useEffect(() => {
     // First, collect all lookup fields that have values
@@ -130,29 +153,6 @@ export function CreateRecordForm({
       fetchLookupFieldsValues();
     }
   }, [objectFields, actionFields, form]);
-  
-  // Process action fields to set default values
-  actionFields.forEach(actionField => {
-    const field = objectFields.find(f => f.id === actionField.field_id);
-    if (field) {
-      // Check if this field has a formula
-      if (actionField.formula_type === 'dynamic' && actionField.formula_expression) {
-        defaultValues[field.api_name] = evaluateFormula(
-          actionField.formula_expression,
-          { lookupFieldsValues }
-        );
-      } 
-      // Otherwise use the static default value
-      else if (actionField.default_value) {
-        defaultValues[field.api_name] = actionField.default_value;
-      }
-    }
-  });
-  
-  const form = useForm({
-    resolver: zodResolver(formSchema),
-    defaultValues,
-  });
 
   // Update form values when lookup values change
   useEffect(() => {
