@@ -7,12 +7,17 @@ import { useAuth } from "@/contexts/AuthContext";
 export type ActionType = 'new_record' | 'linked_record';
 export type ActionColor = 
   // Default colors
-  'default' | 'destructive' | 'secondary' | 'warning' | 'success' |
-  // Extended color palette
-  'purple' | 'indigo' | 'cyan' | 'teal' | 'emerald' | 'lime' | 'yellow' | 'orange' | 'rose' | 'pink' |
-  'violet' | 'fuchsia' | 'sky' | 'cobalt' | 'navy' | 'olive' | 'forest' | 'maroon' | 'brown' | 'coral' |
-  'turquoise' | 'lavender' | 'magenta' | 'slate' | 'charcoal' | 'gold' | 'bronze' | 'silver' | 'mint' |
-  'seafoam' | 'burgundy' | 'ochre' | 'sienna' | 'plum' | 'crimson' | 'mauve' | 'auburn' | 'azure' | 'brick' | 'sage';
+  'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link' | 'warning' | 'success' | 'icon' |
+  // Blues & teals
+  'cyan' | 'teal' | 'sky' | 'azure' | 'cobalt' | 'navy' | 'turquoise' | 'seafoam' |
+  // Greens & yellows
+  'emerald' | 'lime' | 'yellow' | 'olive' | 'forest' | 'mint' | 'sage' |
+  // Reds, oranges & browns
+  'orange' | 'coral' | 'maroon' | 'brown' | 'crimson' | 'burgundy' | 'brick' | 'sienna' | 'ochre' | 'gold' | 'bronze' |
+  // Purples & pinks
+  'purple' | 'violet' | 'indigo' | 'lavender' | 'fuchsia' | 'magenta' | 'rose' | 'pink' | 'plum' | 'mauve' |
+  // Grays
+  'slate' | 'silver' | 'charcoal';
 
 export interface Action {
   id: string;
@@ -72,7 +77,7 @@ export function useActions() {
       }
 
       console.log(`useActions: Fetched ${data?.length || 0} actions`);
-      // Convert all color values to ActionColor type to fix the type error
+      // Ensure color is a valid ActionColor
       const typedData = data.map(item => ({
         ...item,
         color: (item.color || 'default') as ActionColor
@@ -170,7 +175,7 @@ export function useActions() {
       const allActions = [...(targetActions || []), ...validSourceActions];
       console.log(`useActions.getActionsByObjectId: Found ${allActions.length} actions total for ${objectTypeId}`);
       
-      // Fix the type error by ensuring the color property is of type ActionColor
+      // Ensure color is a valid ActionColor
       const typedActions = allActions.map(action => ({
         ...action,
         color: (action.color || 'default') as ActionColor
@@ -199,7 +204,11 @@ export function useActions() {
         return null;
       }
 
-      return data as Action;
+      // Ensure the color is a valid ActionColor
+      return { 
+        ...data,
+        color: (data.color || 'default') as ActionColor 
+      } as Action;
     } catch (error) {
       console.error("Error in getAction:", error);
       return null;
@@ -216,7 +225,7 @@ export function useActions() {
       // Ensure color has a default value if not provided
       const dataWithDefaults = {
         ...actionData,
-        color: actionData.color || 'default',
+        color: (actionData.color || 'default') as ActionColor,
         owner_id: user.id,
       };
       
@@ -230,7 +239,11 @@ export function useActions() {
         throw error;
       }
 
-      return data as Action;
+      // Ensure the color is a valid ActionColor
+      return { 
+        ...data,
+        color: (data.color || 'default') as ActionColor 
+      } as Action;
     },
     onSuccess: () => {
       toast.success("Action created successfully");

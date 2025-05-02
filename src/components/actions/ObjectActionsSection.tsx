@@ -1,11 +1,10 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { Loader2, PlayCircle } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { Action, useActions } from "@/hooks/useActions";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { ExpandableActionButton } from "./ExpandableActionButton";
 
 interface ObjectActionsSectionProps {
   objectTypeId: string;
@@ -150,17 +149,15 @@ export function ObjectActionsSection({
   }
 
   return (
-    <div className="flex flex-wrap gap-2 mb-6">
+    <div className="flex flex-wrap gap-3 mb-6">
       {filteredActions.map((action) => (
-        <Button 
-          key={action.id}
-          onClick={() => handleExecuteAction(action)}
-          className="h-8"
-          variant={action.color || "default"}
-        >
-          <PlayCircle className="mr-1.5 h-4 w-4" />
-          {action.name}
-        </Button>
+        <div key={action.id} className="relative">
+          <ExpandableActionButton
+            actionName={action.name}
+            color={action.color}
+            onExecute={() => handleExecuteAction(action)}
+          />
+        </div>
       ))}
     </div>
   );
