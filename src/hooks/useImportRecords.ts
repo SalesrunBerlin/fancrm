@@ -1,9 +1,9 @@
-
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
-import { findDuplicateRecords, DuplicateRecord } from "@/utils/importDuplicateUtils";
+import { findDuplicateRecords } from "@/utils/importDuplicateUtils";
+import type { DuplicateRecord } from "@/utils/importDuplicateUtils";
 import { parseImportText, createInitialColumnMappings, getSampleValuesForColumn, guessDataTypeForColumn, ImportDataType } from "@/utils/importDataUtils";
 import { createRecord, updateRecord, importRecords as importRecordsService } from "@/services/recordImportService";
 
@@ -17,7 +17,7 @@ export interface ColumnMapping {
   } | null;
 }
 
-export { DuplicateRecord };
+export type { DuplicateRecord };
 
 export function useImportRecords(objectTypeId: string, fields: any[]) {
   const queryClient = useQueryClient();
