@@ -1,11 +1,10 @@
-
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 
-export type ActionType = 'new_record';
+export type ActionType = 'new_record' | 'linked_record';
 
 export interface Action {
   id: string;
@@ -13,6 +12,7 @@ export interface Action {
   description?: string;
   action_type: ActionType;
   target_object_id: string;
+  source_field_id?: string | null;
   owner_id: string;
   created_at: string;
   updated_at: string;
@@ -35,6 +35,7 @@ export interface ActionCreateInput {
   description?: string;
   action_type: ActionType;
   target_object_id: string;
+  source_field_id?: string | null;
 }
 
 export function useActions() {

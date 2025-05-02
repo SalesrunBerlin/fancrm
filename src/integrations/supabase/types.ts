@@ -81,6 +81,7 @@ export type Database = {
           id: string
           name: string
           owner_id: string
+          source_field_id: string | null
           target_object_id: string
           updated_at: string
         }
@@ -91,6 +92,7 @@ export type Database = {
           id?: string
           name: string
           owner_id: string
+          source_field_id?: string | null
           target_object_id: string
           updated_at?: string
         }
@@ -101,10 +103,25 @@ export type Database = {
           id?: string
           name?: string
           owner_id?: string
+          source_field_id?: string | null
           target_object_id?: string
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "actions_source_field_id_fkey"
+            columns: ["source_field_id"]
+            isOneToOne: false
+            referencedRelation: "object_field_relationships"
+            referencedColumns: ["field_id"]
+          },
+          {
+            foreignKeyName: "actions_source_field_id_fkey"
+            columns: ["source_field_id"]
+            isOneToOne: false
+            referencedRelation: "object_fields"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "actions_target_object_id_fkey"
             columns: ["target_object_id"]
@@ -793,7 +810,7 @@ export type Database = {
       }
     }
     Enums: {
-      action_type: "new_record"
+      action_type: "new_record" | "linked_record"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -909,7 +926,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      action_type: ["new_record"],
+      action_type: ["new_record", "linked_record"],
     },
   },
 } as const

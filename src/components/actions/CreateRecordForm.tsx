@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -22,6 +21,7 @@ interface CreateRecordFormProps {
   objectTypeId: string;
   objectFields: ObjectField[];
   actionFields: ActionFieldWithDetails[];
+  initialValues?: Record<string, any>; // Added for linked actions
   onSuccess: () => void;
 }
 
@@ -50,6 +50,7 @@ export function CreateRecordForm({
   objectTypeId,
   objectFields,
   actionFields,
+  initialValues = {},
   onSuccess,
 }: CreateRecordFormProps) {
   const { user } = useAuth();
@@ -70,13 +71,16 @@ export function CreateRecordForm({
   // Build form schema based on fields
   const formSchema = buildFormSchema(enabledObjectFields);
   
-  // Prepare default values from action fields
-  const defaultValues: Record<string, any> = {};
+  // Prepare default values from action fields and initialValues
+  const defaultValues: Record<string, any> = { ...initialValues };
   
   // Process action fields to set default values
   enabledActionFields.forEach(actionField => {
     const field = objectFields.find(f => f.id === actionField.field_id);
     if (field) {
+      // Skip if we already have an initial value for this field
+      if (defaultValues[field.api_name]) return;
+      
       // Check if this field has a formula
       if (actionField.formula_type === 'dynamic' && actionField.formula_expression) {
         defaultValues[field.api_name] = evaluateFormula(

@@ -9,9 +9,14 @@ import { toast } from "sonner";
 interface ObjectActionsSectionProps {
   objectTypeId: string;
   objectTypeName?: string;
+  recordId?: string; // Add recordId for context in linked actions
 }
 
-export function ObjectActionsSection({ objectTypeId, objectTypeName }: ObjectActionsSectionProps) {
+export function ObjectActionsSection({ 
+  objectTypeId, 
+  objectTypeName,
+  recordId
+}: ObjectActionsSectionProps) {
   const navigate = useNavigate();
   const { getActionsByObjectId } = useActions();
   const [actions, setActions] = useState<Action[]>([]);
@@ -71,9 +76,25 @@ export function ObjectActionsSection({ objectTypeId, objectTypeName }: ObjectAct
     fetchActions();
   }, [objectTypeId, getActionsByObjectId]);
 
-  const handleExecuteAction = (actionId: string) => {
-    navigate(`/actions/execute/${actionId}`);
+  const handleExecuteAction = (action: Action) => {
+    if (action.action_type === "linked_record" && recordId) {
+      // For linked records, we need to pass both actionId and recordId
+      navigate(`/actions/execute/${action.id}/from/${recordId}`);
+    } else {
+      // For global actions, just pass the actionId
+      navigate(`/actions/execute/${action.id}`);
+    }
   };
+
+  // Filter actions based on context
+  const filteredActions = actions.filter(action => {
+    // On record detail page (with recordId), show only linked actions
+    if (recordId) {
+      return action.action_type === "linked_record";
+    }
+    // On object list page (no recordId), show only global actions
+    return action.action_type === "new_record";
+  });
 
   if (loading) {
     return (
@@ -84,7 +105,7 @@ export function ObjectActionsSection({ objectTypeId, objectTypeName }: ObjectAct
   }
 
   // Don't render anything if there are no actions and we're not loading
-  if (!actions || actions.length === 0) {
+  if (!filteredActions || filteredActions.length === 0) {
     console.log(`ObjectActionsSection: No actions to display for objectTypeId: ${objectTypeId}`);
     return null;
   }
@@ -95,10 +116,10 @@ export function ObjectActionsSection({ objectTypeId, objectTypeName }: ObjectAct
 
   return (
     <div className="flex flex-wrap gap-2 mb-6">
-      {actions.map((action) => (
+      {filteredActions.map((action) => (
         <Button 
           key={action.id}
-          onClick={() => handleExecuteAction(action.id)}
+          onClick={() => handleExecuteAction(action)}
           className="h-8"
         >
           <PlayCircle className="mr-1.5 h-4 w-4" />
@@ -113,6 +134,8 @@ function formatActionType(type: string): string {
   switch (type) {
     case 'new_record':
       return 'Create Record';
+    case 'linked_record':
+      return 'Create Linked Record';
     default:
       return type.replace(/_/g, ' ');
   }

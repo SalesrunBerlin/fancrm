@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
@@ -13,6 +14,7 @@ import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RelatedRecordsList } from "@/components/records/RelatedRecordsList";
 import { LookupValueDisplay } from "@/components/records/LookupValueDisplay";
+import { ObjectActionsSection } from "@/components/actions/ObjectActionsSection";
 
 export default function ObjectRecordDetail() {
   const navigate = useNavigate();
@@ -136,6 +138,14 @@ export default function ObjectRecordDetail() {
           </div>
         }
       />
+
+      {/* Add linked actions section */}
+      {objectTypeId && recordId && (
+        <ObjectActionsSection 
+          objectTypeId={objectTypeId} 
+          recordId={recordId}
+        />
+      )}
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList>
