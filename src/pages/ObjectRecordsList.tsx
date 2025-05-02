@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
@@ -14,6 +15,7 @@ import { ObjectField } from "@/hooks/useObjectTypes";
 import { DeleteDialog } from "@/components/common/DeleteDialog";
 import { toast } from "sonner";
 import { EnhancedObjectField, toSafeObjectField } from "@/patches/FixObjectFieldType";
+import { ObjectActionsSection } from "@/components/actions/ObjectActionsSection";
 
 export default function ObjectRecordsList() {
   const { objectTypeId } = useParams<{ objectTypeId: string }>();
@@ -169,6 +171,12 @@ export default function ObjectRecordsList() {
         }
       />
 
+      {/* New Actions section */}
+      <ObjectActionsSection 
+        objectTypeId={objectTypeId!} 
+        objectTypeName={objectType.name}
+      />
+
       <Card className="overflow-hidden">
         {isLoading || isLoadingFields ? (
           <div className="flex justify-center py-8">
@@ -186,8 +194,8 @@ export default function ObjectRecordsList() {
       </Card>
 
       <DeleteDialog
-        isOpen={isDeleteDialogOpen}
-        onClose={() => setIsDeleteDialogOpen(false)}
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
         onConfirm={handleBatchDelete}
         title={`Delete ${selectedRecords.length} Records`}
         description={`Are you sure you want to delete ${selectedRecords.length} records? This action cannot be undone.`}

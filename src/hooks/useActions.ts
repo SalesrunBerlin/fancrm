@@ -63,6 +63,24 @@ export function useActions() {
     enabled: !!user,
   });
 
+  // Get actions by object type ID
+  const getActionsByObjectId = async (objectTypeId: string) => {
+    if (!user || !objectTypeId) return [];
+    
+    const { data, error } = await supabase
+      .from("actions")
+      .select("*")
+      .eq("target_object_id", objectTypeId)
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("Error fetching actions by object ID:", error);
+      return [];
+    }
+
+    return data as Action[];
+  };
+
   // Get a single action by ID
   const getAction = async (id: string) => {
     if (!user) return null;
@@ -181,6 +199,7 @@ export function useActions() {
   return {
     actions,
     getAction,
+    getActionsByObjectId,
     createAction,
     updateAction,
     deleteAction,
