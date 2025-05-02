@@ -9,6 +9,102 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      action_field_settings: {
+        Row: {
+          action_id: string
+          created_at: string
+          default_value: string | null
+          display_order: number
+          field_id: string
+          id: string
+          is_preselected: boolean
+          updated_at: string
+        }
+        Insert: {
+          action_id: string
+          created_at?: string
+          default_value?: string | null
+          display_order?: number
+          field_id: string
+          id?: string
+          is_preselected?: boolean
+          updated_at?: string
+        }
+        Update: {
+          action_id?: string
+          created_at?: string
+          default_value?: string | null
+          display_order?: number
+          field_id?: string
+          id?: string
+          is_preselected?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "action_field_settings_action_id_fkey"
+            columns: ["action_id"]
+            isOneToOne: false
+            referencedRelation: "actions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "action_field_settings_field_id_fkey"
+            columns: ["field_id"]
+            isOneToOne: false
+            referencedRelation: "object_field_relationships"
+            referencedColumns: ["field_id"]
+          },
+          {
+            foreignKeyName: "action_field_settings_field_id_fkey"
+            columns: ["field_id"]
+            isOneToOne: false
+            referencedRelation: "object_fields"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      actions: {
+        Row: {
+          action_type: Database["public"]["Enums"]["action_type"]
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          owner_id: string
+          target_object_id: string
+          updated_at: string
+        }
+        Insert: {
+          action_type: Database["public"]["Enums"]["action_type"]
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          owner_id: string
+          target_object_id: string
+          updated_at?: string
+        }
+        Update: {
+          action_type?: Database["public"]["Enums"]["action_type"]
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          owner_id?: string
+          target_object_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "actions_target_object_id_fkey"
+            columns: ["target_object_id"]
+            isOneToOne: false
+            referencedRelation: "object_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       applications: {
         Row: {
           created_at: string
@@ -679,7 +775,7 @@ export type Database = {
       }
     }
     Enums: {
-      [_ in never]: never
+      action_type: "new_record"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -794,6 +890,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      action_type: ["new_record"],
+    },
   },
 } as const

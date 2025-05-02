@@ -15,17 +15,20 @@ import { Loader2 } from "lucide-react";
 
 export interface DeleteDialogProps {
   open: boolean;
+  onOpenChange?: (open: boolean) => void;
   title: string;
   description: string;
   deleteButtonText?: string;
   cancelButtonText?: string;
   isDeleting?: boolean;
-  onCancel: () => void;
-  onConfirm: () => void | Promise<void>;
+  onCancel?: () => void;
+  onConfirm?: () => void | Promise<void>;
+  onDelete?: () => void | Promise<void>;
 }
 
 export function DeleteDialog({
   open,
+  onOpenChange,
   title,
   description,
   deleteButtonText = "Delete",
@@ -33,21 +36,32 @@ export function DeleteDialog({
   isDeleting = false,
   onCancel,
   onConfirm,
+  onDelete,
 }: DeleteDialogProps) {
+  const handleCancel = () => {
+    if (onCancel) onCancel();
+    if (onOpenChange) onOpenChange(false);
+  };
+
+  const handleConfirm = () => {
+    if (onConfirm) onConfirm();
+    if (onDelete) onDelete();
+  };
+
   return (
-    <AlertDialog open={open}>
+    <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>{title}</AlertDialogTitle>
           <AlertDialogDescription>{description}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel onClick={onCancel} disabled={isDeleting}>
+          <AlertDialogCancel onClick={handleCancel} disabled={isDeleting}>
             {cancelButtonText}
           </AlertDialogCancel>
           <Button
             variant="destructive"
-            onClick={onConfirm}
+            onClick={handleConfirm}
             disabled={isDeleting}
           >
             {isDeleting ? (

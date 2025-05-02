@@ -1,7 +1,7 @@
 
 import { Link } from "react-router-dom";
 import { PageHeader } from "@/components/ui/page-header";
-import { AppWindow, Database } from "lucide-react";
+import { AppWindow, Database, PlaySquare } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function Settings() {
@@ -46,6 +46,25 @@ export default function Settings() {
             <CardContent>
               <p className="text-sm text-muted-foreground">
                 Create and configure applications, and assign objects to specific applications.
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
+        
+        <Link to="/actions">
+          <Card className="h-full hover:bg-accent/5 transition-colors">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <PlaySquare className="h-5 w-5" />
+                Actions
+              </CardTitle>
+              <CardDescription>
+                Create and manage actions for your objects
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                Define custom actions like creating new records with pre-selected fields and default values.
               </p>
             </CardContent>
           </Card>
