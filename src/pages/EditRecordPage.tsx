@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Form } from "@/components/ui/form";
@@ -10,9 +10,10 @@ import { useObjectTypes } from "@/hooks/useObjectTypes";
 import { useObjectRecords } from "@/hooks/useObjectRecords";
 import { useRecordDetail } from "@/hooks/useRecordDetail";
 import type { RecordFormData } from "@/types";
-import { Loader2, ArrowLeft, Plus } from "lucide-react";
+import { Loader2, Plus, X, Save } from "lucide-react";
 import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/card";
 import { toast } from "sonner";
+import { PageHeader } from "@/components/ui/page-header";
 
 export default function EditRecordPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -72,24 +73,24 @@ export default function EditRecordPage() {
     }
   };
 
+  const handleCancel = () => {
+    navigate(`/objects/${objectTypeId}/${recordId}`);
+  };
+
   if (!objectType) return null;
 
   const isLoading = isLoadingFields || isLoadingRecord;
+  const recordName = record?.displayName || `${objectType.name} Record`;
 
   return (
     <div className="space-y-6 max-w-2xl mx-auto px-4 sm:px-6">
-      <Button variant="outline" asChild className="mb-2">
-        <Link to={`/objects/${objectTypeId}/${recordId}`}>
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to {objectType.name} Detail
-        </Link>
-      </Button>
+      <PageHeader
+        title={`Edit ${recordName}`}
+        description={`Update the details for this ${objectType.name.toLowerCase()}`}
+        className="mb-4"
+      />
       
       <Card className="shadow-sm">
-        <CardHeader className="border-b pb-4">
-          <h1 className="text-2xl font-bold">Edit {objectType.name}</h1>
-          <p className="text-muted-foreground">Update the details for this record</p>
-        </CardHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)}>
             <CardContent className="space-y-6 pt-6">
@@ -112,30 +113,34 @@ export default function EditRecordPage() {
                     <Button
                       type="button"
                       variant="outline"
-                      className="w-full border-dashed"
+                      size="sm"
                       onClick={navigateToCreateField}
+                      className="w-full border-dashed flex items-center justify-center"
                     >
-                      <Plus className="mr-2 h-4 w-4" />
+                      <Plus className="h-4 w-4 mr-2" />
                       Add New Field
                     </Button>
                   </div>
                 </div>
               )}
             </CardContent>
-            <CardFooter className="flex justify-end gap-3 border-t p-4">
+            <CardFooter className="flex justify-end gap-2 border-t p-4">
               <Button 
                 type="button" 
-                variant="outline" 
-                onClick={() => navigate(`/objects/${objectTypeId}/${recordId}`)}
+                variant="outline"
+                size="icon"
+                onClick={handleCancel}
+                title="Cancel"
               >
-                Cancel
+                <X className="h-4 w-4" />
               </Button>
               <Button 
                 type="submit" 
                 disabled={isSubmitting}
+                size="icon"
+                title="Save Changes"
               >
-                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Save Changes
+                {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
               </Button>
             </CardFooter>
           </form>

@@ -3,7 +3,6 @@ import { Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSidebar } from "@/components/ui/sidebar";
 import { useLocation } from "react-router-dom";
-import { cn } from "@/lib/utils";
 
 export function NavigationToggle() {
   const { toggleSidebar } = useSidebar();

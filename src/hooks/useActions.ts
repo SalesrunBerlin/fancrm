@@ -6,18 +6,53 @@ import { useAuth } from "@/contexts/AuthContext";
 
 export type ActionType = 'new_record' | 'linked_record';
 export type ActionColor = 
-  // Default colors
-  'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link' | 'warning' | 'success' | 'icon' |
-  // Blues & teals
-  'cyan' | 'teal' | 'sky' | 'azure' | 'cobalt' | 'navy' | 'turquoise' | 'seafoam' |
-  // Greens & yellows
-  'emerald' | 'lime' | 'yellow' | 'olive' | 'forest' | 'mint' | 'sage' |
-  // Reds, oranges & browns
-  'orange' | 'coral' | 'maroon' | 'brown' | 'crimson' | 'burgundy' | 'brick' | 'sienna' | 'ochre' | 'gold' | 'bronze' |
-  // Purples & pinks
-  'purple' | 'violet' | 'indigo' | 'lavender' | 'fuchsia' | 'magenta' | 'rose' | 'pink' | 'plum' | 'mauve' |
-  // Grays
-  'slate' | 'silver' | 'charcoal';
+  | "default"
+  | "destructive"
+  | "outline"
+  | "secondary"
+  | "ghost"
+  | "link"
+  | "warning"
+  | "success"
+  | "cyan"
+  | "teal"
+  | "sky"
+  | "azure"
+  | "cobalt"
+  | "navy"
+  | "turquoise"
+  | "seafoam"
+  | "emerald"
+  | "lime"
+  | "yellow"
+  | "olive"
+  | "forest"
+  | "mint"
+  | "sage"
+  | "orange"
+  | "coral"
+  | "maroon"
+  | "brown"
+  | "crimson"
+  | "burgundy"
+  | "brick"
+  | "sienna"
+  | "ochre"
+  | "gold"
+  | "bronze"
+  | "purple"
+  | "violet"
+  | "indigo"
+  | "lavender"
+  | "fuchsia"
+  | "magenta"
+  | "rose"
+  | "pink"
+  | "plum"
+  | "mauve"
+  | "slate"
+  | "silver"
+  | "charcoal";
 
 export interface Action {
   id: string;

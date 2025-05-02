@@ -16,7 +16,6 @@ export function ExpandableActionButton({ actionName, color, onExecute }: Expanda
 
   const handleButtonClick = () => {
     // Only toggle open state when button is clicked
-    // Button no longer executes the action when already open
     setIsOpen(!isOpen);
   };
 
@@ -38,13 +37,13 @@ export function ExpandableActionButton({ actionName, color, onExecute }: Expanda
           size="icon"
           className="h-8 w-8 rounded-full transition-all"
           onClick={handleButtonClick}
+          title={actionName}
         >
           <PlayCircle className="h-4 w-4" />
         </Button>
       </CollapsibleTrigger>
       
       <CollapsibleContent className="absolute left-12 top-0 z-20">
-        {/* Action name in a separate clickable element with increased z-index and spacing */}
         <Button 
           variant={color}
           size="default"

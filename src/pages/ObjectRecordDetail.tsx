@@ -6,7 +6,7 @@ import { useRecordDetail } from "@/hooks/useRecordDetail";
 import { useEnhancedFields } from "@/hooks/useEnhancedFields";
 import { useObjectRecords } from "@/hooks/useObjectRecords";
 import { PageHeader } from "@/components/ui/page-header";
-import { Loader2, ArrowLeft, Edit, Trash2, Star } from "lucide-react";
+import { Loader2, Edit, Trash2, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { DeleteDialog } from "@/components/common/DeleteDialog";
@@ -85,12 +85,6 @@ export default function ObjectRecordDetail() {
   if (!record) {
     return (
       <div className="space-y-4 max-w-2xl mx-auto px-4 sm:px-6">
-        <Button variant="outline" asChild className="mb-4">
-          <Link to={`/objects/${objectTypeId}`}>
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to {objectType.name} List
-          </Link>
-        </Button>
         <Card className="shadow-sm">
           <CardContent className="pt-6">
             <p className="text-center text-muted-foreground">Record not found</p>
@@ -107,37 +101,34 @@ export default function ObjectRecordDetail() {
       <PageHeader
         title={recordName}
         actions={
-          <div className="flex flex-col sm:flex-row gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button 
               variant={starModeActive ? "secondary" : "outline"}
               onClick={toggleStarMode}
-              title={starModeActive ? "Deactivate Star Mode" : "Activate Star Mode"}
-              size="sm"
-              className="w-full sm:w-auto"
+              size="icon"
+              title="Star Mode"
             >
-              <Star className={`mr-2 h-4 w-4 ${starModeActive ? "fill-yellow-400 text-yellow-500" : ""}`} />
-              {starModeActive ? "Exit Star Mode" : "Star Mode"}
+              <Star className={`h-4 w-4 ${starModeActive ? "fill-yellow-400 text-yellow-500" : ""}`} />
             </Button>
-            <Button variant="outline" asChild size="sm" className="w-full sm:w-auto">
-              <Link to={`/objects/${objectTypeId}`}>
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Back
-              </Link>
-            </Button>
-            <Button variant="outline" asChild size="sm" className="w-full sm:w-auto">
+            
+            <Button 
+              variant="outline" 
+              size="icon" 
+              asChild
+              title="Edit"
+            >
               <Link to={`/objects/${objectTypeId}/${recordId}/edit`}>
-                <Edit className="mr-2 h-4 w-4" />
-                Edit
+                <Edit className="h-4 w-4" />
               </Link>
             </Button>
+            
             <Button 
               variant="destructive"
               onClick={() => setDeleteDialogOpen(true)}
-              size="sm"
-              className="w-full sm:w-auto"
+              size="icon"
+              title="Delete"
             >
-              <Trash2 className="mr-2 h-4 w-4" />
-              Delete
+              <Trash2 className="h-4 w-4" />
             </Button>
           </div>
         }

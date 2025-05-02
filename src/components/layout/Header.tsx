@@ -2,15 +2,19 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { Search } from "lucide-react";
+import { Search, ArrowLeft } from "lucide-react";
 import { UserProfileMenu } from "./UserProfileMenu";
 import { CommandSearch } from "@/components/search/CommandSearch";
 import { NavigationToggle } from "./NavigationToggle";
+import { useLocation, useNavigate } from "react-router-dom";
 
 interface HeaderProps extends React.HTMLAttributes<HTMLElement> {}
 
 export function Header({ className }: HeaderProps) {
   const [searchDialogOpen, setSearchDialogOpen] = useState(false);
+  const location = useLocation();
+  const navigate = useNavigate();
+  const isDetailPage = location.pathname.split('/').length > 3;
   
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -24,6 +28,10 @@ export function Header({ className }: HeaderProps) {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
+  const handleBack = () => {
+    navigate(-1);
+  };
+
   return (
     <header className={cn(
       "sticky top-0 z-30 flex h-14 items-center w-full bg-background border-b px-4",
@@ -31,6 +39,18 @@ export function Header({ className }: HeaderProps) {
     )}>
       <div className="flex items-center gap-2">
         <NavigationToggle />
+        
+        {isDetailPage && (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleBack}
+            className="ml-1"
+            aria-label="Back"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+        )}
       </div>
       
       <div className="flex-1 flex justify-end items-center">
