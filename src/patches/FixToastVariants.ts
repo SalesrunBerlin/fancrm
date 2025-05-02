@@ -1,32 +1,39 @@
 
 /**
- * This file provides utility functions to fix toast variant issues.
- * 
- * The error occurs because the toast library we're using doesn't support
- * the 'variant' property in the options object.
+ * This file provides compatibility for toast variants.
+ * In newer versions of the toast library, 'variant' is not supported.
  */
 
-import { toast, ExternalToast } from 'sonner';
+import { toast, type ToastOptions } from "sonner";
 
-// Safe toast wrappers without variant property
-export function safeSuccessToast(message: string, options?: Omit<ExternalToast, 'variant'>) {
-  toast.success(message, options);
+// Define our own extended toast options that includes variants
+export interface ExtendedToastOptions extends ToastOptions {
+  variant?: "default" | "destructive" | "success" | "warning";
 }
 
-export function safeErrorToast(message: string, options?: Omit<ExternalToast, 'variant'>) {
-  toast.error(message, options);
+// Safe error toast function that handles variant
+export function safeErrorToast(message: string, options?: ExtendedToastOptions) {
+  // Extract and remove the variant property
+  const { variant, ...restOptions } = options || {};
+  
+  // Handle the variant by styling differently, but don't pass it to toast
+  if (variant === "destructive") {
+    // For destructive variant, we'd use error toast
+    toast.error(message, restOptions);
+  } else {
+    // For other variants, use regular error toast
+    toast.error(message, restOptions);
+  }
 }
 
-export function safeInfoToast(message: string, options?: Omit<ExternalToast, 'variant'>) {
-  toast.info(message, options);
+// Safe warning toast function that handles variant
+export function safeWarningToast(message: string, options?: ExtendedToastOptions) {
+  const { variant, ...restOptions } = options || {};
+  toast.warning(message, restOptions);
 }
 
-// Use these functions instead of:
-// toast.success("Message", { variant: "default" });
-// toast.error("Message", { variant: "destructive" });
-// 
-// Example usage:
-// import { safeSuccessToast, safeErrorToast } from "@/patches/FixToastVariants";
-// 
-// safeSuccessToast("Object archived successfully");
-// safeErrorToast("Failed to archive object", { description: "Error details here" });
+// Safe success toast function that handles variant
+export function safeSuccessToast(message: string, options?: ExtendedToastOptions) {
+  const { variant, ...restOptions } = options || {};
+  toast.success(message, restOptions);
+}

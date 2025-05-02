@@ -2,34 +2,21 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { ObjectField } from "@/hooks/useObjectTypes";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
+import { ObjectField } from "./useObjectTypes";
+import { useAuth } from "@/contexts/AuthContext";
+import { safeErrorToast } from "@/patches/FixToastVariants";
 
-// Define the form schema
-const fieldEditSchema = z.object({
-  name: z.string().min(1, "Field name is required"),
-  api_name: z.string().min(1, "API name is required"),
-  target_object_type_id: z.string().optional(),
-  display_field_api_name: z.string().optional(),
-});
-
-export type FieldEditFormData = z.infer<typeof fieldEditSchema>;
-
-export function useObjectFieldEdit(fieldId: string, objectTypeId: string) {
+export const useObjectFieldEdit = (fieldId: string) => {
+  const { user } = useAuth();
   const queryClient = useQueryClient();
 
-  // Get field details
   const {
     data: field,
     isLoading,
     error,
   } = useQuery({
     queryKey: ["object-field", fieldId],
-    queryFn: async (): Promise<ObjectField | null> => {
-      if (!fieldId) return null;
-
+    queryFn: async (): Promise<ObjectField> => {
       const { data, error } = await supabase
         .from("object_fields")
         .select("*")
@@ -37,108 +24,108 @@ export function useObjectFieldEdit(fieldId: string, objectTypeId: string) {
         .single();
 
       if (error) {
-        console.error("Error fetching field:", error);
         throw error;
       }
 
-      // Transform the data to match the ObjectField interface
-      return {
-        ...data,
-        options: data.options as ObjectField['options']
-      } as ObjectField;
+      return data as ObjectField;
     },
     enabled: !!fieldId,
   });
 
-  // Initialize the form with field data
-  const form = useForm<FieldEditFormData>({
-    resolver: zodResolver(fieldEditSchema),
-    defaultValues: {
-      name: field?.name || "",
-      api_name: field?.api_name || "",
-      target_object_type_id: field?.options?.target_object_type_id,
-      display_field_api_name: field?.options?.display_field_api_name,
-    },
-    values: field ? {
-      name: field.name,
-      api_name: field.api_name,
-      target_object_type_id: field.options?.target_object_type_id,
-      display_field_api_name: field.options?.display_field_api_name,
-    } : undefined,
-  });
-
-  // Update field
   const updateField = useMutation({
-    mutationFn: async (fieldData: Partial<ObjectField> & { id: string }) => {
-      const { id, ...updateData } = fieldData;
+    mutationFn: async (values: Partial<ObjectField>) => {
+      if (!user) throw new Error("User must be logged in to update field");
+      if (!field || !field.id) throw new Error("Field not found");
+
+      // Prepare the update data
+      const updateData: Record<string, any> = {};
       
-      // Make sure to include the object_type_id
-      const payload = {
-        ...updateData,
-        object_type_id: objectTypeId
-      };
+      // Only include fields that have changed
+      for (const [key, value] of Object.entries(values)) {
+        if (field[key as keyof ObjectField] !== value) {
+          updateData[key] = value;
+        }
+      }
+
+      // If nothing has changed, don't perform update
+      if (Object.keys(updateData).length === 0) {
+        return field;
+      }
 
       const { data, error } = await supabase
         .from("object_fields")
-        .update(payload)
-        .eq("id", id)
+        .update(updateData)
+        .eq("id", field.id)
         .select()
         .single();
 
       if (error) {
-        console.error("Error updating field:", error);
         throw error;
       }
 
-      return {
-        ...data,
-        options: data.options as ObjectField['options']
-      } as ObjectField;
+      return data as ObjectField;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["object-fields", objectTypeId] });
+    onSuccess: (data) => {
+      toast("Field updated", {
+        description: "The field has been updated successfully.",
+      });
+
+      // Invalidate queries
       queryClient.invalidateQueries({ queryKey: ["object-field", fieldId] });
-      toast.success("Field updated successfully");
+      
+      if (data.object_type_id) {
+        queryClient.invalidateQueries({
+          queryKey: ["object-fields", data.object_type_id],
+        });
+      }
     },
-    onError: (error: any) => {
-      toast.error("Failed to update field", {
-        description: error?.message || "An error occurred while updating the field"
+    onError: (error: Error) => {
+      safeErrorToast("Error updating field", {
+        description: error.message,
       });
     },
   });
 
-  const onSubmit = async (data: FieldEditFormData) => {
-    if (!field) return undefined;
-    
-    // Prepare field options based on field type
-    let options = { ...field.options } || {};
-    
-    if (field.data_type === 'lookup') {
-      options = {
-        ...options,
-        target_object_type_id: data.target_object_type_id,
-        display_field_api_name: data.display_field_api_name
-      };
-    }
-    
-    await updateField.mutateAsync({
-      id: field.id,
-      name: data.name,
-      options,
-    });
-    
-    return field;
-  };
+  const deleteField = useMutation({
+    mutationFn: async () => {
+      if (!user) throw new Error("User must be logged in to delete field");
+      if (!field) throw new Error("Field not found");
 
-  const isSubmitting = updateField.isPending;
+      const { error } = await supabase
+        .from("object_fields")
+        .delete()
+        .eq("id", field.id);
+
+      if (error) {
+        throw error;
+      }
+
+      return field;
+    },
+    onSuccess: (data) => {
+      toast("Field deleted", {
+        description: "The field has been permanently deleted.",
+      });
+
+      // Invalidate queries
+      if (data.object_type_id) {
+        queryClient.invalidateQueries({
+          queryKey: ["object-fields", data.object_type_id],
+        });
+      }
+    },
+    onError: (error: Error) => {
+      safeErrorToast("Error deleting field", {
+        description: error.message,
+      });
+    },
+  });
 
   return {
     field,
     isLoading,
     error,
     updateField,
-    form,
-    isSubmitting,
-    onSubmit,
+    deleteField,
   };
-}
+};

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -65,20 +66,25 @@ export function BatchFieldCreation({
 
   // Initialize field configs when component mounts or column data changes
   useEffect(() => {
+    if (!columnNames || columnNames.length === 0) return;
+    
     const configs = columnNames.map(name => {
       // Extract unique values for this column if available
       let uniqueValues: string[] = [];
-      if (columnData[name]) {
+      if (columnData && columnData[name]) {
         // Filter out empty values and get unique values
         uniqueValues = Array.from(new Set(columnData[name].filter(val => val?.trim() !== '')));
       }
+      
+      // Generate API name from column name
+      const apiName = name.toLowerCase().replace(/[^a-z0-9_]/g, '_');
       
       // Create properly typed field config
       const config: FieldConfig = {
         columnName: name,
         name: name,
-        apiName: name.toLowerCase().replace(/[^a-z0-9_]/g, '_'),
-        dataType: "text",
+        apiName: apiName,
+        dataType: guessDataType(name, uniqueValues),
         isRequired: false,
         status: "pending",
         uniqueValues,
@@ -90,6 +96,30 @@ export function BatchFieldCreation({
     
     setFieldConfigs(configs);
   }, [columnNames, columnData]);
+
+  // Function to guess data type based on field name and values
+  const guessDataType = (fieldName: string, values: string[]): string => {
+    const lowercaseName = fieldName.toLowerCase();
+    
+    // Check name patterns
+    if (lowercaseName.includes('email')) return 'email';
+    if (lowercaseName.includes('phone')) return 'phone';
+    if (lowercaseName.includes('date')) return 'date';
+    if (lowercaseName.includes('url') || lowercaseName.includes('website')) return 'url';
+    
+    // Check if all values are numbers
+    if (values.length > 0 && values.every(val => !isNaN(Number(val)))) {
+      return 'number';
+    }
+    
+    // Check if it could be a picklist (few unique values compared to total)
+    if (values.length >= 5 && values.length <= 20 && new Set(values).size <= values.length * 0.5) {
+      return 'picklist';
+    }
+    
+    // Default to text
+    return 'text';
+  };
 
   const handleFieldChange = (index: number, field: Partial<FieldConfig>) => {
     const newConfigs = [...fieldConfigs];
@@ -169,6 +199,11 @@ export function BatchFieldCreation({
         setFieldConfigs([...newConfigs]);
         
         try {
+          // Add a small delay between field creation to avoid race conditions
+          if (i > 0) {
+            await new Promise(resolve => setTimeout(resolve, 300));
+          }
+          
           const field = await createField.mutateAsync({
             name: config.name,
             api_name: config.apiName,
@@ -194,6 +229,9 @@ export function BatchFieldCreation({
             setFieldConfigs([...newConfigs]);
             
             try {
+              // Add delay before creating picklist values
+              await new Promise(resolve => setTimeout(resolve, 300));
+              
               // Create picklist values for this field
               const success = await addBatchPicklistValues(field.id, config.uniqueValues);
               
@@ -229,7 +267,11 @@ export function BatchFieldCreation({
       
       if (!hasErrors) {
         toast.success(`Created ${createdFields.length} fields for ${objectType?.name || 'object'}`);
-        onComplete(createdFields);
+        
+        // Add a small delay before calling onComplete to ensure all mutations are properly settled
+        setTimeout(() => {
+          onComplete(createdFields);
+        }, 500);
       }
     } finally {
       setIsCreating(false);
@@ -343,7 +385,7 @@ export function BatchFieldCreation({
             </TableHeader>
             <TableBody>
               {fieldConfigs.map((config, index) => (
-                <TableRow key={index}>
+                <TableRow key={`${config.columnName}-${index}`}>
                   <TableCell>{config.columnName}</TableCell>
                   <TableCell>
                     <Input

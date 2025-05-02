@@ -1,117 +1,34 @@
 
-import React, { useEffect, useState } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
-import { useObjectFields } from "@/hooks/useObjectFields";
+import { useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Form } from "@/components/ui/form";
-import { Loader2, ArrowLeft } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
+import { Loader2, ArrowLeft, Trash } from "lucide-react";
+import { useObjectFieldEdit } from "@/hooks/useObjectFieldEdit";
+import { useObjectTypes } from "@/hooks/useObjectTypes";
 import { ObjectFieldEditFields } from "@/components/settings/ObjectFieldEditFields";
-import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/card";
-import { ObjectField } from "@/hooks/useObjectTypes";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
-
-// Define the form schema
-const fieldEditSchema = z.object({
-  name: z.string().min(1, "Field name is required"),
-  api_name: z.string().min(1, "API name is required"),
-  target_object_type_id: z.string().optional(),
-  display_field_api_name: z.string().optional(),
-});
-
-export type FieldEditFormData = z.infer<typeof fieldEditSchema>;
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Card, CardContent } from "@/components/ui/card";
+import { AlertCircle } from "lucide-react";
+import { DeleteDialog } from "@/components/common/DeleteDialog";
+import { PicklistValuesManager } from "@/components/settings/PicklistValuesManager";
+import { Separator } from "@/components/ui/separator";
 
 export default function ObjectFieldEditPage() {
+  const { objectTypeId, fieldId } = useParams<{
+    objectTypeId: string;
+    fieldId: string;
+  }>();
   const navigate = useNavigate();
-  const { objectTypeId, fieldId } = useParams<{ objectTypeId: string; fieldId: string }>();
-  const { fields, isLoading } = useObjectFields(objectTypeId);
-  
-  const field = fields?.find(f => f.id === fieldId);
-  
-  const handleClose = () => {
-    navigate(`/settings/objects/${objectTypeId}`);
-  };
-  
-  // Initialize the form
-  const form = useForm<FieldEditFormData>({
-    resolver: zodResolver(fieldEditSchema),
-    defaultValues: {
-      name: field?.name || "",
-      api_name: field?.api_name || "",
-      target_object_type_id: field?.options?.target_object_type_id,
-      display_field_api_name: field?.options?.display_field_api_name,
-    },
-    values: field ? {
-      name: field.name,
-      api_name: field.api_name,
-      target_object_type_id: field.options?.target_object_type_id,
-      display_field_api_name: field.options?.display_field_api_name,
-    } : undefined,
-  });
-  
-  useEffect(() => {
-    if (!isLoading && !field && fieldId) {
-      navigate(`/settings/objects/${objectTypeId}`);
-    }
-    
-    if (field) {
-      form.reset({
-        name: field.name,
-        api_name: field.api_name,
-        target_object_type_id: field.options?.target_object_type_id,
-        display_field_api_name: field.options?.display_field_api_name,
-      });
-    }
-  }, [isLoading, field, navigate, objectTypeId, form, fieldId]);
-  
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  
-  const onSubmit = async (data: FieldEditFormData) => {
-    if (!field) return;
-    setIsSubmitting(true);
-    
-    try {
-      // Prepare field options based on field type
-      let options = { ...field.options } || {};
-      
-      if (field.data_type === 'lookup') {
-        options = {
-          ...options,
-          target_object_type_id: data.target_object_type_id,
-          display_field_api_name: data.display_field_api_name
-        };
-      }
-      
-      const { data: updatedField, error } = await supabase
-        .from("object_fields")
-        .update({
-          name: data.name,
-          options
-        })
-        .eq("id", field.id)
-        .select()
-        .single();
-      
-      if (error) throw error;
-      
-      toast.success("Field updated successfully");
-      handleClose();
-    } catch (error: any) {
-      toast.error("Failed to update field", {
-        description: error?.message || "An error occurred while updating the field"
-      });
-      console.error("Error updating field:", error);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+  const { field, isLoading, deleteField } = useObjectFieldEdit(fieldId || "");
+  const { objectTypes } = useObjectTypes();
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+
+  const objectType = objectTypes?.find((t) => t.id === objectTypeId);
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
+      <div className="flex justify-center items-center h-64">
         <Loader2 className="h-8 w-8 animate-spin" />
       </div>
     );
@@ -120,62 +37,75 @@ export default function ObjectFieldEditPage() {
   if (!field) {
     return (
       <div className="space-y-4">
-        <Button variant="outline" asChild>
-          <Link to={`/settings/objects/${objectTypeId}`}>
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Object
-          </Link>
+        <PageHeader
+          title="Field not found"
+          description="The requested field could not be found"
+        />
+        <Alert>
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            The field you are looking for might have been deleted or does not
+            exist.
+          </AlertDescription>
+        </Alert>
+        <Button variant="outline" onClick={() => navigate(-1)}>
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Go Back
         </Button>
-        <Card>
-          <CardContent className="pt-6">
-            <p className="text-center text-muted-foreground">Field not found</p>
-          </CardContent>
-        </Card>
       </div>
     );
   }
 
+  const handleDelete = async () => {
+    await deleteField.mutateAsync();
+    navigate(`/settings/objects/${objectTypeId}`);
+  };
+
+  const isSystemField = field.is_system === true;
+
   return (
-    <div className="space-y-4 max-w-2xl mx-auto">
-      <Button variant="outline" asChild>
-        <Link to={`/settings/objects/${objectTypeId}`}>
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Object
-        </Link>
-      </Button>
-      
+    <div className="space-y-6">
+      <PageHeader
+        title={`Edit Field: ${field.name}`}
+        description={`Edit the field for ${objectType?.name || "Object Type"}`}
+        actions={
+          !isSystemField && (
+            <Button
+              variant="destructive"
+              onClick={() => setShowDeleteDialog(true)}
+            >
+              <Trash className="mr-2 h-4 w-4" />
+              Delete Field
+            </Button>
+          )
+        }
+        backTo={`/settings/objects/${objectTypeId}`}
+      />
+
       <Card>
-        <CardHeader>
-          <h1 className="text-2xl font-bold">Edit Field: {field.name}</h1>
-        </CardHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)}>
-            <CardContent className="space-y-4">
-              <ObjectFieldEditFields 
-                form={form}
-                field={field}
-                targetFields={fields.filter(f => f.object_type_id === field.options?.target_object_type_id)}
-              />
-            </CardContent>
-            <CardFooter className="flex justify-end gap-2 border-t p-4">
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={handleClose}
-              >
-                Cancel
-              </Button>
-              <Button 
-                type="submit" 
-                disabled={isSubmitting}
-              >
-                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Save Changes
-              </Button>
-            </CardFooter>
-          </form>
-        </Form>
+        <CardContent className="pt-6">
+          <ObjectFieldEditFields field={field} />
+        </CardContent>
       </Card>
+
+      {field.data_type === "picklist" && (
+        <div className="space-y-4">
+          <h3 className="text-lg font-medium">Picklist Values</h3>
+          <Card>
+            <CardContent className="pt-6">
+              <PicklistValuesManager fieldId={field.id} />
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      <DeleteDialog
+        open={showDeleteDialog}
+        onOpenChange={setShowDeleteDialog}
+        title={`Delete Field: ${field.name}`}
+        description="Are you sure you want to delete this field? This action cannot be undone and will remove this field from all records."
+        onDelete={handleDelete}
+      />
     </div>
   );
 }
