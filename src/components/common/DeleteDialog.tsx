@@ -20,6 +20,7 @@ export interface DeleteDialogProps {
   description: string;
   onDelete: () => void;
   isDeleting?: boolean;
+  deleteButtonText?: string;
 }
 
 export function DeleteDialog({
@@ -29,6 +30,7 @@ export function DeleteDialog({
   description,
   onDelete,
   isDeleting = false,
+  deleteButtonText = "Delete",
 }: DeleteDialogProps) {
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
@@ -48,7 +50,7 @@ export function DeleteDialog({
           >
             <Button variant="destructive" disabled={isDeleting}>
               {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Delete
+              {deleteButtonText}
             </Button>
           </AlertDialogAction>
         </AlertDialogFooter>

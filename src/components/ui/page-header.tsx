@@ -3,19 +3,21 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { cn } from "@/lib/utils";
 
 export interface PageHeaderProps {
   title: string;
   description?: string;
   actions?: React.ReactNode;
   backTo?: string;
+  className?: string;
 }
 
-export function PageHeader({ title, description, actions, backTo }: PageHeaderProps) {
+export function PageHeader({ title, description, actions, backTo, className }: PageHeaderProps) {
   const navigate = useNavigate();
 
   return (
-    <div className="flex flex-col md:flex-row items-start md:items-center justify-between space-y-2 md:space-y-0 pb-4">
+    <div className={cn("flex flex-col md:flex-row items-start md:items-center justify-between space-y-2 md:space-y-0 pb-4", className)}>
       <div>
         {backTo && (
           <Button

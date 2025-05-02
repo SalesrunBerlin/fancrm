@@ -5,7 +5,7 @@ import { useObjectTypes } from "@/hooks/useObjectTypes";
 import { useRecordFields } from "@/hooks/useRecordFields";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, AlertCircle, CheckCircle, ArrowLeft, Plus, AlertTriangle, Badge } from "lucide-react";
+import { Loader2, AlertCircle, CheckCircle, ArrowLeft, Plus, AlertTriangle } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { useImportRecords } from "@/hooks/useImportRecords";
 import { useImportStorage } from "@/hooks/useImportStorage";
@@ -147,7 +147,48 @@ export default function ImportRecordsPage() {
   
   // Check for URL parameters - with improved safety
   useEffect(() => {
-    // ... keep existing code (URL parameter handling)
+    const newFieldId = searchParams.get('newFieldId');
+    const columnName = searchParams.get('columnName');
+
+    if (newFieldId && columnName && fields) {
+      // Find the index of the column that matches the column name
+      const columnIndex = hookColumnMappings.findIndex(
+        mapping => mapping.sourceColumnName === columnName
+      );
+
+      if (columnIndex >= 0) {
+        // Update the column mapping with the new field ID
+        const field = fields.find(f => f.id === newFieldId);
+        if (field) {
+          updateColumnMapping(columnIndex, field.id);
+          updateStorageColumnMapping(columnIndex, field.id);
+        }
+      }
+
+      // Remove the URL parameters to avoid infinite loops
+      const newSearchParams = new URLSearchParams(searchParams.toString());
+      newSearchParams.delete('newFieldId');
+      newSearchParams.delete('columnName');
+      navigate(`${window.location.pathname}?${newSearchParams.toString()}`, { replace: true });
+    } else if (storedData && storedData.columnMappings && fields && !isApplyingUrlParams) {
+      setIsApplyingUrlParams(true);
+      stateUpdateLock.current = true;
+
+      // Restore column mappings from stored data
+      storedData.columnMappings.forEach((mapping, index) => {
+        if (mapping.targetField?.id) {
+          const field = fields.find(f => f.id === mapping.targetField?.id);
+          if (field) {
+            updateColumnMapping(index, field.id);
+          }
+        }
+      });
+
+      setTimeout(() => {
+        setIsApplyingUrlParams(false);
+        stateUpdateLock.current = false;
+      }, 500);
+    }
   }, [searchParams, fields, navigate, objectTypeId, updateStorageColumnMapping, storedData, updateProcessingState, updateColumnMapping]);
 
   // NEW: Selective state restoration effect - only restore when returning from field creation
@@ -725,7 +766,7 @@ export default function ImportRecordsPage() {
                   </div>
                 </TabsContent>
                 <TabsContent value="example">
-                  <Alert variant="default">
+                  <Alert>
                     <AlertDescription>
                       Your data should be in a format similar to this example (tab or comma separated):
                     </AlertDescription>
@@ -761,7 +802,7 @@ export default function ImportRecordsPage() {
 
               {/* Enhanced unmapped columns alert */}
               {showUnmappedAlert && (
-                <Alert variant="warning" className="py-3">
+                <Alert className="py-3">
                   <AlertTriangle className="h-5 w-5" />
                   <div className="ml-2">
                     <AlertDescription className="font-medium">
@@ -834,7 +875,7 @@ export default function ImportRecordsPage() {
                               </div>
                             ))}
                             {importData.rows.length > 3 && (
-                              <Badge variant="outline" className="mt-1">+{importData.rows.length - 3} more rows</Badge>
+                              <Badge className="mt-1">+{importData.rows.length - 3} more rows</Badge>
                             )}
                           </div>
                         </TableCell>
@@ -849,78 +890,3 @@ export default function ImportRecordsPage() {
                   {importData.rows.length} records will be imported
                 </p>
               </div>
-
-              <div className="flex justify-end gap-2">
-                <Button 
-                  variant="outline" 
-                  onClick={handleClearImportData}
-                  disabled={isProcessingAction}
-                >
-                  Back
-                </Button>
-                <Button 
-                  onClick={handleCheckForDuplicates} 
-                  disabled={getMappedCount() === 0 || isProcessingAction || isUpdatingMappings || isRestoringState || isApplyingUrlParams}
-                >
-                  {isProcessingAction ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Processing...
-                    </>
-                  ) : "Continue"}
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {step === "duplicate-check" && duplicates.length > 0 && importData && (
-            <DuplicateRecordsResolver 
-              duplicates={duplicates}
-              fields={fields || []}
-              matchingFields={matchingFields}
-              columnMappings={columnMappings}
-              importData={importData}
-              onSetAction={updateDuplicateAction}
-              onUpdateMatchingFields={updateMatchingFields}
-              onUpdateDuplicateCheckIntensity={updateDuplicateCheckIntensity}
-              duplicateCheckIntensity={duplicateCheckIntensity}
-              onContinue={handleDuplicateResolutionContinue}
-              onBack={() => setStep("mapping")}
-              onRecheck={handleRecheckDuplicates}
-            />
-          )}
-
-          {step === "preview" && importData && (
-            <PreviewImportData 
-              importData={importData}
-              columnMappings={columnMappings}
-              selectedRows={selectedRows}
-              duplicateRows={duplicateRowIndices}
-              onSelectRow={handleSelectRow}
-              onSelectAll={handleSelectAll}
-              onContinue={handlePreviewContinue}
-              onBack={() => setStep(duplicates.length > 0 ? "duplicate-check" : "mapping")}
-            />
-          )}
-
-          {step === "batch-field-creation" && unmappedColumns.length > 0 && (
-            <BatchFieldCreation
-              objectTypeId={objectTypeId!}
-              columnNames={unmappedColumns}
-              columnData={columnData}
-              onComplete={handleBatchFieldCreationComplete}
-              onCancel={handleBatchFieldCreationCancel}
-            />
-          )}
-
-          {step === "importing" && (
-            <div className="flex flex-col items-center justify-center py-8">
-              <Loader2 className="h-8 w-8 animate-spin mb-4" />
-              <p>Importing your records...</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
