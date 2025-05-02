@@ -1,9 +1,8 @@
-
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { ObjectField } from "./useObjectTypes";
-import { toast } from "sonner";
 
 export type CreateFieldInput = {
   name: string;
@@ -23,6 +22,7 @@ export function useObjectFields(objectTypeId?: string) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
+  // Get fields for an object type
   const {
     data: fields,
     isLoading,
@@ -31,7 +31,7 @@ export function useObjectFields(objectTypeId?: string) {
   } = useQuery({
     queryKey: ["object-fields", objectTypeId],
     queryFn: async (): Promise<ObjectField[]> => {
-      if (!objectTypeId || !user) {
+      if (!objectTypeId) {
         return [];
       }
 
@@ -46,9 +46,13 @@ export function useObjectFields(objectTypeId?: string) {
         throw error;
       }
 
-      return data || [];
+      // Transform the data to match the ObjectField interface
+      return (data || []).map(field => ({
+        ...field,
+        options: field.options as ObjectField['options']
+      })) as ObjectField[];
     },
-    enabled: !!objectTypeId && !!user,
+    enabled: !!objectTypeId,
   });
 
   // Create a new field

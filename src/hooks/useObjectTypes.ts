@@ -31,6 +31,9 @@ export interface ObjectType {
   is_system: boolean;
   is_published: boolean;
   is_archived: boolean;
+  is_active: boolean;
+  show_in_navigation: boolean;
+  is_template: boolean;
   owner_id: string;
   default_field_api_name: string | null;
   icon: string | null;
