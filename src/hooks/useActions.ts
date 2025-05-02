@@ -47,28 +47,34 @@ export function useActions() {
     queryFn: async () => {
       if (!user) return [];
       
+      console.log("useActions: Fetching all actions");
       const { data, error } = await supabase
         .from("actions")
         .select("*, object_types(name,api_name)")
         .order("created_at", { ascending: false });
 
       if (error) {
-        toast.error("Failed to fetch actions");
         console.error("Error fetching actions:", error);
+        toast.error("Failed to fetch actions");
         return [];
       }
 
+      console.log(`useActions: Fetched ${data?.length || 0} actions`);
       return data as (Action & { object_types: { name: string; api_name: string } })[];
     },
     enabled: !!user,
   });
 
   // Get actions by object type ID
-  const getActionsByObjectId = async (objectTypeId: string) => {
-    if (!user || !objectTypeId) return [];
+  const getActionsByObjectId = async (objectTypeId: string): Promise<Action[] | []> => {
+    if (!user || !objectTypeId) {
+      console.log("useActions.getActionsByObjectId: No user or objectTypeId provided");
+      return [];
+    }
+    
+    console.log(`useActions: Fetching actions for objectTypeId: ${objectTypeId}`);
     
     try {
-      console.log(`useActions: Fetching actions for objectTypeId: ${objectTypeId}`);
       const { data, error } = await supabase
         .from("actions")
         .select("*")
@@ -80,11 +86,16 @@ export function useActions() {
         throw error;
       }
 
-      console.log(`useActions: Found ${data?.length || 0} actions for objectTypeId: ${objectTypeId}`);
+      if (!data) {
+        console.log("useActions.getActionsByObjectId: No data returned from query");
+        return [];
+      }
+      
+      console.log(`useActions: Found ${data.length} actions for objectTypeId: ${objectTypeId}`);
       return data as Action[];
     } catch (error) {
       console.error("Exception in getActionsByObjectId:", error);
-      return [];
+      throw error; // Re-throw to allow for proper error handling up the call stack
     }
   };
 
@@ -92,18 +103,23 @@ export function useActions() {
   const getAction = async (id: string) => {
     if (!user) return null;
 
-    const { data, error } = await supabase
-      .from("actions")
-      .select("*")
-      .eq("id", id)
-      .single();
+    try {
+      const { data, error } = await supabase
+        .from("actions")
+        .select("*")
+        .eq("id", id)
+        .single();
 
-    if (error) {
-      console.error("Error fetching action:", error);
+      if (error) {
+        console.error("Error fetching action:", error);
+        return null;
+      }
+
+      return data as Action;
+    } catch (error) {
+      console.error("Error in getAction:", error);
       return null;
     }
-
-    return data as Action;
   };
 
   // Create a new action

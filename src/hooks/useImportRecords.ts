@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { findDuplicateRecords } from "@/utils/importDuplicateUtils";
 import type { DuplicateRecord } from "@/utils/importDuplicateUtils";
-import { parseImportText, createInitialColumnMappings, getSampleValuesForColumn, guessDataTypeForColumn, ImportDataType } from "@/utils/importDataUtils";
+import { parseImportText, createInitialColumnMappings, getSampleValuesForColumn, guessDataTypeForColumn as guessDataType } from "@/utils/importDataUtils";
 import { createRecord, updateRecord, importRecords as importRecordsService } from "@/services/recordImportService";
 
 export interface ColumnMapping {
@@ -23,7 +23,7 @@ export function useImportRecords(objectTypeId: string, fields: any[]) {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const [isImporting, setIsImporting] = useState(false);
-  const [importData, setImportData] = useState<ImportDataType | null>(null);
+  const [importData, setImportData] = useState<any | null>(null);
   const [columnMappings, setColumnMappings] = useState<ColumnMapping[]>([]);
   const [duplicates, setDuplicates] = useState<DuplicateRecord[]>([]);
   const [matchingFields, setMatchingFields] = useState<string[]>([]);
@@ -50,7 +50,7 @@ export function useImportRecords(objectTypeId: string, fields: any[]) {
     }
   });
 
-  const parseImportData = (text: string): ImportDataType | null => {
+  const parseImportData = (text: string) => {
     const parsedData = parseImportText(text);
     
     if (parsedData) {
@@ -179,7 +179,7 @@ export function useImportRecords(objectTypeId: string, fields: any[]) {
     // Get sample values
     const sampleValues = getSampleValuesForColumn(importData, columnIndex);
     
-    return guessDataTypeForColumn(columnName, sampleValues);
+    return guessDataType(columnName, sampleValues);
   };
 
   return {

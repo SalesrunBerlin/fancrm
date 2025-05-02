@@ -1,7 +1,7 @@
 
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Loader2, Trash2 } from "lucide-react";
 import { useState } from "react";
+import { DeleteDialog } from "@/components/common/DeleteDialog";
 
 interface RecordDeleteDialogProps {
   open: boolean;
@@ -23,33 +23,23 @@ export function RecordDeleteDialog({ open, onOpenChange, onConfirm }: RecordDele
   };
 
   return (
-    <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-          <AlertDialogDescription>
-            This action cannot be undone. This will permanently delete this record
-            and remove its data from our servers.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction
-            onClick={(e) => {
-              e.preventDefault();
-              handleConfirm();
-            }}
-            className="bg-destructive hover:bg-destructive/90"
-          >
-            {isDeleting ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <Trash2 className="mr-2 h-4 w-4" />
-            )}
-            Delete
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+    <DeleteDialog 
+      open={open} 
+      onOpenChange={onOpenChange}
+      title="Are you sure?"
+      description="This action cannot be undone. This will permanently delete this record and remove its data from our servers."
+      onConfirm={handleConfirm}
+      isDeleting={isDeleting}
+      deleteButtonText={(
+        <>
+          {isDeleting ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <Trash2 className="mr-2 h-4 w-4" />
+          )}
+          Delete
+        </>
+      )}
+    />
   );
 }

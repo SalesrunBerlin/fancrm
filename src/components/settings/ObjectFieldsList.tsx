@@ -173,8 +173,8 @@ export function ObjectFieldsList({
       </div>
 
       <DeleteDialog
-        isOpen={isDeleteDialogOpen}
-        onClose={() => setIsDeleteDialogOpen(false)}
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
         onConfirm={handleDeleteField}
         title={`Delete Field: ${fieldToDelete?.name}`}
         description={`Are you sure you want to delete the field "${fieldToDelete?.name}"? This action cannot be undone and may affect existing records.`}

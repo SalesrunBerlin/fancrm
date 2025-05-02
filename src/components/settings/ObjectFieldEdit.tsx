@@ -95,7 +95,6 @@ export function ObjectFieldEdit({ field, isOpen, onClose }: ObjectFieldEditProps
             <ObjectFieldEditFields 
               form={form}
               field={field}
-              targetFields={targetFields}
             />
             
             <div className="flex justify-end gap-2">

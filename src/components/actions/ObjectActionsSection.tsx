@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Loader2, PlayCircle } from "lucide-react";
 import { Action, useActions } from "@/hooks/useActions";
 import { Separator } from "@/components/ui/separator";
+import { toast } from "sonner";
 
 interface ObjectActionsSectionProps {
   objectTypeId: string;
@@ -29,22 +30,36 @@ export function ObjectActionsSection({ objectTypeId, objectTypeName }: ObjectAct
   useEffect(() => {
     const fetchActions = async () => {
       if (!objectTypeId) {
-        console.log("No objectTypeId provided to ObjectActionsSection");
+        console.log("ObjectActionsSection: No objectTypeId provided");
         setLoading(false);
         return;
       }
       
       setLoading(true);
       setError(null);
+      setActions([]);
       
       try {
         console.log(`ObjectActionsSection: Fetching actions for objectTypeId: ${objectTypeId}`);
         const objectActions = await getActionsByObjectId(objectTypeId);
-        console.log(`ObjectActionsSection: Fetched ${objectActions?.length || 0} actions:`, objectActions);
-        setActions(objectActions || []);
+        
+        // Log the actual response for debugging
+        console.log(`ObjectActionsSection: Raw response:`, objectActions);
+        
+        if (!objectActions) {
+          console.log(`ObjectActionsSection: No actions returned from getActionsByObjectId`);
+          setActions([]);
+        } else {
+          console.log(`ObjectActionsSection: Found ${objectActions.length} actions for objectTypeId: ${objectTypeId}`);
+          setActions(objectActions);
+        }
       } catch (err) {
-        console.error("Error fetching actions in ObjectActionsSection:", err);
-        setError(err instanceof Error ? err : new Error("Failed to fetch actions"));
+        const error = err instanceof Error ? err : new Error("Failed to fetch actions");
+        console.error("Error fetching actions in ObjectActionsSection:", error);
+        setError(error);
+        toast.error("Failed to load actions", {
+          description: error.message
+        });
       } finally {
         setLoading(false);
       }
@@ -56,12 +71,6 @@ export function ObjectActionsSection({ objectTypeId, objectTypeName }: ObjectAct
   const handleExecuteAction = (actionId: string) => {
     navigate(`/actions/execute/${actionId}`);
   };
-
-  // Don't render anything if there are no actions and we're not loading
-  if (!loading && (!actions || actions.length === 0)) {
-    console.log(`ObjectActionsSection: No actions found for objectTypeId: ${objectTypeId}, hiding section`);
-    return null;
-  }
 
   if (loading) {
     return (
@@ -77,9 +86,25 @@ export function ObjectActionsSection({ objectTypeId, objectTypeName }: ObjectAct
     );
   }
 
+  // Don't render anything if there are no actions and we're not loading
+  if (!actions || actions.length === 0) {
+    console.log(`ObjectActionsSection: No actions found for objectTypeId: ${objectTypeId}, hiding section`);
+    return null;
+  }
+
   if (error) {
     console.error("Error loading actions:", error);
-    return null; // Hide completely on error
+    return (
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle>Actions</CardTitle>
+          <CardDescription className="text-destructive">Failed to load actions</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <p>There was a problem loading actions. Please try refreshing the page.</p>
+        </CardContent>
+      </Card>
+    );
   }
 
   return (

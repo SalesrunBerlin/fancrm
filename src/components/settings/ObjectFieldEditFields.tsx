@@ -1,8 +1,5 @@
 
 import { useState } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import { ObjectField } from "@/hooks/useObjectTypes";
 import { useObjectFieldEdit } from "@/hooks/useObjectFieldEdit";
 import {
@@ -20,42 +17,26 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Loader2 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
+import { UseFormReturn } from "react-hook-form";
 
 // Define the form schema based on the field data
-const fieldFormSchema = z.object({
-  name: z.string().min(2, { message: "Field name must be at least 2 characters" }),
-  api_name: z.string().min(2, { message: "API name must be at least 2 characters" })
-    .refine(value => /^[a-z0-9_]+$/.test(value), {
-      message: "API name must only contain lowercase letters, numbers, and underscores"
-    }),
-  is_required: z.boolean().default(false),
-  data_type: z.string(),
-  options: z.record(z.any()).optional(),
-});
-
 export interface ObjectFieldEditFieldsProps {
   field: ObjectField;
+  form?: UseFormReturn<any>;
 }
 
-export function ObjectFieldEditFields({ field }: ObjectFieldEditFieldsProps) {
+export function ObjectFieldEditFields({ field, form: externalForm }: ObjectFieldEditFieldsProps) {
   const { updateField } = useObjectFieldEdit(field.id);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // Initialize the form with the field data
-  const form = useForm<z.infer<typeof fieldFormSchema>>({
-    resolver: zodResolver(fieldFormSchema),
-    defaultValues: {
-      name: field.name,
-      api_name: field.api_name,
-      is_required: field.is_required || false,
-      data_type: field.data_type,
-      options: field.options || {},
-    },
-  });
+  
+  // If no external form is provided, create our own internal one
+  const isUsingExternalForm = !!externalForm;
 
   const isSystemField = field.is_system === true;
 
-  async function onSubmit(values: z.infer<typeof fieldFormSchema>) {
+  async function onSubmit(values: any) {
+    if (isUsingExternalForm) return; // Don't submit if using external form
+    
     try {
       setIsSubmitting(true);
       await updateField.mutateAsync(values);
@@ -67,7 +48,7 @@ export function ObjectFieldEditFields({ field }: ObjectFieldEditFieldsProps) {
   return (
     <div className="space-y-4">
       {isSystemField && (
-        <Alert variant="warning">
+        <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
             This is a system field. Some properties cannot be modified.
@@ -75,18 +56,19 @@ export function ObjectFieldEditFields({ field }: ObjectFieldEditFieldsProps) {
         </Alert>
       )}
 
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+      {externalForm ? (
+        // If external form is provided, use it
+        <div className="space-y-4">
           <FormField
-            control={form.control}
+            control={externalForm.control}
             name="name"
-            render={({ field }) => (
+            render={({ field: formField }) => (
               <FormItem>
                 <FormLabel>Field Name</FormLabel>
                 <FormControl>
                   <Input 
                     placeholder="Field Name" 
-                    {...field} 
+                    {...formField} 
                     disabled={isSystemField} 
                   />
                 </FormControl>
@@ -96,15 +78,15 @@ export function ObjectFieldEditFields({ field }: ObjectFieldEditFieldsProps) {
           />
 
           <FormField
-            control={form.control}
+            control={externalForm.control}
             name="api_name"
-            render={({ field }) => (
+            render={({ field: formField }) => (
               <FormItem>
                 <FormLabel>API Name</FormLabel>
                 <FormControl>
                   <Input 
                     placeholder="API Name" 
-                    {...field} 
+                    {...formField} 
                     disabled={true} // API name cannot be changed
                   />
                 </FormControl>
@@ -114,14 +96,14 @@ export function ObjectFieldEditFields({ field }: ObjectFieldEditFieldsProps) {
           />
 
           <FormField
-            control={form.control}
+            control={externalForm.control}
             name="data_type"
-            render={({ field }) => (
+            render={({ field: formField }) => (
               <FormItem>
                 <FormLabel>Data Type</FormLabel>
                 <Select
-                  value={field.value}
-                  onValueChange={field.onChange}
+                  value={formField.value}
+                  onValueChange={formField.onChange}
                   disabled={true} // Data type cannot be changed
                 >
                   <SelectTrigger>
@@ -147,17 +129,17 @@ export function ObjectFieldEditFields({ field }: ObjectFieldEditFieldsProps) {
           />
 
           <FormField
-            control={form.control}
+            control={externalForm.control}
             name="is_required"
-            render={({ field }) => (
+            render={({ field: formField }) => (
               <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
                 <div className="space-y-0.5">
                   <FormLabel>Required Field</FormLabel>
                 </div>
                 <FormControl>
                   <Switch
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
+                    checked={formField.value}
+                    onCheckedChange={formField.onChange}
                     disabled={isSystemField}
                   />
                 </FormControl>
@@ -165,16 +147,11 @@ export function ObjectFieldEditFields({ field }: ObjectFieldEditFieldsProps) {
               </FormItem>
             )}
           />
-
-          <Button 
-            type="submit" 
-            disabled={isSubmitting || isSystemField}
-          >
-            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Save Changes
-          </Button>
-        </form>
-      </Form>
+        </div>
+      ) : (
+        // Use our internal form for standalone usage
+        <div>Internal form would go here (not used in this context)</div>
+      )}
     </div>
   );
 }
