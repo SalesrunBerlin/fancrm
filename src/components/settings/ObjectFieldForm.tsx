@@ -63,9 +63,10 @@ interface ObjectFieldFormProps {
   objectTypeId: string;
   onComplete?: (field: ObjectField) => void;
   initialName?: string;
+  defaultType?: string; // Add this prop to support ImportCreateFieldPage
 }
 
-export function ObjectFieldForm({ objectTypeId, onComplete, initialName }: ObjectFieldFormProps) {
+export function ObjectFieldForm({ objectTypeId, onComplete, initialName, defaultType }: ObjectFieldFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPicklistValues, setShowPicklistValues] = useState(false);
   const [createdFieldId, setCreatedFieldId] = useState<string | null>(null);
@@ -79,7 +80,7 @@ export function ObjectFieldForm({ objectTypeId, onComplete, initialName }: Objec
     defaultValues: {
       name: initialName || "",
       api_name: "",
-      data_type: "text", // Set default value to "text"
+      data_type: defaultType || "text", // Use defaultType if provided
       is_required: false,
       options: {}
     }

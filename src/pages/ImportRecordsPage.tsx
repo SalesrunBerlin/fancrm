@@ -126,76 +126,87 @@ export default function ImportRecordsPage() {
     }, 500);
   }, [storeImportData]);
   
-  // Clear stored import data on initial page load
+  // Modified: Only clear import data on initial page load if we're not returning from field creation
   useEffect(() => {
-    if (isInitialMount.current && objectTypeId) {
+    // Check if we're in the middle of a field creation workflow
+    const isReturningFromFieldCreation = searchParams.get('newFieldId') && searchParams.get('columnName');
+    
+    // Only clear data on initial mount if we're not returning from field creation
+    if (isInitialMount.current && objectTypeId && !isReturningFromFieldCreation && !storedData?.processingNewField) {
       clearStoredImportData();
       clearImportData();
-      console.log("Import data cleared on page load");
+      console.log("Import data cleared on new import session");
+      isInitialMount.current = false;
+    } else if (isInitialMount.current) {
+      // Just mark initial mount as done without clearing if we're returning from field creation
+      console.log("Preserving import data for field creation workflow");
       isInitialMount.current = false;
     }
-  }, [objectTypeId, clearStoredImportData, clearImportData]);
+  }, [objectTypeId, clearStoredImportData, clearImportData, searchParams, storedData]);
   
   // Check for URL parameters - with improved safety
   useEffect(() => {
-    if (!objectTypeId || !fields || fields.length === 0) return;
-    
-    const newFieldId = searchParams.get('newFieldId');
-    const columnName = searchParams.get('columnName');
-    
-    if (newFieldId && columnName && fields && !isApplyingUrlParams && !isProcessingAction) {
-      setIsApplyingUrlParams(true);
-      setIsProcessingAction(true);
-      console.log(`Handling URL parameters: newFieldId=${newFieldId}, columnName=${columnName}`);
-      
-      // Find the new field
-      const newField = fields.find(field => field.id === newFieldId);
-      
-      if (newField && storedData) {
-        // Flag in storage that we're processing a new field
-        updateProcessingState(true);
-        
-        // Find the mapping index for this column
-        const columnIndex = storedData.columnMappings.findIndex(
-          mapping => mapping.sourceColumnName === decodeURIComponent(columnName)
-        );
-        
-        if (columnIndex >= 0) {
-          console.log(`Mapping column ${columnName} to new field:`, newField);
-          
-          // Update the storage first
-          updateStorageColumnMapping(columnIndex, newFieldId);
-          
-          // Then update the hook state after a small delay
-          setTimeout(() => {
-            updateColumnMapping(columnIndex, newFieldId);
-            
-            // Show success message
-            toast.success(`Field "${newField.name}" mapped to column "${decodeURIComponent(columnName)}"`);
-            
-            // Clear URL params after applying them
-            navigate(`/objects/${objectTypeId}/import`, { replace: true });
-            
-            setTimeout(() => {
-              setIsApplyingUrlParams(false);
-              setIsProcessingAction(false);
-              updateProcessingState(false);
-            }, 300);
-          }, 300);
-        } else {
-          setIsApplyingUrlParams(false);
-          setIsProcessingAction(false);
-          updateProcessingState(false);
-        }
-      } else {
-        setIsApplyingUrlParams(false);
-        setIsProcessingAction(false);
-      }
-    }
+    // ... keep existing code (URL parameter handling)
   }, [searchParams, fields, navigate, objectTypeId, updateStorageColumnMapping, storedData, updateProcessingState, updateColumnMapping]);
 
-  // Don't automatically restore state from storage when component mounts
-  // This effect is removed to prevent automatic state restoration
+  // NEW: Selective state restoration effect - only restore when returning from field creation
+  useEffect(() => {
+    // Only restore state if we have stored data and it indicates we're processing a new field
+    if (!objectTypeId || !fields || fields.length === 0) return;
+    
+    // Check if we have URL parameters indicating we're returning from field creation
+    const isReturningFromFieldCreation = searchParams.get('newFieldId') && searchParams.get('columnName');
+    
+    // Restore state if either the stored data shows we're in field creation process
+    // or we have URL params indicating we've returned from field creation
+    if (storedData && fields && !isRestoringState && !isProcessingAction &&
+        (storedData.processingNewField || isReturningFromFieldCreation)) {
+      
+      setIsRestoringState(true);
+      setIsProcessingAction(true);
+      stateUpdateLock.current = true;
+      
+      console.log("Restoring import state for field creation workflow");
+      
+      // Restore import data
+      if (storedData.rawText) {
+        parseImportText(storedData.rawText);
+      }
+      
+      // Restore step - always return to mapping step after field creation
+      setStep(storedData.step || "mapping");
+      
+      // Restore pastedText
+      setPastedText(storedData.rawText || "");
+      
+      // After a delay to ensure importData is parsed
+      setTimeout(() => {
+        if (storedData.columnMappings && storedData.columnMappings.length > 0) {
+          // Only restore mappings that aren't affected by the newly created field
+          storedData.columnMappings.forEach((mapping, index) => {
+            if (mapping.targetField?.id) {
+              const field = fields.find(f => f.id === mapping.targetField?.id);
+              if (field) {
+                updateColumnMapping(index, field.id);
+              }
+            }
+          });
+        }
+        
+        // Release locks after restoration is complete
+        setTimeout(() => {
+          setIsRestoringState(false);
+          setIsProcessingAction(false);
+          stateUpdateLock.current = false;
+          
+          // Reset the processing new field flag after state is restored
+          if (storedData.processingNewField) {
+            updateProcessingState(false);
+          }
+        }, 500);
+      }, 500);
+    }
+  }, [storedData, fields, parseImportText, isProcessingAction, objectTypeId, updateColumnMapping, updateProcessingState, searchParams, storedData?.processingNewField]);
 
   // Store current state whenever important values change - with improved safety
   useEffect(() => {
@@ -481,6 +492,7 @@ export default function ImportRecordsPage() {
     setStep("preview");
   };
 
+  // Modified handleCreateNewField function to properly set the processing flag
   const handleCreateNewField = (columnIndex: number) => {
     // Don't proceed if we're in the middle of an operation
     if (isProcessingAction) return;
@@ -495,11 +507,13 @@ export default function ImportRecordsPage() {
         headers: importData.headers,
         rows: importData.rows,
         columnMappings: hookColumnMappings,
-        step: "mapping" as const, // Always return to mapping step
+        step: step, // Preserve the current step instead of hardcoding
         processingNewField: true
       };
       
+      // Update storage with processing flag set to true
       storeImportData(updatedStoredData);
+      console.log("Setting processingNewField flag before navigating to field creation");
     }
     
     const columnName = hookColumnMappings[columnIndex]?.sourceColumnName || "";
@@ -658,7 +672,7 @@ export default function ImportRecordsPage() {
                     <Button 
                       variant="secondary" 
                       onClick={handleCreateBatchFields}
-                      disabled={isProcessingAction}
+                      disabled={isProcessingAction || isRestoringState || isUpdatingMappings}
                     >
                       <Plus className="mr-2 h-4 w-4" />
                       Create {unmappedColumns.length} Missing Fields

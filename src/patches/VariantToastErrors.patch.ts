@@ -19,8 +19,6 @@ Common issue: 'variant' does not exist in type 'ExternalToast'
 Fix: Remove the variant property or update toast library
 */
 
-// For each file with a toast that has a variant property:
-
 // Replace:
 // toast.success("Message", { variant: "default" });
 // With:
@@ -55,13 +53,28 @@ export function safeInfoToast(message: string) {
 }
 
 /**
- * To use in ObjectArchivePage.tsx and similar files:
+ * Implementation examples:
  * 
+ * 1. In ObjectArchivePage.tsx:
  * import { safeSuccessToast, safeErrorToast } from "@/patches/VariantToastErrors.patch";
  * 
- * // Instead of:
- * // toast.success("Message", { variant: "default" });
+ * // Replace:
+ * // toast.success("Object archived successfully", { variant: "default" });
  * 
- * // Use:
- * toast(safeSuccessToast("Message"));
+ * // With:
+ * toast(safeSuccessToast("Object archived successfully"));
+ * 
+ * // Replace:
+ * // toast.error("Failed to archive object", { variant: "destructive" });
+ * 
+ * // With:
+ * toast(safeErrorToast("Failed to archive object"));
+ * 
+ * 2. For Alert component with "warning" variant:
+ * // Replace:
+ * // <Alert variant="warning">
+ * 
+ * // With:
+ * <Alert variant="default">
  */
+

@@ -1,65 +1,72 @@
 
-import { useState } from "react";
-import { useNavigate, Link, useParams } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { Card, CardHeader, CardContent } from "@/components/ui/card";
-import { ArrowLeft } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import { ObjectFieldForm } from "@/components/settings/ObjectFieldForm";
-import { useObjectTypes } from "@/hooks/useObjectTypes";
+import { useRecordFields } from "@/hooks/useRecordFields";
 import { ObjectField } from "@/hooks/useObjectTypes";
+import { PageHeader } from "@/components/ui/page-header";
+import { Button } from "@/components/ui/button";
+import { ArrowLeft } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
 
 export default function ImportCreateFieldPage() {
-  const navigate = useNavigate();
   const { objectTypeId, columnName } = useParams<{ objectTypeId: string; columnName: string }>();
-  const { objectTypes } = useObjectTypes();
+  const navigate = useNavigate();
+  const { fields, isLoading } = useRecordFields(objectTypeId);
+  const [decodedColumnName, setDecodedColumnName] = useState<string>("");
+  const [suggestedType, setSuggestedType] = useState<string>("text");
   
-  // Get the current object type for display
-  const currentObjectType = objectTypes?.find(obj => obj.id === objectTypeId);
+  useEffect(() => {
+    if (columnName) {
+      // Decode the column name from URL
+      const decoded = decodeURIComponent(columnName);
+      setDecodedColumnName(decoded);
+      
+      // Suggest data type based on column name
+      const lowerName = decoded.toLowerCase();
+      
+      if (lowerName.includes('date') || lowerName.includes('time')) {
+        setSuggestedType('datetime');
+      } else if (lowerName.includes('email')) {
+        setSuggestedType('email');
+      } else if (lowerName.includes('price') || lowerName.includes('cost') || lowerName.includes('amount')) {
+        setSuggestedType('currency');
+      } else if (lowerName.includes('url') || lowerName.includes('website') || lowerName.includes('link')) {
+        setSuggestedType('url');
+      } else if (lowerName.includes('description') || lowerName.includes('notes') || lowerName.includes('comment')) {
+        setSuggestedType('textarea');
+      } else if (lowerName.includes('count') || lowerName.includes('number') || lowerName.includes('amount')) {
+        setSuggestedType('number');
+      } else {
+        setSuggestedType('text');
+      }
+    }
+  }, [columnName]);
   
-  // Handle completion of field creation
-  const handleComplete = (field: ObjectField) => {
-    // Get the original column name from URL params
-    const decodedColumnName = columnName ? decodeURIComponent(columnName) : "";
-    
-    // Redirect back to the import page with the field information
-    navigate(`/objects/${objectTypeId}/import?newFieldId=${field.id}&columnName=${encodeURIComponent(decodedColumnName)}`);
+  const handleFieldCreated = (field: ObjectField) => {
+    navigate(`/objects/${objectTypeId}/import?newFieldId=${field.id}&columnName=${columnName}`);
   };
-
-  if (!objectTypeId) {
-    return <div>Invalid object type ID</div>;
-  }
-
-  const decodedColumnName = columnName ? decodeURIComponent(columnName) : "";
-
+  
   return (
-    <div className="space-y-4 max-w-2xl mx-auto">
-      <Button variant="outline" asChild>
-        <Link to={`/objects/${objectTypeId}/import`}>
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Import
-        </Link>
-      </Button>
+    <div className="space-y-4">
+      <PageHeader
+        title={`Create Field: ${decodedColumnName}`}
+        description="Create a new field for this column"
+        actions={
+          <Button variant="outline" onClick={() => navigate(`/objects/${objectTypeId}/import`)}>
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Import
+          </Button>
+        }
+      />
       
       <Card>
-        <CardHeader>
-          <h1 className="text-2xl font-bold">Create New Field</h1>
-          {currentObjectType && (
-            <p className="text-muted-foreground">
-              For object: {currentObjectType.name}
-            </p>
-          )}
-          {decodedColumnName && (
-            <p className="text-muted-foreground">
-              From column: {decodedColumnName}
-            </p>
-          )}
-        </CardHeader>
-        <CardContent>
-          <ObjectFieldForm 
-            objectTypeId={objectTypeId} 
+        <CardContent className="pt-6">
+          <ObjectFieldForm
+            objectTypeId={objectTypeId!}
             initialName={decodedColumnName}
-            defaultType="text"
-            onComplete={handleComplete}
+            defaultType={suggestedType}
+            onComplete={handleFieldCreated}
           />
         </CardContent>
       </Card>
