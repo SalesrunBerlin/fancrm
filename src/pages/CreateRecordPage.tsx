@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Form } from "@/components/ui/form";
 import { RecordField } from "@/components/records/RecordField";
-import { useRecordFields } from "@/hooks/useRecordFields";
+import { useEnhancedFields } from "@/hooks/useEnhancedFields";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
 import { useObjectRecords } from "@/hooks/useObjectRecords";
 import type { RecordFormData } from "@/lib/types/records";
@@ -17,7 +17,7 @@ export default function CreateRecordPage() {
   const navigate = useNavigate();
   const { objectTypeId } = useParams<{ objectTypeId: string }>();
   const { objectTypes } = useObjectTypes();
-  const { fields, isLoading: isLoadingFields } = useRecordFields(objectTypeId);
+  const { fields, isLoading: isLoadingFields } = useEnhancedFields(objectTypeId);
   const { createRecord } = useObjectRecords(objectTypeId);
   const objectType = objectTypes?.find(type => type.id === objectTypeId);
   const form = useForm<RecordFormData>();

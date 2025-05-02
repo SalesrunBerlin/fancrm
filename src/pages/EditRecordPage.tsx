@@ -1,11 +1,10 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Form } from "@/components/ui/form";
 import { RecordField } from "@/components/records/RecordField";
-import { useRecordFields } from "@/hooks/useRecordFields";
+import { useEnhancedFields } from "@/hooks/useEnhancedFields";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
 import { useObjectRecords } from "@/hooks/useObjectRecords";
 import { useRecordDetail } from "@/hooks/useRecordDetail";
@@ -19,7 +18,7 @@ export default function EditRecordPage() {
   const navigate = useNavigate();
   const { objectTypeId, recordId } = useParams<{ objectTypeId: string; recordId: string }>();
   const { objectTypes } = useObjectTypes();
-  const { fields, isLoading: isLoadingFields } = useRecordFields(objectTypeId);
+  const { fields, isLoading: isLoadingFields } = useEnhancedFields(objectTypeId);
   const { updateRecord } = useObjectRecords(objectTypeId);
   const { record, isLoading: isLoadingRecord } = useRecordDetail(objectTypeId, recordId);
   const objectType = objectTypes?.find(type => type.id === objectTypeId);

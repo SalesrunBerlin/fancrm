@@ -16,6 +16,7 @@ import { ActionFieldWithDetails } from "@/hooks/useActionFields";
 import { RecordField } from "@/components/records/RecordField";
 import { ObjectField } from "@/hooks/useObjectTypes";
 import { evaluateFormula } from "@/utils/formulaEvaluator";
+import { useFieldPicklistValues } from "@/hooks/useFieldPicklistValues";
 
 interface CreateRecordFormProps {
   objectTypeId: string;
@@ -57,6 +58,7 @@ export function CreateRecordForm({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lookupFieldsValues, setLookupFieldsValues] = useState<Record<string, Record<string, any>>>({});
+  const [enhancedFields, setEnhancedFields] = useState<ObjectField[]>([]);
   
   // Filter only enabled fields or fields that are required by the object
   const enabledActionFields = actionFields.filter(af => 
@@ -67,6 +69,51 @@ export function CreateRecordForm({
   const enabledObjectFields = objectFields.filter(objField => 
     enabledActionFields.some(af => af.field_id === objField.id) || objField.is_required
   );
+  
+  // Enhance picklist fields with their values
+  useEffect(() => {
+    const enhancePicklistFields = async () => {
+      const picklistFields = enabledObjectFields.filter(field => field.data_type === 'picklist');
+      
+      if (picklistFields.length === 0) {
+        setEnhancedFields([...enabledObjectFields]);
+        return;
+      }
+      
+      const enhanced = [...enabledObjectFields];
+      
+      for (const field of picklistFields) {
+        try {
+          const { data } = await supabase
+            .from("field_picklist_values")
+            .select("*")
+            .eq("field_id", field.id)
+            .order("order_position");
+            
+          if (data && data.length > 0) {
+            const fieldIndex = enhanced.findIndex(f => f.id === field.id);
+            if (fieldIndex !== -1) {
+              enhanced[fieldIndex] = {
+                ...enhanced[fieldIndex],
+                options: {
+                  values: data.map(item => ({
+                    value: item.value,
+                    label: item.label
+                  }))
+                }
+              };
+            }
+          }
+        } catch (err) {
+          console.error(`Error fetching picklist values for field ${field.id}:`, err);
+        }
+      }
+      
+      setEnhancedFields(enhanced);
+    };
+    
+    enhancePicklistFields();
+  }, [enabledObjectFields]);
   
   // Build form schema based on fields
   const formSchema = buildFormSchema(enabledObjectFields);
@@ -194,13 +241,13 @@ export function CreateRecordForm({
   const preselectedFields = enabledActionFields
     .filter(f => f.is_preselected)
     .map(actionField => {
-      const field = objectFields.find(f => f.id === actionField.field_id);
+      const field = enhancedFields.find(f => f.id === actionField.field_id);
       return field;
     })
     .filter(Boolean) as ObjectField[];
   
   // Get the remaining fields
-  const remainingFields = enabledObjectFields.filter(field => 
+  const remainingFields = enhancedFields.filter(field => 
     !preselectedFields.some(pf => pf.id === field.id)
   );
 

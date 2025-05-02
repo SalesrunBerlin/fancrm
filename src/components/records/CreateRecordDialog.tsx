@@ -1,11 +1,10 @@
-
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Form } from "@/components/ui/form";
 import { RecordField } from "./RecordField";
-import { useRecordFields } from "@/hooks/useRecordFields";
+import { useEnhancedFields } from "@/hooks/useEnhancedFields";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
 import { useObjectRecords } from "@/hooks/useObjectRecords";
 import type { RecordFormData } from "@/lib/types/records";
@@ -21,7 +20,7 @@ interface CreateRecordDialogProps {
 export function CreateRecordDialog({ objectTypeId, open, onOpenChange }: CreateRecordDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { objectTypes } = useObjectTypes();
-  const { fields, isLoading: isLoadingFields } = useRecordFields(objectTypeId);
+  const { fields, isLoading: isLoadingFields } = useEnhancedFields(objectTypeId);
   const { createRecord } = useObjectRecords(objectTypeId);
   const objectType = objectTypes?.find(type => type.id === objectTypeId);
   const form = useForm<RecordFormData>();

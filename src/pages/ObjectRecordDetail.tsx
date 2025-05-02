@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
 import { useRecordDetail } from "@/hooks/useRecordDetail";
-import { useRecordFields } from "@/hooks/useRecordFields";
+import { useEnhancedFields } from "@/hooks/useEnhancedFields";
 import { useObjectRecords } from "@/hooks/useObjectRecords";
 import { PageHeader } from "@/components/ui/page-header";
 import { Loader2, ArrowLeft, Edit, Trash2, Star } from "lucide-react";
@@ -21,7 +21,7 @@ export default function ObjectRecordDetail() {
   const { objectTypeId, recordId } = useParams<{ objectTypeId: string, recordId: string }>();
   const { objectTypes } = useObjectTypes();
   const { record, isLoading } = useRecordDetail(objectTypeId, recordId);
-  const { fields } = useRecordFields(objectTypeId);
+  const { fields } = useEnhancedFields(objectTypeId);
   const { updateRecord } = useObjectRecords(objectTypeId);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("details");
