@@ -30,16 +30,13 @@ export function RecordDeleteDialog({ open, onOpenChange, onConfirm }: RecordDele
       description="This action cannot be undone. This will permanently delete this record and remove its data from our servers."
       onConfirm={handleConfirm}
       isDeleting={isDeleting}
-      deleteButtonText={(
-        <>
-          {isDeleting ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          ) : (
-            <Trash2 className="mr-2 h-4 w-4" />
-          )}
-          Delete
-        </>
+      deleteButtonText="Delete"
+    >
+      {isDeleting ? (
+        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+      ) : (
+        <Trash2 className="mr-2 h-4 w-4" />
       )}
-    />
+    </DeleteDialog>
   );
 }

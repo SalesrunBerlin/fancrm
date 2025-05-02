@@ -24,9 +24,10 @@ export function useInitializeObjects() {
         
         if (error) throw error;
         return data;
-      } catch (error: any) {
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : "An unexpected error occurred";
         safeErrorToast("Error initializing objects", {
-          description: error.message || "An unexpected error occurred"
+          description: errorMessage
         });
         throw error;
       } finally {

@@ -26,8 +26,14 @@ export function ObjectActionsSection({ objectTypeId, objectTypeName }: ObjectAct
   const [actions, setActions] = useState<Action[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
-
+  const [initialized, setInitialized] = useState(false);
+  
   useEffect(() => {
+    // Prevent multiple fetches for the same objectTypeId
+    if (!objectTypeId || initialized) {
+      return;
+    }
+    
     const fetchActions = async () => {
       if (!objectTypeId) {
         console.log("ObjectActionsSection: No objectTypeId provided");
@@ -37,7 +43,6 @@ export function ObjectActionsSection({ objectTypeId, objectTypeName }: ObjectAct
       
       setLoading(true);
       setError(null);
-      setActions([]);
       
       try {
         console.log(`ObjectActionsSection: Fetching actions for objectTypeId: ${objectTypeId}`);
@@ -46,8 +51,8 @@ export function ObjectActionsSection({ objectTypeId, objectTypeName }: ObjectAct
         // Log the actual response for debugging
         console.log(`ObjectActionsSection: Raw response:`, objectActions);
         
-        if (!objectActions) {
-          console.log(`ObjectActionsSection: No actions returned from getActionsByObjectId`);
+        if (!objectActions || objectActions.length === 0) {
+          console.log(`ObjectActionsSection: No actions found for objectTypeId: ${objectTypeId}, hiding section`);
           setActions([]);
         } else {
           console.log(`ObjectActionsSection: Found ${objectActions.length} actions for objectTypeId: ${objectTypeId}`);
@@ -62,6 +67,7 @@ export function ObjectActionsSection({ objectTypeId, objectTypeName }: ObjectAct
         });
       } finally {
         setLoading(false);
+        setInitialized(true);
       }
     };
 
@@ -88,7 +94,7 @@ export function ObjectActionsSection({ objectTypeId, objectTypeName }: ObjectAct
 
   // Don't render anything if there are no actions and we're not loading
   if (!actions || actions.length === 0) {
-    console.log(`ObjectActionsSection: No actions found for objectTypeId: ${objectTypeId}, hiding section`);
+    console.log(`ObjectActionsSection: No actions to display for objectTypeId: ${objectTypeId}`);
     return null;
   }
 

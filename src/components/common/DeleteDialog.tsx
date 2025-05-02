@@ -18,12 +18,13 @@ export interface DeleteDialogProps {
   onOpenChange?: (open: boolean) => void;
   title: string;
   description: string;
-  deleteButtonText?: string;
+  deleteButtonText?: string | React.ReactNode;
   cancelButtonText?: string;
   isDeleting?: boolean;
   onCancel?: () => void;
   onConfirm?: () => void | Promise<void>;
   onDelete?: () => void | Promise<void>;
+  children?: React.ReactNode;
 }
 
 export function DeleteDialog({
@@ -37,6 +38,7 @@ export function DeleteDialog({
   onCancel,
   onConfirm,
   onDelete,
+  children,
 }: DeleteDialogProps) {
   const handleCancel = () => {
     if (onCancel) onCancel();
@@ -72,6 +74,7 @@ export function DeleteDialog({
             ) : (
               deleteButtonText
             )}
+            {children}
           </Button>
         </AlertDialogFooter>
       </AlertDialogContent>

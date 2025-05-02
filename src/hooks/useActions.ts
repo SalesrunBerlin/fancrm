@@ -65,8 +65,8 @@ export function useActions() {
     enabled: !!user,
   });
 
-  // Get actions by object type ID
-  const getActionsByObjectId = async (objectTypeId: string): Promise<Action[] | []> => {
+  // Get actions by object type ID - using a more reliable approach
+  const getActionsByObjectId = async (objectTypeId: string): Promise<Action[]> => {
     if (!user || !objectTypeId) {
       console.log("useActions.getActionsByObjectId: No user or objectTypeId provided");
       return [];
@@ -86,7 +86,9 @@ export function useActions() {
         throw error;
       }
 
-      if (!data) {
+      console.log(`useActions.getActionsByObjectId: Query completed for ${objectTypeId}`);
+      
+      if (!data || data.length === 0) {
         console.log("useActions.getActionsByObjectId: No data returned from query");
         return [];
       }
