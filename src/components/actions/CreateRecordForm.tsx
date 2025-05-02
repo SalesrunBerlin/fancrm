@@ -121,32 +121,60 @@ export function CreateRecordForm({
   // Prepare default values from action fields and initialValues
   const defaultValues: Record<string, any> = { ...initialValues };
   
-  // Process action fields to set default values
-  enabledActionFields.forEach(actionField => {
-    const field = objectFields.find(f => f.id === actionField.field_id);
-    if (field) {
-      // Skip if we already have an initial value for this field
-      if (defaultValues[field.api_name]) return;
-      
-      // Check if this field has a formula
-      if (actionField.formula_type === 'dynamic' && actionField.formula_expression) {
-        defaultValues[field.api_name] = evaluateFormula(
-          actionField.formula_expression,
-          { lookupFieldsValues }
-        );
-      } 
-      // Otherwise use the static default value
-      else if (actionField.default_value) {
-        defaultValues[field.api_name] = actionField.default_value;
-      }
-    }
-  });
-  
   // Create form with the schema and default values
   const form = useForm({
     resolver: zodResolver(formSchema),
     defaultValues,
   });
+
+  // Important: Initialize formula-based default values when the form first loads
+  useEffect(() => {
+    if (enabledActionFields.length > 0 && objectFields.length > 0) {
+      console.log("Evaluating formula-based default values on form load");
+      
+      const formulaDefaults: Record<string, any> = {};
+      let hasFormulaValues = false;
+      
+      // Process action fields to set default values with formulas
+      enabledActionFields.forEach(actionField => {
+        const field = objectFields.find(f => f.id === actionField.field_id);
+        if (field) {
+          // Skip if we already have an initial value for this field
+          if (defaultValues[field.api_name]) return;
+          
+          // Check if this field has a formula
+          if (actionField.formula_type === 'dynamic' && actionField.formula_expression) {
+            const formulaValue = evaluateFormula(
+              actionField.formula_expression,
+              { 
+                fieldValues: form.getValues(),
+                lookupFieldsValues
+              }
+            );
+            
+            console.log(`Evaluating formula for ${field.api_name}:`, 
+              actionField.formula_expression, "-->", formulaValue);
+            
+            formulaDefaults[field.api_name] = formulaValue;
+            hasFormulaValues = true;
+          } 
+          // Otherwise use the static default value
+          else if (actionField.default_value) {
+            formulaDefaults[field.api_name] = actionField.default_value;
+            hasFormulaValues = true;
+          }
+        }
+      });
+      
+      // Set all formula values at once if we have any
+      if (hasFormulaValues) {
+        console.log("Setting formula default values:", formulaDefaults);
+        Object.entries(formulaDefaults).forEach(([fieldName, value]) => {
+          form.setValue(fieldName, value);
+        });
+      }
+    }
+  }, [enabledActionFields, objectFields, form]);
   
   useEffect(() => {
     // First, collect all lookup fields that have values

@@ -24,7 +24,10 @@ export function FormulaBuilder({
 
   useEffect(() => {
     if (value) {
-      setPreview(evaluateFormula(value));
+      console.log("FormulaBuilder: Evaluating preview for:", value);
+      const evaluated = evaluateFormula(value);
+      console.log("FormulaBuilder: Preview result:", evaluated);
+      setPreview(evaluated);
     } else {
       setPreview("");
     }

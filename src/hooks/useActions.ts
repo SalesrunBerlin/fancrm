@@ -139,10 +139,13 @@ export function useActions() {
                 }
               }
               
-              // Check if the field references our object type
-              return options && 
-                     typeof options === 'object' && 
-                     options.target_object_type_id === objectTypeId;
+              // Check if the field references our object type - fixed TypeScript error by checking type
+              if (options && typeof options === 'object' && !Array.isArray(options)) {
+                const typedOptions = options as Record<string, any>;
+                return typedOptions.target_object_type_id === objectTypeId;
+              }
+              
+              return false;
             });
           }
         }

@@ -29,7 +29,7 @@ export function useInitializeObjects() {
         if (error instanceof Error) {
           errorMessage = error.message;
         } else if (typeof error === 'object' && error !== null && 'message' in error) {
-          // Type assertion to handle error objects with message property
+          // Fix TypeScript error by using type assertion with specific shape
           errorMessage = (error as { message: string }).message;
         } else if (typeof error === 'string') {
           errorMessage = error;

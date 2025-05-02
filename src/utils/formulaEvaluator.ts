@@ -15,6 +15,8 @@ type FormulaContext = {
 export function evaluateFormula(expression: string | null | undefined, context: FormulaContext = {}): string {
   if (!expression) return '';
   
+  console.log("Evaluating formula:", expression, "with context:", context);
+  
   let result = expression;
   
   // Handle running number replacements
@@ -28,6 +30,7 @@ export function evaluateFormula(expression: string | null | undefined, context: 
     result = replaceFieldReferences(result, context.fieldValues, context.lookupFieldsValues);
   }
   
+  console.log("Formula evaluation result:", result);
   return result;
 }
 
@@ -65,7 +68,8 @@ function replaceDateFunctions(expression: string): string {
   let result = expression.replace(
     /{Now(?::([^}]*))?}/g, 
     (match, formatPattern) => {
-      if (!formatPattern) return now.toLocaleString();
+      console.log(`Replacing {Now} with format: ${formatPattern || 'default'}`);
+      if (!formatPattern) return now.toISOString();
       return format(now, formatPattern);
     }
   );
@@ -74,7 +78,8 @@ function replaceDateFunctions(expression: string): string {
   result = result.replace(
     /{Today(?::([^}]*))?}/g,
     (match, formatPattern) => {
-      if (!formatPattern) return now.toLocaleDateString();
+      console.log(`Replacing {Today} with format: ${formatPattern || 'default'}`);
+      if (!formatPattern) return format(now, 'yyyy-MM-dd');
       return format(now, formatPattern);
     }
   );
