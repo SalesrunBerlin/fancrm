@@ -1,3 +1,4 @@
+
 import { format } from 'date-fns';
 
 type FormulaContext = {
@@ -25,9 +26,15 @@ export function evaluateFormula(expression: string | null | undefined, context: 
   // Handle date functions
   result = replaceDateFunctions(result);
   
-  // Handle field references - if fieldValues are provided
+  // Handle lookup field references - this should be done before regular field references
+  // so that {lookupField.fieldName} is processed before potentially matching {fieldName}
+  if (context.fieldValues && context.lookupFieldsValues) {
+    result = replaceLookupFieldReferences(result, context.fieldValues, context.lookupFieldsValues);
+  }
+  
+  // Handle regular field references
   if (context.fieldValues) {
-    result = replaceFieldReferences(result, context.fieldValues, context.lookupFieldsValues);
+    result = replaceFieldReferences(result, context.fieldValues);
   }
   
   console.log("Formula evaluation result:", result);
@@ -88,34 +95,57 @@ function replaceDateFunctions(expression: string): string {
 }
 
 /**
- * Replaces field references in the expression
+ * Replaces lookup field references in the expression
+ * This specifically handles patterns like {LookupField.FieldName}
  */
-function replaceFieldReferences(
-  expression: string, 
+function replaceLookupFieldReferences(
+  expression: string,
   fieldValues: Record<string, any>,
-  lookupFieldsValues?: Record<string, Record<string, any>>
+  lookupFieldsValues: Record<string, Record<string, any>>
 ): string {
-  // First, handle lookup field references like {LookupField.FieldName}
-  let result = expression.replace(
-    /{([^{}]+)\.([^{}]+)}/g,
-    (match, lookupField, fieldName) => {
-      // If we have lookup field values
-      if (lookupFieldsValues && lookupFieldsValues[lookupField]) {
-        const lookupValue = lookupFieldsValues[lookupField][fieldName];
-        return lookupValue !== undefined ? String(lookupValue) : match;
+  // Handle explicit lookup field references like {LookupField.FieldName}
+  return expression.replace(
+    /{([^{}\.]+)\.([^{}\.]+)}/g,
+    (match, lookupFieldName, fieldName) => {
+      console.log(`Processing lookup reference: ${match} -> ${lookupFieldName}.${fieldName}`);
+      
+      // First check if we have values for this lookup field
+      if (lookupFieldsValues[lookupFieldName]) {
+        const lookupData = lookupFieldsValues[lookupFieldName];
+        console.log(`Found lookup data for ${lookupFieldName}:`, lookupData);
+        
+        const fieldValue = lookupData[fieldName];
+        if (fieldValue !== undefined) {
+          console.log(`Found lookup field value: ${lookupFieldName}.${fieldName} = ${fieldValue}`);
+          return String(fieldValue);
+        }
       }
-
-      // Otherwise try to find the lookup record ID first
-      const lookupId = fieldValues[lookupField];
-      if (!lookupId) return match;
-
-      console.log(`Found lookup ID: ${lookupId} for field ${lookupField}, but no resolved values available`);
+      
+      // If lookup field itself has a value (record ID) but we don't have the lookup data yet
+      const lookupId = fieldValues[lookupFieldName];
+      if (lookupId) {
+        console.log(`Lookup field ${lookupFieldName} has ID ${lookupId} but no resolved values available`);
+      } else {
+        console.log(`Lookup field ${lookupFieldName} has no value`);
+      }
+      
+      // If we can't resolve the lookup, return the original placeholder
+      // This allows for later reevaluation when lookup data is available
       return match;
     }
   );
+}
 
-  // Then, handle simple field references like {FieldName}
-  result = result.replace(
+/**
+ * Replaces simple field references in the expression
+ * This handles patterns like {FieldName}
+ */
+function replaceFieldReferences(
+  expression: string, 
+  fieldValues: Record<string, any>
+): string {
+  // Handle simple field references like {FieldName}
+  return expression.replace(
     /{([^{}\.]+)}/g,
     (match, fieldName) => {
       // If the match is a known function, don't replace it
@@ -127,9 +157,13 @@ function replaceFieldReferences(
       
       // Otherwise, try to replace with field value
       const value = fieldValues[fieldName];
-      return value !== undefined ? String(value) : match;
+      if (value !== undefined) {
+        console.log(`Replacing field reference {${fieldName}} with value:`, value);
+        return String(value);
+      }
+      
+      console.log(`Field reference {${fieldName}} has no value, keeping placeholder`);
+      return match;
     }
   );
-  
-  return result;
 }

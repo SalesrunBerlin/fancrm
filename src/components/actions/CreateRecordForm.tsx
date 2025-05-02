@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -17,6 +18,7 @@ import { RecordField } from "@/components/records/RecordField";
 import { ObjectField } from "@/hooks/useObjectTypes";
 import { evaluateFormula } from "@/utils/formulaEvaluator";
 import { useFieldPicklistValues } from "@/hooks/useFieldPicklistValues";
+import { useQueries, useQuery } from "@tanstack/react-query";
 
 interface CreateRecordFormProps {
   objectTypeId: string;
@@ -60,6 +62,9 @@ export function CreateRecordForm({
   const [lookupFieldsValues, setLookupFieldsValues] = useState<Record<string, Record<string, any>>>({});
   const [enhancedFields, setEnhancedFields] = useState<ObjectField[]>([]);
   const hasInitializedFormulas = useRef(false);
+  const hasProcessedLookupFormulas = useRef(false);
+  const [isLoadingLookupData, setIsLoadingLookupData] = useState(false);
+  const lookupFieldsLoadedRef = useRef<Set<string>>(new Set());
   
   // Filter only enabled fields or fields that are required by the object
   const enabledActionFields = actionFields.filter(af => 
@@ -128,6 +133,51 @@ export function CreateRecordForm({
     defaultValues,
   });
 
+  // Function to identify lookup fields that need data loading
+  const getLookupFieldsWithValues = () => {
+    const lookupFields = enabledObjectFields
+      .filter(field => field.data_type === 'lookup');
+      
+    const lookupFieldsWithValues = new Map<string, string>();
+
+    // Check which lookup fields have values in the form
+    lookupFields.forEach(field => {
+      const fieldValue = form.getValues(field.api_name);
+      if (fieldValue && !lookupFieldsLoadedRef.current.has(field.api_name)) {
+        lookupFieldsWithValues.set(field.api_name, fieldValue);
+      }
+    });
+
+    return lookupFieldsWithValues;
+  };
+
+  // Function to load lookup field data
+  const fetchLookupFieldData = async (fieldApiName: string, recordId: string) => {
+    console.log(`Fetching lookup data for field ${fieldApiName}, record ${recordId}`);
+    
+    try {
+      // Fetch the record values
+      const { data: fieldValues } = await supabase
+        .from('object_field_values')
+        .select('field_api_name, value')
+        .eq('record_id', recordId);
+        
+      if (fieldValues && fieldValues.length > 0) {
+        const valuesObj = fieldValues.reduce((acc, val) => {
+          acc[val.field_api_name] = val.value;
+          return acc;
+        }, {} as Record<string, any>);
+        
+        console.log(`Lookup data loaded for ${fieldApiName}:`, valuesObj);
+        return valuesObj;
+      }
+    } catch (err) {
+      console.error(`Error fetching values for lookup field ${fieldApiName}:`, err);
+    }
+    
+    return null;
+  };
+
   // Important: Initialize formula-based default values when the form first loads
   useEffect(() => {
     if (!hasInitializedFormulas.current && enabledActionFields.length > 0 && objectFields.length > 0) {
@@ -148,7 +198,7 @@ export function CreateRecordForm({
           
           // Check if this field has a formula
           if (actionField.formula_type === 'dynamic' && actionField.formula_expression) {
-            // Get the current timestamp for {Now} and {Today} formulas
+            // Evaluate simple formulas like {Now} and {Today}
             const formulaValue = evaluateFormula(
               actionField.formula_expression,
               { 
@@ -184,74 +234,141 @@ export function CreateRecordForm({
     }
   }, [enabledActionFields, objectFields, form, defaultValues, lookupFieldsValues]);
   
-  // Fetch data for lookup fields when their values change
+  // Immediately load lookup data when form initializes with lookup values
   useEffect(() => {
-    // First, collect all lookup fields that have values
-    const lookupFields = enabledObjectFields
-      .filter(field => field.data_type === 'lookup');
+    const loadLookupData = async () => {
+      // Check for lookup fields that have values
+      const lookupFieldsWithValues = getLookupFieldsWithValues();
       
-    const lookupFieldsWithValues = new Set<string>();
-
-    // Check which lookup fields have values in the form
-    lookupFields.forEach(field => {
-      const actionField = actionFields.find(af => af.field_id === field.id);
-      if (actionField && form.getValues(field.api_name)) {
-        lookupFieldsWithValues.add(field.api_name);
+      if (lookupFieldsWithValues.size === 0) {
+        return;
       }
-    });
-
-    // If we have any lookup fields with values, fetch their details
-    if (lookupFieldsWithValues.size > 0) {
-      const fetchLookupFieldsValues = async () => {
-        const newLookupValues: Record<string, Record<string, any>> = {};
+      
+      setIsLoadingLookupData(true);
+      console.log(`Loading data for ${lookupFieldsWithValues.size} lookup fields:`, 
+        Array.from(lookupFieldsWithValues.entries()));
+      
+      const newLookupValues: Record<string, Record<string, any>> = { ...lookupFieldsValues };
+      let dataLoaded = false;
+      
+      // Process each lookup field
+      for (const [fieldApiName, recordId] of lookupFieldsWithValues.entries()) {
+        const fieldData = await fetchLookupFieldData(fieldApiName, recordId);
         
-        for (const fieldApiName of lookupFieldsWithValues) {
-          const field = objectFields.find(f => f.api_name === fieldApiName);
-          if (!field || !field.options) continue;
+        if (fieldData) {
+          newLookupValues[fieldApiName] = fieldData;
+          lookupFieldsLoadedRef.current.add(fieldApiName);
+          dataLoaded = true;
+        }
+      }
+      
+      if (dataLoaded) {
+        console.log("Setting new lookup values:", newLookupValues);
+        setLookupFieldsValues(newLookupValues);
+      }
+      
+      setIsLoadingLookupData(false);
+    };
+    
+    loadLookupData();
+  }, [form.getValues]);
+  
+  // Re-evaluate formulas when lookup field values change
+  useEffect(() => {
+    // Only run this after initial formula evaluation and when lookup data changes
+    if (hasInitializedFormulas.current && 
+        Object.keys(lookupFieldsValues).length > 0 && 
+        !hasProcessedLookupFormulas.current) {
+      console.log("Re-evaluating formulas with lookup field data");
+      
+      const formulaUpdates: Record<string, any> = {};
+      let hasUpdates = false;
+      
+      // Process action fields that have formulas
+      enabledActionFields.forEach(actionField => {
+        if (actionField.formula_type === 'dynamic' && actionField.formula_expression) {
+          const field = objectFields.find(f => f.id === actionField.field_id);
+          if (!field) return;
           
-          let targetObjectTypeId = '';
+          // Check if the formula contains lookup references (e.g., {field.property})
+          const hasLookupReference = /{\w+\.\w+}/.test(actionField.formula_expression);
+          if (!hasLookupReference) return;
           
-          if (typeof field.options === 'object') {
-            targetObjectTypeId = (field.options as any).target_object_type_id || '';
-          } else if (typeof field.options === 'string') {
-            try {
-              targetObjectTypeId = JSON.parse(field.options).target_object_type_id || '';
-            } catch (e) {
-              console.error("Error parsing field options:", e);
+          console.log(`Re-evaluating lookup formula for ${field.api_name}:`, actionField.formula_expression);
+          
+          // Get the current form values and re-evaluate the formula
+          const currentFormValues = form.getValues();
+          const newValue = evaluateFormula(
+            actionField.formula_expression,
+            { 
+              fieldValues: currentFormValues, 
+              lookupFieldsValues 
             }
-          }
+          );
           
-          if (!targetObjectTypeId) continue;
+          console.log(`Formula result for ${field.api_name}:`, newValue);
           
-          const recordId = form.getValues(fieldApiName);
-          if (!recordId) continue;
-          
-          try {
-            // Fetch the record values
-            const { data: fieldValues } = await supabase
-              .from('object_field_values')
-              .select('field_api_name, value')
-              .eq('record_id', recordId);
-              
-            if (fieldValues && fieldValues.length > 0) {
-              const valuesObj = fieldValues.reduce((acc, val) => {
-                acc[val.field_api_name] = val.value;
-                return acc;
-              }, {} as Record<string, any>);
-              
-              newLookupValues[fieldApiName] = valuesObj;
-            }
-          } catch (err) {
-            console.error(`Error fetching values for lookup field ${fieldApiName}:`, err);
+          // Only update if the value actually changed
+          if (newValue !== currentFormValues[field.api_name]) {
+            formulaUpdates[field.api_name] = newValue;
+            hasUpdates = true;
           }
         }
-        
-        setLookupFieldsValues(newLookupValues);
-      };
+      });
       
-      fetchLookupFieldsValues();
+      // Apply all formula updates at once
+      if (hasUpdates) {
+        console.log("Updating form values with lookup-based formulas:", formulaUpdates);
+        Object.entries(formulaUpdates).forEach(([fieldName, value]) => {
+          form.setValue(fieldName, value);
+        });
+      }
+      
+      hasProcessedLookupFormulas.current = true;
     }
-  }, [objectFields, actionFields, form, enabledObjectFields]);
+  }, [lookupFieldsValues, enabledActionFields, objectFields, form]);
+  
+  // Watch for lookup field value changes to load related data
+  useEffect(() => {
+    const subscription = form.watch((value, { name, type }) => {
+      if (type !== 'change' || !name) return;
+      
+      // Check if this is a lookup field
+      const field = enabledObjectFields.find(f => f.api_name === name && f.data_type === 'lookup');
+      if (!field) return;
+      
+      const fieldValue = value[name];
+      if (!fieldValue) return;
+      
+      // Check if we already loaded this value
+      if (lookupFieldsLoadedRef.current.has(name) && lookupFieldsValues[name]) return;
+      
+      console.log(`Lookup field ${name} changed to ${fieldValue}, loading related data`);
+      
+      // Load the lookup field data
+      (async () => {
+        setIsLoadingLookupData(true);
+        const fieldData = await fetchLookupFieldData(name, fieldValue);
+        
+        if (fieldData) {
+          console.log(`Setting lookup data for ${name}:`, fieldData);
+          setLookupFieldsValues(prev => ({
+            ...prev,
+            [name]: fieldData
+          }));
+          
+          lookupFieldsLoadedRef.current.add(name);
+          
+          // Reset the processed flag so formulas will be re-evaluated
+          hasProcessedLookupFormulas.current = false;
+        }
+        
+        setIsLoadingLookupData(false);
+      })();
+    });
+    
+    return () => subscription.unsubscribe();
+  }, [form, enabledObjectFields, lookupFieldsValues]);
 
   // Get pre-selected fields
   const preselectedFields = enabledActionFields
@@ -319,6 +436,13 @@ export function CreateRecordForm({
           <Alert className={getAlertVariantClass("destructive")}>
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+        
+        {isLoadingLookupData && (
+          <Alert>
+            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+            <AlertDescription>Loading lookup field data...</AlertDescription>
           </Alert>
         )}
         
