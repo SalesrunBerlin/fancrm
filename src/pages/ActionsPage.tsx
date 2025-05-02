@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { PageHeader } from "@/components/ui/page-header";
@@ -116,6 +115,7 @@ export default function ActionsPage() {
                       <Button 
                         size="sm" 
                         onClick={() => navigate(`/actions/execute/${action.id}`)}
+                        variant={action.color || "default"}
                       >
                         <Play className="h-4 w-4 mr-1" /> Execute
                       </Button>

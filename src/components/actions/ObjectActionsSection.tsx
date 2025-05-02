@@ -155,6 +155,7 @@ export function ObjectActionsSection({
           key={action.id}
           onClick={() => handleExecuteAction(action)}
           className="h-8"
+          variant={action.color || "default"}
         >
           <PlayCircle className="mr-1.5 h-4 w-4" />
           {action.name}

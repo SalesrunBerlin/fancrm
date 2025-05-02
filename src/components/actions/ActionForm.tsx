@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -23,7 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Loader2, Save } from "lucide-react";
-import { ActionType } from "@/hooks/useActions";
+import { ActionType, ActionColor } from "@/hooks/useActions";
 import { supabase } from "@/integrations/supabase/client";
 
 const actionFormSchema = z.object({
@@ -32,6 +31,7 @@ const actionFormSchema = z.object({
   action_type: z.enum(["new_record", "linked_record"] as const),
   target_object_id: z.string().min(1, "Target object is required"),
   source_field_id: z.string().optional().nullable(),
+  color: z.enum(["default", "destructive", "outline", "secondary", "ghost", "link", "warning", "success"] as const).default("default"),
 });
 
 type ActionFormData = z.infer<typeof actionFormSchema>;
@@ -58,6 +58,7 @@ export function ActionForm({
       action_type: "new_record" as ActionType,
       target_object_id: "",
       source_field_id: null,
+      color: "default",
       ...defaultValues,
     },
   });
@@ -71,6 +72,7 @@ export function ActionForm({
   
   const actionType = form.watch("action_type");
   const targetObjectId = form.watch("target_object_id");
+  const selectedColor = form.watch("color");
 
   // Update form when defaultValues change
   useEffect(() => {
@@ -150,6 +152,11 @@ export function ActionForm({
     }
     
     onSubmit(data);
+  };
+
+  // Helper function to get button style based on selected color
+  const getButtonStyle = (color: ActionColor) => {
+    return `bg-${color === 'default' ? 'primary' : color}-500 hover:bg-${color === 'default' ? 'primary' : color}-600 text-white px-6 py-1 rounded`;
   };
 
   return (
@@ -273,6 +280,42 @@ export function ActionForm({
             )}
           />
         )}
+
+        <FormField
+          control={form.control}
+          name="color"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Button Color</FormLabel>
+              <Select
+                value={field.value}
+                onValueChange={field.onChange}
+              >
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select button color" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="default">Blue (Default)</SelectItem>
+                  <SelectItem value="destructive">Red</SelectItem>
+                  <SelectItem value="success">Green</SelectItem>
+                  <SelectItem value="warning">Orange</SelectItem>
+                  <SelectItem value="secondary">Gray</SelectItem>
+                  <SelectItem value="outline">Outline</SelectItem>
+                  <SelectItem value="ghost">Ghost</SelectItem>
+                </SelectContent>
+              </Select>
+              <div className="mt-2">
+                <div className="text-xs text-gray-500 mb-2">Preview:</div>
+                <Button type="button" variant={field.value} className="pointer-events-none">
+                  Button Preview
+                </Button>
+              </div>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
         <div className="flex justify-end gap-3">
           <Button

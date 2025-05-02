@@ -29,12 +29,10 @@ export function useInitializeObjects() {
         if (error instanceof Error) {
           errorMessage = error.message;
         } else if (typeof error === 'object' && error !== null && 'message' in error) {
-          // Fix TypeScript error by using type assertion with specific shape
-          errorMessage = (error as { message: string }).message;
+          const errorObj = error as { message: string };
+          errorMessage = errorObj.message;
         } else if (typeof error === 'string') {
           errorMessage = error;
-        } else if (typeof error === 'object' && error !== null) {
-          errorMessage = JSON.stringify(error);
         }
         
         toast.error("Error initializing objects", {
