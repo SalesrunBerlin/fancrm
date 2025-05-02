@@ -15,44 +15,50 @@ import { Loader2 } from "lucide-react";
 
 export interface DeleteDialogProps {
   open: boolean;
-  onOpenChange: (open: boolean) => void;
   title: string;
   description: string;
-  onDelete: () => void;
-  isDeleting?: boolean;
   deleteButtonText?: string;
+  cancelButtonText?: string;
+  isDeleting?: boolean;
+  onCancel: () => void;
+  onConfirm: () => void | Promise<void>;
 }
 
 export function DeleteDialog({
   open,
-  onOpenChange,
   title,
   description,
-  onDelete,
-  isDeleting = false,
   deleteButtonText = "Delete",
+  cancelButtonText = "Cancel",
+  isDeleting = false,
+  onCancel,
+  onConfirm,
 }: DeleteDialogProps) {
   return (
-    <AlertDialog open={open} onOpenChange={onOpenChange}>
+    <AlertDialog open={open}>
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>{title}</AlertDialogTitle>
           <AlertDialogDescription>{description}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
-          <AlertDialogAction
-            asChild
-            onClick={(e) => {
-              e.preventDefault();
-              onDelete();
-            }}
+          <AlertDialogCancel onClick={onCancel} disabled={isDeleting}>
+            {cancelButtonText}
+          </AlertDialogCancel>
+          <Button
+            variant="destructive"
+            onClick={onConfirm}
+            disabled={isDeleting}
           >
-            <Button variant="destructive" disabled={isDeleting}>
-              {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {deleteButtonText}
-            </Button>
-          </AlertDialogAction>
+            {isDeleting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Deleting...
+              </>
+            ) : (
+              deleteButtonText
+            )}
+          </Button>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
