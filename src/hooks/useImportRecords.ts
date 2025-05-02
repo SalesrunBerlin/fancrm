@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -39,6 +40,15 @@ export interface ColumnMapping {
 interface RecordFormData {
   [key: string]: string | null;
 }
+
+// Helper function to remove square brackets from the beginning and end of a string
+const removeSquareBrackets = (text: string): string => {
+  if (!text) return text;
+  if (text.startsWith('[') && text.endsWith(']')) {
+    return text.substring(1, text.length - 1);
+  }
+  return text;
+};
 
 export function useImportRecords(objectTypeId: string, fields: any[]) {
   const queryClient = useQueryClient();
@@ -140,12 +150,12 @@ export function useImportRecords(objectTypeId: string, fields: any[]) {
       delimiter = ',';
     }
     
-    // Parse headers
-    const headers = lines[0].split(delimiter).map(h => h.trim());
+    // Parse headers and remove square brackets
+    const headers = lines[0].split(delimiter).map(h => removeSquareBrackets(h.trim()));
     
-    // Parse rows
+    // Parse rows and remove square brackets from each cell
     const rows = lines.slice(1).map(line => {
-      return line.split(delimiter).map(cell => cell.trim());
+      return line.split(delimiter).map(cell => removeSquareBrackets(cell.trim()));
     });
     
     // Create column mappings

@@ -3,6 +3,19 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { ObjectField } from "@/hooks/useObjectTypes";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+
+// Define the form schema
+const fieldEditSchema = z.object({
+  name: z.string().min(1, "Field name is required"),
+  api_name: z.string().min(1, "API name is required"),
+  target_object_type_id: z.string().optional(),
+  display_field_api_name: z.string().optional(),
+});
+
+export type FieldEditFormData = z.infer<typeof fieldEditSchema>;
 
 export function useObjectFieldEdit(fieldId: string, objectTypeId: string) {
   const queryClient = useQueryClient();
@@ -35,6 +48,23 @@ export function useObjectFieldEdit(fieldId: string, objectTypeId: string) {
       } as ObjectField;
     },
     enabled: !!fieldId,
+  });
+
+  // Initialize the form with field data
+  const form = useForm<FieldEditFormData>({
+    resolver: zodResolver(fieldEditSchema),
+    defaultValues: {
+      name: field?.name || "",
+      api_name: field?.api_name || "",
+      target_object_type_id: field?.options?.target_object_type_id,
+      display_field_api_name: field?.options?.display_field_api_name,
+    },
+    values: field ? {
+      name: field.name,
+      api_name: field.api_name,
+      target_object_type_id: field.options?.target_object_type_id,
+      display_field_api_name: field.options?.display_field_api_name,
+    } : undefined,
   });
 
   // Update field
@@ -77,10 +107,38 @@ export function useObjectFieldEdit(fieldId: string, objectTypeId: string) {
     },
   });
 
+  const onSubmit = async (data: FieldEditFormData) => {
+    if (!field) return;
+    
+    // Prepare field options based on field type
+    let options = { ...field.options } || {};
+    
+    if (field.data_type === 'lookup') {
+      options = {
+        ...options,
+        target_object_type_id: data.target_object_type_id,
+        display_field_api_name: data.display_field_api_name
+      };
+    }
+    
+    await updateField.mutateAsync({
+      id: field.id,
+      name: data.name,
+      options,
+    });
+    
+    return field;
+  };
+
+  const isSubmitting = updateField.isPending;
+
   return {
     field,
     isLoading,
     error,
     updateField,
+    form,
+    isSubmitting,
+    onSubmit,
   };
 }
