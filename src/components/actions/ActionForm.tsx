@@ -110,8 +110,8 @@ export function ActionForm({
                   options = JSON.parse(options);
                 }
                 // Safely access the target_object_type_id
-                if (options && typeof options === 'object' && 'target_object_type_id' in options) {
-                  targetObjectTypeId = options.target_object_type_id || '';
+                if (options && typeof options === 'object' && options.target_object_type_id) {
+                  targetObjectTypeId = String(options.target_object_type_id);
                 }
               } catch (e) {
                 console.error("Error parsing field options:", e);
