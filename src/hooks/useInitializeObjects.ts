@@ -28,6 +28,11 @@ export function useInitializeObjects() {
         let errorMessage = "An unexpected error occurred";
         if (error instanceof Error) {
           errorMessage = error.message;
+        } else if (typeof error === 'object' && error !== null && 'message' in error) {
+          // Type assertion to handle error objects with message property
+          errorMessage = (error as { message: string }).message;
+        } else if (typeof error === 'string') {
+          errorMessage = error;
         } else if (typeof error === 'object' && error !== null) {
           errorMessage = JSON.stringify(error);
         }
