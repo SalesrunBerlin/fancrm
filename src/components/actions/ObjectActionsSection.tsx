@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -155,6 +156,7 @@ export function ObjectActionsSection({
           key={action.id}
           onClick={() => handleExecuteAction(action)}
           className="h-8"
+          variant={action.color || "default"}
         >
           <PlayCircle className="mr-1.5 h-4 w-4" />
           {action.name}

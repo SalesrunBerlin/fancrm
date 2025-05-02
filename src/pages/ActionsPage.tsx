@@ -4,7 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Loader2, Settings, MoreHorizontal, Play, Edit, Trash2 } from "lucide-react";
+import { Plus, Loader2, Settings, MoreHorizontal, Play, Edit, Trash2, Circle } from "lucide-react";
 import { useActions, Action } from "@/hooks/useActions";
 import { formatDistanceToNow } from "date-fns";
 import { DeleteDialog } from "@/components/common/DeleteDialog";
@@ -96,7 +96,16 @@ export default function ActionsPage() {
                 >
                   <div className="flex-grow">
                     <div className="flex items-center gap-2">
-                      <Settings className="h-5 w-5 text-muted-foreground" />
+                      <Circle 
+                        className={`h-5 w-5 ${
+                          action.color === 'destructive' ? 'text-destructive' : 
+                          action.color === 'warning' ? 'text-amber-500' : 
+                          action.color === 'success' ? 'text-green-600' : 
+                          action.color === 'secondary' ? 'text-secondary' : 
+                          'text-primary'
+                        }`} 
+                        fill="currentColor"
+                      />
                       <h3 className="font-medium">{action.name}</h3>
                       <Badge className={getActionTypeColor(action.action_type)} variant="outline">
                         {getActionTypeLabel(action.action_type)}
@@ -116,6 +125,7 @@ export default function ActionsPage() {
                       <Button 
                         size="sm" 
                         onClick={() => navigate(`/actions/execute/${action.id}`)}
+                        variant={action.color || "default"}
                       >
                         <Play className="h-4 w-4 mr-1" /> Execute
                       </Button>

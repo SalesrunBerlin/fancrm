@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 
 export type ActionType = 'new_record' | 'linked_record';
+export type ActionColor = 'default' | 'destructive' | 'secondary' | 'warning' | 'success';
 
 export interface Action {
   id: string;
@@ -14,6 +15,7 @@ export interface Action {
   action_type: ActionType;
   target_object_id: string;
   source_field_id?: string | null;
+  color: ActionColor;
   owner_id: string;
   created_at: string;
   updated_at: string;
@@ -37,6 +39,7 @@ export interface ActionCreateInput {
   action_type: ActionType;
   target_object_id: string;
   source_field_id?: string | null;
+  color?: ActionColor;
 }
 
 export function useActions() {
@@ -191,12 +194,16 @@ export function useActions() {
       
       setIsLoading(true);
       
+      // Ensure color has a default value if not provided
+      const dataWithDefaults = {
+        ...actionData,
+        color: actionData.color || 'default',
+        owner_id: user.id,
+      };
+      
       const { data, error } = await supabase
         .from("actions")
-        .insert({
-          ...actionData,
-          owner_id: user.id,
-        })
+        .insert(dataWithDefaults)
         .select()
         .single();
 

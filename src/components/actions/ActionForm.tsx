@@ -22,7 +22,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, Save } from "lucide-react";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Loader2, Save, Circle } from "lucide-react";
 import { ActionType } from "@/hooks/useActions";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -32,6 +37,7 @@ const actionFormSchema = z.object({
   action_type: z.enum(["new_record", "linked_record"] as const),
   target_object_id: z.string().min(1, "Target object is required"),
   source_field_id: z.string().optional().nullable(),
+  color: z.string().default("default"),
 });
 
 type ActionFormData = z.infer<typeof actionFormSchema>;
@@ -42,6 +48,14 @@ export interface ActionFormProps {
   onSubmit: (data: ActionFormData) => void | Promise<void>;
   isSubmitting?: boolean;
 }
+
+const colorOptions = [
+  { value: "default", label: "Blue (Default)", className: "bg-primary" },
+  { value: "destructive", label: "Red", className: "bg-destructive" },
+  { value: "secondary", label: "Gray", className: "bg-secondary" },
+  { value: "warning", label: "Amber", className: "bg-amber-500" },
+  { value: "success", label: "Green", className: "bg-green-600" },
+];
 
 export function ActionForm({
   defaultValues,
@@ -58,6 +72,7 @@ export function ActionForm({
       action_type: "new_record" as ActionType,
       target_object_id: "",
       source_field_id: null,
+      color: "default",
       ...defaultValues,
     },
   });
@@ -71,6 +86,7 @@ export function ActionForm({
   
   const actionType = form.watch("action_type");
   const targetObjectId = form.watch("target_object_id");
+  const selectedColor = form.watch("color");
 
   // Update form when defaultValues change
   useEffect(() => {
@@ -81,6 +97,7 @@ export function ActionForm({
         action_type: defaultValues.action_type || "new_record",
         target_object_id: defaultValues.target_object_id || "",
         source_field_id: defaultValues.source_field_id || null,
+        color: defaultValues.color || "default",
       });
     }
   }, [defaultValues, form]);
@@ -152,22 +169,76 @@ export function ActionForm({
     onSubmit(data);
   };
 
+  // Helper function to get color circle style
+  const getColorStyle = (colorValue: string) => {
+    const color = colorOptions.find(c => c.value === colorValue);
+    return color ? color.className : "bg-primary";
+  };
+
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-        <FormField
-          control={form.control}
-          name="name"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Name</FormLabel>
-              <FormControl>
-                <Input placeholder="Enter action name" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        <div className="flex items-center gap-3 mb-4">
+          <FormField
+            control={form.control}
+            name="color"
+            render={({ field }) => (
+              <FormItem className="flex-shrink-0">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      size="icon" 
+                      className="w-8 h-8 rounded-full p-0 border-2 border-muted"
+                    >
+                      <Circle className={`h-5 w-5 ${getColorStyle(field.value)}`} />
+                      <span className="sr-only">Toggle color picker</span>
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-64 p-3" align="start">
+                    <div className="space-y-2">
+                      <h4 className="font-medium text-sm">Select action color</h4>
+                      <div className="grid grid-cols-5 gap-2">
+                        {colorOptions.map((color) => (
+                          <Button
+                            key={color.value}
+                            type="button"
+                            variant={field.value === color.value ? "default" : "outline"}
+                            size="icon"
+                            className="w-8 h-8 rounded-full p-0"
+                            onClick={() => field.onChange(color.value)}
+                          >
+                            <Circle className={`h-5 w-5 ${color.className}`} />
+                            <span className="sr-only">{color.label}</span>
+                          </Button>
+                        ))}
+                      </div>
+                      <div className="pt-2">
+                        <p className="text-xs text-muted-foreground">
+                          Selected: {colorOptions.find(c => c.value === field.value)?.label}
+                        </p>
+                      </div>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="name"
+            render={({ field }) => (
+              <FormItem className="flex-1">
+                <FormControl>
+                  <Input placeholder="Enter action name" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
 
         <FormField
           control={form.control}
