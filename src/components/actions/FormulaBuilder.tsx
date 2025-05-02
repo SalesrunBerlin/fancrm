@@ -50,12 +50,11 @@ export function FormulaBuilder({
                 <h4 className="font-medium">Formula Syntax Help</h4>
                 <p className="text-sm">Use these placeholders in your formulas:</p>
                 <ul className="text-sm space-y-1">
-                  <li><code>{`{RunningNumber}`}</code> - Sequential number</li>
-                  <li><code>{`{RunningNumber:000}`}</code> - Formatted number (001, 002)</li>
                   <li><code>{`{Today}`}</code> - Current date</li>
                   <li><code>{`{Today:yyyy-MM-dd}`}</code> - Formatted date</li>
                   <li><code>{`{Now}`}</code> - Current date and time</li>
                   <li><code>{`{FieldName}`}</code> - Reference to other field</li>
+                  <li><code>{`{LookupField.FieldName}`}</code> - Reference to lookup field</li>
                 </ul>
               </div>
             </PopoverContent>
@@ -65,20 +64,12 @@ export function FormulaBuilder({
           id="formula-expression"
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          placeholder="E.g., Lead-{RunningNumber:000}"
+          placeholder="E.g., {Today:yyyy-MM-dd}"
           className="mt-1"
         />
       </div>
       
       <div className="grid grid-cols-2 gap-2">
-        <Button 
-          type="button" 
-          variant="outline" 
-          size="sm"
-          onClick={() => insertTemplate("{RunningNumber:000}")}
-        >
-          + Running Number
-        </Button>
         <Button 
           type="button" 
           variant="outline" 

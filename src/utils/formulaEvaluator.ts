@@ -2,6 +2,7 @@ import { format } from 'date-fns';
 
 type FormulaContext = {
   fieldValues?: Record<string, any>;
+  lookupFieldsValues?: Record<string, Record<string, any>>;
   runningNumberValue?: number;
 };
 
@@ -24,7 +25,7 @@ export function evaluateFormula(expression: string | null | undefined, context: 
   
   // Handle field references - if fieldValues are provided
   if (context.fieldValues) {
-    result = replaceFieldReferences(result, context.fieldValues);
+    result = replaceFieldReferences(result, context.fieldValues, context.lookupFieldsValues);
   }
   
   return result;
@@ -84,10 +85,33 @@ function replaceDateFunctions(expression: string): string {
 /**
  * Replaces field references in the expression
  */
-function replaceFieldReferences(expression: string, fieldValues: Record<string, any>): string {
-  // Match patterns like {FieldName}
-  return expression.replace(
-    /{([^{}]+)}/g,
+function replaceFieldReferences(
+  expression: string, 
+  fieldValues: Record<string, any>,
+  lookupFieldsValues?: Record<string, Record<string, any>>
+): string {
+  // First, handle lookup field references like {LookupField.FieldName}
+  let result = expression.replace(
+    /{([^{}]+)\.([^{}]+)}/g,
+    (match, lookupField, fieldName) => {
+      // If we have lookup field values
+      if (lookupFieldsValues && lookupFieldsValues[lookupField]) {
+        const lookupValue = lookupFieldsValues[lookupField][fieldName];
+        return lookupValue !== undefined ? String(lookupValue) : match;
+      }
+
+      // Otherwise try to find the lookup record ID first
+      const lookupId = fieldValues[lookupField];
+      if (!lookupId) return match;
+
+      console.log(`Found lookup ID: ${lookupId} for field ${lookupField}, but no resolved values available`);
+      return match;
+    }
+  );
+
+  // Then, handle simple field references like {FieldName}
+  result = result.replace(
+    /{([^{}\.]+)}/g,
     (match, fieldName) => {
       // If the match is a known function, don't replace it
       if (fieldName.startsWith('RunningNumber') || 
@@ -101,4 +125,6 @@ function replaceFieldReferences(expression: string, fieldValues: Record<string, 
       return value !== undefined ? String(value) : match;
     }
   );
+  
+  return result;
 }

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -54,6 +55,7 @@ export function CreateRecordForm({
   const { user } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lookupFieldsValues, setLookupFieldsValues] = useState<Record<string, Record<string, any>>>({});
   
   // Build form schema based on fields
   const formSchema = buildFormSchema(objectFields);
@@ -61,12 +63,84 @@ export function CreateRecordForm({
   // Prepare default values from action fields
   const defaultValues: Record<string, any> = {};
   
+  useEffect(() => {
+    // First, collect all lookup fields that have values
+    const lookupFields = objectFields
+      .filter(field => field.data_type === 'lookup');
+      
+    const lookupFieldsWithValues = new Set<string>();
+
+    // Check which lookup fields have values in the form
+    lookupFields.forEach(field => {
+      const actionField = actionFields.find(af => af.field_id === field.id);
+      if (actionField && form.getValues(field.api_name)) {
+        lookupFieldsWithValues.add(field.api_name);
+      }
+    });
+
+    // If we have any lookup fields with values, fetch their details
+    if (lookupFieldsWithValues.size > 0) {
+      const fetchLookupFieldsValues = async () => {
+        const newLookupValues: Record<string, Record<string, any>> = {};
+        
+        for (const fieldApiName of lookupFieldsWithValues) {
+          const field = objectFields.find(f => f.api_name === fieldApiName);
+          if (!field || !field.options) continue;
+          
+          let targetObjectTypeId = '';
+          
+          if (typeof field.options === 'object') {
+            targetObjectTypeId = (field.options as any).target_object_type_id || '';
+          } else if (typeof field.options === 'string') {
+            try {
+              targetObjectTypeId = JSON.parse(field.options).target_object_type_id || '';
+            } catch (e) {
+              console.error("Error parsing field options:", e);
+            }
+          }
+          
+          if (!targetObjectTypeId) continue;
+          
+          const recordId = form.getValues(fieldApiName);
+          if (!recordId) continue;
+          
+          try {
+            // Fetch the record values
+            const { data: fieldValues } = await supabase
+              .from('object_field_values')
+              .select('field_api_name, value')
+              .eq('record_id', recordId);
+              
+            if (fieldValues && fieldValues.length > 0) {
+              const valuesObj = fieldValues.reduce((acc, val) => {
+                acc[val.field_api_name] = val.value;
+                return acc;
+              }, {} as Record<string, any>);
+              
+              newLookupValues[fieldApiName] = valuesObj;
+            }
+          } catch (err) {
+            console.error(`Error fetching values for lookup field ${fieldApiName}:`, err);
+          }
+        }
+        
+        setLookupFieldsValues(newLookupValues);
+      };
+      
+      fetchLookupFieldsValues();
+    }
+  }, [objectFields, actionFields, form]);
+  
+  // Process action fields to set default values
   actionFields.forEach(actionField => {
     const field = objectFields.find(f => f.id === actionField.field_id);
     if (field) {
       // Check if this field has a formula
       if (actionField.formula_type === 'dynamic' && actionField.formula_expression) {
-        defaultValues[field.api_name] = evaluateFormula(actionField.formula_expression);
+        defaultValues[field.api_name] = evaluateFormula(
+          actionField.formula_expression,
+          { lookupFieldsValues }
+        );
       } 
       // Otherwise use the static default value
       else if (actionField.default_value) {
@@ -79,6 +153,27 @@ export function CreateRecordForm({
     resolver: zodResolver(formSchema),
     defaultValues,
   });
+
+  // Update form values when lookup values change
+  useEffect(() => {
+    if (Object.keys(lookupFieldsValues).length > 0) {
+      // Re-evaluate formulas with the new lookup values
+      actionFields.forEach(actionField => {
+        const field = objectFields.find(f => f.id === actionField.field_id);
+        if (field && actionField.formula_type === 'dynamic' && actionField.formula_expression) {
+          const newValue = evaluateFormula(
+            actionField.formula_expression, 
+            { 
+              fieldValues: form.getValues(), 
+              lookupFieldsValues 
+            }
+          );
+          
+          form.setValue(field.api_name, newValue);
+        }
+      });
+    }
+  }, [lookupFieldsValues, actionFields, objectFields]);
 
   // Get pre-selected fields
   const preselectedFields = actionFields

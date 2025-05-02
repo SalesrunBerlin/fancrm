@@ -1,155 +1,405 @@
 
-import { useFormField } from "@/components/ui/form";
+import { useFormContext } from "react-hook-form";
+import { 
+  FormField,
+  FormItem, 
+  FormLabel, 
+  FormControl,
+  FormMessage,
+  FormDescription
+} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { FormItem, FormLabel, FormControl, FormDescription, FormMessage } from "@/components/ui/form";
-import { ControllerRenderProps, UseFormReturn } from "react-hook-form";
-import { ObjectField } from "@/hooks/useObjectTypes";
+import { Switch } from "@/components/ui/switch";
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue 
+} from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { cn } from "@/lib/utils";
 import { LookupField } from "./LookupField";
-import { useFieldPicklistValues } from "@/hooks/useFieldPicklistValues";
-import { Loader2 } from "lucide-react";
 
 interface RecordFieldProps {
-  field: ObjectField;
-  form: UseFormReturn<any>;
+  field: {
+    name: string;
+    api_name: string;
+    data_type: string;
+    is_required?: boolean;
+    options?: any;
+  };
+  hideLabel?: boolean;
+  form?: any;
 }
 
-export function RecordField({ field, form }: RecordFieldProps) {
-  const { name } = useFormField();
-  const value = form.watch(field.api_name);
-  const { picklistValues, isLoading: loadingPicklist } = useFieldPicklistValues(field.id);
+export function RecordField({ field, hideLabel = false, form }: RecordFieldProps) {
+  const methods = useFormContext();
+  const formMethods = form || methods;
 
+  // Ensure we have a valid form context
+  if (!formMethods) {
+    console.error("RecordField must be used within a FormProvider or passed a form prop");
+    return null;
+  }
+
+  // Create a render function for each field type
   const renderField = () => {
+    const isRequired = field.is_required;
+    
     switch (field.data_type) {
-      case "text":
+      case "text": 
         return (
-          <Input
-            type="text"
-            placeholder={field.name}
-            {...form.register(field.api_name, { required: field.is_required })}
+          <FormField
+            control={formMethods.control}
+            name={field.api_name}
+            render={({ field: formField }) => (
+              <FormItem>
+                {!hideLabel && <FormLabel>{field.name}{isRequired && " *"}</FormLabel>}
+                <FormControl>
+                  <Input {...formField} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
           />
         );
+
       case "textarea":
         return (
-          <Textarea
-            placeholder={field.name}
-            {...form.register(field.api_name, { required: field.is_required })}
+          <FormField
+            control={formMethods.control}
+            name={field.api_name}
+            render={({ field: formField }) => (
+              <FormItem>
+                {!hideLabel && <FormLabel>{field.name}{isRequired && " *"}</FormLabel>}
+                <FormControl>
+                  <Textarea 
+                    {...formField}
+                    rows={4}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
           />
         );
-      case "number":
-        return (
-          <Input
-            type="number"
-            placeholder={field.name}
-            {...form.register(field.api_name, { required: field.is_required })}
-          />
-        );
+
       case "email":
         return (
-          <Input
-            type="email"
-            placeholder={field.name}
-            {...form.register(field.api_name, { required: field.is_required })}
+          <FormField
+            control={formMethods.control}
+            name={field.api_name}
+            render={({ field: formField }) => (
+              <FormItem>
+                {!hideLabel && <FormLabel>{field.name}{isRequired && " *"}</FormLabel>}
+                <FormControl>
+                  <Input 
+                    {...formField} 
+                    type="email" 
+                    placeholder="email@example.com" 
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
           />
         );
-      case "boolean":
+
+      case "url":
         return (
-          <Select
-            value={value === true ? "true" : value === false ? "false" : ""}
-            onValueChange={(value) => form.setValue(field.api_name, value === "true", { shouldValidate: true })}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder={field.name} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="true">True</SelectItem>
-              <SelectItem value="false">False</SelectItem>
-            </SelectContent>
-          </Select>
+          <FormField
+            control={formMethods.control}
+            name={field.api_name}
+            render={({ field: formField }) => (
+              <FormItem>
+                {!hideLabel && <FormLabel>{field.name}{isRequired && " *"}</FormLabel>}
+                <FormControl>
+                  <Input 
+                    {...formField} 
+                    type="url" 
+                    placeholder="https://example.com" 
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
         );
+
+      case "number":
+        return (
+          <FormField
+            control={formMethods.control}
+            name={field.api_name}
+            render={({ field: formField }) => (
+              <FormItem>
+                {!hideLabel && <FormLabel>{field.name}{isRequired && " *"}</FormLabel>}
+                <FormControl>
+                  <Input 
+                    {...formField} 
+                    type="number" 
+                    onChange={(e) => {
+                      const value = e.target.value === "" ? "" : Number(e.target.value);
+                      formField.onChange(value);
+                    }}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        );
+
+      case "currency":
+        return (
+          <FormField
+            control={formMethods.control}
+            name={field.api_name}
+            render={({ field: formField }) => (
+              <FormItem>
+                {!hideLabel && <FormLabel>{field.name}{isRequired && " *"}</FormLabel>}
+                <FormControl>
+                  <div className="relative">
+                    <span className="absolute left-3 top-2.5 text-muted-foreground">$</span>
+                    <Input 
+                      {...formField} 
+                      type="number"
+                      className="pl-7" 
+                      onChange={(e) => {
+                        const value = e.target.value === "" ? "" : Number(e.target.value);
+                        formField.onChange(value);
+                      }}
+                    />
+                  </div>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        );
+
+      case "percentage":
+        return (
+          <FormField
+            control={formMethods.control}
+            name={field.api_name}
+            render={({ field: formField }) => (
+              <FormItem>
+                {!hideLabel && <FormLabel>{field.name}{isRequired && " *"}</FormLabel>}
+                <FormControl>
+                  <div className="relative">
+                    <Input 
+                      {...formField} 
+                      type="number"
+                      className="pr-7" 
+                      onChange={(e) => {
+                        const value = e.target.value === "" ? "" : Number(e.target.value);
+                        formField.onChange(value);
+                      }}
+                    />
+                    <span className="absolute right-3 top-2.5 text-muted-foreground">%</span>
+                  </div>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        );
+
       case "date":
         return (
-          <Input
-            type="date"
-            placeholder={field.name}
-            {...form.register(field.api_name, { required: field.is_required })}
+          <FormField
+            control={formMethods.control}
+            name={field.api_name}
+            render={({ field: formField }) => (
+              <FormItem>
+                {!hideLabel && <FormLabel>{field.name}{isRequired && " *"}</FormLabel>}
+                <FormControl>
+                  <Input 
+                    {...formField} 
+                    type="date" 
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
           />
         );
+
+      case "time":
+        return (
+          <FormField
+            control={formMethods.control}
+            name={field.api_name}
+            render={({ field: formField }) => (
+              <FormItem>
+                {!hideLabel && <FormLabel>{field.name}{isRequired && " *"}</FormLabel>}
+                <FormControl>
+                  <Input 
+                    {...formField} 
+                    type="time" 
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        );
+
+      case "datetime":
+        return (
+          <FormField
+            control={formMethods.control}
+            name={field.api_name}
+            render={({ field: formField }) => (
+              <FormItem>
+                {!hideLabel && <FormLabel>{field.name}{isRequired && " *"}</FormLabel>}
+                <FormControl>
+                  <Input 
+                    {...formField} 
+                    type="datetime-local" 
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        );
+
+      case "checkbox":
+        return (
+          <FormField
+            control={formMethods.control}
+            name={field.api_name}
+            render={({ field: formField }) => (
+              <FormItem className={cn("flex flex-row items-start space-x-3 space-y-0 p-1")}>
+                <FormControl>
+                  <Checkbox
+                    checked={formField.value === "true" || formField.value === true}
+                    onCheckedChange={(checked) => {
+                      formField.onChange(checked ? "true" : "false");
+                    }}
+                  />
+                </FormControl>
+                {!hideLabel && <FormLabel className="font-normal">{field.name}</FormLabel>}
+              </FormItem>
+            )}
+          />
+        );
+
+      case "toggle":
+        return (
+          <FormField
+            control={formMethods.control}
+            name={field.api_name}
+            render={({ field: formField }) => (
+              <FormItem className="flex flex-row items-center justify-between p-1">
+                {!hideLabel && <FormLabel>{field.name}</FormLabel>}
+                <FormControl>
+                  <Switch
+                    checked={formField.value === "true" || formField.value === true}
+                    onCheckedChange={(checked) => {
+                      formField.onChange(checked ? "true" : "false");
+                    }}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+        );
+
       case "picklist":
-        if (loadingPicklist) {
-          return <div className="flex items-center space-x-2">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            <span>Loading options...</span>
-          </div>;
-        }
-        
-        if (!picklistValues || picklistValues.length === 0) {
-          return <Input 
-            type="text"
-            placeholder={`No options available for ${field.name}`}
-            disabled
-          />;
-        }
-        
         return (
-          <Select
-            value={value || ""}
-            onValueChange={(val) => form.setValue(field.api_name, val, { shouldValidate: true })}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder={`Select ${field.name.toLowerCase()}`} />
-            </SelectTrigger>
-            <SelectContent>
-              {picklistValues.map(option => (
-                <SelectItem key={option.id} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        );
-      case "lookup":
-        const fieldOptions = field.options as { target_object_type_id?: string } | undefined;
-        const targetObjectTypeId = fieldOptions?.target_object_type_id;
-        
-        if (!targetObjectTypeId) {
-          console.error(`Lookup field ${field.name} missing target object type id`);
-          return null;
-        }
-        
-        return (
-          <LookupField
-            value={value}
-            onChange={(newValue) => {
-              form.setValue(field.api_name, newValue, { shouldValidate: true });
-            }}
-            targetObjectTypeId={targetObjectTypeId}
-            disabled={form.formState.isSubmitting}
+          <FormField
+            control={formMethods.control}
+            name={field.api_name}
+            render={({ field: formField }) => (
+              <FormItem>
+                {!hideLabel && <FormLabel>{field.name}{isRequired && " *"}</FormLabel>}
+                <Select 
+                  onValueChange={formField.onChange}
+                  value={formField.value || ''}
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select an option" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {field.options?.values?.map((option: { value: string, label: string }) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
           />
         );
+
+      case "lookup":
+        let targetObjectTypeId = '';
         
+        // Extract target object ID from options
+        if (field.options) {
+          if (typeof field.options === 'string') {
+            try {
+              const parsedOptions = JSON.parse(field.options);
+              targetObjectTypeId = parsedOptions.target_object_type_id || '';
+            } catch (e) {
+              console.error("Error parsing lookup field options:", e);
+            }
+          } else if (typeof field.options === 'object') {
+            targetObjectTypeId = field.options.target_object_type_id || '';
+          }
+        }
+
+        return (
+          <FormField
+            control={formMethods.control}
+            name={field.api_name}
+            render={({ field: formField }) => (
+              <FormItem>
+                {!hideLabel && <FormLabel>{field.name}{isRequired && " *"}</FormLabel>}
+                <FormControl>
+                  <LookupField
+                    value={formField.value}
+                    onChange={formField.onChange}
+                    targetObjectTypeId={targetObjectTypeId}
+                    disabled={formField.disabled}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        );
+
       default:
         return (
-          <Input
-            type="text"
-            placeholder={field.name}
-            {...form.register(field.api_name, { required: field.is_required })}
+          <FormField
+            control={formMethods.control}
+            name={field.api_name}
+            render={({ field: formField }) => (
+              <FormItem>
+                {!hideLabel && <FormLabel>{field.name}{isRequired && " *"}</FormLabel>}
+                <FormControl>
+                  <Input {...formField} />
+                </FormControl>
+                <FormDescription className="text-xs">
+                  Unsupported field type: {field.data_type}
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
           />
         );
     }
   };
 
-  return (
-    <FormItem>
-      <FormLabel>{field.name}</FormLabel>
-      <FormControl>
-        {renderField()}
-      </FormControl>
-      {field.options && typeof field.options === 'object' && 'description' in field.options && (
-        <FormDescription>{String(field.options.description)}</FormDescription>
-      )}
-      <FormMessage />
-    </FormItem>
-  );
+  return renderField();
 }
