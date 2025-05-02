@@ -21,18 +21,19 @@ export default function ImportCreateFieldPage() {
   // Handle completion of field creation
   const handleComplete = (field: ObjectField) => {
     console.log("Field created successfully:", field);
-    toast.success(`Field '${field.name}' created successfully`);
+    
+    // Get the original column name from URL params
+    const decodedColumnName = columnName ? decodeURIComponent(columnName) : "";
     
     // Log details for debugging
     console.log("Redirecting with params:", {
       fieldId: field.id,
-      columnName: columnName || '',
+      columnName: decodedColumnName,
       objectTypeId
     });
     
     // Redirect back to the import page with the field information
-    // We encode the field ID to be used for mapping
-    navigate(`/objects/${objectTypeId}/import?newFieldId=${field.id}&columnName=${encodeURIComponent(columnName || '')}`);
+    navigate(`/objects/${objectTypeId}/import?newFieldId=${field.id}&columnName=${encodeURIComponent(decodedColumnName)}`);
   };
 
   if (!objectTypeId) {

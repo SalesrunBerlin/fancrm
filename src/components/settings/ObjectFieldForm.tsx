@@ -79,7 +79,7 @@ export function ObjectFieldForm({ objectTypeId, onComplete, initialName }: Objec
     defaultValues: {
       name: initialName || "",
       api_name: "",
-      data_type: "",
+      data_type: "text", // Set default value to "text"
       is_required: false,
       options: {}
     }

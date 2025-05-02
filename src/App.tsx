@@ -1,4 +1,3 @@
-
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { Toaster } from "sonner"; // Use sonner's Toaster, not the custom one
 import { Layout } from "@/components/layout/Layout";
@@ -19,7 +18,7 @@ import EditRecordPage from "@/pages/EditRecordPage";
 import CreateObjectPage from "@/pages/CreateObjectPage";
 import ImportRecordsPage from "@/pages/ImportRecordsPage";
 import CreateFieldPage from "@/pages/CreateFieldPage";
-import ImportCreateFieldPage from "@/pages/ImportCreateFieldPage";
+import ImportCreateFieldPage from "./pages/ImportCreateFieldPage";
 import ObjectDeletePage from "@/pages/ObjectDeletePage";
 import ObjectArchivePage from "@/pages/ObjectArchivePage";
 import ObjectRestorePage from "@/pages/ObjectRestorePage";

@@ -71,7 +71,7 @@ export default function ImportRecordsPage() {
   const [fieldsToCreate, setFieldsToCreate] = useState<FieldToCreate[]>([]);
   
   const { objectTypes } = useObjectTypes();
-  const { fields, isLoading: isLoadingFields } = useRecordFields(objectTypeId);
+  const { fields, isLoading: isLoadingFields, refetch: refetchFields } = useRecordFields(objectTypeId);
   const objectType = objectTypes?.find(type => type.id === objectTypeId);
 
   const { 
@@ -91,6 +91,35 @@ export default function ImportRecordsPage() {
     updateDuplicateAction,
     updateDuplicateCheckIntensity: rawUpdateIntensity
   } = useImportRecords(objectTypeId!, fields || []);
+
+  // Check for newly created field from the URL parameters
+  useEffect(() => {
+    const newFieldId = searchParams.get('newFieldId');
+    const columnName = searchParams.get('columnName');
+    
+    if (newFieldId && columnName && fields) {
+      // Find the new field
+      const newField = fields.find(field => field.id === newFieldId);
+      
+      if (newField) {
+        // Find the mapping index for this column
+        const columnIndex = hookColumnMappings.findIndex(
+          mapping => mapping.sourceColumnName === decodeURIComponent(columnName)
+        );
+        
+        if (columnIndex >= 0) {
+          console.log(`Mapping column ${columnName} to new field:`, newField);
+          updateColumnMapping(columnIndex, newFieldId);
+          
+          // Show success message
+          toast.success(`Field "${newField.name}" mapped to column "${decodeURIComponent(columnName)}"`);
+          
+          // Clear URL params after applying them
+          navigate(`/objects/${objectTypeId}/import`, { replace: true });
+        }
+      }
+    }
+  }, [searchParams, fields, hookColumnMappings, updateColumnMapping, navigate, objectTypeId]);
 
   // Directly use the columnMappings from the hook without conversion
   const columnMappings = hookColumnMappings;
@@ -258,6 +287,9 @@ export default function ImportRecordsPage() {
     
     // Reset fields to create list since they've been processed
     setFieldsToCreate([]);
+    
+    // Refetch fields to ensure we have the latest data
+    refetchFields();
   };
 
   const handleBatchFieldCreationCancel = () => {
