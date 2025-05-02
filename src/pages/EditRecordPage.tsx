@@ -83,23 +83,24 @@ export default function EditRecordPage() {
   const recordName = record?.displayName || `${objectType.name} Record`;
 
   return (
-    <div className="space-y-6 max-w-2xl mx-auto px-4 sm:px-6">
+    <div className="space-y-6 w-full max-w-2xl mx-auto px-4 sm:px-6">
       <PageHeader
         title={`Edit ${recordName}`}
         description={`Update the details for this ${objectType.name.toLowerCase()}`}
         className="mb-4"
+        backTo={`/objects/${objectTypeId}/${recordId}`}
       />
       
-      <Card className="shadow-sm">
+      <Card className="shadow-sm w-full max-w-full">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)}>
-            <CardContent className="space-y-6 pt-6">
+            <CardContent className="space-y-6 pt-6 w-full max-w-full">
               {isLoading ? (
                 <div className="flex justify-center py-8">
                   <Loader2 className="h-8 w-8 animate-spin" />
                 </div>
               ) : (
-                <div className="space-y-6">
+                <div className="space-y-6 w-full max-w-full">
                   {fields.map((field) => (
                     <RecordField
                       key={field.id}
@@ -109,7 +110,7 @@ export default function EditRecordPage() {
                   ))}
                   
                   {/* Add New Field Button */}
-                  <div className="pt-4 border-t">
+                  <div className="pt-4 border-t w-full">
                     <Button
                       type="button"
                       variant="outline"

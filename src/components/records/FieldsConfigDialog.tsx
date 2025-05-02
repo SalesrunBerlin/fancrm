@@ -20,6 +20,7 @@ interface FieldsConfigDialogProps {
   objectTypeId: string;
   onVisibilityChange?: (visibleFields: string[]) => void;
   defaultVisibleFields?: string[];
+  triggerComponent?: React.ReactNode;
 }
 
 const systemFields = [
@@ -32,6 +33,7 @@ export function FieldsConfigDialog({
   objectTypeId,
   onVisibilityChange,
   defaultVisibleFields,
+  triggerComponent,
 }: FieldsConfigDialogProps) {
   const { fields } = useObjectFields(objectTypeId);
   const { visibleFields, updateVisibleFields } = useUserFieldSettings(objectTypeId);
@@ -87,10 +89,12 @@ export function FieldsConfigDialog({
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button variant="ghost" size="icon" className="h-8 w-8">
-          <Settings2 className="h-4 w-4" />
-          <span className="sr-only">Configure columns</span>
-        </Button>
+        {triggerComponent || (
+          <Button variant="ghost" size="icon" className="h-8 w-8">
+            <Settings2 className="h-4 w-4" />
+            <span className="sr-only">Configure columns</span>
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>

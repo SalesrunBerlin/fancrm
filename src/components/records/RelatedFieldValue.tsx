@@ -33,6 +33,15 @@ export function RelatedFieldValue({ field, value }: RelatedFieldValueProps) {
     );
   }
   
+  // For text or textarea, ensure they don't overflow on mobile
+  if (field.data_type === "text" || field.data_type === "textarea") {
+    return (
+      <span className="truncate max-w-[150px] sm:max-w-[200px] md:max-w-[250px] block">
+        {value !== null && value !== undefined ? String(value) : "—"}
+      </span>
+    );
+  }
+  
   return (
     <Fragment>{value !== null && value !== undefined ? String(value) : "—"}</Fragment>
   );

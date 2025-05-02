@@ -13,11 +13,11 @@ interface RelatedRecordsSectionProps {
 
 export function RelatedRecordsSection({ section }: RelatedRecordsSectionProps) {
   return (
-    <Card className="shadow-sm">
+    <Card className="shadow-sm w-full max-w-full overflow-hidden">
       <CardHeader className="flex flex-row items-center justify-between border-b pb-4">
-        <div className="flex flex-col gap-1">
-          <div className="flex items-center gap-2">
-            <CardTitle>{section.objectType.name}</CardTitle>
+        <div className="flex flex-col gap-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <CardTitle className="text-lg">{section.objectType.name}</CardTitle>
             <Badge variant="outline" className="text-xs">
               {section.relationship.relationship_type}
             </Badge>
@@ -36,7 +36,7 @@ export function RelatedRecordsSection({ section }: RelatedRecordsSectionProps) {
           />
         </div>
       </CardHeader>
-      <CardContent className="pt-4 px-0 sm:px-4">
+      <CardContent className="pt-4 px-0 sm:px-2 md:px-4 overflow-hidden">
         <RelatedRecordsTable section={section} />
       </CardContent>
     </Card>

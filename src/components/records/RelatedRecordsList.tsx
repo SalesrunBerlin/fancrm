@@ -21,7 +21,7 @@ export function RelatedRecordsList({ objectTypeId, recordId }: RelatedRecordsLis
 
   if (!relatedSections || relatedSections.length === 0) {
     return (
-      <div className="text-center text-muted-foreground py-12 bg-muted/10 rounded-md border border-dashed">
+      <div className="text-center text-muted-foreground py-12 bg-muted/10 rounded-md border border-dashed w-full">
         <p className="font-medium">Keine verknüpften Datensätze gefunden</p>
         <p className="text-sm mt-2">No related records found for this item</p>
       </div>
@@ -29,7 +29,7 @@ export function RelatedRecordsList({ objectTypeId, recordId }: RelatedRecordsLis
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 w-full max-w-full">
       {relatedSections.map((section) => (
         <RelatedRecordsSection key={section.relationship.id + "-" + section.objectType.id} section={section} />
       ))}

@@ -10,8 +10,9 @@ interface RelatedRecordsTableProps {
 
 export function RelatedRecordsTable({ section }: RelatedRecordsTableProps) {
   return (
-    <div className="overflow-hidden rounded-md border">
-      <div className="overflow-x-auto">
+    <div className="overflow-hidden rounded-md border w-full max-w-full">
+      {/* Add a container with horizontal scroll for mobile */}
+      <div className="overflow-x-auto max-w-[calc(100vw-2rem)]">
         <Table>
           <TableHeader>
             <TableRow>

@@ -149,9 +149,9 @@ export default function ObjectRecordDetail() {
           <TabsTrigger value="related" className="flex-1 sm:flex-none">Related Records</TabsTrigger>
         </TabsList>
         
-        <TabsContent value="details">
-          <Card className="shadow-sm">
-            <CardContent className="pt-6 divide-y">
+        <TabsContent value="details" className="w-full max-w-full overflow-hidden">
+          <Card className="shadow-sm w-full">
+            <CardContent className="pt-6 divide-y w-full max-w-full">
               {fields
                 .sort((a, b) => (a.display_order || 0) - (b.display_order || 0))
                 .map((field) => {
@@ -159,32 +159,34 @@ export default function ObjectRecordDetail() {
                   const isTextField = field.data_type === "text" || field.data_type === "textarea";
                   
                   return (
-                    <div key={field.id} className="py-4 grid grid-cols-1 sm:grid-cols-3 gap-1">
-                      <div className="font-medium text-muted-foreground">
+                    <div key={field.id} className="py-4 grid grid-cols-1 sm:grid-cols-3 gap-1 w-full max-w-full">
+                      <div className="font-medium text-muted-foreground truncate">
                         {field.name}
                       </div>
-                      <div className="sm:col-span-2 flex items-center gap-2">
-                        {field.data_type === "lookup" && field.options ? (
-                          <LookupValueDisplay
-                            value={value}
-                            fieldOptions={{
-                              target_object_type_id: (field.options as { target_object_type_id?: string })?.target_object_type_id || ''
-                            }}
-                          />
-                        ) : field.data_type === "picklist" && value ? (
-                          <span>{value}</span>
-                        ) : (
-                          <span className="text-foreground">
-                            {value !== null && value !== undefined ? String(value) : "—"}
-                          </span>
-                        )}
+                      <div className="sm:col-span-2 flex items-center gap-2 break-words overflow-hidden">
+                        <div className="overflow-hidden overflow-ellipsis max-w-[calc(100%-2rem)]">
+                          {field.data_type === "lookup" && field.options ? (
+                            <LookupValueDisplay
+                              value={value}
+                              fieldOptions={{
+                                target_object_type_id: (field.options as { target_object_type_id?: string })?.target_object_type_id || ''
+                              }}
+                            />
+                          ) : field.data_type === "picklist" && value ? (
+                            <span>{value}</span>
+                          ) : (
+                            <span className="text-foreground break-all">
+                              {value !== null && value !== undefined ? String(value) : "—"}
+                            </span>
+                          )}
+                        </div>
                         
                         {/* Star icon for text fields when star mode is active */}
                         {starModeActive && isTextField && value && (
                           <Button 
                             variant="ghost" 
                             size="icon"
-                            className="h-6 w-6"
+                            className="h-6 w-6 shrink-0"
                             onClick={() => handleFieldStarClick(field.name, field.api_name)}
                             disabled={isProcessing}
                           >
@@ -199,12 +201,14 @@ export default function ObjectRecordDetail() {
           </Card>
         </TabsContent>
         
-        <TabsContent value="related">
+        <TabsContent value="related" className="w-full max-w-full">
           {objectTypeId && recordId && (
-            <RelatedRecordsList 
-              objectTypeId={objectTypeId} 
-              recordId={recordId} 
-            />
+            <div className="w-full max-w-full overflow-hidden">
+              <RelatedRecordsList 
+                objectTypeId={objectTypeId} 
+                recordId={recordId} 
+              />
+            </div>
           )}
         </TabsContent>
       </Tabs>
