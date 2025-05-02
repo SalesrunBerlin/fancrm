@@ -1,5 +1,4 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -16,6 +15,7 @@ import { getAlertVariantClass } from "@/patches/FixAlertVariants";
 import { ActionFieldWithDetails } from "@/hooks/useActionFields";
 import { RecordField } from "@/components/records/RecordField";
 import { ObjectField } from "@/hooks/useObjectTypes";
+import { evaluateFormula } from "@/utils/formulaEvaluator";
 
 interface CreateRecordFormProps {
   objectTypeId: string;
@@ -29,13 +29,13 @@ const buildFormSchema = (fields: ObjectField[]) => {
   const schemaObj: Record<string, any> = {};
 
   fields.forEach((field) => {
-    // Start with a base string validator
-    let validator = z.string();
+    // Start with a base schema based on field type
+    let validator: z.ZodTypeAny = z.string();
 
     if (field.is_required) {
-      validator = validator.min(1, { message: `${field.name} is required` });
+      validator = z.string().min(1, { message: `${field.name} is required` });
     } else {
-      // For optional fields, use .optional() on the string validator
+      // For optional fields
       validator = z.string().optional();
     }
 
@@ -63,8 +63,15 @@ export function CreateRecordForm({
   
   actionFields.forEach(actionField => {
     const field = objectFields.find(f => f.id === actionField.field_id);
-    if (field && actionField.default_value) {
-      defaultValues[field.api_name] = actionField.default_value;
+    if (field) {
+      // Check if this field has a formula
+      if (actionField.formula_type === 'dynamic' && actionField.formula_expression) {
+        defaultValues[field.api_name] = evaluateFormula(actionField.formula_expression);
+      } 
+      // Otherwise use the static default value
+      else if (actionField.default_value) {
+        defaultValues[field.api_name] = actionField.default_value;
+      }
     }
   });
   

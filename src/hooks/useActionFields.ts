@@ -12,12 +12,16 @@ export interface ActionFieldCreateInput {
   is_preselected?: boolean;
   default_value?: string | null;
   display_order?: number;
+  formula_type?: 'static' | 'dynamic';
+  formula_expression?: string | null;
 }
 
 export interface ActionFieldWithDetails extends ActionField {
   field_name?: string;
   api_name?: string;
   data_type?: string;
+  formula_type?: 'static' | 'dynamic';
+  formula_expression?: string | null;
 }
 
 export function useActionFields(actionId?: string) {
@@ -91,7 +95,7 @@ export function useActionFields(actionId?: string) {
 
   // Update a field in an action
   const updateField = useMutation({
-    mutationFn: async ({ id, ...data }: Partial<ActionField> & { id: string }) => {
+    mutationFn: async ({ id, ...data }: Partial<ActionFieldWithDetails> & { id: string }) => {
       if (!user) throw new Error("User not authenticated");
       
       setIsLoading(true);

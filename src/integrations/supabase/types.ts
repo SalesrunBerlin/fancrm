@@ -16,6 +16,8 @@ export type Database = {
           default_value: string | null
           display_order: number
           field_id: string
+          formula_expression: string | null
+          formula_type: string
           id: string
           is_preselected: boolean
           updated_at: string
@@ -26,6 +28,8 @@ export type Database = {
           default_value?: string | null
           display_order?: number
           field_id: string
+          formula_expression?: string | null
+          formula_type?: string
           id?: string
           is_preselected?: boolean
           updated_at?: string
@@ -36,6 +40,8 @@ export type Database = {
           default_value?: string | null
           display_order?: number
           field_id?: string
+          formula_expression?: string | null
+          formula_type?: string
           id?: string
           is_preselected?: boolean
           updated_at?: string
@@ -756,6 +762,15 @@ export type Database = {
       delete_system_objects: {
         Args: Record<PropertyKey, never>
         Returns: undefined
+      }
+      evaluate_action_formula: {
+        Args: {
+          formula_expression: string
+          formula_type: string
+          field_id: string
+          action_id: string
+        }
+        Returns: string
       }
       initialize_deal_statuses: {
         Args: Record<PropertyKey, never>
