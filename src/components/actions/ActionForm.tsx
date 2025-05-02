@@ -109,7 +109,10 @@ export function ActionForm({
                 if (typeof options === 'string') {
                   options = JSON.parse(options);
                 }
-                targetObjectTypeId = options?.target_object_type_id || '';
+                // Safely access the target_object_type_id
+                if (options && typeof options === 'object' && 'target_object_type_id' in options) {
+                  targetObjectTypeId = options.target_object_type_id || '';
+                }
               } catch (e) {
                 console.error("Error parsing field options:", e);
               }
@@ -236,7 +239,7 @@ export function ActionForm({
               <FormItem>
                 <FormLabel>Source Field (Lookup Field)</FormLabel>
                 <Select
-                  value={field.value || ""}
+                  value={field.value || undefined} 
                   onValueChange={field.onChange}
                 >
                   <FormControl>
@@ -246,7 +249,7 @@ export function ActionForm({
                   </FormControl>
                   <SelectContent>
                     {lookupFields.length === 0 ? (
-                      <SelectItem value="" disabled>
+                      <SelectItem value="no-fields" disabled>
                         No lookup fields available
                       </SelectItem>
                     ) : (

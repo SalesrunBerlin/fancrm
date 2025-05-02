@@ -75,12 +75,17 @@ export default function ActionExecutePage() {
             if (fieldData.options) {
               if (typeof fieldData.options === 'string') {
                 try {
-                  targetObjectTypeId = JSON.parse(fieldData.options).target_object_type_id || '';
+                  const parsedOptions = JSON.parse(fieldData.options);
+                  if (parsedOptions && typeof parsedOptions === 'object' && 'target_object_type_id' in parsedOptions) {
+                    targetObjectTypeId = parsedOptions.target_object_type_id || '';
+                  }
                 } catch (e) {
                   console.error("Error parsing field options:", e);
                 }
               } else if (typeof fieldData.options === 'object') {
-                targetObjectTypeId = fieldData.options.target_object_type_id || '';
+                if ('target_object_type_id' in fieldData.options) {
+                  targetObjectTypeId = fieldData.options.target_object_type_id || '';
+                }
               }
             }
             
