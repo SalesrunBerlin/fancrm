@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { PageHeader } from "@/components/ui/page-header";
@@ -8,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Loader2, AlertCircle, CheckCircle, ArrowLeft, Plus } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { useImportRecords } from "@/hooks/useImportRecords";
+import { useImportStorage } from "@/hooks/useImportStorage";
 import {
   Table,
   TableBody,
@@ -69,10 +71,14 @@ export default function ImportRecordsPage() {
   const [columnData, setColumnData] = useState<{ [columnName: string]: string[] }>({});
   const [selectedRows, setSelectedRows] = useState<number[]>([]);
   const [fieldsToCreate, setFieldsToCreate] = useState<FieldToCreate[]>([]);
+  const [isRestoringState, setIsRestoringState] = useState(false);
   
   const { objectTypes } = useObjectTypes();
   const { fields, isLoading: isLoadingFields, refetch: refetchFields } = useRecordFields(objectTypeId);
   const objectType = objectTypes?.find(type => type.id === objectTypeId);
+
+  // Get import storage to persist state across navigation
+  const { storedData, storeImportData, clearImportData: clearStoredImportData } = useImportStorage(objectTypeId!);
 
   const { 
     importData, 
@@ -91,6 +97,40 @@ export default function ImportRecordsPage() {
     updateDuplicateAction,
     updateDuplicateCheckIntensity: rawUpdateIntensity
   } = useImportRecords(objectTypeId!, fields || []);
+
+  // Restore state from storage when component mounts
+  useEffect(() => {
+    if (storedData && fields && !isRestoringState) {
+      setIsRestoringState(true);
+      
+      // Restore import data
+      parseImportText(storedData.rawText);
+      
+      // Restore step
+      setStep(storedData.step);
+      
+      // Restore pastedText
+      setPastedText(storedData.rawText);
+      
+      // We'll handle column mappings after importData is restored in the next useEffect
+      
+      setIsRestoringState(false);
+    }
+  }, [storedData, fields]);
+
+  // Restore column mappings after importData is loaded
+  useEffect(() => {
+    if (importData && storedData && fields && !isRestoringState) {
+      // Restore column mappings
+      if (storedData.columnMappings && storedData.columnMappings.length > 0) {
+        storedData.columnMappings.forEach((mapping, index) => {
+          if (mapping.targetField) {
+            updateColumnMapping(index, mapping.targetField.id);
+          }
+        });
+      }
+    }
+  }, [importData, storedData, fields]);
 
   // Check for newly created field from the URL parameters
   useEffect(() => {
@@ -120,6 +160,19 @@ export default function ImportRecordsPage() {
       }
     }
   }, [searchParams, fields, hookColumnMappings, updateColumnMapping, navigate, objectTypeId]);
+
+  // Store current state whenever important values change
+  useEffect(() => {
+    if (importData && !isRestoringState) {
+      storeImportData({
+        rawText: pastedText,
+        headers: importData.headers,
+        rows: importData.rows,
+        columnMappings: hookColumnMappings,
+        step: step
+      });
+    }
+  }, [importData, hookColumnMappings, step, pastedText, storeImportData]);
 
   // Directly use the columnMappings from the hook without conversion
   const columnMappings = hookColumnMappings;
@@ -236,6 +289,8 @@ export default function ImportRecordsPage() {
         loading: 'Importing records...',
         success: (result) => {
           if (result) {
+            // Clear stored import data when import is complete
+            clearStoredImportData();
             navigate(`/objects/${objectTypeId}`);
             return `Successfully imported ${result.success} records`;
           }
@@ -302,6 +357,17 @@ export default function ImportRecordsPage() {
   };
 
   const handleCreateNewField = (columnIndex: number) => {
+    // Store the current state before navigating
+    if (importData) {
+      storeImportData({
+        rawText: pastedText,
+        headers: importData.headers,
+        rows: importData.rows,
+        columnMappings: hookColumnMappings,
+        step: "mapping" // Always return to mapping step
+      });
+    }
+    
     const columnName = hookColumnMappings[columnIndex]?.sourceColumnName || "";
     // Navigate to the field creation page, passing the column name as a URL parameter
     navigate(`/objects/${objectTypeId}/import/create-field/${encodeURIComponent(columnName)}`);
@@ -322,6 +388,13 @@ export default function ImportRecordsPage() {
     } else {
       setSelectedRows([]);
     }
+  };
+
+  // Handle clearing import data (both in state and storage)
+  const handleClearImportData = () => {
+    clearImportData();
+    clearStoredImportData();
+    setStep("paste");
   };
 
   if (!objectType || isLoadingFields) {
@@ -504,10 +577,7 @@ export default function ImportRecordsPage() {
               </div>
 
               <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => {
-                  clearImportData();
-                  setStep("paste");
-                }}>
+                <Button variant="outline" onClick={handleClearImportData}>
                   Back
                 </Button>
                 <Button 
