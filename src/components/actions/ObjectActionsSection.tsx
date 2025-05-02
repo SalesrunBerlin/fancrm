@@ -1,10 +1,10 @@
-
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Loader2, PlayCircle } from "lucide-react";
 import { Action, useActions } from "@/hooks/useActions";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 interface ObjectActionsSectionProps {
   objectTypeId: string;
@@ -18,11 +18,39 @@ export function ObjectActionsSection({
   recordId
 }: ObjectActionsSectionProps) {
   const navigate = useNavigate();
+  const location = useLocation();
   const { getActionsByObjectId } = useActions();
   const [actions, setActions] = useState<Action[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const [initialized, setInitialized] = useState(false);
+  const [isTargetOfLinkedActions, setIsTargetOfLinkedActions] = useState(false);
+  
+  // Check if we're on a target object page by examining if this object is the target of linked actions
+  useEffect(() => {
+    if (!objectTypeId) return;
+    
+    const checkIfTargetObject = async () => {
+      try {
+        // Get all actions where this object is the target
+        const { data, error } = await supabase
+          .from("actions")
+          .select("id")
+          .eq("action_type", "linked_record")
+          .eq("target_object_id", objectTypeId);
+          
+        if (error) throw error;
+        
+        // If any linked_record actions target this object type, set the flag
+        setIsTargetOfLinkedActions(data && data.length > 0);
+        console.log(`Object ${objectTypeId} is target of linked actions: ${data && data.length > 0}`);
+      } catch (err) {
+        console.error("Error checking if object is target of linked actions:", err);
+      }
+    };
+    
+    checkIfTargetObject();
+  }, [objectTypeId]);
   
   useEffect(() => {
     console.log(`ObjectActionsSection: Effect running for objectTypeId: ${objectTypeId}`);
@@ -92,6 +120,10 @@ export function ObjectActionsSection({
   const filteredActions = actions.filter(action => {
     // On record detail page (with recordId), show only linked actions
     if (recordId) {
+      // If we're on a target object page and this is a linked_record action, don't show it
+      if (isTargetOfLinkedActions && action.action_type === "linked_record") {
+        return false;
+      }
       return action.action_type === "linked_record";
     }
     // On object list page (no recordId), show only global actions
