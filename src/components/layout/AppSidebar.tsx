@@ -72,8 +72,8 @@ export function AppSidebar() {
   
   const isLoading = isLoadingApps || isLoadingObjects;
   
-  // Filter active objects that are assigned to the default application
-  const activeObjects = applicationObjects?.filter(obj => obj.is_active) || [];
+  // Show all assigned objects, regardless of their active status
+  const assignedObjects = applicationObjects || [];
 
   return (
     <Sidebar variant="floating">
@@ -100,12 +100,12 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {activeObjects.length > 0 && (
+        {assignedObjects.length > 0 && (
           <SidebarGroup>
             <SidebarGroupLabel>Objects</SidebarGroupLabel>
             <SidebarGroupContent className="space-y-0.5">
               <SidebarMenu>
-                {activeObjects.map((object) => (
+                {assignedObjects.map((object) => (
                   <SidebarMenuItem key={object.id}>
                     <SidebarMenuButton
                       asChild

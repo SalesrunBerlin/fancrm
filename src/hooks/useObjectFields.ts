@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -95,18 +96,20 @@ export function useObjectFields(objectTypeId?: string) {
         throw error;
       }
 
-      return data;
+      return {
+        ...data,
+        options: data.options as ObjectField['options']
+      } as ObjectField;
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["object-fields", variables.object_type_id] });
-      toast("Field created successfully", {
+      toast.success("Field created successfully", {
         description: "Your new field has been added to the object type."
       });
     },
     onError: (error: any) => {
-      toast("Failed to create field", {
-        description: error.message || "An error occurred while creating the field.",
-        variant: "destructive"
+      toast.error("Failed to create field", {
+        description: error.message || "An error occurred while creating the field."
       });
     },
   });
@@ -131,18 +134,20 @@ export function useObjectFields(objectTypeId?: string) {
         throw error;
       }
 
-      return data;
+      return {
+        ...data,
+        options: data.options as ObjectField['options']
+      } as ObjectField;
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["object-fields", variables.object_type_id] });
-      toast("Field updated successfully", {
+      toast.success("Field updated successfully", {
         description: "The field has been updated."
       });
     },
     onError: (error: any) => {
-      toast("Failed to update field", {
-        description: error.message || "An error occurred while updating the field.",
-        variant: "destructive"
+      toast.error("Failed to update field", {
+        description: error.message || "An error occurred while updating the field."
       });
     },
   });
@@ -167,14 +172,13 @@ export function useObjectFields(objectTypeId?: string) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["object-fields", objectTypeId] });
-      toast("Field deleted successfully", {
+      toast.success("Field deleted successfully", {
         description: "The field has been removed from this object type."
       });
     },
     onError: (error: any) => {
-      toast("Failed to delete field", {
-        description: error.message || "An error occurred while deleting the field.",
-        variant: "destructive"
+      toast.error("Failed to delete field", {
+        description: error.message || "An error occurred while deleting the field."
       });
     },
   });
@@ -186,35 +190,30 @@ export function useObjectFields(objectTypeId?: string) {
         throw new Error("You must be logged in to reorder fields");
       }
 
-      // Use upsert to update multiple fields at once
-      const { error } = await supabase
-        .from("object_fields")
-        .upsert(
-          orderedFields.map((field) => ({
-            id: field.id,
-            display_order: field.display_order,
-            // We need to include this to satisfy upsert requirements
-            object_type_id: objectTypeId,
-          })),
-          { onConflict: "id" }
-        );
+      // Use individual updates for each field
+      for (const field of orderedFields) {
+        const { error } = await supabase
+          .from("object_fields")
+          .update({ display_order: field.display_order })
+          .eq("id", field.id)
+          .eq("object_type_id", objectTypeId);
 
-      if (error) {
-        throw error;
+        if (error) {
+          throw error;
+        }
       }
 
       return orderedFields;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["object-fields", objectTypeId] });
-      toast("Field order updated", {
+      toast.success("Field order updated", {
         description: "The fields have been reordered successfully."
       });
     },
     onError: (error: any) => {
-      toast("Failed to update field order", {
-        description: error.message || "An error occurred while reordering the fields.",
-        variant: "destructive"
+      toast.error("Failed to update field order", {
+        description: error.message || "An error occurred while reordering the fields."
       });
     },
   });

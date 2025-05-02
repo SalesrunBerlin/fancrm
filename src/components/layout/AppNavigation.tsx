@@ -68,7 +68,7 @@ export function AppNavigation() {
             </h2>
             <div className="space-y-1">
               {objectTypes
-                .filter(type => type.show_in_navigation && type.is_active)
+                .filter(type => type.show_in_navigation && !type.is_archived)
                 .map(type => (
                   <Button
                     key={type.id}

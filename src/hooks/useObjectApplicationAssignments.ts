@@ -88,7 +88,7 @@ export function useObjectApplicationAssignments(objectTypeId?: string) {
       queryClient.invalidateQueries({ 
         queryKey: ["object-application-assignments", objectTypeId] 
       });
-      toast("Object assigned to application successfully");
+      toast.success("Object assigned to application successfully");
     },
     onError: (error) => {
       toast.error("Failed to assign object to application: " + (error instanceof Error ? error.message : "Unknown error"));
@@ -117,7 +117,7 @@ export function useObjectApplicationAssignments(objectTypeId?: string) {
       queryClient.invalidateQueries({ 
         queryKey: ["object-application-assignments", objectTypeId] 
       });
-      toast("Object removed from application successfully");
+      toast.success("Object removed from application successfully");
     },
     onError: (error) => {
       toast.error("Failed to remove object from application: " + (error instanceof Error ? error.message : "Unknown error"));

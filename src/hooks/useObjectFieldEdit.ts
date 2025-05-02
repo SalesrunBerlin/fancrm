@@ -68,10 +68,10 @@ export function useObjectFieldEdit(fieldId: string, objectTypeId: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["object-fields", objectTypeId] });
       queryClient.invalidateQueries({ queryKey: ["object-field", fieldId] });
-      toast("Field updated successfully");
+      toast.success("Field updated successfully");
     },
     onError: (error: any) => {
-      toast("Failed to update field", {
+      toast.error("Failed to update field", {
         description: error?.message || "An error occurred while updating the field"
       });
     },

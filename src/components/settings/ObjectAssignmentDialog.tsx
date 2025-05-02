@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -107,7 +108,7 @@ export function ObjectAssignmentDialog({
     }
   };
 
-  // Filter objects to show only non-archived ones that the user has access to, removed is_active filter
+  // Filter objects to show only non-archived ones that the user has access to
   const availableObjects = objectTypes?.filter(obj => 
     (obj.owner_id === user?.id || obj.is_system) && 
     !obj.is_archived
@@ -134,7 +135,7 @@ export function ObjectAssignmentDialog({
                 <TableRow>
                   <TableHead>Object Name</TableHead>
                   <TableHead>API Name</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead>Type</TableHead>
                   <TableHead className="text-right">Action</TableHead>
                 </TableRow>
               </TableHeader>
@@ -156,11 +157,6 @@ export function ObjectAssignmentDialog({
                         <TableCell>
                           {obj.is_system && (
                             <Badge variant="secondary" className="mr-1">System</Badge>
-                          )}
-                          {obj.is_active ? (
-                            <Badge variant="outline" className="bg-green-50">Active</Badge>
-                          ) : (
-                            <Badge variant="outline" className="bg-gray-50">Inactive</Badge>
                           )}
                         </TableCell>
                         <TableCell className="text-right">

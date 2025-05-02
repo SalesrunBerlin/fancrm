@@ -1,3 +1,4 @@
+
 import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { PageHeader } from "@/components/ui/page-header";
@@ -113,7 +114,7 @@ export default function ApplicationObjectsPage() {
     }
   };
 
-  // Filter objects to show objects that the user has access to, removing the is_active filter
+  // Filter objects to show objects that the user has access to
   const availableObjects = objectTypes?.filter(obj => 
     (obj.owner_id === user?.id || obj.is_system) && 
     !obj.is_archived
@@ -172,7 +173,7 @@ export default function ApplicationObjectsPage() {
                   <TableRow>
                     <TableHead className="min-w-[150px]">Object Name</TableHead>
                     <TableHead className="min-w-[150px]">API Name</TableHead>
-                    <TableHead className="min-w-[100px]">Status</TableHead>
+                    <TableHead className="min-w-[100px]">Type</TableHead>
                     <TableHead className="text-right min-w-[100px]">Action</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -195,11 +196,6 @@ export default function ApplicationObjectsPage() {
                             <div className="flex flex-wrap gap-1">
                               {obj.is_system && (
                                 <Badge variant="secondary" className="text-xs whitespace-nowrap">System</Badge>
-                              )}
-                              {obj.is_active ? (
-                                <Badge variant="outline" className="bg-green-50 text-xs whitespace-nowrap">Active</Badge>
-                              ) : (
-                                <Badge variant="outline" className="bg-gray-50 text-xs whitespace-nowrap">Inactive</Badge>
                               )}
                             </div>
                           </TableCell>
