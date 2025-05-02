@@ -8,6 +8,7 @@ export interface StoredImportData {
   rows: string[][];
   columnMappings: ColumnMapping[];
   step: "paste" | "mapping" | "duplicate-check" | "preview" | "batch-field-creation" | "importing";
+  processingNewField: boolean;
 }
 
 export function useImportStorage(objectTypeId: string) {
@@ -26,9 +27,39 @@ export function useImportStorage(objectTypeId: string) {
     setStoredData(null);
   };
 
+  const updateProcessingState = (processingNewField: boolean) => {
+    if (storedData) {
+      setStoredData({
+        ...storedData,
+        processingNewField
+      });
+    }
+  };
+
+  const updateColumnMapping = (columnIndex: number, fieldId: string | null) => {
+    if (storedData && storedData.columnMappings) {
+      const updatedMappings = [...storedData.columnMappings];
+      updatedMappings[columnIndex] = {
+        ...updatedMappings[columnIndex],
+        targetField: fieldId ? {
+          id: fieldId,
+          name: "",  // These will be populated when data is fully restored
+          api_name: ""
+        } : null
+      };
+      
+      setStoredData({
+        ...storedData,
+        columnMappings: updatedMappings
+      });
+    }
+  };
+
   return {
     storedData,
     storeImportData,
-    clearImportData
+    clearImportData,
+    updateProcessingState,
+    updateColumnMapping
   };
 }

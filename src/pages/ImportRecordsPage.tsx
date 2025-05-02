@@ -1,5 +1,4 @@
-
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { PageHeader } from "@/components/ui/page-header";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
@@ -72,13 +71,21 @@ export default function ImportRecordsPage() {
   const [selectedRows, setSelectedRows] = useState<number[]>([]);
   const [fieldsToCreate, setFieldsToCreate] = useState<FieldToCreate[]>([]);
   const [isRestoringState, setIsRestoringState] = useState(false);
+  const [isApplyingUrlParams, setIsApplyingUrlParams] = useState(false);
+  const isInitialMount = useRef(true);
   
   const { objectTypes } = useObjectTypes();
   const { fields, isLoading: isLoadingFields, refetch: refetchFields } = useRecordFields(objectTypeId);
   const objectType = objectTypes?.find(type => type.id === objectTypeId);
 
   // Get import storage to persist state across navigation
-  const { storedData, storeImportData, clearImportData: clearStoredImportData } = useImportStorage(objectTypeId!);
+  const { 
+    storedData, 
+    storeImportData, 
+    clearImportData: clearStoredImportData,
+    updateProcessingState,
+    updateColumnMapping: updateStorageColumnMapping
+  } = useImportStorage(objectTypeId!);
 
   const { 
     importData, 
@@ -98,9 +105,52 @@ export default function ImportRecordsPage() {
     updateDuplicateCheckIntensity: rawUpdateIntensity
   } = useImportRecords(objectTypeId!, fields || []);
 
+  // Check for URL parameters first
+  useEffect(() => {
+    const newFieldId = searchParams.get('newFieldId');
+    const columnName = searchParams.get('columnName');
+    
+    if (newFieldId && columnName && fields) {
+      setIsApplyingUrlParams(true);
+      
+      // Find the new field
+      const newField = fields.find(field => field.id === newFieldId);
+      
+      if (newField && storedData) {
+        // Flag in storage that we're processing a new field to prevent flicker
+        updateProcessingState(true);
+        
+        // Find the mapping index for this column
+        const columnIndex = storedData.columnMappings.findIndex(
+          mapping => mapping.sourceColumnName === decodeURIComponent(columnName)
+        );
+        
+        if (columnIndex >= 0) {
+          console.log(`Mapping column ${columnName} to new field:`, newField);
+          
+          // Update the storage first
+          updateStorageColumnMapping(columnIndex, newFieldId);
+          
+          // Then update the hook state
+          updateColumnMapping(columnIndex, newFieldId);
+          
+          // Show success message
+          toast.success(`Field "${newField.name}" mapped to column "${decodeURIComponent(columnName)}"`);
+        }
+        
+        // Clear URL params after applying them
+        setTimeout(() => {
+          navigate(`/objects/${objectTypeId}/import`, { replace: true });
+          setIsApplyingUrlParams(false);
+          updateProcessingState(false);
+        }, 100);
+      }
+    }
+  }, [searchParams, fields, navigate, objectTypeId, updateStorageColumnMapping, storedData, updateProcessingState]);
+
   // Restore state from storage when component mounts
   useEffect(() => {
-    if (storedData && fields && !isRestoringState) {
+    if (storedData && fields && !isRestoringState && !isApplyingUrlParams) {
       setIsRestoringState(true);
       
       // Restore import data
@@ -113,66 +163,50 @@ export default function ImportRecordsPage() {
       setPastedText(storedData.rawText);
       
       // We'll handle column mappings after importData is restored in the next useEffect
-      
-      setIsRestoringState(false);
+      setTimeout(() => {
+        setIsRestoringState(false);
+      }, 100);
     }
-  }, [storedData, fields]);
+  }, [storedData, fields, parseImportText, isApplyingUrlParams]);
 
   // Restore column mappings after importData is loaded
   useEffect(() => {
-    if (importData && storedData && fields && !isRestoringState) {
-      // Restore column mappings
-      if (storedData.columnMappings && storedData.columnMappings.length > 0) {
-        storedData.columnMappings.forEach((mapping, index) => {
-          if (mapping.targetField) {
-            updateColumnMapping(index, mapping.targetField.id);
-          }
-        });
-      }
-    }
-  }, [importData, storedData, fields]);
-
-  // Check for newly created field from the URL parameters
-  useEffect(() => {
-    const newFieldId = searchParams.get('newFieldId');
-    const columnName = searchParams.get('columnName');
-    
-    if (newFieldId && columnName && fields) {
-      // Find the new field
-      const newField = fields.find(field => field.id === newFieldId);
-      
-      if (newField) {
-        // Find the mapping index for this column
-        const columnIndex = hookColumnMappings.findIndex(
-          mapping => mapping.sourceColumnName === decodeURIComponent(columnName)
-        );
-        
-        if (columnIndex >= 0) {
-          console.log(`Mapping column ${columnName} to new field:`, newField);
-          updateColumnMapping(columnIndex, newFieldId);
-          
-          // Show success message
-          toast.success(`Field "${newField.name}" mapped to column "${decodeURIComponent(columnName)}"`);
-          
-          // Clear URL params after applying them
-          navigate(`/objects/${objectTypeId}/import`, { replace: true });
+    if (importData && storedData && fields && !isRestoringState && !isApplyingUrlParams) {
+      // Only restore mappings if we're not in the middle of processing a new field
+      if (!storedData.processingNewField) {
+        // Restore column mappings
+        if (storedData.columnMappings && storedData.columnMappings.length > 0) {
+          storedData.columnMappings.forEach((mapping, index) => {
+            if (mapping.targetField?.id) {
+              const field = fields.find(f => f.id === mapping.targetField?.id);
+              if (field) {
+                updateColumnMapping(index, field.id);
+              }
+            }
+          });
         }
       }
     }
-  }, [searchParams, fields, hookColumnMappings, updateColumnMapping, navigate, objectTypeId]);
+  }, [importData, storedData, fields, updateColumnMapping, isRestoringState, isApplyingUrlParams]);
 
   // Store current state whenever important values change
   useEffect(() => {
-    if (importData && !isRestoringState) {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+    
+    if (importData && !isRestoringState && !isApplyingUrlParams) {
       storeImportData({
         rawText: pastedText,
         headers: importData.headers,
         rows: importData.rows,
         columnMappings: hookColumnMappings,
-        step: step
+        step: step,
+        processingNewField: false
       });
     }
-  }, [importData, hookColumnMappings, step, pastedText, storeImportData]);
+  }, [importData, hookColumnMappings, step, pastedText, storeImportData, isRestoringState, isApplyingUrlParams]);
 
   // Directly use the columnMappings from the hook without conversion
   const columnMappings = hookColumnMappings;
@@ -333,6 +367,8 @@ export default function ImportRecordsPage() {
       
       if (columnIndex >= 0) {
         updateColumnMapping(columnIndex, fieldId);
+        // Also update storage
+        updateStorageColumnMapping(columnIndex, fieldId);
       }
     });
     
@@ -359,13 +395,17 @@ export default function ImportRecordsPage() {
   const handleCreateNewField = (columnIndex: number) => {
     // Store the current state before navigating
     if (importData) {
-      storeImportData({
+      // Set the flag that we're about to create a new field
+      const updatedStoredData = {
         rawText: pastedText,
         headers: importData.headers,
         rows: importData.rows,
         columnMappings: hookColumnMappings,
-        step: "mapping" // Always return to mapping step
-      });
+        step: "mapping", // Always return to mapping step
+        processingNewField: true
+      };
+      
+      storeImportData(updatedStoredData);
     }
     
     const columnName = hookColumnMappings[columnIndex]?.sourceColumnName || "";
@@ -524,12 +564,15 @@ export default function ImportRecordsPage() {
                         </TableCell>
                         <TableCell>
                           <Select
+                            key={`${mapping.targetField?.id || 'none'}-${index}`}
                             value={mapping.targetField?.id || "none"}
                             onValueChange={(value) => {
                               if (value === "create_new") {
                                 handleCreateNewField(index);
                               } else {
                                 updateColumnMapping(index, value === "none" ? null : value);
+                                // Also update in storage to keep them in sync
+                                updateStorageColumnMapping(index, value === "none" ? null : value);
                               }
                             }}
                           >

@@ -1,6 +1,6 @@
 
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import { Toaster } from "sonner"; // Use sonner's Toaster, not the custom one
+import { Toaster } from "sonner"; 
 import { Layout } from "@/components/layout/Layout";
 import { AuthProvider } from "@/contexts/AuthContext";
 import Auth from "@/pages/Auth";

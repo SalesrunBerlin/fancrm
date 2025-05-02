@@ -1,18 +1,16 @@
 
 import { useState } from "react";
-import { useNavigate, Link, useParams, useSearchParams } from "react-router-dom";
+import { useNavigate, Link, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { ArrowLeft } from "lucide-react";
 import { ObjectFieldForm } from "@/components/settings/ObjectFieldForm";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
 import { ObjectField } from "@/hooks/useObjectTypes";
-import { toast } from "sonner";
 
 export default function ImportCreateFieldPage() {
   const navigate = useNavigate();
   const { objectTypeId, columnName } = useParams<{ objectTypeId: string; columnName: string }>();
-  const [searchParams] = useSearchParams();
   const { objectTypes } = useObjectTypes();
   
   // Get the current object type for display
@@ -20,17 +18,8 @@ export default function ImportCreateFieldPage() {
   
   // Handle completion of field creation
   const handleComplete = (field: ObjectField) => {
-    console.log("Field created successfully:", field);
-    
     // Get the original column name from URL params
     const decodedColumnName = columnName ? decodeURIComponent(columnName) : "";
-    
-    // Log details for debugging
-    console.log("Redirecting with params:", {
-      fieldId: field.id,
-      columnName: decodedColumnName,
-      objectTypeId
-    });
     
     // Redirect back to the import page with the field information
     navigate(`/objects/${objectTypeId}/import?newFieldId=${field.id}&columnName=${encodeURIComponent(decodedColumnName)}`);
@@ -69,6 +58,7 @@ export default function ImportCreateFieldPage() {
           <ObjectFieldForm 
             objectTypeId={objectTypeId} 
             initialName={decodedColumnName}
+            defaultType="text"
             onComplete={handleComplete}
           />
         </CardContent>
