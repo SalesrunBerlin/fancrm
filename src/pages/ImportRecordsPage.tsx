@@ -126,6 +126,16 @@ export default function ImportRecordsPage() {
     }, 500);
   }, [storeImportData]);
   
+  // Clear stored import data on initial page load
+  useEffect(() => {
+    if (isInitialMount.current && objectTypeId) {
+      clearStoredImportData();
+      clearImportData();
+      console.log("Import data cleared on page load");
+      isInitialMount.current = false;
+    }
+  }, [objectTypeId, clearStoredImportData, clearImportData]);
+  
   // Check for URL parameters - with improved safety
   useEffect(() => {
     if (!objectTypeId || !fields || fields.length === 0) return;
@@ -184,49 +194,8 @@ export default function ImportRecordsPage() {
     }
   }, [searchParams, fields, navigate, objectTypeId, updateStorageColumnMapping, storedData, updateProcessingState, updateColumnMapping]);
 
-  // Restore state from storage when component mounts - with improved safety
-  useEffect(() => {
-    if (!objectTypeId || !fields || fields.length === 0) return;
-    
-    if (storedData && fields && !isRestoringState && !isApplyingUrlParams && !isProcessingAction) {
-      setIsRestoringState(true);
-      setIsProcessingAction(true);
-      stateUpdateLock.current = true;
-      
-      console.log("Restoring import state from storage");
-      
-      // Restore import data
-      parseImportText(storedData.rawText);
-      
-      // Restore step
-      setStep(storedData.step);
-      
-      // Restore pastedText
-      setPastedText(storedData.rawText);
-      
-      // After a delay to ensure importData is parsed
-      setTimeout(() => {
-        if (storedData.columnMappings && storedData.columnMappings.length > 0 && 
-            !storedData.processingNewField) {
-          storedData.columnMappings.forEach((mapping, index) => {
-            if (mapping.targetField?.id) {
-              const field = fields.find(f => f.id === mapping.targetField?.id);
-              if (field) {
-                updateColumnMapping(index, field.id);
-              }
-            }
-          });
-        }
-        
-        // Release locks after restoration is complete
-        setTimeout(() => {
-          setIsRestoringState(false);
-          setIsProcessingAction(false);
-          stateUpdateLock.current = false;
-        }, 500);
-      }, 500);
-    }
-  }, [storedData, fields, parseImportText, isApplyingUrlParams, isProcessingAction, objectTypeId]);
+  // Don't automatically restore state from storage when component mounts
+  // This effect is removed to prevent automatic state restoration
 
   // Store current state whenever important values change - with improved safety
   useEffect(() => {

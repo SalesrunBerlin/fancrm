@@ -38,3 +38,30 @@ Fix: Remove the variant property or update toast library
 // <Alert>
 // Or with a valid variant:
 // <Alert variant="default">
+
+/**
+ * Safe toast wrapper functions
+ */
+export function safeSuccessToast(message: string) {
+  return { success: message };
+}
+
+export function safeErrorToast(message: string) {
+  return { error: message };
+}
+
+export function safeInfoToast(message: string) {
+  return { info: message };
+}
+
+/**
+ * To use in ObjectArchivePage.tsx and similar files:
+ * 
+ * import { safeSuccessToast, safeErrorToast } from "@/patches/VariantToastErrors.patch";
+ * 
+ * // Instead of:
+ * // toast.success("Message", { variant: "default" });
+ * 
+ * // Use:
+ * toast(safeSuccessToast("Message"));
+ */
