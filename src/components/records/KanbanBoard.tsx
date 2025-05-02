@@ -151,10 +151,11 @@ export function KanbanBoard({
     }
   };
   
-  // Extract visible fields for card display
+  // Extract visible fields for card display - only use fields that have been configured as visible
   const getVisibleFieldsForRecord = (record: ObjectRecord) => {
     if (!visibleFields || !fields) return [];
     
+    // Only include fields that are marked as visible in the configuration
     return visibleFields
       .filter(apiName => apiName !== kanbanFieldApiName) // Don't show the kanban field itself
       .map(apiName => {
