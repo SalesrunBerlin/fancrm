@@ -1,4 +1,3 @@
-
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -59,6 +58,7 @@ export function ObjectTypeForm({ onComplete }: ObjectTypeFormProps) {
   const { user } = useAuth();
   const [selectedApplications, setSelectedApplications] = useState<string[]>([]);
   const [isCreatingApplicationAssignments, setIsCreatingApplicationAssignments] = useState(false);
+  const [authChecked, setAuthChecked] = useState(false);
 
   const form = useForm<ObjectTypeFormValues>({
     resolver: zodResolver(objectTypeSchema),
@@ -70,6 +70,24 @@ export function ObjectTypeForm({ onComplete }: ObjectTypeFormProps) {
       default_field_api_name: "name",
     },
   });
+
+  // Check authentication status on component mount
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data } = await supabase.auth.getSession();
+      if (!data.session || !user) {
+        console.error("Authentication required: No active session or user found");
+        toast.error("Authentication required", {
+          description: "You must be logged in to create objects"
+        });
+      } else {
+        console.log("Authentication verified: User ID:", user.id);
+        setAuthChecked(true);
+      }
+    };
+    
+    checkAuth();
+  }, [user]);
 
   // Generate API name from name
   const generateApiName = () => {
@@ -235,7 +253,19 @@ export function ObjectTypeForm({ onComplete }: ObjectTypeFormProps) {
 
   const onSubmit = async (values: ObjectTypeFormValues) => {
     try {
-      // First create the object type
+      // Verify user authentication before proceeding
+      if (!user) {
+        console.error("User must be logged in to create objects");
+        toast.error("Authentication required", {
+          description: "You must be logged in to create objects"
+        });
+        return;
+      }
+
+      // Log authentication details
+      console.log("Creating object with owner_id:", user.id);
+      
+      // First create the object type with explicit owner_id
       const result = await createObjectType.mutateAsync({
         name: values.name.trim(),
         api_name: values.api_name.trim().toLowerCase(),
@@ -247,7 +277,8 @@ export function ObjectTypeForm({ onComplete }: ObjectTypeFormProps) {
         show_in_navigation: true,
         is_published: false,
         is_template: false,
-        source_object_id: null
+        source_object_id: null,
+        owner_id: user.id // Explicitly set owner_id to user.id
       });
       
       if (result && result.id) {
@@ -277,6 +308,11 @@ export function ObjectTypeForm({ onComplete }: ObjectTypeFormProps) {
       }
     } catch (error: any) {
       console.error("Error creating object type:", error);
+      // Log more detailed error information for debugging
+      if (error.code === 'PGRST301') {
+        console.error("Row-level security policy violation. Check if user is authenticated.");
+      }
+      
       toast.error("Object type could not be created", {
         description: error?.message || 'Unknown error'
       });
@@ -287,12 +323,22 @@ export function ObjectTypeForm({ onComplete }: ObjectTypeFormProps) {
   useEffect(() => {
     if (!user) {
       console.log("Warning: No authenticated user detected. Field creation may fail.");
+    } else {
+      console.log("User authenticated with ID:", user.id);
     }
   }, [user]);
 
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        {/* Show warning if not authenticated */}
+        {!user && (
+          <div className="p-4 mb-4 text-red-700 bg-red-100 rounded-md">
+            <p className="font-medium">Authentication required</p>
+            <p>You must be logged in to create objects.</p>
+          </div>
+        )}
+
         <FormField
           control={form.control}
           name="name"
@@ -404,7 +450,7 @@ export function ObjectTypeForm({ onComplete }: ObjectTypeFormProps) {
 
         <Button 
           type="submit" 
-          disabled={createObjectType.isPending || isCreatingApplicationAssignments}
+          disabled={createObjectType.isPending || isCreatingApplicationAssignments || !user}
           className="w-full"
         >
           {(createObjectType.isPending || isCreatingApplicationAssignments) && (
@@ -412,6 +458,12 @@ export function ObjectTypeForm({ onComplete }: ObjectTypeFormProps) {
           )}
           Create Object Type
         </Button>
+
+        {!user && (
+          <p className="text-sm text-center text-red-500 mt-2">
+            Please log in to create objects
+          </p>
+        )}
       </form>
     </Form>
   );

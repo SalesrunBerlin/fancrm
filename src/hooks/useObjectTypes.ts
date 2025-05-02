@@ -2,6 +2,7 @@
 import { useQuery, useMutation, QueryObserverResult, RefetchOptions } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
 
 export interface ObjectType {
   id: string;
@@ -38,6 +39,8 @@ export interface ObjectField {
 }
 
 export function useObjectTypes() {
+  const { user } = useAuth();
+  
   // Fetch object types
   const { data: objectTypes, isLoading, error, refetch } = useQuery({
     queryKey: ["object-types"],
@@ -56,7 +59,17 @@ export function useObjectTypes() {
   const createObjectType = useMutation({
     mutationFn: async (objectType: Omit<ObjectType, "id" | "created_at" | "updated_at">) => {
       try {
-        console.log("Creating object type:", objectType);
+        // Verify user is authenticated
+        if (!user) {
+          throw new Error("Authentication required to create object types");
+        }
+        
+        // Ensure owner_id is set to current user
+        if (!objectType.owner_id) {
+          objectType.owner_id = user.id;
+        }
+        
+        console.log("Creating object type with owner_id:", objectType.owner_id);
         
         const { data, error } = await supabase
           .from("object_types")
@@ -64,11 +77,20 @@ export function useObjectTypes() {
           .select()
           .single();
         
-        if (error) throw error;
+        if (error) {
+          console.error("Supabase error creating object type:", error);
+          throw error;
+        }
         
         return data as ObjectType;
       } catch (error: any) {
         console.error("Error creating object type:", error);
+        
+        // Check for RLS policy violations
+        if (error.code === 'PGRST301') {
+          throw new Error("Permission denied: Row-level security prevents this action");
+        }
+        
         throw error;
       }
     },
