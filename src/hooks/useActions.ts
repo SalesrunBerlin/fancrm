@@ -182,7 +182,7 @@ export function useActions() {
         color: (action.color || 'default') as ActionColor
       }));
       
-      return typedActions;
+      return typedActions as Action[];
     } catch (error) {
       console.error("Exception in getActionsByObjectId:", error);
       throw error;

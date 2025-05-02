@@ -15,14 +15,9 @@ export function ExpandableActionButton({ actionName, color, onExecute }: Expanda
   const [isOpen, setIsOpen] = useState(false);
 
   const handleButtonClick = () => {
-    // Toggle open state when button is clicked
-    if (!isOpen) {
-      setIsOpen(true);
-    } else {
-      // If already open, execute the action
-      onExecute();
-      setIsOpen(false); // Close after execution
-    }
+    // Only toggle open state when button is clicked
+    // Button no longer executes the action when already open
+    setIsOpen(!isOpen);
   };
 
   const handleNameClick = () => {
@@ -48,12 +43,12 @@ export function ExpandableActionButton({ actionName, color, onExecute }: Expanda
         </Button>
       </CollapsibleTrigger>
       
-      <CollapsibleContent className="absolute left-10 top-0 z-10">
-        {/* Action name in a separate clickable element that doesn't overlap with the button */}
+      <CollapsibleContent className="absolute left-12 top-0 z-20">
+        {/* Action name in a separate clickable element with increased z-index and spacing */}
         <Button 
           variant={color}
           size="default"
-          className="h-8 transition-all"
+          className="h-8 transition-all whitespace-nowrap"
           onClick={handleNameClick}
         >
           {actionName}

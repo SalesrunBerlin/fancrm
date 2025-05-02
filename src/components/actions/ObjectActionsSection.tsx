@@ -149,7 +149,7 @@ export function ObjectActionsSection({
   }
 
   return (
-    <div className="flex flex-wrap gap-3 mb-6">
+    <div className="flex flex-wrap gap-6 mb-6">
       {filteredActions.map((action) => (
         <div key={action.id} className="relative">
           <ExpandableActionButton
