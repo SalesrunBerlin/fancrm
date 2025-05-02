@@ -26,7 +26,6 @@ export function ObjectActionsSection({
   
   useEffect(() => {
     console.log(`ObjectActionsSection: Effect running for objectTypeId: ${objectTypeId}`);
-    console.log(`ObjectActionsSection: Current initialized state: ${initialized}`);
     
     // Prevent fetch if no objectTypeId is provided
     if (!objectTypeId) {

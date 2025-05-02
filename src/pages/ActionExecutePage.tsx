@@ -30,7 +30,7 @@ export default function ActionExecutePage() {
   const { fields: actionFields, isLoading: loadingActionFields } = useActionFields(actionId);
   const { fields: objectFields } = useObjectFields(action?.target_object_id);
   
-  // Laden des Quell-Datensatzes für verknüpfte Aktionen
+  // Load source record for linked actions
   const { record: sourceRecord } = useRecordDetail(sourceObjectId, sourceRecordId);
 
   const targetObject = objectTypes?.find(obj => obj.id === action?.target_object_id);
@@ -38,7 +38,7 @@ export default function ActionExecutePage() {
   console.log("ActionExecutePage: Current params:", { actionId, sourceRecordId });
   console.log("ActionExecutePage: Source object ID:", sourceObjectId);
   
-  // Aktion laden
+  // Load action
   useEffect(() => {
     const fetchAction = async () => {
       if (!actionId) {
@@ -68,7 +68,8 @@ export default function ActionExecutePage() {
         console.log("ActionExecutePage: Action data loaded:", actionData);
         setAction(actionData);
         
-        // Wenn es sich um eine verknüpfte Aktion handelt, müssen wir die Quell-Objekttyp-ID abrufen
+        // If this is a linked action and we have a source record ID,
+        // we need to get the source object type ID from the source field
         if (actionData.action_type === "linked_record" && actionData.source_field_id && sourceRecordId) {
           console.log("ActionExecutePage: Linked action detected, fetching source field details");
           try {
@@ -135,7 +136,7 @@ export default function ActionExecutePage() {
     fetchAction();
   }, [actionId, sourceRecordId]);
 
-  // Warten, bis alle benötigten Daten geladen sind
+  // Wait until all required data is loaded
   useEffect(() => {
     if (!loadingActionFields && actionFields && objectFields && action) {
       console.log("ActionExecutePage: All required data loaded");
@@ -144,7 +145,7 @@ export default function ActionExecutePage() {
   }, [actionFields, objectFields, loadingActionFields, action]);
 
   const handleSuccess = () => {
-    // Nach erfolgreicher Erstellung zur Objektliste navigieren
+    // After successful creation, navigate to the object list
     if (action?.target_object_id) {
       navigate(`/objects/${action.target_object_id}`);
     } else {
@@ -164,48 +165,48 @@ export default function ActionExecutePage() {
     return (
       <div className="space-y-4">
         <PageHeader
-          title="Aktionsfehler"
-          description="Es gab ein Problem beim Laden dieser Aktion"
+          title="Action Error"
+          description="There was a problem loading this action"
           backTo="/actions"
         />
         <Alert className={getAlertVariantClass("destructive")}>
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            {error || "Aktion nicht gefunden"}
+            {error || "Action not found"}
           </AlertDescription>
         </Alert>
       </div>
     );
   }
 
-  // Für verknüpfte Aktionen prüfen, ob der Quelldatensatz vorhanden ist
+  // For linked actions, check if the source record exists
   if (action.action_type === "linked_record" && sourceRecordId && !sourceObjectId) {
     console.log("ActionExecutePage: Missing source object ID for linked record action");
     return (
       <div className="space-y-4">
         <PageHeader
-          title="Aktionsfehler"
-          description="Es gab ein Problem beim Laden des Quelldatensatzes"
+          title="Action Error"
+          description="There was a problem loading the source record"
           backTo="/actions"
         />
         <Alert className={getAlertVariantClass("destructive")}>
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            Informationen zum Quellobjekt fehlen
+            Source object information is missing
           </AlertDescription>
         </Alert>
       </div>
     );
   }
 
-  // Für verknüpfte Aktionen prüfen, ob der Quelldatensatz geladen werden konnte
+  // For linked actions, check if the source record could be loaded
   if (action.action_type === "linked_record" && sourceRecordId && sourceObjectId && !sourceRecord) {
     console.log("ActionExecutePage: Source record not loaded for linked action");
     if (loading) {
       return (
         <div className="flex justify-center items-center h-64">
           <Loader2 className="h-8 w-8 animate-spin" />
-          <span className="ml-2">Lade Quelldatensatz...</span>
+          <span className="ml-2">Loading source record...</span>
         </div>
       );
     }
@@ -214,20 +215,21 @@ export default function ActionExecutePage() {
   const getActionTypeTitle = () => {
     switch (action.action_type) {
       case "new_record":
-        return `Neuen ${targetObject?.name || "Datensatz"} erstellen`;
+        return `Create new ${targetObject?.name || "record"}`;
       case "linked_record":
-        return `Verknüpften ${targetObject?.name || "Datensatz"} erstellen`;
+        return `Create linked ${targetObject?.name || "record"}`;
       default:
-        return "Aktion ausführen";
+        return "Execute action";
     }
   };
 
-  // Standardwerte für verknüpfte Datensätze vorbereiten
+  // Prepare initial values for linked records
   const initialValues: Record<string, any> = {};
   
-  // Wenn es sich um einen verknüpften Datensatz handelt und wir die Quellfeld-ID haben, setzen wir den Standardwert
+  // If this is a linked record and we have the source field ID and source record ID,
+  // set the initial value for the lookup field
   if (action.action_type === "linked_record" && action.source_field_id && sourceRecordId) {
-    // Das entsprechende Objektfeld finden
+    // Find the corresponding object field
     const sourceField = objectFields?.find(field => field.id === action.source_field_id);
     if (sourceField) {
       console.log(`ActionExecutePage: Setting initial value for ${sourceField.api_name} to ${sourceRecordId}`);
@@ -241,9 +243,9 @@ export default function ActionExecutePage() {
         title={getActionTypeTitle()}
         description={targetObject 
           ? action.action_type === "linked_record" 
-            ? `Erstellen Sie einen neuen ${targetObject.name}, der mit dem aktuellen Datensatz verknüpft ist` 
-            : `Erstellen Sie einen neuen ${targetObject.name} Datensatz`
-          : "Erstellen Sie einen neuen Datensatz"
+            ? `Create a new ${targetObject.name} linked to the current record` 
+            : `Create a new ${targetObject.name} record`
+          : "Create a new record"
         }
         backTo="/actions"
       />

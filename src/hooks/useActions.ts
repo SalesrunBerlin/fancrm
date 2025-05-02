@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -67,7 +68,7 @@ export function useActions() {
     enabled: !!user,
   });
 
-  // Get actions by object type ID - using a more reliable approach
+  // Get actions by object type ID - including both target and source actions
   const getActionsByObjectId = async (objectTypeId: string): Promise<Action[]> => {
     if (!user || !objectTypeId) {
       console.log("useActions.getActionsByObjectId: No user or objectTypeId provided");
@@ -77,29 +78,83 @@ export function useActions() {
     console.log(`useActions: Fetching actions for objectTypeId: ${objectTypeId}`);
     
     try {
-      const { data, error } = await supabase
+      // First get actions where this object is the target (standard global actions)
+      const { data: targetActions, error: targetError } = await supabase
         .from("actions")
         .select("*")
-        .eq("target_object_id", objectTypeId)
+        .eq("target_object_id", objectTypeId);
+
+      if (targetError) {
+        console.error("Error fetching target actions:", targetError);
+        throw targetError;
+      }
+
+      // Then get actions where this object is the source (linked record actions)
+      // We need to find actions that have source_field_id pointing to fields that reference this object type
+      const { data: sourceActions, error: sourceError } = await supabase
+        .from("actions")
+        .select("*")
+        .filter("action_type", "eq", "linked_record")
+        .filter("source_field_id", "not.is", null)
         .order("created_at", { ascending: false });
 
-      if (error) {
-        console.error("Error fetching actions by object ID:", error);
-        throw error;
+      if (sourceError) {
+        console.error("Error fetching source actions:", sourceError);
+        throw sourceError;
       }
 
-      console.log(`useActions.getActionsByObjectId: Query completed for ${objectTypeId}`);
+      // For source actions, we need to filter them further
+      // by checking if they reference fields that point to our object type
+      let validSourceActions: Action[] = [];
       
-      if (!data || data.length === 0) {
-        console.log("useActions.getActionsByObjectId: No data returned from query");
-        return [];
+      if (sourceActions && sourceActions.length > 0) {
+        // Get all field IDs from source actions
+        const fieldIds = sourceActions
+          .filter(action => action.source_field_id)
+          .map(action => action.source_field_id);
+          
+        if (fieldIds.length > 0) {
+          // Get field details to check which object type they reference
+          const { data: fields, error: fieldsError } = await supabase
+            .from("object_fields")
+            .select("id, options")
+            .in("id", fieldIds)
+            .filter("data_type", "eq", "lookup");
+            
+          if (fieldsError) {
+            console.error("Error fetching field details:", fieldsError);
+          } else if (fields && fields.length > 0) {
+            // Filter actions by checking if their fields reference our object type
+            validSourceActions = sourceActions.filter(action => {
+              const field = fields.find(f => f.id === action.source_field_id);
+              if (!field) return false;
+              
+              let options = field.options;
+              if (typeof options === 'string') {
+                try {
+                  options = JSON.parse(options);
+                } catch (e) {
+                  console.error("Error parsing field options:", e);
+                  return false;
+                }
+              }
+              
+              // Check if the field references our object type
+              return options && 
+                     typeof options === 'object' && 
+                     options.target_object_type_id === objectTypeId;
+            });
+          }
+        }
       }
-      
-      console.log(`useActions: Found ${data.length} actions for objectTypeId: ${objectTypeId}`);
-      return data as Action[];
+
+      // Combine and return all actions
+      const allActions = [...(targetActions || []), ...validSourceActions];
+      console.log(`useActions.getActionsByObjectId: Found ${allActions.length} actions total for ${objectTypeId}`);
+      return allActions as Action[];
     } catch (error) {
       console.error("Exception in getActionsByObjectId:", error);
-      throw error; // Re-throw to allow for proper error handling up the call stack
+      throw error;
     }
   };
 
