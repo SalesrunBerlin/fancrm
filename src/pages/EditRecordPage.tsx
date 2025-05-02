@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useForm } from "react-hook-form";
@@ -76,27 +77,28 @@ export default function EditRecordPage() {
   const isLoading = isLoadingFields || isLoadingRecord;
 
   return (
-    <div className="space-y-4 max-w-2xl mx-auto">
-      <Button variant="outline" asChild>
+    <div className="space-y-6 max-w-2xl mx-auto px-4 sm:px-6">
+      <Button variant="outline" asChild className="mb-2">
         <Link to={`/objects/${objectTypeId}/${recordId}`}>
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back to {objectType.name} Detail
         </Link>
       </Button>
       
-      <Card>
-        <CardHeader>
+      <Card className="shadow-sm">
+        <CardHeader className="border-b pb-4">
           <h1 className="text-2xl font-bold">Edit {objectType.name}</h1>
+          <p className="text-muted-foreground">Update the details for this record</p>
         </CardHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)}>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-6 pt-6">
               {isLoading ? (
-                <div className="flex justify-center py-4">
-                  <Loader2 className="h-6 w-6 animate-spin" />
+                <div className="flex justify-center py-8">
+                  <Loader2 className="h-8 w-8 animate-spin" />
                 </div>
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-6">
                   {fields.map((field) => (
                     <RecordField
                       key={field.id}

@@ -12,9 +12,6 @@ interface RelatedFieldValueProps {
 }
 
 export function RelatedFieldValue({ field, value }: RelatedFieldValueProps) {
-  // Add debug output to help diagnose issues
-  console.log("RelatedFieldValue rendering:", { fieldApiName: field.api_name, dataType: field.data_type, value });
-  
   if (field.data_type === "lookup" && field.options) {
     return (
       <LookupValueDisplay
@@ -24,6 +21,15 @@ export function RelatedFieldValue({ field, value }: RelatedFieldValueProps) {
             (field.options as { target_object_type_id?: string })?.target_object_type_id : '') || ''
         }}
       />
+    );
+  }
+  
+  // Format boolean values
+  if (field.data_type === "boolean") {
+    return (
+      <span className={value === "true" || value === true ? "text-green-600" : "text-gray-500"}>
+        {value === "true" || value === true ? "Yes" : "No"}
+      </span>
     );
   }
   

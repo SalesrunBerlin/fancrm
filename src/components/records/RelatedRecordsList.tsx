@@ -13,22 +13,23 @@ export function RelatedRecordsList({ objectTypeId, recordId }: RelatedRecordsLis
 
   if (isLoading) {
     return (
-      <div className="flex justify-center p-4">
-        <Loader2 className="h-6 w-6 animate-spin" />
+      <div className="flex justify-center p-6">
+        <Loader2 className="h-8 w-8 animate-spin" />
       </div>
     );
   }
 
   if (!relatedSections || relatedSections.length === 0) {
     return (
-      <div className="text-center text-muted-foreground py-8">
-        Keine verknüpften Datensätze gefunden
+      <div className="text-center text-muted-foreground py-12 bg-muted/10 rounded-md border border-dashed">
+        <p className="font-medium">Keine verknüpften Datensätze gefunden</p>
+        <p className="text-sm mt-2">No related records found for this item</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {relatedSections.map((section) => (
         <RelatedRecordsSection key={section.relationship.id + "-" + section.objectType.id} section={section} />
       ))}

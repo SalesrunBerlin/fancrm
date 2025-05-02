@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
@@ -83,14 +84,14 @@ export default function ObjectRecordDetail() {
 
   if (!record) {
     return (
-      <div className="space-y-4">
-        <Button variant="outline" asChild>
+      <div className="space-y-4 max-w-2xl mx-auto px-4 sm:px-6">
+        <Button variant="outline" asChild className="mb-4">
           <Link to={`/objects/${objectTypeId}`}>
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to {objectType.name} List
           </Link>
         </Button>
-        <Card>
+        <Card className="shadow-sm">
           <CardContent className="pt-6">
             <p className="text-center text-muted-foreground">Record not found</p>
           </CardContent>
@@ -102,26 +103,28 @@ export default function ObjectRecordDetail() {
   const recordName = record.displayName || `${objectType.name} Record`;
 
   return (
-    <div className="container mx-auto px-2 md:px-0 space-y-6 max-w-5xl">
+    <div className="container mx-auto px-4 sm:px-6 space-y-6 max-w-5xl">
       <PageHeader
         title={recordName}
         actions={
-          <div className="flex items-center space-x-2">
+          <div className="flex flex-col sm:flex-row gap-2">
             <Button 
               variant={starModeActive ? "secondary" : "outline"}
               onClick={toggleStarMode}
               title={starModeActive ? "Deactivate Star Mode" : "Activate Star Mode"}
+              size="sm"
+              className="w-full sm:w-auto"
             >
               <Star className={`mr-2 h-4 w-4 ${starModeActive ? "fill-yellow-400 text-yellow-500" : ""}`} />
               {starModeActive ? "Exit Star Mode" : "Star Mode"}
             </Button>
-            <Button variant="outline" asChild>
+            <Button variant="outline" asChild size="sm" className="w-full sm:w-auto">
               <Link to={`/objects/${objectTypeId}`}>
                 <ArrowLeft className="mr-2 h-4 w-4" />
                 Back
               </Link>
             </Button>
-            <Button variant="outline" asChild>
+            <Button variant="outline" asChild size="sm" className="w-full sm:w-auto">
               <Link to={`/objects/${objectTypeId}/${recordId}/edit`}>
                 <Edit className="mr-2 h-4 w-4" />
                 Edit
@@ -130,15 +133,18 @@ export default function ObjectRecordDetail() {
             <Button 
               variant="destructive"
               onClick={() => setDeleteDialogOpen(true)}
+              size="sm"
+              className="w-full sm:w-auto"
             >
               <Trash2 className="mr-2 h-4 w-4" />
               Delete
             </Button>
           </div>
         }
+        className="mb-4"
       />
 
-      {/* Add linked actions section */}
+      {/* Add linked actions section with improved spacing */}
       {objectTypeId && recordId && (
         <ObjectActionsSection 
           objectTypeId={objectTypeId} 
@@ -147,13 +153,13 @@ export default function ObjectRecordDetail() {
       )}
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList>
-          <TabsTrigger value="details">Details</TabsTrigger>
-          <TabsTrigger value="related">Related Records</TabsTrigger>
+        <TabsList className="w-full sm:w-auto mb-4">
+          <TabsTrigger value="details" className="flex-1 sm:flex-none">Details</TabsTrigger>
+          <TabsTrigger value="related" className="flex-1 sm:flex-none">Related Records</TabsTrigger>
         </TabsList>
         
-        <TabsContent value="details" className="mt-4">
-          <Card>
+        <TabsContent value="details">
+          <Card className="shadow-sm">
             <CardContent className="pt-6 divide-y">
               {fields
                 .sort((a, b) => (a.display_order || 0) - (b.display_order || 0))
@@ -162,11 +168,11 @@ export default function ObjectRecordDetail() {
                   const isTextField = field.data_type === "text" || field.data_type === "textarea";
                   
                   return (
-                    <div key={field.id} className="py-3 grid grid-cols-3">
+                    <div key={field.id} className="py-4 grid grid-cols-1 sm:grid-cols-3 gap-1">
                       <div className="font-medium text-muted-foreground">
                         {field.name}
                       </div>
-                      <div className="col-span-2 flex items-center gap-2">
+                      <div className="sm:col-span-2 flex items-center gap-2">
                         {field.data_type === "lookup" && field.options ? (
                           <LookupValueDisplay
                             value={value}
@@ -177,7 +183,7 @@ export default function ObjectRecordDetail() {
                         ) : field.data_type === "picklist" && value ? (
                           <span>{value}</span>
                         ) : (
-                          <span>
+                          <span className="text-foreground">
                             {value !== null && value !== undefined ? String(value) : "—"}
                           </span>
                         )}
@@ -202,7 +208,7 @@ export default function ObjectRecordDetail() {
           </Card>
         </TabsContent>
         
-        <TabsContent value="related" className="mt-4">
+        <TabsContent value="related">
           {objectTypeId && recordId && (
             <RelatedRecordsList 
               objectTypeId={objectTypeId} 
