@@ -312,14 +312,14 @@ export function ActionFieldsManager({
                                 disabled={isRequired || isLoading}
                               />
                             ) : (
-                              <Button
-                                onClick={() => setSelectedFieldId(field.id)}
-                                size="sm" 
-                                variant="outline"
-                              >
-                                <Plus className="h-3 w-3 mr-1" />
-                                Add
-                              </Button>
+                              <Switch
+                                checked={false}
+                                onCheckedChange={() => {
+                                  setSelectedFieldId(field.id);
+                                  handleAddField();
+                                }}
+                                disabled={isLoading}
+                              />
                             )}
                           </div>
                         );
