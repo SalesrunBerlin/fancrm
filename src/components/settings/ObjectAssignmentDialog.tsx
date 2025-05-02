@@ -2,14 +2,14 @@
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Loader2, Plus } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Switch } from "@/components/ui/switch";
 
 interface ObjectAssignmentDialogProps {
   applicationId: string;
@@ -58,51 +58,44 @@ export function ObjectAssignmentDialog({
     }
   };
 
-  const handleAssignObject = async (objectTypeId: string) => {
+  const handleToggleObject = async (objectTypeId: string, isAssigned: boolean) => {
     if (!user) return;
     
     try {
       setIsAssigning(true);
       
-      const { error } = await supabase
-        .from("object_application_assignments")
-        .insert({
-          application_id: applicationId,
-          object_type_id: objectTypeId,
-          owner_id: user.id
-        });
+      if (isAssigned) {
+        // Remove object
+        const { error } = await supabase
+          .from("object_application_assignments")
+          .delete()
+          .eq("application_id", applicationId)
+          .eq("object_type_id", objectTypeId);
+          
+        if (error) throw error;
         
-      if (error) throw error;
-      
-      // Update local state
-      setAssignedObjectIds(prev => [...prev, objectTypeId]);
-      toast.success("Object assigned to application");
-    } catch (error) {
-      console.error("Error assigning object:", error);
-      toast.error("Failed to assign object");
-    } finally {
-      setIsAssigning(false);
-    }
-  };
-
-  const handleRemoveObject = async (objectTypeId: string) => {
-    try {
-      setIsAssigning(true);
-      
-      const { error } = await supabase
-        .from("object_application_assignments")
-        .delete()
-        .eq("application_id", applicationId)
-        .eq("object_type_id", objectTypeId);
+        // Update local state
+        setAssignedObjectIds(prev => prev.filter(id => id !== objectTypeId));
+        toast.success("Object removed from application");
+      } else {
+        // Assign object
+        const { error } = await supabase
+          .from("object_application_assignments")
+          .insert({
+            application_id: applicationId,
+            object_type_id: objectTypeId,
+            owner_id: user.id
+          });
+          
+        if (error) throw error;
         
-      if (error) throw error;
-      
-      // Update local state
-      setAssignedObjectIds(prev => prev.filter(id => id !== objectTypeId));
-      toast.success("Object removed from application");
+        // Update local state
+        setAssignedObjectIds(prev => [...prev, objectTypeId]);
+        toast.success("Object assigned to application");
+      }
     } catch (error) {
-      console.error("Error removing object:", error);
-      toast.error("Failed to remove object");
+      console.error("Error toggling object:", error);
+      toast.error("Failed to update object assignment");
     } finally {
       setIsAssigning(false);
     }
@@ -130,60 +123,39 @@ export function ObjectAssignmentDialog({
           </div>
         ) : (
           <ScrollArea className="h-[400px]">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Object Name</TableHead>
-                  <TableHead>API Name</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead className="text-right">Action</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+            <div className="border rounded-md p-4 bg-muted/30">
+              <div className="space-y-2">
                 {availableObjects.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={4} className="text-center py-4">
-                      No available objects found.
-                    </TableCell>
-                  </TableRow>
+                  <div className="py-8 text-center text-muted-foreground">
+                    No available objects found.
+                  </div>
                 ) : (
                   availableObjects.map((obj) => {
                     const isAssigned = assignedObjectIds.includes(obj.id);
                     
                     return (
-                      <TableRow key={obj.id}>
-                        <TableCell>{obj.name}</TableCell>
-                        <TableCell>{obj.api_name}</TableCell>
-                        <TableCell>
-                          {obj.is_system && (
-                            <Badge variant="secondary" className="mr-1">System</Badge>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button
-                            variant={isAssigned ? "destructive" : "outline"}
-                            size="sm"
-                            onClick={() => isAssigned ? handleRemoveObject(obj.id) : handleAssignObject(obj.id)}
-                            disabled={isAssigning}
-                          >
-                            {isAssigning ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : isAssigned ? (
-                              "Remove"
-                            ) : (
-                              <>
-                                <Plus className="h-4 w-4 mr-1" />
-                                Assign
-                              </>
+                      <div key={obj.id} className="flex items-center justify-between py-2 border-b last:border-b-0">
+                        <div>
+                          <div className="font-medium">{obj.name}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {obj.api_name}
+                            {obj.is_system && (
+                              <Badge variant="secondary" className="ml-2 text-xs">System</Badge>
                             )}
-                          </Button>
-                        </TableCell>
-                      </TableRow>
+                          </div>
+                        </div>
+                        
+                        <Switch
+                          checked={isAssigned}
+                          onCheckedChange={() => handleToggleObject(obj.id, isAssigned)}
+                          disabled={isAssigning}
+                        />
+                      </div>
                     );
                   })
                 )}
-              </TableBody>
-            </Table>
+              </div>
+            </div>
           </ScrollArea>
         )}
 

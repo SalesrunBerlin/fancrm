@@ -4,7 +4,6 @@ import { useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import { safeErrorToast } from "@/patches/FixToastVariants";
 
 export function useInitializeObjects() {
   const { user } = useAuth();
@@ -33,7 +32,7 @@ export function useInitializeObjects() {
           errorMessage = String(error);
         }
         
-        safeErrorToast("Error initializing objects", {
+        toast.error("Error initializing objects", {
           description: errorMessage
         });
         throw new Error(errorMessage);
@@ -42,7 +41,7 @@ export function useInitializeObjects() {
       }
     },
     onSuccess: () => {
-      toast("Standard objects initialized", {
+      toast.success("Standard objects initialized", {
         description: "The standard objects have been created in your account."
       });
     }

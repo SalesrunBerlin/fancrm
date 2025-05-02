@@ -5,13 +5,13 @@ import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
 import { useApplications } from "@/hooks/useApplications";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { Loader2, ArrowLeft, Plus } from "lucide-react";
+import { Loader2, ArrowLeft } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Switch } from "@/components/ui/switch";
 
 export default function ApplicationObjectsPage() {
   const { applicationId } = useParams<{ applicationId: string }>();
@@ -64,51 +64,43 @@ export default function ApplicationObjectsPage() {
     }
   };
 
-  const handleAssignObject = async (objectTypeId: string) => {
+  const handleToggleObject = async (objectTypeId: string, isAssigned: boolean) => {
     if (!user) return;
+    setIsAssigning(true);
     
     try {
-      setIsAssigning(true);
-      
-      const { error } = await supabase
-        .from("object_application_assignments")
-        .insert({
-          application_id: applicationId,
-          object_type_id: objectTypeId,
-          owner_id: user.id
-        });
+      if (isAssigned) {
+        // Remove object
+        const { error } = await supabase
+          .from("object_application_assignments")
+          .delete()
+          .eq("application_id", applicationId)
+          .eq("object_type_id", objectTypeId);
+          
+        if (error) throw error;
         
-      if (error) throw error;
-      
-      // Update local state
-      setAssignedObjectIds(prev => [...prev, objectTypeId]);
-      toast.success("Object assigned to application");
-    } catch (error) {
-      console.error("Error assigning object:", error);
-      toast.error("Failed to assign object");
-    } finally {
-      setIsAssigning(false);
-    }
-  };
-
-  const handleRemoveObject = async (objectTypeId: string) => {
-    try {
-      setIsAssigning(true);
-      
-      const { error } = await supabase
-        .from("object_application_assignments")
-        .delete()
-        .eq("application_id", applicationId)
-        .eq("object_type_id", objectTypeId);
+        // Update local state
+        setAssignedObjectIds(prev => prev.filter(id => id !== objectTypeId));
+        toast.success("Object removed from application");
+      } else {
+        // Assign object
+        const { error } = await supabase
+          .from("object_application_assignments")
+          .insert({
+            application_id: applicationId,
+            object_type_id: objectTypeId,
+            owner_id: user.id
+          });
+          
+        if (error) throw error;
         
-      if (error) throw error;
-      
-      // Update local state
-      setAssignedObjectIds(prev => prev.filter(id => id !== objectTypeId));
-      toast.success("Object removed from application");
+        // Update local state
+        setAssignedObjectIds(prev => [...prev, objectTypeId]);
+        toast.success("Object assigned to application");
+      }
     } catch (error) {
-      console.error("Error removing object:", error);
-      toast.error("Failed to remove object");
+      console.error("Error toggling object assignment:", error);
+      toast.error("Failed to update object assignment");
     } finally {
       setIsAssigning(false);
     }
@@ -165,69 +157,41 @@ export default function ApplicationObjectsPage() {
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         </div>
       ) : (
-        <div className="border rounded-md overflow-hidden">
-          <ScrollArea className="w-full">
-            <div className="min-w-full">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="min-w-[150px]">Object Name</TableHead>
-                    <TableHead className="min-w-[150px]">API Name</TableHead>
-                    <TableHead className="min-w-[100px]">Type</TableHead>
-                    <TableHead className="text-right min-w-[100px]">Action</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {availableObjects.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={4} className="text-center py-4">
-                        No available objects found.
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    availableObjects.map((obj) => {
-                      const isAssigned = assignedObjectIds.includes(obj.id);
+        <ScrollArea className="h-[calc(100vh-200px)]">
+          <div className="border rounded-md p-4 bg-muted/30">
+            <div className="space-y-2">
+              {availableObjects.length === 0 ? (
+                <div className="py-8 text-center text-muted-foreground">
+                  No available objects found.
+                </div>
+              ) : (
+                availableObjects.map((obj) => {
+                  const isAssigned = assignedObjectIds.includes(obj.id);
+                  
+                  return (
+                    <div key={obj.id} className="flex items-center justify-between py-2 border-b last:border-b-0">
+                      <div>
+                        <div className="font-medium">{obj.name}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {obj.api_name}
+                          {obj.is_system && (
+                            <Badge variant="secondary" className="ml-2 text-xs">System</Badge>
+                          )}
+                        </div>
+                      </div>
                       
-                      return (
-                        <TableRow key={obj.id}>
-                          <TableCell className="font-medium">{obj.name}</TableCell>
-                          <TableCell className="text-sm break-all">{obj.api_name}</TableCell>
-                          <TableCell>
-                            <div className="flex flex-wrap gap-1">
-                              {obj.is_system && (
-                                <Badge variant="secondary" className="text-xs whitespace-nowrap">System</Badge>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <Button
-                              variant={isAssigned ? "destructive" : "outline"}
-                              size="sm"
-                              onClick={() => isAssigned ? handleRemoveObject(obj.id) : handleAssignObject(obj.id)}
-                              disabled={isAssigning}
-                              className="whitespace-nowrap"
-                            >
-                              {isAssigning ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                              ) : isAssigned ? (
-                                "Remove"
-                              ) : (
-                                <>
-                                  <Plus className="h-4 w-4 mr-1" />
-                                  Assign
-                                </>
-                              )}
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })
-                  )}
-                </TableBody>
-              </Table>
+                      <Switch
+                        checked={isAssigned}
+                        onCheckedChange={() => handleToggleObject(obj.id, isAssigned)}
+                        disabled={isAssigning}
+                      />
+                    </div>
+                  );
+                })
+              )}
             </div>
-          </ScrollArea>
-        </div>
+          </div>
+        </ScrollArea>
       )}
     </div>
   );
