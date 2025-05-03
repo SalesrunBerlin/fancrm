@@ -13,6 +13,8 @@ import { Eye, Download } from "lucide-react";
 import { useState } from "react";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 
 interface PublishedObjectDetailProps {
   objectType: ObjectType;
@@ -24,14 +26,29 @@ export function PublishedObjectDetail({ objectType, children, onClose }: Publish
   const [isImplementing, setIsImplementing] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const { importObjectType } = useObjectTypes();
+  const { user } = useAuth();
 
   const handleImplement = async () => {
     try {
+      if (!user) {
+        toast.error("You must be logged in to implement object structures");
+        return;
+      }
+      
       setIsImplementing(true);
-      await importObjectType.mutateAsync(objectType.id);
+      
+      // Call the Supabase function to clone the object structure
+      const { data, error } = await supabase.rpc('clone_object_structure', {
+        source_object_id: objectType.id,
+        new_owner_id: user.id
+      });
+      
+      if (error) throw error;
+      
       toast.success("Object structure implemented successfully", {
         description: "You can now find it in your Object Manager",
       });
+      
       setDialogOpen(false);
       onClose?.(); // Close the dialog on successful implementation
     } catch (error) {

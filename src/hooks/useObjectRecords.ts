@@ -35,12 +35,30 @@ export function useObjectRecords(objectTypeId?: string) {
       
       console.log(`Fetching records for object type: ${objectTypeId}`);
       
-      // Get records
-      const { data: recordsData, error: recordsError } = await supabase
+      // First, check if this object is owned by current user or is a system object
+      const { data: objectType, error: objectError } = await supabase
+        .from("object_types")
+        .select("owner_id, is_system")
+        .eq("id", objectTypeId)
+        .single();
+      
+      if (objectError) {
+        console.error("Error fetching object type:", objectError);
+        throw objectError;
+      }
+      
+      let recordsQuery = supabase
         .from("object_records")
         .select("*")
-        .eq("object_type_id", objectTypeId)
-        .limit(100);
+        .eq("object_type_id", objectTypeId);
+        
+      // For non-system objects that current user doesn't own, only show records they own
+      if (!objectType.is_system && objectType.owner_id !== user.id) {
+        recordsQuery = recordsQuery.eq("owner_id", user.id);
+      }
+      
+      // Limit to 100 records for performance
+      const { data: recordsData, error: recordsError } = await recordsQuery.limit(100);
       
       if (recordsError) {
         console.error("Error fetching records:", recordsError);
@@ -98,7 +116,9 @@ export function useObjectRecords(objectTypeId?: string) {
         .from("object_records")
         .insert([{ 
           object_type_id: objectTypeId,
-          owner_id: user.id // Add owner_id to comply with RLS policies
+          owner_id: user.id, // Always set current user as owner
+          created_by: user.id,
+          last_modified_by: user.id
         }])
         .select()
         .single();
@@ -139,14 +159,40 @@ export function useObjectRecords(objectTypeId?: string) {
         throw new Error("Missing record id or user");
       }
       
+      // Check if the user has permission to update this record
+      const { data: recordData, error: recordCheckError } = await supabase
+        .from("object_records")
+        .select("owner_id, object_type_id")
+        .eq("id", id)
+        .single();
+      
+      if (recordCheckError) throw recordCheckError;
+      
+      // Check if user owns the record or the object type
+      const { data: objectTypeData, error: objectTypeError } = await supabase
+        .from("object_types")
+        .select("owner_id, is_system")
+        .eq("id", recordData.object_type_id)
+        .single();
+      
+      if (objectTypeError) throw objectTypeError;
+      
+      // Only allow update if user owns the record, or owns the object type, or it's a system object
+      const canUpdate = recordData.owner_id === user.id || 
+                        objectTypeData.owner_id === user.id ||
+                        objectTypeData.is_system;
+      
+      if (!canUpdate) {
+        throw new Error("You don't have permission to update this record");
+      }
+      
       console.log("Updating record:", id, "with data:", field_values);
 
-      // Update the record's timestamp and ensure owner_id is set
+      // Update the record's timestamp and ensure last_modified_by is set
       const { error: recordError } = await supabase
         .from("object_records")
         .update({ 
           updated_at: new Date().toISOString(),
-          owner_id: user.id, // Set owner_id to current user to comply with RLS policies
           last_modified_by: user.id
         })
         .eq("id", id);
@@ -186,6 +232,33 @@ export function useObjectRecords(objectTypeId?: string) {
     mutationFn: async (id: string) => {
       if (!id || !user) {
         throw new Error("Missing record id or user");
+      }
+      
+      // Check if the user has permission to delete this record
+      const { data: recordData, error: recordCheckError } = await supabase
+        .from("object_records")
+        .select("owner_id, object_type_id")
+        .eq("id", id)
+        .single();
+      
+      if (recordCheckError) throw recordCheckError;
+      
+      // Check if user owns the record or the object type
+      const { data: objectTypeData, error: objectTypeError } = await supabase
+        .from("object_types")
+        .select("owner_id, is_system")
+        .eq("id", recordData.object_type_id)
+        .single();
+      
+      if (objectTypeError) throw objectTypeError;
+      
+      // Only allow delete if user owns the record, or owns the object type, or it's a system object
+      const canDelete = recordData.owner_id === user.id || 
+                        objectTypeData.owner_id === user.id ||
+                        objectTypeData.is_system;
+      
+      if (!canDelete) {
+        throw new Error("You don't have permission to delete this record");
       }
       
       console.log("Deleting record:", id);

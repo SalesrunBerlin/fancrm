@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, QueryObserverResult, RefetchOptions } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -41,18 +40,42 @@ export interface ObjectField {
 export function useObjectTypes() {
   const { user } = useAuth();
   
-  // Fetch object types
+  // Fetch object types - now with improved visibility rules
   const { data: objectTypes, isLoading, error, refetch } = useQuery({
     queryKey: ["object-types"],
     queryFn: async () => {
+      // Only proceed if user is authenticated
+      if (!user) return [];
+      
       const { data, error } = await supabase
         .from("object_types")
         .select("*")
+        .or(`owner_id.eq.${user.id},is_published.eq.true,is_system.eq.true`)
         .order("name");
       
       if (error) throw error;
       return data as ObjectType[];
-    }
+    },
+    enabled: !!user
+  });
+
+  // Fetch specifically published objects by other users
+  const { data: publishedObjects, isLoading: isLoadingPublished } = useQuery({
+    queryKey: ["published-objects"],
+    queryFn: async () => {
+      if (!user) return [];
+      
+      const { data, error } = await supabase
+        .from("object_types")
+        .select("*")
+        .eq("is_published", true)
+        .neq("owner_id", user.id)
+        .order("name");
+      
+      if (error) throw error;
+      return data as ObjectType[];
+    },
+    enabled: !!user
   });
 
   // Create object type mutation
@@ -111,6 +134,19 @@ export function useObjectTypes() {
 
   const updateObjectType = useMutation({
     mutationFn: async (objectType: Partial<ObjectType> & { id: string }) => {
+      // Only owners should be able to update
+      const { data: existingObject, error: checkError } = await supabase
+        .from("object_types")
+        .select("owner_id")
+        .eq("id", objectType.id)
+        .single();
+      
+      if (checkError) throw checkError;
+      
+      if (existingObject.owner_id !== user?.id) {
+        throw new Error("You don't have permission to update this object");
+      }
+      
       const { data, error } = await supabase
         .from("object_types")
         .update(objectType)
@@ -126,6 +162,19 @@ export function useObjectTypes() {
 
   const publishObjectType = useMutation({
     mutationFn: async (id: string) => {
+      // Only owners can publish
+      const { data: existingObject, error: checkError } = await supabase
+        .from("object_types")
+        .select("owner_id")
+        .eq("id", id)
+        .single();
+      
+      if (checkError) throw checkError;
+      
+      if (existingObject.owner_id !== user?.id) {
+        throw new Error("You don't have permission to publish this object");
+      }
+      
       const { data, error } = await supabase
         .from("object_types")
         .update({ is_published: true })
@@ -186,6 +235,19 @@ export function useObjectTypes() {
 
   const deleteObjectType = useMutation({
     mutationFn: async (id: string) => {
+      // Only owners can delete
+      const { data: existingObject, error: checkError } = await supabase
+        .from("object_types")
+        .select("owner_id")
+        .eq("id", id)
+        .single();
+      
+      if (checkError) throw checkError;
+      
+      if (existingObject.owner_id !== user?.id) {
+        throw new Error("You don't have permission to delete this object");
+      }
+      
       const { error } = await supabase
         .from("object_types")
         .delete()
@@ -213,6 +275,7 @@ export function useObjectTypes() {
         ...sourceObject,
         is_template: true,
         source_object_id: sourceId,
+        owner_id: user?.id // Set current user as owner
       };
       
       delete newObject.id;
@@ -232,9 +295,7 @@ export function useObjectTypes() {
   });
 
   // Filter for published and archived objects
-  const publishedObjects = objectTypes?.filter(obj => obj.is_published) || [];
   const archivedObjects = objectTypes?.filter(obj => obj.is_archived) || [];
-  const isLoadingPublished = isLoading;
 
   return {
     objectTypes,
