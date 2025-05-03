@@ -22,6 +22,7 @@ interface PublishedObjectDetailProps {
 
 export function PublishedObjectDetail({ objectType, children, onClose }: PublishedObjectDetailProps) {
   const [isImplementing, setIsImplementing] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
   const { importObjectType } = useObjectTypes();
 
   const handleImplement = async () => {
@@ -31,6 +32,7 @@ export function PublishedObjectDetail({ objectType, children, onClose }: Publish
       toast.success("Object structure implemented successfully", {
         description: "You can now find it in your Object Manager",
       });
+      setDialogOpen(false);
       onClose?.(); // Close the dialog on successful implementation
     } catch (error) {
       console.error("Error implementing object:", error);
@@ -43,7 +45,7 @@ export function PublishedObjectDetail({ objectType, children, onClose }: Publish
   };
 
   return (
-    <Dialog>
+    <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
       <DialogTrigger asChild>
         {children}
       </DialogTrigger>

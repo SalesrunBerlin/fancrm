@@ -19,6 +19,8 @@ export default function Structures() {
   const { objectTypes, isLoading, publishObjectType } = useObjectTypes();
   const queryClient = useQueryClient();
   const [selectedObject, setSelectedObject] = useState(null);
+  const [showPublishingConfig, setShowPublishingConfig] = useState(false);
+  const [selectedObjectId, setSelectedObjectId] = useState<string | null>(null);
   const { user } = useAuth();
 
   useEffect(() => {
@@ -26,12 +28,14 @@ export default function Structures() {
   }, [queryClient]);
 
   const handlePublish = async (objectId: string) => {
-    try {
-      await publishObjectType.mutateAsync(objectId);
-      queryClient.invalidateQueries({ queryKey: ["objectTypes"] });
-    } catch (error) {
-      console.error("Error publishing object type:", error);
-    }
+    setSelectedObjectId(objectId);
+    setShowPublishingConfig(true);
+  };
+
+  const handlePublishingComplete = () => {
+    setShowPublishingConfig(false);
+    setSelectedObjectId(null);
+    queryClient.invalidateQueries({ queryKey: ["objectTypes"] });
   };
 
   return (
@@ -44,7 +48,6 @@ export default function Structures() {
       <Tabs defaultValue="active" className="space-y-4">
         <TabsList className="w-full sm:w-auto">
           <TabsTrigger value="active">Active</TabsTrigger>
-          <TabsTrigger value="inactive">Inactive</TabsTrigger>
           <TabsTrigger value="published">Published</TabsTrigger>
         </TabsList>
         <TabsContent value="active" className="space-y-4">
@@ -77,31 +80,6 @@ export default function Structures() {
           )}
         </TabsContent>
 
-        <TabsContent value="inactive" className="space-y-4">
-          {isLoading ? (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {Array.from({ length: 6 }).map((_, i) => (
-                <Skeleton key={i} className="h-48 w-full" />
-              ))}
-            </div>
-          ) : objectTypes && objectTypes.filter(obj => !obj.is_active).length > 0 ? (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {objectTypes
-                .filter(obj => !obj.is_active)
-                .map(objectType => (
-                  <ObjectCard key={objectType.id} objectType={objectType} />
-                ))}
-            </div>
-          ) : (
-            <Alert>
-              <AlertTitle>No Inactive Objects</AlertTitle>
-              <AlertDescription>
-                There are no inactive objects to display.
-              </AlertDescription>
-            </Alert>
-          )}
-        </TabsContent>
-
         <TabsContent value="published" className="space-y-4">
           {isLoading ? (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -127,6 +105,15 @@ export default function Structures() {
           )}
         </TabsContent>
       </Tabs>
+
+      {selectedObjectId && (
+        <PublishingConfigDialog
+          objectTypeId={selectedObjectId}
+          open={showPublishingConfig}
+          onOpenChange={setShowPublishingConfig}
+          onComplete={handlePublishingComplete}
+        />
+      )}
     </div>
   );
 }
