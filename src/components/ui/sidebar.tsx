@@ -1,3 +1,4 @@
+
 import * as React from "react"
 import { Slot } from "@radix-ui/react-slot"
 import { cva, type VariantProps } from "class-variance-authority"
@@ -234,7 +235,7 @@ const Sidebar = React.forwardRef<
         {/* Background overlay when sidebar is expanded */}
         {open && (
           <div 
-            className="fixed inset-0 bg-black/50 z-[99] transition-opacity duration-300"
+            className="fixed inset-0 bg-black/20 z-[99] transition-opacity duration-300"
             onClick={() => useSidebar().setOpen(false)}
           />
         )}
@@ -251,7 +252,7 @@ const Sidebar = React.forwardRef<
           {/* Sidebar visibility area */}
           <div
             className={cn(
-              "fixed inset-y-0 z-[100] h-svh bg-sidebar transition-transform duration-300 shadow-xl",
+              "fixed inset-y-0 z-[100] h-svh transition-transform duration-300 shadow-xl border rounded-r-md",
               side === "left" ? "left-0" : "right-0",
               open ? "translate-x-0" : "-translate-x-full",
               variant === "floating" || variant === "inset"
@@ -261,7 +262,10 @@ const Sidebar = React.forwardRef<
           >
             <div
               data-sidebar="sidebar"
-              className="flex h-full w-full flex-col group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:border group-data-[variant=floating]:border-sidebar-border group-data-[variant=floating]:shadow"
+              className={cn(
+                "flex h-full w-full flex-col group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:border group-data-[variant=floating]:border-sidebar-border group-data-[variant=floating]:shadow",
+                "bg-white/90 backdrop-blur-md supports-[backdrop-filter]:bg-white/80"
+              )}
             >
               {children}
             </div>
