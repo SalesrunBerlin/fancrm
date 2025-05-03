@@ -1,5 +1,6 @@
 
-import { Json } from "@/lib/types/database";
+// Define our own Json type since it's not exported from database.ts
+export type Json = string | number | boolean | null | { [key: string]: Json } | Json[];
 
 // Extension of ObjectField type to handle Json types for default_value and options
 export interface ObjectFieldWithJson {

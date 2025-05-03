@@ -160,14 +160,12 @@ export function RecordsTable({ records, fields, objectTypeId, selectable = false
                     </Link>
                   </Button>
                   
-                  {/* Action buttons for this specific record */}
-                  <div className="ml-2">
-                    <ObjectActionsSection 
-                      objectTypeId={objectTypeId}
-                      recordId={record.id}
-                      inTable={true}
-                    />
-                  </div>
+                  {/* Single play button for record actions */}
+                  <ObjectActionsSection 
+                    objectTypeId={objectTypeId}
+                    recordId={record.id}
+                    inTable={true}
+                  />
                 </div>
               </TableCell>
               

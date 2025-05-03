@@ -1,22 +1,32 @@
 
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
-import { PlayCircle } from "lucide-react";
+import { PlayCircle, ChevronDown } from "lucide-react";
 import { ActionColor } from "@/hooks/useActions";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+  DropdownMenuItem
+} from "@/components/ui/dropdown-menu";
 
 interface ExpandableActionButtonProps {
   actionName: string;
   color: ActionColor;
   onExecute: () => void;
   compact?: boolean; // Add compact mode for table cells
+  dropdown?: boolean; // Add dropdown mode for table rows
+  actions?: Array<{ name: string; color: ActionColor; onClick: () => void }>; // Multiple actions for dropdown
 }
 
 export function ExpandableActionButton({ 
   actionName, 
   color, 
   onExecute,
-  compact = false
+  compact = false,
+  dropdown = false,
+  actions = []
 }: ExpandableActionButtonProps) {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -30,6 +40,34 @@ export function ExpandableActionButton({
     onExecute();
     setIsOpen(false); // Close after execution
   };
+
+  // For dropdown mode in tables (showing multiple actions in a dropdown)
+  if (dropdown) {
+    return (
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button 
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0"
+          >
+            <PlayCircle className="h-4 w-4 text-blue-500" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-48">
+          {actions.map((action, index) => (
+            <DropdownMenuItem 
+              key={index}
+              onClick={action.onClick}
+              className="cursor-pointer"
+            >
+              {action.name}
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    );
+  }
 
   // For compact mode in tables, just show a small button
   if (compact) {

@@ -222,7 +222,7 @@ export function useActions() {
       }
 
       // Combine all actions and ensure the colors are properly typed
-      const allActions: Action[] = [
+      const allActions = [
         ...(targetActions?.map(action => ({
           ...action,
           color: (action.color || 'default') as ActionColor
@@ -235,7 +235,7 @@ export function useActions() {
           ...action,
           color: (action.color || 'default') as ActionColor
         })) || [])
-      ];
+      ] as Action[];
       
       console.log(`useActions.getActionsByObjectId: Found ${allActions.length} actions total for ${objectTypeId}`);
       return allActions;

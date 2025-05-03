@@ -185,20 +185,23 @@ export function ObjectActionsSection({
     return null; // Don't show error UI, just don't display actions
   }
 
-  // Use a different layout for table view
+  // Use a dropdown layout for table view
   if (inTable) {
+    // Format actions for the dropdown
+    const dropdownActions = filteredActions.map(action => ({
+      name: action.name,
+      color: action.color,
+      onClick: () => handleExecuteAction(action)
+    }));
+
     return (
-      <div className="flex gap-1">
-        {filteredActions.map((action) => (
-          <ExpandableActionButton
-            key={action.id}
-            actionName={action.name}
-            color={action.color}
-            onExecute={() => handleExecuteAction(action)}
-            compact={true}
-          />
-        ))}
-      </div>
+      <ExpandableActionButton
+        actionName="Actions"
+        color="default"
+        onExecute={() => {}}
+        dropdown={true}
+        actions={dropdownActions}
+      />
     );
   }
 
