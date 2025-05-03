@@ -63,9 +63,9 @@ function App() {
               <Route path="/settings/objects/:objectTypeId/fields/new" element={<CreateFieldPage />} />
               <Route path="/settings/objects/:objectTypeId/fields/:fieldId/edit" element={<ObjectFieldEditPage />} />
               <Route path="/structures/*" element={<Structures />} />
-              <Route path="/applications" element={<ApplicationsPage />} />
-              <Route path="/applications/:applicationId" element={<ApplicationDetailPage />} />
-              <Route path="/applications/:applicationId/objects" element={<ApplicationObjectsPage />} />
+              <Route path="/settings/applications" element={<ApplicationsPage />} />
+              <Route path="/settings/applications/:applicationId" element={<ApplicationDetailPage />} />
+              <Route path="/settings/applications/:applicationId/objects" element={<ApplicationObjectsPage />} />
               <Route path="/objects/:objectTypeId" element={<ObjectRecordsList />} />
               <Route path="/objects/:objectTypeId/import" element={<ImportRecordsPage />} />
               <Route path="/objects/:objectTypeId/import/create-field/:columnName" element={<ImportCreateFieldPage />} />
@@ -74,12 +74,12 @@ function App() {
               <Route path="/objects/:objectTypeId/:recordId" element={<ObjectRecordDetail />} />
               <Route path="/objects/:objectTypeId/:recordId/edit" element={<EditRecordPage />} />
               {/* Actions routes */}
-              <Route path="/actions" element={<ActionsPage />} />
-              <Route path="/actions/new" element={<ActionCreatePage />} />
-              <Route path="/actions/:actionId" element={<ActionDetailPage />} />
-              <Route path="/actions/execute/:actionId" element={<ActionExecutePage />} />
-              <Route path="/actions/execute/:actionId/from/:sourceRecordId" element={<ActionExecutePage />} />
-              <Route path="/actions/mass/:actionId" element={<MassActionPage />} />
+              <Route path="/settings/actions" element={<ActionsPage />} />
+              <Route path="/settings/actions/new" element={<ActionCreatePage />} />
+              <Route path="/settings/actions/:actionId" element={<ActionDetailPage />} />
+              <Route path="/settings/actions/execute/:actionId" element={<ActionExecutePage />} />
+              <Route path="/settings/actions/execute/:actionId/from/:sourceRecordId" element={<ActionExecutePage />} />
+              <Route path="/settings/actions/mass/:actionId" element={<MassActionPage />} />
             </Route>
           </Routes>
           <Toaster richColors position="top-right" />

@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -65,27 +66,29 @@ export function useActions() {
   });
 
   // Get a single action by ID
+  const getActionById = async (actionId: string): Promise<Action> => {
+    const { data, error } = await supabase
+      .from("actions")
+      .select("*")
+      .eq("id", actionId)
+      .eq("owner_id", user?.id)
+      .single();
+
+    if (error) {
+      throw error;
+    }
+
+    return data as Action;
+  };
+
   const {
     data: action,
     isLoading: isActionLoading,
     error: actionError,
   } = useQuery({
-    queryKey: ["actions"],
-    queryFn: async (actionId: string) => {
-      const { data, error } = await supabase
-        .from("actions")
-        .select("*")
-        .eq("id", actionId)
-        .eq("owner_id", user?.id)
-        .single();
-
-      if (error) {
-        throw error;
-      }
-
-      return data as Action;
-    },
-    enabled: !!user,
+    queryKey: ["action"],
+    queryFn: () => Promise.resolve(undefined),
+    enabled: false,
   });
 
   // Get actions by object ID
@@ -219,6 +222,7 @@ export function useActions() {
     isActionLoading,
     error,
     actionError,
+    getActionById,
     getActionsByObjectId,
     createAction,
     updateAction,
