@@ -1,6 +1,5 @@
-
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import {
   Table,
   TableBody,
@@ -12,7 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { ObjectField } from "@/hooks/useObjectTypes";
 import { ObjectRecord } from "@/hooks/useObjectRecords";
-import { Edit, Eye } from "lucide-react";
+import { Edit } from "lucide-react";
 import { LookupValueDisplay } from "./LookupValueDisplay";
 import { format } from "date-fns";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -28,6 +27,7 @@ interface RecordsTableProps {
 
 export function RecordsTable({ records, fields, objectTypeId, selectable = false, onSelectionChange }: RecordsTableProps) {
   const [selectedRecords, setSelectedRecords] = useState<string[]>([]);
+  const navigate = useNavigate();
 
   if (records.length === 0) {
     return (
@@ -95,6 +95,10 @@ export function RecordsTable({ records, fields, objectTypeId, selectable = false
     if (onSelectionChange) onSelectionChange(newSelectedRecords);
   };
 
+  const handleRowClick = (recordId: string) => {
+    navigate(`/objects/${objectTypeId}/${recordId}`);
+  };
+
   const allSelected = records.length > 0 && selectedRecords.length === records.length;
 
   return (
@@ -121,9 +125,12 @@ export function RecordsTable({ records, fields, objectTypeId, selectable = false
         </TableHeader>
         <TableBody>
           {records.map((record) => (
-            <TableRow key={record.id} className={selectedRecords.includes(record.id) ? "bg-muted/30" : undefined}>
+            <TableRow 
+              key={record.id} 
+              className={`${selectedRecords.includes(record.id) ? "bg-muted/30" : ""} hover:bg-muted/50 cursor-pointer transition-colors`}
+            >
               {selectable && (
-                <TableCell>
+                <TableCell onClick={(e) => e.stopPropagation()}>
                   <Checkbox
                     checked={selectedRecords.includes(record.id)}
                     onCheckedChange={(checked) => handleSelectRecord(record.id, !!checked)}
@@ -133,31 +140,17 @@ export function RecordsTable({ records, fields, objectTypeId, selectable = false
               )}
               
               {/* Actions cell */}
-              <TableCell>
+              <TableCell onClick={(e) => e.stopPropagation()} className="whitespace-nowrap">
                 <div className="flex items-center space-x-2">
-                  {/* Edit & View buttons */}
+                  {/* Edit button */}
                   <Button
                     variant="ghost"
                     size="sm"
-                    asChild
                     className="h-8 w-8 p-0"
+                    onClick={() => navigate(`/objects/${objectTypeId}/${record.id}/edit`)}
                   >
-                    <Link to={`/objects/${objectTypeId}/${record.id}/edit`}>
-                      <Edit className="h-4 w-4" />
-                      <span className="sr-only">Edit</span>
-                    </Link>
-                  </Button>
-                  
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    asChild
-                    className="h-8 w-8 p-0"
-                  >
-                    <Link to={`/objects/${objectTypeId}/${record.id}`}>
-                      <Eye className="h-4 w-4" />
-                      <span className="sr-only">View</span>
-                    </Link>
+                    <Edit className="h-4 w-4" />
+                    <span className="sr-only">Edit</span>
                   </Button>
                   
                   {/* Single play button for record actions */}
@@ -171,7 +164,10 @@ export function RecordsTable({ records, fields, objectTypeId, selectable = false
               
               {/* Fields cells */}
               {fields.map((field) => (
-                <TableCell key={`${record.id}-${field.id}`}>
+                <TableCell 
+                  key={`${record.id}-${field.id}`}
+                  onClick={() => handleRowClick(record.id)}
+                >
                   {getFieldValue(record, field)}
                 </TableCell>
               ))}

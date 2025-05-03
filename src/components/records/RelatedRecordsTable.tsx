@@ -1,5 +1,6 @@
 
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { RelatedFieldValue } from "./RelatedFieldValue";
 import { RelatedSection } from "@/hooks/useRelatedRecords";
@@ -8,7 +9,6 @@ import { Button } from "@/components/ui/button";
 import { Edit, Play } from "lucide-react";
 import { useActions } from "@/hooks/useActions";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { useNavigate } from "react-router-dom";
 import { Action } from "@/hooks/useActions";
 
 interface RelatedRecordsTableProps {
@@ -54,6 +54,10 @@ export function RelatedRecordsTable({ section }: RelatedRecordsTableProps) {
     }
     setExpandedAction(null); // Close dropdown after action is selected
   };
+  
+  const handleRowClick = (recordId: string) => {
+    navigate(`/objects/${section.objectType.id}/${recordId}`);
+  };
 
   return (
     <div className="overflow-hidden rounded-md border w-full max-w-full">
@@ -77,16 +81,16 @@ export function RelatedRecordsTable({ section }: RelatedRecordsTableProps) {
             {section.records.map((record) => (
               <TableRow 
                 key={record.id}
-                className="hover:bg-muted/50 transition-colors"
+                className="hover:bg-muted/50 transition-colors cursor-pointer"
               >
                 {/* Actions Column */}
-                <TableCell className="whitespace-nowrap">
+                <TableCell className="whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                   <div className="flex items-center space-x-2">
                     <Button
                       variant="ghost"
-                      size="icon"
+                      size="sm"
                       className="h-8 w-8 p-0"
-                      onClick={() => window.location.href = `/objects/${section.objectType.id}/${record.id}`}
+                      onClick={() => navigate(`/objects/${section.objectType.id}/${record.id}/edit`)}
                     >
                       <Edit className="h-4 w-4" />
                       <span className="sr-only">Edit</span>
@@ -96,8 +100,8 @@ export function RelatedRecordsTable({ section }: RelatedRecordsTableProps) {
                       <DropdownMenuTrigger asChild>
                         <Button
                           variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 p-0 text-blue-500 hover:text-blue-600"
+                          size="sm"
+                          className="h-8 p-0 text-blue-500 hover:text-blue-600"
                         >
                           <Play className="h-4 w-4" />
                           <span className="sr-only">Actions</span>
@@ -113,7 +117,7 @@ export function RelatedRecordsTable({ section }: RelatedRecordsTableProps) {
                             <DropdownMenuItem 
                               key={action.id}
                               onClick={() => handleExecuteAction(action, record.id)}
-                              className={`text-${action.color}-500 hover:bg-${action.color}-50`}
+                              className="cursor-pointer"
                             >
                               {action.name}
                             </DropdownMenuItem>
@@ -131,7 +135,7 @@ export function RelatedRecordsTable({ section }: RelatedRecordsTableProps) {
                   <TableCell 
                     key={`${record.id}-${field.api_name}`} 
                     className="whitespace-nowrap"
-                    onClick={() => window.location.href = `/objects/${section.objectType.id}/${record.id}`}
+                    onClick={() => handleRowClick(record.id)}
                   >
                     <RelatedFieldValue 
                       field={field} 
@@ -141,13 +145,13 @@ export function RelatedRecordsTable({ section }: RelatedRecordsTableProps) {
                 ))}
                 <TableCell 
                   className="whitespace-nowrap text-muted-foreground text-sm"
-                  onClick={() => window.location.href = `/objects/${section.objectType.id}/${record.id}`}
+                  onClick={() => handleRowClick(record.id)}
                 >
                   {format(new Date(record.created_at), "dd.MM.yyyy")}
                 </TableCell>
                 <TableCell 
                   className="whitespace-nowrap text-muted-foreground text-sm"
-                  onClick={() => window.location.href = `/objects/${section.objectType.id}/${record.id}`}
+                  onClick={() => handleRowClick(record.id)}
                 >
                   {format(new Date(record.updated_at), "dd.MM.yyyy")}
                 </TableCell>

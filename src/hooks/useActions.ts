@@ -235,7 +235,7 @@ export function useActions() {
           ...action,
           color: (action.color || 'default') as ActionColor
         })) || [])
-      ] as Action[];
+      ];
       
       console.log(`useActions.getActionsByObjectId: Found ${allActions.length} actions total for ${objectTypeId}`);
       return allActions;

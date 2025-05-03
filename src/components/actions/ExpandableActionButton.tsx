@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
-import { PlayCircle, ChevronDown } from "lucide-react";
+import { Play, ChevronDown } from "lucide-react";
 import { ActionColor } from "@/hooks/useActions";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
@@ -49,12 +49,12 @@ export function ExpandableActionButton({
           <Button 
             variant="ghost"
             size="sm"
-            className="h-8 w-8 p-0"
+            className="h-8 p-0 text-blue-500 hover:text-blue-600"
           >
-            <PlayCircle className="h-4 w-4 text-blue-500" />
+            <Play className="h-4 w-4" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-48">
+        <DropdownMenuContent align="end" className="w-48 bg-white">
           {actions.map((action, index) => (
             <DropdownMenuItem 
               key={index}
@@ -75,11 +75,11 @@ export function ExpandableActionButton({
       <Button 
         variant={color}
         size="sm"
-        className="h-7 w-7 p-0 rounded-full"
+        className="h-7 p-0"
         onClick={onExecute}
         title={actionName}
       >
-        <PlayCircle className="h-3.5 w-3.5" />
+        <Play className="h-3.5 w-3.5" />
       </Button>
     );
   }
@@ -95,11 +95,11 @@ export function ExpandableActionButton({
         <Button 
           variant={color}
           size="icon"
-          className="h-8 w-8 rounded-full transition-all"
+          className="h-8 transition-all"
           onClick={handleButtonClick}
           title={actionName}
         >
-          <PlayCircle className="h-4 w-4" />
+          <Play className="h-4 w-4" />
         </Button>
       </CollapsibleTrigger>
       
