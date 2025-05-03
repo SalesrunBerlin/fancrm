@@ -59,7 +59,7 @@ export function useRecordDetail(objectTypeId?: string, recordId?: string) {
       console.log("Field values fetched:", fieldValues.length);
 
       // Convert field values array to object
-      const valuesObject = fieldValues.reduce((acc, curr) => {
+      const valuesObject: { [key: string]: string | null } = fieldValues.reduce((acc, curr) => {
         acc[curr.field_api_name] = curr.value;
         return acc;
       }, {} as { [key: string]: string | null });

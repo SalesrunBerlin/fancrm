@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -12,6 +11,7 @@ import { RecordsTable } from '@/components/records/RecordsTable';
 import { ObjectField } from '@/hooks/useObjectTypes';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { LookupField } from '@/components/records/LookupField';
+import { ObjectRecord } from '@/lib/types/records';
 
 export default function MassActionPage() {
   const { actionId } = useParams<{ actionId: string }>();
@@ -252,6 +252,7 @@ export default function MassActionPage() {
     );
   }
 
+  // Type-safe rendering of RecordsTable
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
       <PageHeader
@@ -314,8 +315,8 @@ export default function MassActionPage() {
                 <p className="text-muted-foreground text-center py-4">No records found to update</p>
               ) : (
                 <RecordsTable
-                  records={objectDetails.records}
-                  fields={objectDetails.fields || []}
+                  records={objectDetails.records as unknown as ObjectRecord[]}
+                  fields={objectDetails.fields as unknown as ObjectField[]}
                   objectTypeId={action.target_object_id}
                   selectable={true}
                   onSelectionChange={handleSelectionChange}
