@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
@@ -170,11 +171,27 @@ export default function ObjectRecordsList() {
         }
       />
 
-      {/* Actions section - now will only show when actions exist */}
+      {/* Regular actions section - will only show new record actions when no records are selected */}
       <ObjectActionsSection 
         objectTypeId={objectTypeId!} 
         objectTypeName={objectType.name}
       />
+
+      {/* Mass actions section - only visible when records are selected */}
+      {selectedRecords.length > 0 && (
+        <div className="bg-muted/30 p-4 rounded-md">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-medium text-sm">
+              {selectedRecords.length} {objectType.name} selected
+            </h3>
+          </div>
+          <ObjectActionsSection 
+            objectTypeId={objectTypeId!} 
+            objectTypeName={objectType.name}
+            selectedRecordIds={selectedRecords}
+          />
+        </div>
+      )}
 
       <Card className="overflow-hidden">
         {isLoading || isLoadingFields ? (

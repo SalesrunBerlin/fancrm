@@ -62,7 +62,7 @@ export interface Action {
   action_type: ActionType;
   target_object_id: string;
   source_field_id?: string | null;
-  lookup_field_id?: string | null; // Add the new lookup_field_id property
+  lookup_field_id?: string | null;
   color: ActionColor;
   owner_id: string;
   created_at: string;
@@ -87,7 +87,7 @@ export interface ActionCreateInput {
   action_type: ActionType;
   target_object_id: string;
   source_field_id?: string | null;
-  lookup_field_id?: string | null; // Add lookup_field_id to input interface
+  lookup_field_id?: string | null;
   color?: ActionColor;
 }
 

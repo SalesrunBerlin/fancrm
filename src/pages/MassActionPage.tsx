@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { PageHeader } from '@/components/ui/page-header';
 import { Card, CardContent } from '@/components/ui/card';
@@ -16,10 +16,13 @@ import { LookupField } from '@/components/records/LookupField';
 export default function MassActionPage() {
   const { actionId } = useParams<{ actionId: string }>();
   const navigate = useNavigate();
-  const [selectedRecords, setSelectedRecords] = useState<string[]>([]);
+  const [searchParams] = useSearchParams();
+  const preselectedRecordIds = searchParams.get('records')?.split(',') || [];
+  
+  const [selectedRecords, setSelectedRecords] = useState<string[]>(preselectedRecordIds);
   const [lookupValue, setLookupValue] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [activeTab, setActiveTab] = useState<string>('select');
+  const [activeTab, setActiveTab] = useState<string>(preselectedRecordIds.length > 0 ? 'assign' : 'select');
 
   // Fetch action details
   const { data: action, isLoading: isLoadingAction } = useQuery({
@@ -42,7 +45,7 @@ export default function MassActionPage() {
 
   // Fetch records from the object type and lookup field metadata
   const { data: objectDetails, isLoading: isLoadingObjectDetails } = useQuery({
-    queryKey: ['object-details', action?.object_types?.id],
+    queryKey: ['object-details', action?.object_types?.id, preselectedRecordIds],
     queryFn: async () => {
       if (!action?.object_types?.id) return null;
 
@@ -58,10 +61,17 @@ export default function MassActionPage() {
       if (fieldsError) throw fieldsError;
       
       // 2. Get records from the target object
-      const { data: records, error: recordsError } = await supabase
+      let recordsQuery = supabase
         .from('object_records')
         .select('*, field_values:record_field_values(*)')
-        .eq('object_type_id', targetObjectId)
+        .eq('object_type_id', targetObjectId);
+        
+      // If we have preselected records, filter by those
+      if (preselectedRecordIds.length > 0) {
+        recordsQuery = recordsQuery.in('id', preselectedRecordIds);
+      }
+      
+      const { data: records, error: recordsError } = await recordsQuery
         .order('created_at', { ascending: false });
 
       if (recordsError) throw recordsError;
@@ -98,7 +108,12 @@ export default function MassActionPage() {
           created_at: record.created_at,
           updated_at: record.updated_at,
           field_values: fieldValues,
-          displayName: getDisplayName(record, fields)
+          displayName: getDisplayName(record, fields),
+          // Add these properties to match the ObjectRecord type
+          object_type_id: targetObjectId,
+          owner_id: record.owner_id || null,
+          created_by: record.created_by || null,
+          last_modified_by: record.last_modified_by || null
         };
       });
 
@@ -112,7 +127,7 @@ export default function MassActionPage() {
   });
 
   // Helper function to get a display name for records
-  function getDisplayName(record: any, fields: ObjectField[]) {
+  function getDisplayName(record: any, fields: any[]) {
     // Try to find a name field
     const nameField = fields.find(f => 
       f.api_name === 'name' || 

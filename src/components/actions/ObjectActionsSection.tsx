@@ -11,12 +11,14 @@ interface ObjectActionsSectionProps {
   objectTypeId: string;
   objectTypeName?: string;
   recordId?: string; // Add recordId for context in linked actions
+  selectedRecordIds?: string[]; // Add selectedRecordIds for mass actions
 }
 
 export function ObjectActionsSection({ 
   objectTypeId, 
   objectTypeName,
-  recordId
+  recordId,
+  selectedRecordIds = []
 }: ObjectActionsSectionProps) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -116,9 +118,17 @@ export function ObjectActionsSection({
         break;
         
       case "mass_action":
-        // For mass actions, navigate to the mass action page
-        console.log(`ObjectActionsSection: Executing mass action ${action.id}`);
-        navigate(`/actions/mass/${action.id}`);
+        // For mass actions, navigate to the mass action page with selected records
+        console.log(`ObjectActionsSection: Executing mass action ${action.id} with ${selectedRecordIds.length} selected records`);
+        
+        if (selectedRecordIds.length > 0) {
+          // Pass the selected record IDs as a URL parameter
+          const recordIdsParam = selectedRecordIds.join(',');
+          navigate(`/actions/mass/${action.id}?records=${recordIdsParam}`);
+        } else {
+          // If no records are selected, navigate to the regular mass action page
+          navigate(`/actions/mass/${action.id}`);
+        }
         break;
         
       case "new_record":
@@ -141,8 +151,13 @@ export function ObjectActionsSection({
       return action.action_type === "linked_record";
     }
     
-    // On object list page (no recordId), show global and mass actions
-    return action.action_type === "new_record" || action.action_type === "mass_action";
+    // On object list page with selected records, show only mass actions
+    if (selectedRecordIds.length > 0) {
+      return action.action_type === "mass_action";
+    }
+    
+    // On object list page (no recordId and no selected records), show global actions
+    return action.action_type === "new_record";
   });
 
   if (loading) {
