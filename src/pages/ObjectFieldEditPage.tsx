@@ -13,6 +13,7 @@ import { AlertCircle } from "lucide-react";
 import { DeleteDialog } from "@/components/common/DeleteDialog";
 import { PicklistValuesManager } from "@/components/settings/PicklistValuesManager";
 import { Separator } from "@/components/ui/separator";
+import { toast } from "sonner";
 
 export default function ObjectFieldEditPage() {
   const { objectTypeId, fieldId } = useParams<{
@@ -20,7 +21,7 @@ export default function ObjectFieldEditPage() {
     fieldId: string;
   }>();
   const navigate = useNavigate();
-  const { field, isLoading, deleteField } = useObjectFieldEdit(fieldId || "");
+  const { field, isLoading, updateField, deleteField } = useObjectFieldEdit(fieldId || "");
   const { objectTypes } = useObjectTypes();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
