@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -59,6 +60,7 @@ export function CreateRecordForm({
   const [error, setError] = useState<string | null>(null);
   const [lookupFieldsValues, setLookupFieldsValues] = useState<Record<string, Record<string, any>>>({});
   const [enhancedFields, setEnhancedFields] = useState<ObjectField[]>([]);
+  const [formulaWarnings, setFormulaWarnings] = useState<Record<string, string>>({});
   
   // Filter only enabled fields or fields that are required by the object
   const enabledActionFields = actionFields.filter(af => 
@@ -133,6 +135,7 @@ export function CreateRecordForm({
       console.log("Evaluating formula-based default values on form load");
       
       const formulaDefaults: Record<string, any> = {};
+      const newFormulaWarnings: Record<string, string> = {};
       let hasFormulaValues = false;
       
       // Process action fields to set default values with formulas
@@ -155,7 +158,17 @@ export function CreateRecordForm({
             console.log(`Evaluating formula for ${field.api_name}:`, 
               actionField.formula_expression, "-->", formulaValue);
             
-            formulaDefaults[field.api_name] = formulaValue;
+            // Check if the formula returned null (unresolved)
+            if (formulaValue === null && actionField.formula_expression) {
+              newFormulaWarnings[field.api_name] = 
+                `Formula could not be resolved: ${actionField.formula_expression}`;
+              
+              // Use empty string instead of null for form fields
+              formulaDefaults[field.api_name] = '';
+            } else {
+              formulaDefaults[field.api_name] = formulaValue || '';
+            }
+            
             hasFormulaValues = true;
           } 
           // Otherwise use the static default value
@@ -165,6 +178,11 @@ export function CreateRecordForm({
           }
         }
       });
+      
+      // Update formula warnings
+      if (Object.keys(newFormulaWarnings).length > 0) {
+        setFormulaWarnings(newFormulaWarnings);
+      }
       
       // Set all formula values at once if we have any
       if (hasFormulaValues) {
@@ -247,11 +265,13 @@ export function CreateRecordForm({
   // Update form values when lookup values change
   useEffect(() => {
     if (Object.keys(lookupFieldsValues).length > 0) {
+      const newFormulaWarnings: Record<string, string> = {};
+      
       // Re-evaluate formulas with the new lookup values
       enabledActionFields.forEach(actionField => {
         const field = objectFields.find(f => f.id === actionField.field_id);
         if (field && actionField.formula_type === 'dynamic' && actionField.formula_expression) {
-          const newValue = evaluateFormula(
+          const formulaValue = evaluateFormula(
             actionField.formula_expression, 
             { 
               fieldValues: form.getValues(), 
@@ -259,9 +279,21 @@ export function CreateRecordForm({
             }
           );
           
-          form.setValue(field.api_name, newValue);
+          // Check if the formula returned null (unresolved)
+          if (formulaValue === null && actionField.formula_expression) {
+            newFormulaWarnings[field.api_name] = 
+              `Formula could not be resolved: ${actionField.formula_expression}`;
+            
+            // Use empty string instead of null for form fields
+            form.setValue(field.api_name, '');
+          } else {
+            form.setValue(field.api_name, formulaValue || '');
+          }
         }
       });
+      
+      // Update formula warnings
+      setFormulaWarnings(prev => ({...prev, ...newFormulaWarnings}));
     }
   }, [lookupFieldsValues, enabledActionFields, objectFields, form]);
 
@@ -279,9 +311,46 @@ export function CreateRecordForm({
     !preselectedFields.some(pf => pf.id === field.id)
   );
 
+  // Validate if all formulas are resolved
+  const validateFormFormulas = () => {
+    const fieldValues = form.getValues();
+    const newFormulaWarnings: Record<string, string> = {};
+    let hasUnresolvedFormulas = false;
+    
+    // Check all formula fields
+    enabledActionFields.forEach(actionField => {
+      const field = objectFields.find(f => f.id === actionField.field_id);
+      if (field && actionField.formula_type === 'dynamic' && actionField.formula_expression) {
+        // If field is required but value is empty or still has formula syntax
+        const value = fieldValues[field.api_name];
+        if (field.is_required && (!value || value === '')) {
+          if (actionField.formula_expression.includes('.')) {
+            // It's a lookup formula that likely failed
+            newFormulaWarnings[field.api_name] = 
+              `Required formula field could not be resolved: ${actionField.formula_expression}`;
+            hasUnresolvedFormulas = true;
+          }
+        }
+      }
+    });
+    
+    // Update formula warnings
+    if (Object.keys(newFormulaWarnings).length > 0) {
+      setFormulaWarnings(prev => ({...prev, ...newFormulaWarnings}));
+    }
+    
+    return !hasUnresolvedFormulas;
+  };
+
   const handleSubmit = async (data: Record<string, any>) => {
     if (!user) {
       setError("You must be logged in to create records");
+      return;
+    }
+    
+    // Validate formula fields
+    if (!validateFormFormulas()) {
+      setError("Some required formula fields could not be resolved. Please check the form for details.");
       return;
     }
     
@@ -305,7 +374,7 @@ export function CreateRecordForm({
       const fieldValues = Object.entries(data).map(([api_name, value]) => ({
         record_id: record.id,
         field_api_name: api_name,
-        value: value === undefined ? null : String(value),
+        value: value === undefined || value === null ? null : String(value),
       }));
       
       const { error: valuesError } = await supabase
@@ -331,6 +400,25 @@ export function CreateRecordForm({
           <Alert className={getAlertVariantClass("destructive")}>
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+        
+        {Object.keys(formulaWarnings).length > 0 && (
+          <Alert className={getAlertVariantClass("warning")}>
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              <div>Some formula fields may need attention:</div>
+              <ul className="list-disc pl-5 text-sm mt-1">
+                {Object.entries(formulaWarnings).map(([fieldName, warning]) => {
+                  const field = objectFields.find(f => f.api_name === fieldName);
+                  return (
+                    <li key={fieldName} className="mt-1">
+                      <span className="font-semibold">{field?.name || fieldName}</span>: {warning}
+                    </li>
+                  );
+                })}
+              </ul>
+            </AlertDescription>
           </Alert>
         )}
         

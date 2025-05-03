@@ -1,3 +1,4 @@
+
 import { format } from 'date-fns';
 
 type FormulaContext = {
@@ -12,8 +13,8 @@ type FormulaContext = {
  * @param context Optional context data like field values
  * @returns The evaluated result as a string
  */
-export function evaluateFormula(expression: string | null | undefined, context: FormulaContext = {}): string {
-  if (!expression) return '';
+export function evaluateFormula(expression: string | null | undefined, context: FormulaContext = {}): string | null {
+  if (!expression) return null;
   
   console.log("Evaluating formula:", expression, "with context:", context);
   
@@ -28,6 +29,15 @@ export function evaluateFormula(expression: string | null | undefined, context: 
   // Handle field references - if fieldValues are provided
   if (context.fieldValues) {
     result = replaceFieldReferences(result, context.fieldValues, context.lookupFieldsValues);
+  }
+  
+  // If the result still contains unresolved formula references, return null instead of the unresolved formula
+  if (result.includes('{') && result.includes('}')) {
+    console.log("Formula contains unresolved references:", result);
+    // If the formula completely matches the original expression (nothing was replaced), return null
+    if (result === expression) {
+      return null;
+    }
   }
   
   console.log("Formula evaluation result:", result);
@@ -102,15 +112,18 @@ function replaceFieldReferences(
       // If we have lookup field values
       if (lookupFieldsValues && lookupFieldsValues[lookupField]) {
         const lookupValue = lookupFieldsValues[lookupField][fieldName];
-        return lookupValue !== undefined ? String(lookupValue) : match;
+        return lookupValue !== undefined ? String(lookupValue) : '';
       }
 
       // Otherwise try to find the lookup record ID first
       const lookupId = fieldValues[lookupField];
-      if (!lookupId) return match;
+      if (!lookupId) {
+        console.log(`Lookup field ${lookupField} has no value, returning empty string`);
+        return '';
+      }
 
       console.log(`Found lookup ID: ${lookupId} for field ${lookupField}, but no resolved values available`);
-      return match;
+      return ''; // Return empty string instead of keeping the unresolved reference
     }
   );
 
@@ -127,7 +140,12 @@ function replaceFieldReferences(
       
       // Otherwise, try to replace with field value
       const value = fieldValues[fieldName];
-      return value !== undefined ? String(value) : match;
+      if (value !== undefined) {
+        return String(value);
+      } else {
+        console.log(`Field ${fieldName} has no value, returning empty string`);
+        return ''; // Return empty string instead of keeping the unresolved reference
+      }
     }
   );
   
