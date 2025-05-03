@@ -1,6 +1,6 @@
 
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import {
   Table,
   TableBody,
@@ -12,7 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { ObjectField } from "@/hooks/useObjectTypes";
 import { ObjectRecord } from "@/hooks/useObjectRecords";
-import { Edit, Play } from "lucide-react";
+import { Edit, Play, Eye, Trash2 } from "lucide-react";
 import { LookupValueDisplay } from "./LookupValueDisplay";
 import { format } from "date-fns";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -92,8 +92,7 @@ export function RecordsTable({ records, fields, objectTypeId, selectable = false
     }
   };
 
-  const handleSelectRecord = (recordId: string, checked: boolean, e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent row click navigation
+  const handleSelectRecord = (recordId: string, checked: boolean) => {
     let newSelectedRecords = [...selectedRecords];
     
     if (checked) {
@@ -107,9 +106,7 @@ export function RecordsTable({ records, fields, objectTypeId, selectable = false
   };
 
   // Function to toggle the action dropdown for a specific record
-  const toggleActionDropdown = async (recordId: string, e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent row click navigation
-    
+  const toggleActionDropdown = async (recordId: string) => {
     if (expandedAction === recordId) {
       setExpandedAction(null);
       return;
@@ -131,9 +128,7 @@ export function RecordsTable({ records, fields, objectTypeId, selectable = false
     }
   };
 
-  const handleExecuteAction = (action: Action, recordId: string, e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent row click navigation
-    
+  const handleExecuteAction = (action: Action, recordId: string) => {
     if (action.action_type === "linked_record" && recordId) {
       // For linked records actions
       navigate(`/actions/execute/${action.id}/from/${recordId}`);
@@ -142,15 +137,6 @@ export function RecordsTable({ records, fields, objectTypeId, selectable = false
       navigate(`/actions/execute/${action.id}`);
     }
     setExpandedAction(null); // Close dropdown after action is selected
-  };
-
-  const handleRowClick = (recordId: string) => {
-    navigate(`/objects/${objectTypeId}/${recordId}`);
-  };
-
-  const handleEditClick = (recordId: string, e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent row click navigation
-    navigate(`/objects/${objectTypeId}/${recordId}/edit`);
   };
 
   const allSelected = records.length > 0 && selectedRecords.length === records.length;
@@ -179,47 +165,38 @@ export function RecordsTable({ records, fields, objectTypeId, selectable = false
         </TableHeader>
         <TableBody>
           {records.map((record) => (
-            <TableRow 
-              key={record.id} 
-              className={`${selectedRecords.includes(record.id) ? "bg-muted/30" : ""} cursor-pointer hover:bg-muted/50`}
-              onClick={() => handleRowClick(record.id)}
-            >
+            <TableRow key={record.id} className={selectedRecords.includes(record.id) ? "bg-muted/30" : undefined}>
               {selectable && (
-                <TableCell onClick={(e) => e.stopPropagation()}>
+                <TableCell>
                   <Checkbox
                     checked={selectedRecords.includes(record.id)}
-                    onCheckedChange={(checked) => handleSelectRecord(record.id, !!checked, event)}
+                    onCheckedChange={(checked) => handleSelectRecord(record.id, !!checked)}
                     aria-label={`Select record ${record.id}`}
                   />
                 </TableCell>
               )}
               
               {/* Actions cell */}
-              <TableCell onClick={(e) => e.stopPropagation()}>
+              <TableCell>
                 <div className="flex items-center space-x-2">
                   <Button
                     variant="ghost"
                     size="sm"
+                    asChild
                     className="h-8 w-8 p-0"
-                    onClick={(e) => handleEditClick(record.id, e)}
                   >
-                    <Edit className="h-4 w-4" />
-                    <span className="sr-only">Edit</span>
+                    <Link to={`/objects/${objectTypeId}/${record.id}/edit`}>
+                      <Edit className="h-4 w-4" />
+                      <span className="sr-only">Edit</span>
+                    </Link>
                   </Button>
                   
-                  <DropdownMenu 
-                    open={expandedAction === record.id} 
-                    onOpenChange={(open) => {
-                      if (open) toggleActionDropdown(record.id, event);
-                      else setExpandedAction(null);
-                    }}
-                  >
+                  <DropdownMenu open={expandedAction === record.id} onOpenChange={() => toggleActionDropdown(record.id)}>
                     <DropdownMenuTrigger asChild>
                       <Button
                         variant="ghost"
                         size="sm"
                         className="h-8 w-8 p-0 text-blue-500 hover:text-blue-600"
-                        onClick={(e) => toggleActionDropdown(record.id, e)}
                       >
                         <Play className="h-4 w-4" />
                         <span className="sr-only">Actions</span>
@@ -234,7 +211,7 @@ export function RecordsTable({ records, fields, objectTypeId, selectable = false
                         recordActions[record.id].map((action) => (
                           <DropdownMenuItem 
                             key={action.id}
-                            onClick={(e) => handleExecuteAction(action, record.id, e)}
+                            onClick={() => handleExecuteAction(action, record.id)}
                           >
                             {action.name}
                           </DropdownMenuItem>
@@ -244,10 +221,22 @@ export function RecordsTable({ records, fields, objectTypeId, selectable = false
                       )}
                     </DropdownMenuContent>
                   </DropdownMenu>
+                  
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    asChild
+                    className="h-8 w-8 p-0"
+                  >
+                    <Link to={`/objects/${objectTypeId}/${record.id}`}>
+                      <Eye className="h-4 w-4" />
+                      <span className="sr-only">View</span>
+                    </Link>
+                  </Button>
                 </div>
               </TableCell>
               
-              {/* Fields cells - now all are clickable, no need for extra view button */}
+              {/* Fields cells */}
               {fields.map((field) => (
                 <TableCell key={`${record.id}-${field.id}`}>
                   {getFieldValue(record, field)}

@@ -55,11 +55,6 @@ export function RelatedRecordsTable({ section }: RelatedRecordsTableProps) {
     setExpandedAction(null); // Close dropdown after action is selected
   };
 
-  // Function to navigate to record detail page
-  const navigateToRecord = (recordId: string) => {
-    navigate(`/objects/${section.objectType.id}/${recordId}`);
-  };
-
   return (
     <div className="overflow-hidden rounded-md border w-full max-w-full">
       {/* Add a container with horizontal scroll for mobile */}
@@ -82,16 +77,16 @@ export function RelatedRecordsTable({ section }: RelatedRecordsTableProps) {
             {section.records.map((record) => (
               <TableRow 
                 key={record.id}
-                className="hover:bg-muted/50 transition-colors cursor-pointer"
+                className="hover:bg-muted/50 transition-colors"
               >
                 {/* Actions Column */}
-                <TableCell className="whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                <TableCell className="whitespace-nowrap">
                   <div className="flex items-center space-x-2">
                     <Button
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8 p-0"
-                      onClick={() => navigate(`/objects/${section.objectType.id}/${record.id}/edit`)}
+                      onClick={() => window.location.href = `/objects/${section.objectType.id}/${record.id}`}
                     >
                       <Edit className="h-4 w-4" />
                       <span className="sr-only">Edit</span>
@@ -118,7 +113,7 @@ export function RelatedRecordsTable({ section }: RelatedRecordsTableProps) {
                             <DropdownMenuItem 
                               key={action.id}
                               onClick={() => handleExecuteAction(action, record.id)}
-                              className="hover:bg-muted"
+                              className={`text-${action.color}-500 hover:bg-${action.color}-50`}
                             >
                               {action.name}
                             </DropdownMenuItem>
@@ -131,12 +126,12 @@ export function RelatedRecordsTable({ section }: RelatedRecordsTableProps) {
                   </div>
                 </TableCell>
                 
-                {/* Original Fields - now clickable */}
+                {/* Original Fields */}
                 {section.fields.map((field) => (
                   <TableCell 
                     key={`${record.id}-${field.api_name}`} 
                     className="whitespace-nowrap"
-                    onClick={() => navigateToRecord(record.id)}
+                    onClick={() => window.location.href = `/objects/${section.objectType.id}/${record.id}`}
                   >
                     <RelatedFieldValue 
                       field={field} 
@@ -146,13 +141,13 @@ export function RelatedRecordsTable({ section }: RelatedRecordsTableProps) {
                 ))}
                 <TableCell 
                   className="whitespace-nowrap text-muted-foreground text-sm"
-                  onClick={() => navigateToRecord(record.id)}
+                  onClick={() => window.location.href = `/objects/${section.objectType.id}/${record.id}`}
                 >
                   {format(new Date(record.created_at), "dd.MM.yyyy")}
                 </TableCell>
                 <TableCell 
                   className="whitespace-nowrap text-muted-foreground text-sm"
-                  onClick={() => navigateToRecord(record.id)}
+                  onClick={() => window.location.href = `/objects/${section.objectType.id}/${record.id}`}
                 >
                   {format(new Date(record.updated_at), "dd.MM.yyyy")}
                 </TableCell>
