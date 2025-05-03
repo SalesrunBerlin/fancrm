@@ -18,7 +18,7 @@ export function useRecordDetail(objectTypeId?: string, recordId?: string) {
       // First check object type ownership to determine visibility rules
       const { data: objectType, error: objectTypeError } = await supabase
         .from("object_types")
-        .select("owner_id, is_system, name")
+        .select("owner_id, is_system, name, default_field_api_name")
         .eq("id", objectTypeId)
         .single();
 
