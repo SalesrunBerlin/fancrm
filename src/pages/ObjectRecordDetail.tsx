@@ -15,6 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RelatedRecordsList } from "@/components/records/RelatedRecordsList";
 import { LookupValueDisplay } from "@/components/records/LookupValueDisplay";
 import { ObjectActionsSection } from "@/components/actions/ObjectActionsSection";
+import { RecordDetailForm } from "@/components/records/RecordDetailForm";
 
 export default function ObjectRecordDetail() {
   const navigate = useNavigate();
@@ -151,52 +152,64 @@ export default function ObjectRecordDetail() {
         
         <TabsContent value="details" className="w-full max-w-full overflow-hidden">
           <Card className="shadow-sm w-full">
-            <CardContent className="pt-6 divide-y w-full max-w-full">
-              {fields
-                .sort((a, b) => (a.display_order || 0) - (b.display_order || 0))
-                .map((field) => {
-                  const value = record.fieldValues[field.api_name];
-                  const isTextField = field.data_type === "text" || field.data_type === "textarea";
-                  
-                  return (
-                    <div key={field.id} className="py-4 grid grid-cols-1 sm:grid-cols-3 gap-1 w-full max-w-full">
-                      <div className="font-medium text-muted-foreground truncate">
-                        {field.name}
-                      </div>
-                      <div className="sm:col-span-2 flex items-center gap-2 break-words overflow-hidden">
-                        <div className="overflow-hidden overflow-ellipsis max-w-[calc(100%-2rem)]">
-                          {field.data_type === "lookup" && field.options ? (
-                            <LookupValueDisplay
-                              value={value}
-                              fieldOptions={{
-                                target_object_type_id: (field.options as { target_object_type_id?: string })?.target_object_type_id || ''
-                              }}
-                            />
-                          ) : field.data_type === "picklist" && value ? (
-                            <span>{value}</span>
-                          ) : (
-                            <span className="text-foreground break-all">
-                              {value !== null && value !== undefined ? String(value) : "—"}
-                            </span>
-                          )}
+            <CardContent className="pt-6 w-full max-w-full">
+              {fields.length === 0 ? (
+                <RecordDetailForm 
+                  record={record}
+                  fields={fields}
+                  onFieldChange={() => {}}
+                  editedValues={{}}
+                  objectTypeId={objectTypeId}
+                />
+              ) : (
+                <div className="divide-y w-full max-w-full">
+                  {fields
+                    .sort((a, b) => (a.display_order || 0) - (b.display_order || 0))
+                    .map((field) => {
+                      const value = record.fieldValues[field.api_name];
+                      const isTextField = field.data_type === "text" || field.data_type === "textarea";
+                      
+                      return (
+                        <div key={field.id} className="py-4 grid grid-cols-1 sm:grid-cols-3 gap-1 w-full max-w-full">
+                          <div className="font-medium text-muted-foreground truncate">
+                            {field.name}
+                          </div>
+                          <div className="sm:col-span-2 flex items-center gap-2 break-words overflow-hidden">
+                            <div className="overflow-hidden overflow-ellipsis max-w-[calc(100%-2rem)]">
+                              {field.data_type === "lookup" && field.options ? (
+                                <LookupValueDisplay
+                                  value={value}
+                                  fieldOptions={{
+                                    target_object_type_id: (field.options as { target_object_type_id?: string })?.target_object_type_id || ''
+                                  }}
+                                />
+                              ) : field.data_type === "picklist" && value ? (
+                                <span>{value}</span>
+                              ) : (
+                                <span className="text-foreground break-all">
+                                  {value !== null && value !== undefined ? String(value) : "—"}
+                                </span>
+                              )}
+                            </div>
+                            
+                            {/* Star icon for text fields when star mode is active */}
+                            {starModeActive && isTextField && value && (
+                              <Button 
+                                variant="ghost" 
+                                size="icon"
+                                className="h-6 w-6 shrink-0"
+                                onClick={() => handleFieldStarClick(field.name, field.api_name)}
+                                disabled={isProcessing}
+                              >
+                                <Star className="h-4 w-4 text-yellow-500 hover:fill-yellow-400" />
+                              </Button>
+                            )}
+                          </div>
                         </div>
-                        
-                        {/* Star icon for text fields when star mode is active */}
-                        {starModeActive && isTextField && value && (
-                          <Button 
-                            variant="ghost" 
-                            size="icon"
-                            className="h-6 w-6 shrink-0"
-                            onClick={() => handleFieldStarClick(field.name, field.api_name)}
-                            disabled={isProcessing}
-                          >
-                            <Star className="h-4 w-4 text-yellow-500 hover:fill-yellow-400" />
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
+                      );
+                    })}
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

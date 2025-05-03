@@ -1,3 +1,4 @@
+
 import { ObjectField } from "@/hooks/useObjectTypes";
 import { ObjectRecord } from "@/hooks/useObjectRecords";
 import { Input } from "@/components/ui/input";
@@ -8,6 +9,10 @@ import { LookupField } from "./LookupField";
 import { LookupValueDisplay } from "./LookupValueDisplay";
 import { useFieldPicklistValues } from "@/hooks/useFieldPicklistValues";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Plus } from "lucide-react";
+import { Link } from "react-router-dom";
 
 interface RecordDetailFormProps {
   record: ObjectRecord;
@@ -16,6 +21,7 @@ interface RecordDetailFormProps {
   editedValues: Record<string, any>;
   isEditing?: boolean;
   maxHeight?: string;
+  objectTypeId?: string;
 }
 
 export function RecordDetailForm({ 
@@ -24,7 +30,8 @@ export function RecordDetailForm({
   onFieldChange, 
   editedValues, 
   isEditing = false,
-  maxHeight
+  maxHeight,
+  objectTypeId
 }: RecordDetailFormProps) {
   const getFieldValue = (fieldApiName: string) => {
     if (fieldApiName in editedValues) {
@@ -160,6 +167,32 @@ export function RecordDetailForm({
       return <p className="pt-1">{value || "-"}</p>;
     }
   };
+
+  // If there are no fields defined, show a message and a link to create fields
+  if (fields.length === 0) {
+    return (
+      <Card className="shadow-sm">
+        <CardContent className="p-6 space-y-4">
+          <p className="text-center text-muted-foreground">No fields defined for this object type.</p>
+          
+          {objectTypeId && (
+            <div className="flex justify-center">
+              <Button 
+                variant="outline" 
+                asChild
+                className="border-dashed"
+              >
+                <Link to={`/settings/objects/${objectTypeId}/fields/new`}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add your first field
+                </Link>
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    );
+  }
 
   const content = (
     <div className="grid grid-cols-1 gap-6">
