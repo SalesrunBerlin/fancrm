@@ -1,4 +1,3 @@
-
 import * as React from "react"
 import { Slot } from "@radix-ui/react-slot"
 import { cva, type VariantProps } from "class-variance-authority"
@@ -186,7 +185,7 @@ const Sidebar = React.forwardRef<
     },
     ref
   ) => {
-    const { isMobile, state, open, openMobile, setOpenMobile } = useSidebar()
+    const { isMobile, state, open, openMobile, setOpenMobile, setOpen } = useSidebar()
 
     // Mobile sidebar handling with Sheet
     if (isMobile) {
@@ -236,7 +235,7 @@ const Sidebar = React.forwardRef<
         {open && (
           <div 
             className="fixed inset-0 bg-black/20 z-[99] transition-opacity duration-300"
-            onClick={() => useSidebar().setOpen(false)}
+            onClick={() => setOpen(false)}
           />
         )}
         
