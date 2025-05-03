@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -208,16 +207,19 @@ export function useActions() {
         }
       }
 
-      // Combine and return all actions with proper type conversion
-      const allActionsRaw = [...(targetActions || []), ...validSourceActions];
-      console.log(`useActions.getActionsByObjectId: Found ${allActionsRaw.length} actions total for ${objectTypeId}`);
+      // Combine both arrays of actions and ensure the colors are properly typed
+      const allActions: Action[] = [
+        ...(targetActions?.map(action => ({
+          ...action,
+          color: (action.color || 'default') as ActionColor
+        })) || []),
+        ...validSourceActions.map(action => ({
+          ...action,
+          color: (action.color || 'default') as ActionColor
+        }))
+      ];
       
-      // Fix the type error by ensuring color is a valid ActionColor
-      const allActions: Action[] = allActionsRaw.map(action => ({
-        ...action,
-        color: (action.color || 'default') as ActionColor
-      }));
-      
+      console.log(`useActions.getActionsByObjectId: Found ${allActions.length} actions total for ${objectTypeId}`);
       return allActions;
     } catch (error) {
       console.error("Exception in getActionsByObjectId:", error);

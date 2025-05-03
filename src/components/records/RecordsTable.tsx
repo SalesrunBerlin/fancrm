@@ -1,6 +1,6 @@
 
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import {
   Table,
   TableBody,
@@ -12,10 +12,17 @@ import {
 import { Button } from "@/components/ui/button";
 import { ObjectField } from "@/hooks/useObjectTypes";
 import { ObjectRecord } from "@/hooks/useObjectRecords";
-import { Edit, Trash2, Eye } from "lucide-react";
+import { Edit, Play, Eye, Trash2 } from "lucide-react";
 import { LookupValueDisplay } from "./LookupValueDisplay";
 import { format } from "date-fns";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useActions, Action } from "@/hooks/useActions";
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuTrigger 
+} from "@/components/ui/dropdown-menu";
 
 interface RecordsTableProps {
   records: ObjectRecord[];
@@ -27,6 +34,10 @@ interface RecordsTableProps {
 
 export function RecordsTable({ records, fields, objectTypeId, selectable = false, onSelectionChange }: RecordsTableProps) {
   const [selectedRecords, setSelectedRecords] = useState<string[]>([]);
+  const [expandedAction, setExpandedAction] = useState<string | null>(null);
+  const [recordActions, setRecordActions] = useState<{[key: string]: Action[]}>({});
+  const navigate = useNavigate();
+  const { getActionsByObjectId } = useActions();
 
   if (records.length === 0) {
     return (
@@ -94,6 +105,40 @@ export function RecordsTable({ records, fields, objectTypeId, selectable = false
     if (onSelectionChange) onSelectionChange(newSelectedRecords);
   };
 
+  // Function to toggle the action dropdown for a specific record
+  const toggleActionDropdown = async (recordId: string) => {
+    if (expandedAction === recordId) {
+      setExpandedAction(null);
+      return;
+    }
+    
+    setExpandedAction(recordId);
+    
+    // Load actions for this record if not already loaded
+    if (!recordActions[recordId]) {
+      try {
+        const actions = await getActionsByObjectId(objectTypeId);
+        setRecordActions(prev => ({
+          ...prev,
+          [recordId]: actions
+        }));
+      } catch (error) {
+        console.error("Error loading actions:", error);
+      }
+    }
+  };
+
+  const handleExecuteAction = (action: Action, recordId: string) => {
+    if (action.action_type === "linked_record" && recordId) {
+      // For linked records actions
+      navigate(`/actions/execute/${action.id}/from/${recordId}`);
+    } else {
+      // For global actions
+      navigate(`/actions/execute/${action.id}`);
+    }
+    setExpandedAction(null); // Close dropdown after action is selected
+  };
+
   const allSelected = records.length > 0 && selectedRecords.length === records.length;
 
   return (
@@ -110,10 +155,12 @@ export function RecordsTable({ records, fields, objectTypeId, selectable = false
                 />
               </TableHead>
             )}
+            {/* Actions column as first column */}
+            <TableHead>Actions</TableHead>
+            
             {fields.map((field) => (
               <TableHead key={field.id}>{field.name}</TableHead>
             ))}
-            <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -128,24 +175,10 @@ export function RecordsTable({ records, fields, objectTypeId, selectable = false
                   />
                 </TableCell>
               )}
-              {fields.map((field) => (
-                <TableCell key={`${record.id}-${field.id}`}>
-                  {getFieldValue(record, field)}
-                </TableCell>
-              ))}
-              <TableCell className="text-right">
-                <div className="flex justify-end gap-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    asChild
-                    className="h-8 w-8 p-0"
-                  >
-                    <Link to={`/objects/${objectTypeId}/${record.id}`}>
-                      <Eye className="h-4 w-4" />
-                      <span className="sr-only">View</span>
-                    </Link>
-                  </Button>
+              
+              {/* Actions cell */}
+              <TableCell>
+                <div className="flex items-center space-x-2">
                   <Button
                     variant="ghost"
                     size="sm"
@@ -157,8 +190,58 @@ export function RecordsTable({ records, fields, objectTypeId, selectable = false
                       <span className="sr-only">Edit</span>
                     </Link>
                   </Button>
+                  
+                  <DropdownMenu open={expandedAction === record.id} onOpenChange={() => toggleActionDropdown(record.id)}>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0 text-blue-500 hover:text-blue-600"
+                      >
+                        <Play className="h-4 w-4" />
+                        <span className="sr-only">Actions</span>
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent 
+                      align="start" 
+                      className="w-48 bg-white" 
+                      sideOffset={5}
+                    >
+                      {recordActions[record.id]?.length ? (
+                        recordActions[record.id].map((action) => (
+                          <DropdownMenuItem 
+                            key={action.id}
+                            onClick={() => handleExecuteAction(action, record.id)}
+                          >
+                            {action.name}
+                          </DropdownMenuItem>
+                        ))
+                      ) : (
+                        <DropdownMenuItem disabled>No actions available</DropdownMenuItem>
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                  
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    asChild
+                    className="h-8 w-8 p-0"
+                  >
+                    <Link to={`/objects/${objectTypeId}/${record.id}`}>
+                      <Eye className="h-4 w-4" />
+                      <span className="sr-only">View</span>
+                    </Link>
+                  </Button>
                 </div>
               </TableCell>
+              
+              {/* Fields cells */}
+              {fields.map((field) => (
+                <TableCell key={`${record.id}-${field.id}`}>
+                  {getFieldValue(record, field)}
+                </TableCell>
+              ))}
             </TableRow>
           ))}
         </TableBody>
