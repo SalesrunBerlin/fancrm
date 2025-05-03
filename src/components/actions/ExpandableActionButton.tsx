@@ -27,18 +27,19 @@ export function ExpandableActionButton({ actionName, color, onExecute }: Expanda
 
   // Convert ActionColor to Button variant
   const getButtonVariant = (color: ActionColor): "default" | "destructive" | "outline" | "secondary" | "ghost" | "link" => {
-    switch(color) {
-      case "red": return "destructive";
-      case "green": return "default";
-      case "blue": return "default";
-      case "yellow": return "outline";
-      case "purple": return "secondary";
-      case "pink": return "secondary";
-      case "indigo": return "default";
-      case "orange": return "outline";
-      case "gray": return "outline";
-      default: return "default";
+    // Map color categories to button variants
+    if (color === "destructive" || color === "maroon" || color === "crimson" || color === "burgundy" || color === "brick") {
+      return "destructive";
+    } else if (color === "secondary" || color === "slate" || color === "silver" || color === "charcoal") {
+      return "secondary";
+    } else if (color === "warning" || color === "yellow" || color === "gold" || color === "orange" || color === "coral") {
+      return "outline"; // Using outline for warning/yellow tones
+    } else if (color === "success" || color === "emerald" || color === "lime" || color === "forest" || color === "mint" || color === "sage") {
+      return "default"; // Using default (which is typically green in most themes)
     }
+    
+    // Default to the primary button style for all other colors
+    return "default";
   };
 
   return (

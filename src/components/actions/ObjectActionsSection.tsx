@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { Action, useActions } from "@/hooks/useActions";
 import { toast } from "sonner";
@@ -19,7 +19,6 @@ export function ObjectActionsSection({
   recordId
 }: ObjectActionsSectionProps) {
   const navigate = useNavigate();
-  const location = useLocation();
   const { getActionsByObjectId } = useActions();
   const [actions, setActions] = useState<Action[]>([]);
   const [loading, setLoading] = useState(true);
@@ -130,6 +129,12 @@ export function ObjectActionsSection({
     }
   };
 
+  // Reset initialization when objectTypeId changes
+  useEffect(() => {
+    setInitialized(false);
+    setActions([]);
+  }, [objectTypeId]);
+
   // Filter actions based on context
   const filteredActions = actions.filter(action => {
     // On record detail page (with recordId), show only linked actions
@@ -176,17 +181,4 @@ export function ObjectActionsSection({
       ))}
     </div>
   );
-}
-
-function formatActionType(type: string): string {
-  switch (type) {
-    case 'new_record':
-      return 'Create Record';
-    case 'linked_record':
-      return 'Create Linked Record';
-    case 'mass_action':
-      return 'Mass Update Records';
-    default:
-      return type.replace(/_/g, ' ');
-  }
 }

@@ -85,39 +85,58 @@ export function useActions() {
     data: actions,
     isLoading,
     error,
+    refetch
   } = useQuery({
     queryKey: ["actions"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("actions")
-        .select("*")
-        .eq("owner_id", user?.id);
+      console.log("Fetching actions for user:", user?.id);
+      
+      try {
+        const { data, error } = await supabase
+          .from("actions")
+          .select("*")
+          .eq("owner_id", user?.id);
 
-      if (error) {
-        throw error;
+        if (error) {
+          console.error("Error fetching actions:", error);
+          throw error;
+        }
+
+        console.log("Actions fetched:", data?.length || 0);
+        return data as Action[];
+      } catch (err) {
+        console.error("Error in actions query:", err);
+        throw err;
       }
-
-      return data as Action[];
     },
     enabled: !!user,
   });
 
   // Get a single action by ID
   const getActionById = async (actionId: string): Promise<Action> => {
-    const { data, error } = await supabase
-      .from("actions")
-      .select("*")
-      .eq("id", actionId)
-      .eq("owner_id", user?.id)
-      .single();
+    console.log("Fetching action by ID:", actionId);
+    
+    try {
+      const { data, error } = await supabase
+        .from("actions")
+        .select("*")
+        .eq("id", actionId)
+        .eq("owner_id", user?.id)
+        .single();
 
-    if (error) {
-      throw error;
+      if (error) {
+        console.error("Error fetching action by ID:", error);
+        throw error;
+      }
+
+      return data as Action;
+    } catch (err) {
+      console.error("Error in getActionById:", err);
+      throw err;
     }
-
-    return data as Action;
   };
 
+  // Setup for single action query
   const {
     data: action,
     isLoading: isActionLoading,
@@ -131,6 +150,8 @@ export function useActions() {
   // Get actions by object ID
   const getActionsByObjectId = async (objectTypeId: string): Promise<Action[]> => {
     try {
+      console.log(`Fetching actions for object ID: ${objectTypeId}`);
+      
       const { data, error } = await supabase
         .from("actions")
         .select("*")
@@ -142,6 +163,7 @@ export function useActions() {
         throw error;
       }
 
+      console.log(`Found ${data?.length || 0} actions for object ${objectTypeId}`);
       return data as Action[];
     } catch (error) {
       console.error("Error in getActionsByObjectId:", error);
@@ -264,5 +286,6 @@ export function useActions() {
     createAction,
     updateAction,
     deleteAction,
+    refetch,  // Add refetch function to allow manual refreshing
   };
 }

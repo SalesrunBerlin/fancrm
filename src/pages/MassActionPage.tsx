@@ -11,7 +11,16 @@ import { RecordsTable } from '@/components/records/RecordsTable';
 import { ObjectField } from '@/hooks/useObjectTypes';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { LookupField } from '@/components/records/LookupField';
-import { ObjectRecord } from '@/lib/types/records';
+
+// Define a simplified type for object records that matches RecordsTable expectations
+interface ObjectRecordSimplified {
+  id: string;
+  record_id?: string;
+  created_at: string;
+  updated_at: string;
+  field_values: Record<string, any>;
+  displayName?: string;
+}
 
 export default function MassActionPage() {
   const { actionId } = useParams<{ actionId: string }>();
@@ -315,8 +324,8 @@ export default function MassActionPage() {
                 <p className="text-muted-foreground text-center py-4">No records found to update</p>
               ) : (
                 <RecordsTable
-                  records={objectDetails.records as unknown as ObjectRecord[]}
-                  fields={objectDetails.fields as unknown as ObjectField[]}
+                  records={objectDetails.records as ObjectRecordSimplified[]}
+                  fields={objectDetails.fields as ObjectField[]}
                   objectTypeId={action.target_object_id}
                   selectable={true}
                   onSelectionChange={handleSelectionChange}
