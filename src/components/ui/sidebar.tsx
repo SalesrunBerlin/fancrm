@@ -185,8 +185,9 @@ const Sidebar = React.forwardRef<
     },
     ref
   ) => {
-    const { isMobile, state, openMobile, setOpenMobile } = useSidebar()
+    const { isMobile, state, open, openMobile, setOpenMobile } = useSidebar()
 
+    // Mobile sidebar handling with Sheet
     if (isMobile) {
       return (
         <Sheet open={openMobile} onOpenChange={setOpenMobile} {...props}>
@@ -211,6 +212,7 @@ const Sidebar = React.forwardRef<
       )
     }
 
+    // For non-collapsible sidebars
     if (collapsible === "none") {
       return (
         <div
@@ -226,46 +228,46 @@ const Sidebar = React.forwardRef<
       )
     }
 
+    // Desktop sidebar overlay implementation
     return (
-      <div
-        ref={ref}
-        className="group peer hidden md:block text-sidebar-foreground"
-        data-state={state}
-        data-collapsible={state === "collapsed" ? collapsible : ""}
-        data-variant={variant}
-        data-side={side}
-      >
+      <>
+        {/* Background overlay when sidebar is expanded */}
+        {open && (
+          <div 
+            className="fixed inset-0 bg-black/50 z-[99] transition-opacity duration-300"
+            onClick={() => useSidebar().setOpen(false)}
+          />
+        )}
+        
+        {/* Desktop sidebar with overlay behavior */}
         <div
-          className={cn(
-            "duration-200 relative h-svh w-[--sidebar-width] bg-transparent transition-[width] ease-linear",
-            "group-data-[collapsible=offcanvas]:w-0",
-            "group-data-[side=right]:rotate-180",
-            variant === "floating" || variant === "inset"
-              ? "group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)_+_theme(spacing.4))]"
-              : "group-data-[collapsible=icon]:w-[--sidebar-width-icon]"
-          )}
-        />
-        <div
-          className={cn(
-            "duration-200 fixed inset-y-0 z-10 hidden h-svh w-[--sidebar-width] transition-[left,right,width] ease-linear md:flex",
-            side === "left"
-              ? "left-0 group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)]"
-              : "right-0 group-data-[collapsible=offcanvas]:right-[calc(var(--sidebar-width)*-1)]",
-            variant === "floating" || variant === "inset"
-              ? "p-2 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)_+_theme(spacing.4)_+2px)]"
-              : "group-data-[collapsible=icon]:w-[--sidebar-width-icon] group-data-[side=left]:border-r group-data-[side=right]:border-l",
-            className
-          )}
-          {...props}
+          ref={ref}
+          className="group peer hidden md:block text-sidebar-foreground z-[100]"
+          data-state={state}
+          data-collapsible={state === "collapsed" ? collapsible : ""}
+          data-variant={variant}
+          data-side={side}
         >
+          {/* Sidebar visibility area */}
           <div
-            data-sidebar="sidebar"
-            className="flex h-full w-full flex-col bg-sidebar group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:border group-data-[variant=floating]:border-sidebar-border group-data-[variant=floating]:shadow"
+            className={cn(
+              "fixed inset-y-0 z-[100] h-svh bg-sidebar transition-transform duration-300 shadow-xl",
+              side === "left" ? "left-0" : "right-0",
+              open ? "translate-x-0" : "-translate-x-full",
+              variant === "floating" || variant === "inset"
+                ? "p-2 w-[calc(var(--sidebar-width)_+_theme(spacing.4))]"
+                : "w-[--sidebar-width] border-r"
+            )}
           >
-            {children}
+            <div
+              data-sidebar="sidebar"
+              className="flex h-full w-full flex-col group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:border group-data-[variant=floating]:border-sidebar-border group-data-[variant=floating]:shadow"
+            >
+              {children}
+            </div>
           </div>
         </div>
-      </div>
+      </>
     )
   }
 )
