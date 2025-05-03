@@ -1,3 +1,4 @@
+
 import {
   Dialog,
   DialogContent,
@@ -20,24 +21,24 @@ interface PublishedObjectDetailProps {
 }
 
 export function PublishedObjectDetail({ objectType, children, onClose }: PublishedObjectDetailProps) {
-  const [isImporting, setIsImporting] = useState(false);
+  const [isImplementing, setIsImplementing] = useState(false);
   const { importObjectType } = useObjectTypes();
 
-  const handleImport = async () => {
+  const handleImplement = async () => {
     try {
-      setIsImporting(true);
+      setIsImplementing(true);
       await importObjectType.mutateAsync(objectType.id);
-      toast.success("Object structure imported successfully", {
+      toast.success("Object structure implemented successfully", {
         description: "You can now find it in your Object Manager",
       });
-      onClose?.(); // Close the dialog on successful import
+      onClose?.(); // Close the dialog on successful implementation
     } catch (error) {
-      console.error("Error importing object:", error);
-      toast.error("Failed to import object", {
+      console.error("Error implementing object:", error);
+      toast.error("Failed to implement object", {
         description: error instanceof Error ? error.message : "Unknown error occurred"
       });
     } finally {
-      setIsImporting(false);
+      setIsImplementing(false);
     }
   };
 
@@ -63,16 +64,16 @@ export function PublishedObjectDetail({ objectType, children, onClose }: Publish
             </p>
           </div>
         </div>
-        <Button disabled={isImporting} onClick={handleImport}>
-          {isImporting ? (
+        <Button disabled={isImplementing} onClick={handleImplement}>
+          {isImplementing ? (
             <>
               <Download className="mr-2 h-4 w-4 animate-spin" />
-              Importing...
+              Implementing...
             </>
           ) : (
             <>
               <Download className="mr-2 h-4 w-4" />
-              Import
+              Implement
             </>
           )}
         </Button>

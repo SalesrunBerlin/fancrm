@@ -12,12 +12,14 @@ import { PublishingConfigDialog } from "@/components/settings/PublishingConfigDi
 import { useQueryClient } from "@tanstack/react-query";
 import { AppWindow } from "lucide-react";
 import { useEffect } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function Structures() {
   const [open, setOpen] = useState(false);
   const { objectTypes, isLoading, publishObjectType } = useObjectTypes();
   const queryClient = useQueryClient();
   const [selectedObject, setSelectedObject] = useState(null);
+  const { user } = useAuth();
 
   useEffect(() => {
     queryClient.invalidateQueries({ queryKey: ["objectTypes"] });
@@ -107,10 +109,10 @@ export default function Structures() {
                 <Skeleton key={i} className="h-48 w-full" />
               ))}
             </div>
-          ) : objectTypes && objectTypes.filter(obj => obj.is_published).length > 0 ? (
+          ) : objectTypes && objectTypes.filter(obj => obj.is_published && obj.owner_id !== user?.id).length > 0 ? (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {objectTypes
-                .filter(obj => obj.is_published)
+                .filter(obj => obj.is_published && obj.owner_id !== user?.id)
                 .map(objectType => (
                   <ObjectCard key={objectType.id} objectType={objectType} />
                 ))}
@@ -119,7 +121,7 @@ export default function Structures() {
             <Alert>
               <AlertTitle>No Published Objects</AlertTitle>
               <AlertDescription>
-                There are no published objects to display.
+                There are no published objects from other users to display.
               </AlertDescription>
             </Alert>
           )}
