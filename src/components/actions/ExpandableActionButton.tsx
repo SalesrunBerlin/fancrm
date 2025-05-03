@@ -9,9 +9,15 @@ interface ExpandableActionButtonProps {
   actionName: string;
   color: ActionColor;
   onExecute: () => void;
+  compact?: boolean; // Add compact mode for table cells
 }
 
-export function ExpandableActionButton({ actionName, color, onExecute }: ExpandableActionButtonProps) {
+export function ExpandableActionButton({ 
+  actionName, 
+  color, 
+  onExecute,
+  compact = false
+}: ExpandableActionButtonProps) {
   const [isOpen, setIsOpen] = useState(false);
 
   const handleButtonClick = () => {
@@ -25,6 +31,22 @@ export function ExpandableActionButton({ actionName, color, onExecute }: Expanda
     setIsOpen(false); // Close after execution
   };
 
+  // For compact mode in tables, just show a small button
+  if (compact) {
+    return (
+      <Button 
+        variant={color}
+        size="sm"
+        className="h-7 w-7 p-0 rounded-full"
+        onClick={onExecute}
+        title={actionName}
+      >
+        <PlayCircle className="h-3.5 w-3.5" />
+      </Button>
+    );
+  }
+
+  // Regular expandable button for normal view
   return (
     <Collapsible
       open={isOpen}

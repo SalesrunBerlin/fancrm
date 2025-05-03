@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -12,6 +11,7 @@ import { RecordsTable } from '@/components/records/RecordsTable';
 import { ObjectField } from '@/hooks/useObjectTypes';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { LookupField } from '@/components/records/LookupField';
+import { convertToObjectFields, ObjectFieldWithJson } from "@/types/ObjectFieldTypes";
 
 export default function MassActionPage() {
   const { actionId } = useParams<{ actionId: string }>();
@@ -52,7 +52,7 @@ export default function MassActionPage() {
       const targetObjectId = action.object_types.id;
 
       // 1. Get fields for the target object
-      const { data: fields, error: fieldsError } = await supabase
+      const { data: fieldsData, error: fieldsError } = await supabase
         .from('object_fields')
         .select('*')
         .eq('object_type_id', targetObjectId)
@@ -60,6 +60,10 @@ export default function MassActionPage() {
 
       if (fieldsError) throw fieldsError;
       
+      // Convert fields to ObjectFieldWithJson type
+      const fieldsWithJson = fieldsData as unknown as ObjectFieldWithJson[];
+      const fields = convertToObjectFields(fieldsWithJson);
+
       // 2. Get records from the target object
       let recordsQuery = supabase
         .from('object_records')

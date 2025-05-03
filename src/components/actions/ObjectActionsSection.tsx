@@ -12,13 +12,15 @@ interface ObjectActionsSectionProps {
   objectTypeName?: string;
   recordId?: string; // Add recordId for context in linked actions
   selectedRecordIds?: string[]; // Add selectedRecordIds for mass actions
+  inTable?: boolean; // Add flag to indicate if shown in a table cell
 }
 
 export function ObjectActionsSection({ 
   objectTypeId, 
   objectTypeName,
   recordId,
-  selectedRecordIds = []
+  selectedRecordIds = [],
+  inTable = false
 }: ObjectActionsSectionProps) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -142,6 +144,11 @@ export function ObjectActionsSection({
 
   // Filter actions based on context
   const filteredActions = actions.filter(action => {
+    // When in a table row, only show linked record actions
+    if (inTable && recordId) {
+      return action.action_type === "linked_record";
+    }
+    
     // On record detail page (with recordId), show only linked actions
     if (recordId) {
       // If we're on a target object page and this is a linked_record action, don't show it
@@ -160,7 +167,7 @@ export function ObjectActionsSection({
     return action.action_type === "new_record";
   });
 
-  if (loading) {
+  if (loading && !inTable) {
     return (
       <div className="flex justify-center py-4 mb-4">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -174,10 +181,28 @@ export function ObjectActionsSection({
     return null;
   }
 
-  if (error) {
+  if (error && !inTable) {
     return null; // Don't show error UI, just don't display actions
   }
 
+  // Use a different layout for table view
+  if (inTable) {
+    return (
+      <div className="flex gap-1">
+        {filteredActions.map((action) => (
+          <ExpandableActionButton
+            key={action.id}
+            actionName={action.name}
+            color={action.color}
+            onExecute={() => handleExecuteAction(action)}
+            compact={true}
+          />
+        ))}
+      </div>
+    );
+  }
+
+  // Default layout for regular view
   return (
     <div className="flex flex-wrap gap-6 mb-6">
       {filteredActions.map((action) => (

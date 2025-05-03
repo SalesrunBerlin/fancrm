@@ -16,6 +16,7 @@ import { Edit, Eye } from "lucide-react";
 import { LookupValueDisplay } from "./LookupValueDisplay";
 import { format } from "date-fns";
 import { Checkbox } from "@/components/ui/checkbox";
+import { ObjectActionsSection } from "../actions/ObjectActionsSection";
 
 interface RecordsTableProps {
   records: ObjectRecord[];
@@ -134,6 +135,7 @@ export function RecordsTable({ records, fields, objectTypeId, selectable = false
               {/* Actions cell */}
               <TableCell>
                 <div className="flex items-center space-x-2">
+                  {/* Edit & View buttons */}
                   <Button
                     variant="ghost"
                     size="sm"
@@ -157,6 +159,15 @@ export function RecordsTable({ records, fields, objectTypeId, selectable = false
                       <span className="sr-only">View</span>
                     </Link>
                   </Button>
+                  
+                  {/* Action buttons for this specific record */}
+                  <div className="ml-2">
+                    <ObjectActionsSection 
+                      objectTypeId={objectTypeId}
+                      recordId={record.id}
+                      inTable={true}
+                    />
+                  </div>
                 </div>
               </TableCell>
               
