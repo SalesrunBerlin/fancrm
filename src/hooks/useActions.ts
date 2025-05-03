@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -211,7 +212,7 @@ export function useActions() {
       const allActionsRaw = [...(targetActions || []), ...validSourceActions];
       console.log(`useActions.getActionsByObjectId: Found ${allActionsRaw.length} actions total for ${objectTypeId}`);
       
-      // Fix the type error by explicitly casting colors to ActionColor
+      // Fix the type error by ensuring color is a valid ActionColor
       const allActions: Action[] = allActionsRaw.map(action => ({
         ...action,
         color: (action.color || 'default') as ActionColor
@@ -221,6 +222,23 @@ export function useActions() {
     } catch (error) {
       console.error("Exception in getActionsByObjectId:", error);
       throw error;
+    }
+  };
+
+  // Get actions for a specific record
+  const getActionsByRecordId = async (objectTypeId: string, recordId: string): Promise<Action[]> => {
+    if (!user || !objectTypeId || !recordId) return [];
+
+    try {
+      // Get all actions for this object type
+      const actions = await getActionsByObjectId(objectTypeId);
+      
+      // Filter actions that are applicable to this specific record
+      // For now, we're returning all actions for the object type since we don't have record-specific filtering yet
+      return actions;
+    } catch (error) {
+      console.error("Error getting actions for record:", error);
+      return [];
     }
   };
 
@@ -363,6 +381,7 @@ export function useActions() {
     actions,
     getAction,
     getActionsByObjectId,
+    getActionsByRecordId,
     createAction,
     updateAction,
     deleteAction,

@@ -26,7 +26,7 @@ export function useInitializeObjects() {
         return data;
       } catch (error) {
         // Fix the error handling to properly type the error
-        let errorMessage: string = "An unexpected error occurred";
+        let errorMessage = "An unexpected error occurred";
         if (error instanceof Error) {
           errorMessage = error.message;
         } else if (typeof error === 'object' && error !== null && 'message' in error) {
