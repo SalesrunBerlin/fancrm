@@ -75,6 +75,11 @@ export function AppSidebar() {
   // Show all assigned objects, regardless of their active status
   const assignedObjects = applicationObjects || [];
 
+  // Handler to close sidebar when clicking on any navigation item
+  const handleNavClick = () => {
+    setOpenMobile(false);
+  };
+
   return (
     <Sidebar variant="floating">
       <SidebarContent>
@@ -89,7 +94,7 @@ export function AppSidebar() {
                     isActive={pathname === item.path || pathname.startsWith(item.path + "/")}
                     tooltip={item.title}
                   >
-                    <Link to={item.path} onClick={() => setOpenMobile(false)}>
+                    <Link to={item.path} onClick={handleNavClick}>
                       <item.icon className="h-4 w-4" />
                       <span>{item.title}</span>
                     </Link>
@@ -112,7 +117,7 @@ export function AppSidebar() {
                       isActive={pathname.includes(`/objects/${object.id}`)}
                       tooltip={object.name}
                     >
-                      <Link to={`/objects/${object.id}`} onClick={() => setOpenMobile(false)}>
+                      <Link to={`/objects/${object.id}`} onClick={handleNavClick}>
                         <Box className="h-4 w-4" />
                         <span>{object.name}</span>
                       </Link>
