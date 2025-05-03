@@ -15,11 +15,13 @@ export type ActionColor =
   | 'orange' 
   | 'gray';
 
+export type ActionType = 'new_record' | 'linked_record' | 'mass_action';
+
 export interface Action {
   id: string;
   name: string;
   description: string;
-  action_type: 'new_record' | 'linked_record' | 'mass_action';
+  action_type: ActionType;
   color: ActionColor;
   source_field_id?: string | null;
   target_object_id: string;
@@ -32,7 +34,7 @@ export interface Action {
 export interface ActionInput {
   name: string;
   description: string;
-  action_type: 'new_record' | 'linked_record' | 'mass_action';
+  action_type: ActionType;
   color: ActionColor;
   source_field_id?: string | null;
   target_object_id: string;

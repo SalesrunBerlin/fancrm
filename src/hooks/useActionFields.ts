@@ -1,10 +1,20 @@
-
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { ActionField } from "./useActions";
+
+export interface ActionField {
+  id: string;
+  action_id: string;
+  field_id: string;
+  is_preselected?: boolean;
+  is_enabled?: boolean;
+  default_value?: string | null;
+  display_order?: number;
+  created_at?: string;
+  updated_at?: string;
+}
 
 export interface ActionFieldCreateInput {
   action_id: string;
@@ -24,6 +34,7 @@ export interface ActionFieldWithDetails extends ActionField {
   formula_type?: 'static' | 'dynamic';
   formula_expression?: string | null;
   is_required?: boolean;
+  options?: any;
 }
 
 export function useActionFields(actionId?: string) {

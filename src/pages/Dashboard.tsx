@@ -4,6 +4,7 @@ import { useObjectTypes } from "@/hooks/useObjectTypes";
 import { useObjectRecords } from "@/hooks/useObjectRecords";
 import { Box, Building, Briefcase, Calendar, User } from "lucide-react";
 import { Link } from "react-router-dom";
+import { ObjectActionsIndicator } from "@/components/actions/ObjectActionsIndicator";
 
 export default function Dashboard() {
   const { objectTypes } = useObjectTypes();
@@ -35,7 +36,7 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        {objectTypes?.filter(type => type.is_active).map((objectType) => (
+        {objectTypes?.filter(type => type.is_active && !type.is_archived).map((objectType) => (
           <Link 
             key={objectType.id} 
             to={`/objects/${objectType.id}`}
@@ -45,7 +46,10 @@ export default function Dashboard() {
               <CardHeader className="flex flex-row items-center justify-between space-y-0">
                 <CardTitle className="flex items-center gap-2">
                   {getIconComponent(objectType.icon)}
-                  {objectType.name}
+                  <span className="flex items-center">
+                    {objectType.name}
+                    <ObjectActionsIndicator objectTypeId={objectType.id} />
+                  </span>
                 </CardTitle>
               </CardHeader>
               <CardContent>
