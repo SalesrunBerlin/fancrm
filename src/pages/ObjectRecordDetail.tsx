@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
@@ -5,7 +6,7 @@ import { useRecordDetail } from "@/hooks/useRecordDetail";
 import { useEnhancedFields } from "@/hooks/useEnhancedFields";
 import { useObjectRecords } from "@/hooks/useObjectRecords";
 import { PageHeader } from "@/components/ui/page-header";
-import { Loader2, Edit, Trash2, Cylinder } from "lucide-react";
+import { Loader2, Edit, Trash2, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { DeleteDialog } from "@/components/common/DeleteDialog";
@@ -108,7 +109,7 @@ export default function ObjectRecordDetail() {
               size="icon"
               title="Star Mode"
             >
-              <Cylinder className={`h-4 w-4 ${starModeActive ? "fill-yellow-400 text-yellow-500" : ""}`} />
+              <Star className={`h-4 w-4 ${starModeActive ? "fill-yellow-400 text-yellow-500" : ""}`} />
             </Button>
             
             <Button 
@@ -200,7 +201,7 @@ export default function ObjectRecordDetail() {
                                 onClick={() => handleFieldStarClick(field.name, field.api_name)}
                                 disabled={isProcessing}
                               >
-                                <Cylinder className="h-4 w-4 text-yellow-500 hover:fill-yellow-400" />
+                                <Star className="h-4 w-4 text-yellow-500 hover:fill-yellow-400" />
                               </Button>
                             )}
                           </div>

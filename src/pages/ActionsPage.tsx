@@ -125,7 +125,7 @@ export default function ActionsPage() {
         description="Define and manage actions for your objects"
         actions={
           <Button asChild>
-            <Link to="/settings/actions/new">
+            <Link to="/actions/new">
               <Plus className="mr-2 h-4 w-4" />
               Create Action
             </Link>
@@ -174,7 +174,7 @@ export default function ActionsPage() {
                     {action.action_type === 'new_record' && (
                       <Button 
                         size="sm" 
-                        onClick={() => navigate(`/settings/actions/execute/${action.id}`)}
+                        onClick={() => navigate(`/actions/execute/${action.id}`)}
                         variant={action.color}
                       >
                         <Play className="h-4 w-4 mr-1" /> Execute
@@ -188,7 +188,7 @@ export default function ActionsPage() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => navigate(`/settings/actions/${action.id}`)}>
+                        <DropdownMenuItem onClick={() => navigate(`/actions/${action.id}`)}>
                           <Edit className="h-4 w-4 mr-2" /> Edit
                         </DropdownMenuItem>
                         <DropdownMenuItem 
@@ -212,7 +212,7 @@ export default function ActionsPage() {
                 No actions found. Create your first action to get started.
               </p>
               <Button asChild>
-                <Link to="/settings/actions/new">
+                <Link to="/actions/new">
                   <Plus className="mr-2 h-4 w-4" />
                   Create Action
                 </Link>

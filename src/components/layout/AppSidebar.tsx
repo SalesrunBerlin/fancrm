@@ -10,7 +10,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { LayoutDashboard, Settings, FileText, Box } from "lucide-react";
+import { LayoutDashboard, Settings, FileText, Box, Database, AppWindow } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
 import { useApplications } from "@/hooks/useApplications";
@@ -22,6 +22,16 @@ const navigationItems = [
     title: "Dashboard",
     icon: LayoutDashboard,
     path: "/dashboard"
+  },
+  {
+    title: "Object Manager",
+    icon: Database,
+    path: "/settings/object-manager"
+  },
+  {
+    title: "Applications",
+    icon: AppWindow,
+    path: "/applications"
   },
   {
     title: "Structures",
@@ -65,11 +75,6 @@ export function AppSidebar() {
   // Show all assigned objects, regardless of their active status
   const assignedObjects = applicationObjects || [];
 
-  // Handle link click to close mobile sidebar
-  const handleLinkClick = () => {
-    setOpenMobile(false);
-  };
-
   return (
     <Sidebar variant="floating">
       <SidebarContent>
@@ -84,7 +89,7 @@ export function AppSidebar() {
                     isActive={pathname === item.path || pathname.startsWith(item.path + "/")}
                     tooltip={item.title}
                   >
-                    <Link to={item.path} onClick={handleLinkClick}>
+                    <Link to={item.path} onClick={() => setOpenMobile(false)}>
                       <item.icon className="h-4 w-4" />
                       <span>{item.title}</span>
                     </Link>
@@ -107,7 +112,7 @@ export function AppSidebar() {
                       isActive={pathname.includes(`/objects/${object.id}`)}
                       tooltip={object.name}
                     >
-                      <Link to={`/objects/${object.id}`} onClick={handleLinkClick}>
+                      <Link to={`/objects/${object.id}`} onClick={() => setOpenMobile(false)}>
                         <Box className="h-4 w-4" />
                         <span>{object.name}</span>
                       </Link>

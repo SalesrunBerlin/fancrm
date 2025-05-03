@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -11,20 +12,6 @@ import { RecordsTable } from '@/components/records/RecordsTable';
 import { ObjectField } from '@/hooks/useObjectTypes';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { LookupField } from '@/components/records/LookupField';
-
-// Define a type that's compatible with what RecordsTable expects
-interface ObjectRecordSimplified {
-  id: string;
-  record_id?: string;
-  created_at: string;
-  updated_at: string;
-  field_values: Record<string, any>;
-  displayName?: string;
-  object_type_id: string;
-  owner_id?: string | null;
-  created_by?: string | null;
-  last_modified_by?: string | null;
-}
 
 export default function MassActionPage() {
   const { actionId } = useParams<{ actionId: string }>();
@@ -70,13 +57,6 @@ export default function MassActionPage() {
 
       if (fieldsError) throw fieldsError;
       
-      // Convert fields to expected ObjectField type
-      const typedFields: ObjectField[] = fields.map(field => ({
-        ...field,
-        default_value: field.default_value ? String(field.default_value) : '',
-        options: field.options || null
-      }));
-      
       // 2. Get records from the target object
       const { data: records, error: recordsError } = await supabase
         .from('object_records')
@@ -100,7 +80,7 @@ export default function MassActionPage() {
       }
 
       // Process and format the records
-      const formattedRecords: ObjectRecordSimplified[] = records.map(record => {
+      const formattedRecords = records.map(record => {
         const fieldValues: Record<string, any> = {};
         
         // Extract field values from the record_field_values
@@ -118,16 +98,12 @@ export default function MassActionPage() {
           created_at: record.created_at,
           updated_at: record.updated_at,
           field_values: fieldValues,
-          displayName: getDisplayName(record, typedFields),
-          object_type_id: record.object_type_id,
-          owner_id: record.owner_id,
-          created_by: record.created_by,
-          last_modified_by: record.last_modified_by
+          displayName: getDisplayName(record, fields)
         };
       });
 
       return {
-        fields: typedFields,
+        fields,
         records: formattedRecords,
         lookupField
       };
@@ -276,7 +252,6 @@ export default function MassActionPage() {
     );
   }
 
-  // Type-safe rendering of RecordsTable
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
       <PageHeader
@@ -340,7 +315,7 @@ export default function MassActionPage() {
               ) : (
                 <RecordsTable
                   records={objectDetails.records}
-                  fields={objectDetails.fields}
+                  fields={objectDetails.fields || []}
                   objectTypeId={action.target_object_id}
                   selectable={true}
                   onSelectionChange={handleSelectionChange}

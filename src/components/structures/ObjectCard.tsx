@@ -7,8 +7,6 @@ import { ObjectType } from "@/hooks/useObjectTypes";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Eye, AppWindow } from "lucide-react";
-import { PublishedObjectDetail } from "./PublishedObjectDetail";
-import { useAuth } from "@/contexts/AuthContext";
 
 interface ObjectCardProps {
   objectType: ObjectType;
@@ -19,8 +17,6 @@ interface ObjectCardProps {
 export function ObjectCard({ objectType, onPublish, showPublishButton = false }: ObjectCardProps) {
   const [applications, setApplications] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const { user } = useAuth();
-  const isPublishedByOthers = objectType.is_published && objectType.owner_id !== user?.id;
 
   useEffect(() => {
     const fetchApplications = async () => {
@@ -124,13 +120,6 @@ export function ObjectCard({ objectType, onPublish, showPublishButton = false }:
             >
               Publish
             </Button>
-          )}
-          {isPublishedByOthers && (
-            <PublishedObjectDetail objectType={objectType}>
-              <Button variant="outline" className="flex-1">
-                Implement
-              </Button>
-            </PublishedObjectDetail>
           )}
         </div>
       </CardFooter>

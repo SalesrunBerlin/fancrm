@@ -31,7 +31,6 @@ export function useInitializeObjects() {
         if (error instanceof Error) {
           errorMessage = error.message;
         } else if (typeof error === 'object' && error !== null && 'message' in error) {
-          // Use type assertion to avoid 'never' type conflict
           errorMessage = String((error as { message: unknown }).message);
         } else if (typeof error === 'string') {
           errorMessage = error;

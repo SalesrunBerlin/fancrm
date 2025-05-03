@@ -12,30 +12,24 @@ import { PublishingConfigDialog } from "@/components/settings/PublishingConfigDi
 import { useQueryClient } from "@tanstack/react-query";
 import { AppWindow } from "lucide-react";
 import { useEffect } from "react";
-import { useAuth } from "@/contexts/AuthContext";
 
 export default function Structures() {
   const [open, setOpen] = useState(false);
   const { objectTypes, isLoading, publishObjectType } = useObjectTypes();
   const queryClient = useQueryClient();
   const [selectedObject, setSelectedObject] = useState(null);
-  const [showPublishingConfig, setShowPublishingConfig] = useState(false);
-  const [selectedObjectId, setSelectedObjectId] = useState<string | null>(null);
-  const { user } = useAuth();
 
   useEffect(() => {
     queryClient.invalidateQueries({ queryKey: ["objectTypes"] });
   }, [queryClient]);
 
   const handlePublish = async (objectId: string) => {
-    setSelectedObjectId(objectId);
-    setShowPublishingConfig(true);
-  };
-
-  const handlePublishingComplete = () => {
-    setShowPublishingConfig(false);
-    setSelectedObjectId(null);
-    queryClient.invalidateQueries({ queryKey: ["objectTypes"] });
+    try {
+      await publishObjectType.mutateAsync(objectId);
+      queryClient.invalidateQueries({ queryKey: ["objectTypes"] });
+    } catch (error) {
+      console.error("Error publishing object type:", error);
+    }
   };
 
   return (
@@ -48,6 +42,7 @@ export default function Structures() {
       <Tabs defaultValue="active" className="space-y-4">
         <TabsList className="w-full sm:w-auto">
           <TabsTrigger value="active">Active</TabsTrigger>
+          <TabsTrigger value="inactive">Inactive</TabsTrigger>
           <TabsTrigger value="published">Published</TabsTrigger>
         </TabsList>
         <TabsContent value="active" className="space-y-4">
@@ -80,6 +75,31 @@ export default function Structures() {
           )}
         </TabsContent>
 
+        <TabsContent value="inactive" className="space-y-4">
+          {isLoading ? (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <Skeleton key={i} className="h-48 w-full" />
+              ))}
+            </div>
+          ) : objectTypes && objectTypes.filter(obj => !obj.is_active).length > 0 ? (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {objectTypes
+                .filter(obj => !obj.is_active)
+                .map(objectType => (
+                  <ObjectCard key={objectType.id} objectType={objectType} />
+                ))}
+            </div>
+          ) : (
+            <Alert>
+              <AlertTitle>No Inactive Objects</AlertTitle>
+              <AlertDescription>
+                There are no inactive objects to display.
+              </AlertDescription>
+            </Alert>
+          )}
+        </TabsContent>
+
         <TabsContent value="published" className="space-y-4">
           {isLoading ? (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -87,10 +107,10 @@ export default function Structures() {
                 <Skeleton key={i} className="h-48 w-full" />
               ))}
             </div>
-          ) : objectTypes && objectTypes.filter(obj => obj.is_published && obj.owner_id !== user?.id).length > 0 ? (
+          ) : objectTypes && objectTypes.filter(obj => obj.is_published).length > 0 ? (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {objectTypes
-                .filter(obj => obj.is_published && obj.owner_id !== user?.id)
+                .filter(obj => obj.is_published)
                 .map(objectType => (
                   <ObjectCard key={objectType.id} objectType={objectType} />
                 ))}
@@ -99,21 +119,12 @@ export default function Structures() {
             <Alert>
               <AlertTitle>No Published Objects</AlertTitle>
               <AlertDescription>
-                There are no published objects from other users to display.
+                There are no published objects to display.
               </AlertDescription>
             </Alert>
           )}
         </TabsContent>
       </Tabs>
-
-      {selectedObjectId && (
-        <PublishingConfigDialog
-          objectTypeId={selectedObjectId}
-          open={showPublishingConfig}
-          onOpenChange={setShowPublishingConfig}
-          onComplete={handlePublishingComplete}
-        />
-      )}
     </div>
   );
 }

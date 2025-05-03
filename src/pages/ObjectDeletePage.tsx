@@ -1,9 +1,7 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
-import { useObjectRecords } from "@/hooks/useObjectRecords";
-import { useObjectApplicationAssignments } from "@/hooks/useObjectApplicationAssignments";
 import { Button } from "@/components/ui/button";
 import { AlertCircle, ArrowLeft, Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -13,13 +11,10 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 export default function ObjectDeletePage() {
   const { objectTypeId } = useParams<{ objectTypeId: string }>();
   const navigate = useNavigate();
-  const { archivedObjects, objectTypes, deleteObjectType } = useObjectTypes();
-  const { records, isLoading: isLoadingRecords } = useObjectRecords(objectTypeId);
-  const { assignments, isLoading: isLoadingAssignments } = useObjectApplicationAssignments(objectTypeId);
+  const { archivedObjects, deleteObjectType } = useObjectTypes();
   const [isDeleting, setIsDeleting] = useState(false);
   
-  const objectType = [...(archivedObjects || []), ...(objectTypes || [])].find(obj => obj.id === objectTypeId);
-  const recordCount = records?.length || 0;
+  const objectType = archivedObjects?.find(obj => obj.id === objectTypeId);
 
   const handleDelete = async () => {
     if (!objectTypeId) return;
@@ -77,7 +72,7 @@ export default function ObjectDeletePage() {
           </CardDescription>
         </CardHeader>
         
-        <CardContent className="space-y-6">
+        <CardContent>
           <Alert variant="destructive" className="mb-4">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
@@ -85,85 +80,15 @@ export default function ObjectDeletePage() {
             </AlertDescription>
           </Alert>
           
-          <div className="space-y-2">
-            <h3 className="font-medium text-lg">Deletion Impact</h3>
-            
-            <div className="border rounded-md p-4 space-y-4">
-              <div>
-                <h4 className="font-medium">Object Information</h4>
-                <p className="text-sm text-muted-foreground">
-                  You are deleting the <strong>{objectType.name}</strong> object ({objectType.api_name})
-                </p>
-                {objectType.description && (
-                  <p className="text-sm text-muted-foreground mt-1">{objectType.description}</p>
-                )}
-              </div>
-              
-              <div>
-                <h4 className="font-medium">Records</h4>
-                {isLoadingRecords ? (
-                  <div className="flex items-center text-sm text-muted-foreground">
-                    <Loader2 className="mr-2 h-3 w-3 animate-spin" />
-                    Loading records...
-                  </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground">
-                    {recordCount === 0 ? (
-                      "No records will be affected."
-                    ) : (
-                      <span className="text-destructive font-medium">
-                        {recordCount} record{recordCount !== 1 ? 's' : ''} will be permanently deleted.
-                      </span>
-                    )}
-                  </p>
-                )}
-              </div>
-              
-              <div>
-                <h4 className="font-medium">Application Assignments</h4>
-                {isLoadingAssignments ? (
-                  <div className="flex items-center text-sm text-muted-foreground">
-                    <Loader2 className="mr-2 h-3 w-3 animate-spin" />
-                    Loading application assignments...
-                  </div>
-                ) : assignments && assignments.length > 0 ? (
-                  <div className="space-y-2">
-                    <p className="text-sm text-destructive font-medium">
-                      This object is assigned to {assignments.length} application{assignments.length !== 1 ? 's' : ''}.
-                      All assignments will be deleted.
-                    </p>
-                    <ul className="list-disc pl-5 text-sm text-muted-foreground">
-                      {assignments.map(assignment => (
-                        <li key={assignment.id}>
-                          {assignment.application?.name || "Unknown Application"}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground">
-                    This object is not assigned to any applications.
-                  </p>
-                )}
-              </div>
-              
-              <div>
-                <h4 className="font-medium">Relationships</h4>
-                <p className="text-sm text-destructive">
-                  All relationships to and from this object will be deleted.
-                </p>
-              </div>
-            </div>
-          </div>
-          
-          <div className="pt-2">
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription className="font-medium">
-                Are you absolutely sure? This action cannot be undone.
-              </AlertDescription>
-            </Alert>
-          </div>
+          <p>
+            You are about to delete the <strong>{objectType.name}</strong> object type. 
+            This includes:
+          </p>
+          <ul className="list-disc pl-5 my-4 space-y-2">
+            <li>All fields and field configurations</li>
+            <li>All records stored in this object</li>
+            <li>All relationships to other objects</li>
+          </ul>
         </CardContent>
         
         <CardFooter className="flex justify-end space-x-4">

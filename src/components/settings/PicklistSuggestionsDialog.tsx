@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useUnusedPicklistValues } from "@/hooks/useUnusedPicklistValues";
 import { usePicklistCreation } from "@/hooks/usePicklistCreation";
-import { Loader2, Cylinder, AlertTriangle, RefreshCw } from "lucide-react";
+import { Loader2, Star, AlertTriangle, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -84,7 +84,7 @@ export function PicklistSuggestionsDialog({
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Cylinder className="h-5 w-5" />
+            <Star className="h-5 w-5" />
             Suggested Picklist Values
           </DialogTitle>
         </DialogHeader>

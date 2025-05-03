@@ -1,4 +1,3 @@
-
 import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { PageHeader } from "@/components/ui/page-header";
@@ -13,7 +12,7 @@ import {
   Save, 
   Plus, 
   X, 
-  Cylinder,
+  Star,
   StarOff
 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -145,7 +144,7 @@ export default function ApplicationDetailPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center">
-          <Button variant="outline" size="icon" onClick={() => navigate("/settings/applications")} className="mr-4">
+          <Button variant="outline" size="icon" onClick={() => navigate("/applications")} className="mr-4">
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <PageHeader 
@@ -154,7 +153,7 @@ export default function ApplicationDetailPage() {
           />
           {currentApplication.is_default && (
             <Badge variant="secondary" className="ml-2 flex items-center gap-1">
-              <Cylinder className="h-3 w-3" />
+              <Star className="h-3 w-3" />
               Default
             </Badge>
           )}
@@ -162,7 +161,7 @@ export default function ApplicationDetailPage() {
         <div className="flex gap-2">
           {!currentApplication.is_default && (
             <Button variant="outline" onClick={handleSetDefault}>
-              <Cylinder className="mr-2 h-4 w-4" />
+              <Star className="mr-2 h-4 w-4" />
               Make Default
             </Button>
           )}

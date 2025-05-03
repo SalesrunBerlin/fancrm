@@ -5,35 +5,35 @@ import { toast } from "sonner";
 
 export function useImportObjectType(onClose: () => void) {
   const [selectedObjectId, setSelectedObjectId] = useState<string | null>(null);
-  const [isImplementing, setIsImplementing] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
   const { importObjectType } = useObjectTypes();
 
   const handleObjectIdChange = (objectId: string | null) => {
     setSelectedObjectId(objectId);
   };
 
-  const handleImplement = async () => {
+  const handleImport = async () => {
     try {
-      setIsImplementing(true);
+      setIsImporting(true);
       await importObjectType.mutateAsync(selectedObjectId as string);
-      toast.success("Object structure implemented successfully", {
+      toast.success("Object structure imported successfully", {
         description: "The object has been added to your Object Manager"
       });
       onClose();
     } catch (error: any) {
-      console.error("Implementation error:", error);
-      toast.error("Failed to implement object", {
+      console.error("Import error:", error);
+      toast.error("Failed to import object", {
         description: error?.message || "Unknown error occurred"
       });
     } finally {
-      setIsImplementing(false);
+      setIsImporting(false);
     }
   };
 
   return {
     selectedObjectId,
-    isImplementing,
+    isImporting,
     handleObjectIdChange,
-    handleImplement,
+    handleImport,
   };
 }

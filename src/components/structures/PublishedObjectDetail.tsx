@@ -1,4 +1,3 @@
-
 import {
   Dialog,
   DialogContent,
@@ -13,8 +12,6 @@ import { Eye, Download } from "lucide-react";
 import { useState } from "react";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
 import { toast } from "sonner";
-import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
 
 interface PublishedObjectDetailProps {
   objectType: ObjectType;
@@ -23,46 +20,29 @@ interface PublishedObjectDetailProps {
 }
 
 export function PublishedObjectDetail({ objectType, children, onClose }: PublishedObjectDetailProps) {
-  const [isImplementing, setIsImplementing] = useState(false);
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
   const { importObjectType } = useObjectTypes();
-  const { user } = useAuth();
 
-  const handleImplement = async () => {
+  const handleImport = async () => {
     try {
-      if (!user) {
-        toast.error("You must be logged in to implement object structures");
-        return;
-      }
-      
-      setIsImplementing(true);
-      
-      // Call the Supabase function to clone the object structure
-      const { data, error } = await supabase.rpc('clone_object_structure', {
-        source_object_id: objectType.id,
-        new_owner_id: user.id
-      });
-      
-      if (error) throw error;
-      
-      toast.success("Object structure implemented successfully", {
+      setIsImporting(true);
+      await importObjectType.mutateAsync(objectType.id);
+      toast.success("Object structure imported successfully", {
         description: "You can now find it in your Object Manager",
       });
-      
-      setDialogOpen(false);
-      onClose?.(); // Close the dialog on successful implementation
+      onClose?.(); // Close the dialog on successful import
     } catch (error) {
-      console.error("Error implementing object:", error);
-      toast.error("Failed to implement object", {
+      console.error("Error importing object:", error);
+      toast.error("Failed to import object", {
         description: error instanceof Error ? error.message : "Unknown error occurred"
       });
     } finally {
-      setIsImplementing(false);
+      setIsImporting(false);
     }
   };
 
   return (
-    <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+    <Dialog>
       <DialogTrigger asChild>
         {children}
       </DialogTrigger>
@@ -83,16 +63,16 @@ export function PublishedObjectDetail({ objectType, children, onClose }: Publish
             </p>
           </div>
         </div>
-        <Button disabled={isImplementing} onClick={handleImplement}>
-          {isImplementing ? (
+        <Button disabled={isImporting} onClick={handleImport}>
+          {isImporting ? (
             <>
               <Download className="mr-2 h-4 w-4 animate-spin" />
-              Implementing...
+              Importing...
             </>
           ) : (
             <>
               <Download className="mr-2 h-4 w-4" />
-              Implement
+              Import
             </>
           )}
         </Button>

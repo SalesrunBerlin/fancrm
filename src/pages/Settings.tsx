@@ -32,7 +32,7 @@ export default function Settings() {
           </Card>
         </Link>
         
-        <Link to="/settings/applications">
+        <Link to="/applications">
           <Card className="h-full hover:bg-accent/5 transition-colors border-2 border-primary/20">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -51,7 +51,7 @@ export default function Settings() {
           </Card>
         </Link>
         
-        <Link to="/settings/actions">
+        <Link to="/actions">
           <Card className="h-full hover:bg-accent/5 transition-colors">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
