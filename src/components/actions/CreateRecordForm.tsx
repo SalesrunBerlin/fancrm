@@ -61,6 +61,7 @@ export function CreateRecordForm({
   const [lookupFieldsValues, setLookupFieldsValues] = useState<Record<string, Record<string, any>>>({});
   const [enhancedFields, setEnhancedFields] = useState<ObjectField[]>([]);
   const [formulaWarnings, setFormulaWarnings] = useState<Record<string, string>>({});
+  const [formReady, setFormReady] = useState(false);
   
   // Filter only enabled fields or fields that are required by the object
   const enabledActionFields = actionFields.filter(af => 
@@ -112,6 +113,7 @@ export function CreateRecordForm({
       }
       
       setEnhancedFields(enhanced);
+      setFormReady(true);
     };
     
     enhancePicklistFields();
@@ -192,7 +194,7 @@ export function CreateRecordForm({
         });
       }
     }
-  }, [enabledActionFields, objectFields, form]);
+  }, [enabledActionFields, objectFields, form, formReady]);
   
   useEffect(() => {
     // First, collect all lookup fields that have values
@@ -315,7 +317,7 @@ export function CreateRecordForm({
   const validateFormFormulas = () => {
     const fieldValues = form.getValues();
     const newFormulaWarnings: Record<string, string> = {};
-    let hasUnresolvedFormulas = false;
+    let hasUnresolvedRequiredFormulas = false;
     
     // Check all formula fields
     enabledActionFields.forEach(actionField => {
@@ -328,7 +330,7 @@ export function CreateRecordForm({
             // It's a lookup formula that likely failed
             newFormulaWarnings[field.api_name] = 
               `Required formula field could not be resolved: ${actionField.formula_expression}`;
-            hasUnresolvedFormulas = true;
+            hasUnresolvedRequiredFormulas = true;
           }
         }
       }
@@ -339,7 +341,7 @@ export function CreateRecordForm({
       setFormulaWarnings(prev => ({...prev, ...newFormulaWarnings}));
     }
     
-    return !hasUnresolvedFormulas;
+    return !hasUnresolvedRequiredFormulas;
   };
 
   const handleSubmit = async (data: Record<string, any>) => {
@@ -387,11 +389,27 @@ export function CreateRecordForm({
       onSuccess();
     } catch (err: any) {
       console.error("Error creating record:", err);
-      setError(err.message || "Failed to create record");
+      if (err.message && err.message.includes("invalid input syntax for type uuid")) {
+        setError("Ein oder mehrere Felder enthalten ungültige Werte. Bitte überprüfen Sie die Lookup-Felder und Formeln.");
+      } else {
+        setError(err.message || "Failed to create record");
+      }
     } finally {
       setIsSubmitting(false);
     }
   };
+
+  // Find fields with unresolved lookup references
+  const unresolvedLookupFields = Object.keys(formulaWarnings).filter(fieldName => {
+    const warning = formulaWarnings[fieldName];
+    return warning.includes("could not be resolved") && warning.includes(".");
+  });
+
+  // Get the field names with unresolved lookup references
+  const unresolvedFieldNames = unresolvedLookupFields.map(apiName => {
+    const field = objectFields.find(f => f.api_name === apiName);
+    return field?.name || apiName;
+  });
 
   return (
     <Form {...form}>
@@ -403,21 +421,17 @@ export function CreateRecordForm({
           </Alert>
         )}
         
-        {Object.keys(formulaWarnings).length > 0 && (
+        {unresolvedFieldNames.length > 0 && (
           <Alert className={getAlertVariantClass("warning")}>
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
-              <div>Some formula fields may need attention:</div>
+              <div>Achtung: Die folgenden Felder konnten nicht automatisch gefüllt werden, da Lookup-Werte fehlen:</div>
               <ul className="list-disc pl-5 text-sm mt-1">
-                {Object.entries(formulaWarnings).map(([fieldName, warning]) => {
-                  const field = objectFields.find(f => f.api_name === fieldName);
-                  return (
-                    <li key={fieldName} className="mt-1">
-                      <span className="font-semibold">{field?.name || fieldName}</span>: {warning}
-                    </li>
-                  );
-                })}
+                {unresolvedFieldNames.map(fieldName => (
+                  <li key={fieldName} className="mt-1">{fieldName}</li>
+                ))}
               </ul>
+              <div className="mt-2 text-sm">Bitte füllen Sie die entsprechenden Lookup-Felder aus, damit die Formeln berechnet werden können.</div>
             </AlertDescription>
           </Alert>
         )}
