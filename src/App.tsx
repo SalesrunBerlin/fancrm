@@ -31,6 +31,7 @@ import ActionsPage from "./pages/ActionsPage";
 import ActionCreatePage from "./pages/ActionCreatePage";
 import ActionDetailPage from "./pages/ActionDetailPage";
 import ActionExecutePage from "./pages/ActionExecutePage";
+import MassActionPage from "./pages/MassActionPage";
 
 // Create a client
 const queryClient = new QueryClient({
@@ -78,6 +79,7 @@ function App() {
               <Route path="/actions/:actionId" element={<ActionDetailPage />} />
               <Route path="/actions/execute/:actionId" element={<ActionExecutePage />} />
               <Route path="/actions/execute/:actionId/from/:sourceRecordId" element={<ActionExecutePage />} />
+              <Route path="/actions/mass/:actionId" element={<MassActionPage />} />
             </Route>
           </Routes>
           <Toaster richColors position="top-right" />

@@ -34,9 +34,10 @@ import { supabase } from "@/integrations/supabase/client";
 const actionFormSchema = z.object({
   name: z.string().min(1, "Name is required"),
   description: z.string().optional(),
-  action_type: z.enum(["new_record", "linked_record"] as const),
+  action_type: z.enum(["new_record", "linked_record", "mass_action"] as const),
   target_object_id: z.string().min(1, "Target object is required"),
   source_field_id: z.string().optional().nullable(),
+  lookup_field_id: z.string().optional().nullable(),
   color: z.string().default("default"),
 });
 
@@ -123,6 +124,7 @@ export function ActionForm({
       action_type: "new_record" as ActionType,
       target_object_id: "",
       source_field_id: null,
+      lookup_field_id: null,
       color: "default",
       ...defaultValues,
     },
@@ -148,14 +150,15 @@ export function ActionForm({
         action_type: defaultValues.action_type || "new_record",
         target_object_id: defaultValues.target_object_id || "",
         source_field_id: defaultValues.source_field_id || null,
+        lookup_field_id: defaultValues.lookup_field_id || null,
         color: defaultValues.color || "default",
       });
     }
   }, [defaultValues, form]);
 
-  // Fetch lookup fields when the target object changes and action type is linked_record
+  // Fetch lookup fields when the target object changes and action type is linked_record or mass_action
   useEffect(() => {
-    if (actionType === "linked_record" && targetObjectId) {
+    if ((actionType === "linked_record" || actionType === "mass_action") && targetObjectId) {
       // Fetch lookup fields for the selected target object
       const fetchLookupFields = async () => {
         try {
@@ -215,6 +218,11 @@ export function ActionForm({
     // If action type is not linked_record, make sure source_field_id is null
     if (data.action_type !== "linked_record") {
       data.source_field_id = null;
+    }
+    
+    // If action type is not mass_action, make sure lookup_field_id is null
+    if (data.action_type !== "mass_action") {
+      data.lookup_field_id = null;
     }
     
     onSubmit(data);
@@ -328,6 +336,7 @@ export function ActionForm({
                 <SelectContent>
                   <SelectItem value="new_record">New Record (Global)</SelectItem>
                   <SelectItem value="linked_record">Linked Record</SelectItem>
+                  <SelectItem value="mass_action">Mass Action</SelectItem>
                 </SelectContent>
               </Select>
               <FormMessage />
@@ -375,6 +384,42 @@ export function ActionForm({
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select lookup field" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {lookupFields.length === 0 ? (
+                      <SelectItem value="no-fields-available" disabled>
+                        No lookup fields available
+                      </SelectItem>
+                    ) : (
+                      lookupFields.map((lookupField) => (
+                        <SelectItem key={lookupField.id} value={lookupField.id}>
+                          {lookupField.name}
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
+
+        {actionType === "mass_action" && (
+          <FormField
+            control={form.control}
+            name="lookup_field_id"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Target Field (For Bulk Assignment)</FormLabel>
+                <Select
+                  value={field.value || undefined} 
+                  onValueChange={field.onChange}
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select field for assignment" />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>

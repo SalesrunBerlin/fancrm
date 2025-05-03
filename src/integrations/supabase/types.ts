@@ -80,6 +80,7 @@ export type Database = {
           created_at: string
           description: string | null
           id: string
+          lookup_field_id: string | null
           name: string
           owner_id: string
           source_field_id: string | null
@@ -92,6 +93,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          lookup_field_id?: string | null
           name: string
           owner_id: string
           source_field_id?: string | null
@@ -104,6 +106,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          lookup_field_id?: string | null
           name?: string
           owner_id?: string
           source_field_id?: string | null
@@ -813,7 +816,7 @@ export type Database = {
       }
     }
     Enums: {
-      action_type: "new_record" | "linked_record"
+      action_type: "new_record" | "linked_record" | "mass_action"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -929,7 +932,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      action_type: ["new_record", "linked_record"],
+      action_type: ["new_record", "linked_record", "mass_action"],
     },
   },
 } as const

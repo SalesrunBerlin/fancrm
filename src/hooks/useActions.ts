@@ -1,10 +1,11 @@
+
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 
-export type ActionType = 'new_record' | 'linked_record';
+export type ActionType = 'new_record' | 'linked_record' | 'mass_action';
 export type ActionColor = 
   | "default"
   | "destructive"
@@ -61,6 +62,7 @@ export interface Action {
   action_type: ActionType;
   target_object_id: string;
   source_field_id?: string | null;
+  lookup_field_id?: string | null; // Add the new lookup_field_id property
   color: ActionColor;
   owner_id: string;
   created_at: string;
@@ -85,6 +87,7 @@ export interface ActionCreateInput {
   action_type: ActionType;
   target_object_id: string;
   source_field_id?: string | null;
+  lookup_field_id?: string | null; // Add lookup_field_id to input interface
   color?: ActionColor;
 }
 
@@ -207,7 +210,18 @@ export function useActions() {
         }
       }
 
-      // Combine both arrays of actions and ensure the colors are properly typed
+      // Get mass actions where the lookup field points to this object type
+      const { data: massActions, error: massActionsError } = await supabase
+        .from("actions")
+        .select("*, object_fields!inner(*)")
+        .eq("action_type", "mass_action")
+        .eq("object_fields.object_type_id", objectTypeId);
+
+      if (massActionsError) {
+        console.error("Error fetching mass actions:", massActionsError);
+      }
+
+      // Combine all actions and ensure the colors are properly typed
       const allActions: Action[] = [
         ...(targetActions?.map(action => ({
           ...action,
@@ -216,7 +230,11 @@ export function useActions() {
         ...validSourceActions.map(action => ({
           ...action,
           color: (action.color || 'default') as ActionColor
-        }))
+        })),
+        ...(massActions?.map(action => ({
+          ...action,
+          color: (action.color || 'default') as ActionColor
+        })) || [])
       ];
       
       console.log(`useActions.getActionsByObjectId: Found ${allActions.length} actions total for ${objectTypeId}`);
