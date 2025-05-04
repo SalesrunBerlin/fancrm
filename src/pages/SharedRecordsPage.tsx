@@ -13,6 +13,7 @@ import { RecordShare } from '@/types/RecordSharing';
 import { useFieldMappings } from '@/hooks/useFieldMappings';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { toast } from 'sonner';
 
 interface UserProfile {
   id: string;
@@ -36,28 +37,34 @@ export default function SharedRecordsPage() {
       
       console.log('Fetching records shared with me');
       
-      // Use explicit join with specific column names
-      const { data, error } = await supabase
-        .from('record_shares')
-        .select(`
-          *,
-          shared_by_user:profiles!shared_by_user_id(
-            id, 
-            first_name, 
-            last_name, 
-            avatar_url, 
-            screen_name
-          )
-        `)
-        .eq('shared_with_user_id', user.id);
+      try {
+        // Use explicit join with specific column names
+        const { data, error } = await supabase
+          .from('record_shares')
+          .select(`
+            *,
+            shared_by_user:profiles!shared_by_user_id(
+              id, 
+              first_name, 
+              last_name, 
+              avatar_url, 
+              screen_name
+            )
+          `)
+          .eq('shared_with_user_id', user.id);
+          
+        if (error) {
+          console.error('Error fetching shared records:', error);
+          throw error;
+        }
         
-      if (error) {
-        console.error('Error fetching shared records:', error);
-        throw error;
+        console.log('Records shared with me:', data?.length);
+        return data || [];
+      } catch (error) {
+        console.error('Error in sharedWithMe query:', error);
+        toast.error("Could not load shared records");
+        return [];
       }
-      
-      console.log('Records shared with me:', data?.length);
-      return data || [];
     },
     enabled: !!user
   });
@@ -70,54 +77,60 @@ export default function SharedRecordsPage() {
       
       console.log('Fetching my shared records');
       
-      // Use explicit join with specific column names
-      const { data, error } = await supabase
-        .from('record_shares')
-        .select(`
-          *,
-          shared_with_user:profiles!shared_with_user_id(
-            id, 
-            first_name, 
-            last_name, 
-            avatar_url, 
-            screen_name
-          )
-        `)
-        .eq('shared_by_user_id', user.id);
+      try {
+        // Use explicit join with specific column names
+        const { data, error } = await supabase
+          .from('record_shares')
+          .select(`
+            *,
+            shared_with_user:profiles!shared_with_user_id(
+              id, 
+              first_name, 
+              last_name, 
+              avatar_url, 
+              screen_name
+            )
+          `)
+          .eq('shared_by_user_id', user.id);
+          
+        if (error) {
+          console.error('Error fetching my shared records:', error);
+          throw error;
+        }
         
-      if (error) {
-        console.error('Error fetching my shared records:', error);
-        throw error;
+        // For each record, fetch the object type name
+        const enhancedData = await Promise.all((data || []).map(async (share) => {
+          if (!share.record_id) return share;
+          
+          // Get the object record
+          const { data: recordData } = await supabase
+            .from('object_records')
+            .select('object_type_id')
+            .eq('id', share.record_id)
+            .single();
+            
+          if (!recordData) return share;
+          
+          // Get the object type name
+          const { data: objectTypeData } = await supabase
+            .from('object_types')
+            .select('name')
+            .eq('id', recordData.object_type_id)
+            .single();
+            
+          return {
+            ...share,
+            objectTypeName: objectTypeData?.name || 'Unknown'
+          };
+        }));
+        
+        console.log('My shared records:', enhancedData?.length);
+        return enhancedData;
+      } catch (error) {
+        console.error('Error in myShares query:', error);
+        toast.error("Could not load your shared records");
+        return [];
       }
-      
-      // For each record, fetch the object type name
-      const enhancedData = await Promise.all((data || []).map(async (share) => {
-        if (!share.record_id) return share;
-        
-        // Get the object record
-        const { data: recordData } = await supabase
-          .from('object_records')
-          .select('object_type_id')
-          .eq('id', share.record_id)
-          .single();
-          
-        if (!recordData) return share;
-        
-        // Get the object type name
-        const { data: objectTypeData } = await supabase
-          .from('object_types')
-          .select('name')
-          .eq('id', recordData.object_type_id)
-          .single();
-          
-        return {
-          ...share,
-          objectTypeName: objectTypeData?.name || 'Unknown'
-        };
-      }));
-      
-      console.log('My shared records:', enhancedData?.length);
-      return enhancedData;
     },
     enabled: !!user && activeTab === 'my-shares'
   });
@@ -229,15 +242,15 @@ export default function SharedRecordsPage() {
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <Badge variant={mappingStatuses[share.id].isConfigured ? "success" : "outline"}>
-                                {mappingStatuses[share.id].isConfigured 
-                                  ? `Zugeordnet (${mappingStatuses[share.id].percentage}%)`
+                              <Badge variant={mappingStatuses[share.id]?.isConfigured ? "success" : "outline"}>
+                                {mappingStatuses[share.id]?.isConfigured 
+                                  ? `Zugeordnet (${mappingStatuses[share.id]?.percentage}%)`
                                   : "Zuordnung erforderlich"}
                               </Badge>
                             </TooltipTrigger>
                             <TooltipContent>
-                              {mappingStatuses[share.id].isConfigured 
-                                ? `${mappingStatuses[share.id].percentage}% der Felder sind zugeordnet`
+                              {mappingStatuses[share.id]?.isConfigured 
+                                ? `${mappingStatuses[share.id]?.percentage}% der Felder sind zugeordnet`
                                 : "Sie müssen Felder zuordnen, bevor Sie diesen Datensatz anzeigen können"}
                             </TooltipContent>
                           </Tooltip>

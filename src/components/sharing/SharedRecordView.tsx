@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -5,10 +6,12 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useFieldMappings } from '@/hooks/useFieldMappings';
 import { Button } from '@/components/ui/button';
-import { Card, CardHeader, CardContent } from '@/components/ui/card';
+import { Card, CardHeader, CardContent, CardFooter } from '@/components/ui/card';
 import { Loader2, ArrowLeft, Settings } from 'lucide-react';
 import { toast } from 'sonner';
 import { useObjectFields } from '@/hooks/useObjectFields';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { AlertCircle } from 'lucide-react';
 
 type ShareByUser = {
   id: string;
@@ -23,38 +26,45 @@ export function SharedRecordView() {
   const { user } = useAuth();
   const { mappings, getMappingsForShare } = useFieldMappings();
   const [userMappings, setUserMappings] = useState<any[]>([]);
+  const [loadingError, setLoadingError] = useState<string | null>(null);
   
   // Fetch share details (who shared this record with the current user)
-  const { data: shareData, isLoading: isLoadingShare } = useQuery({
+  const { data: shareData, isLoading: isLoadingShare, error: shareError } = useQuery({
     queryKey: ['record-share', recordId],
     queryFn: async () => {
       if (!recordId || !user) return null;
       
       console.log('Fetching share details for record:', recordId);
       
-      // Use specific column naming in the join to avoid ambiguity
-      const { data, error } = await supabase
-        .from('record_shares')
-        .select(`
-          *,
-          shared_by_user:profiles!shared_by_user_id(
-            id,
-            first_name, 
-            last_name, 
-            screen_name
-          )
-        `)
-        .eq('record_id', recordId)
-        .eq('shared_with_user_id', user.id)
-        .single();
+      try {
+        // Use specific column naming in the join to avoid ambiguity
+        const { data, error } = await supabase
+          .from('record_shares')
+          .select(`
+            *,
+            shared_by_user:profiles!shared_by_user_id(
+              id,
+              first_name, 
+              last_name, 
+              screen_name
+            )
+          `)
+          .eq('record_id', recordId)
+          .eq('shared_with_user_id', user.id)
+          .single();
+          
+        if (error) {
+          console.error('Error fetching share:', error);
+          throw error;
+        }
         
-      if (error) {
-        console.error('Error fetching share:', error);
-        throw error;
+        console.log('Share data retrieved:', data);
+        return data;
+      } catch (error) {
+        console.error('Error in share query:', error);
+        setLoadingError(error instanceof Error ? error.message : "Failed to load share data");
+        return null;
       }
-      
-      console.log('Share data retrieved:', data);
-      return data;
     },
     enabled: !!recordId && !!user
   });
@@ -67,45 +77,51 @@ export function SharedRecordView() {
       
       console.log('Fetching record data for record:', recordId);
       
-      // First get the record object type
-      const { data: recordDetails, error: recordError } = await supabase
-        .from('object_records')
-        .select('object_type_id')
-        .eq('id', recordId)
-        .single();
+      try {
+        // First get the record object type
+        const { data: recordDetails, error: recordError } = await supabase
+          .from('object_records')
+          .select('object_type_id')
+          .eq('id', recordId)
+          .single();
+          
+        if (recordError) {
+          console.error('Error fetching record details:', recordError);
+          throw recordError;
+        }
         
-      if (recordError) {
-        console.error('Error fetching record details:', recordError);
-        throw recordError;
+        // Then get the values
+        const { data: fieldValues, error: valuesError } = await supabase
+          .from('object_field_values')
+          .select('field_api_name, value')
+          .eq('record_id', recordId);
+          
+        if (valuesError) {
+          console.error('Error fetching field values:', valuesError);
+          throw valuesError;
+        }
+        
+        // Get visible fields based on record share
+        const { data: shareFields } = await supabase
+          .from('record_share_fields')
+          .select('field_api_name')
+          .eq('record_share_id', shareData?.id);
+          
+        console.log('Record data fetched. Object type:', recordDetails?.object_type_id, 'Field values:', fieldValues?.length);
+        
+        return {
+          objectTypeId: recordDetails.object_type_id,
+          fieldValues: fieldValues.reduce((acc, item) => {
+            acc[item.field_api_name] = item.value;
+            return acc;
+          }, {} as Record<string, string>),
+          visibleFields: shareFields?.map(f => f.field_api_name) || []
+        };
+      } catch (error) {
+        console.error('Error in record data query:', error);
+        setLoadingError(error instanceof Error ? error.message : "Failed to load record data");
+        return null;
       }
-      
-      // Then get the values
-      const { data: fieldValues, error: valuesError } = await supabase
-        .from('object_field_values')
-        .select('field_api_name, value')
-        .eq('record_id', recordId);
-        
-      if (valuesError) {
-        console.error('Error fetching field values:', valuesError);
-        throw valuesError;
-      }
-      
-      // Get visible fields based on record share
-      const { data: shareFields } = await supabase
-        .from('record_share_fields')
-        .select('field_api_name')
-        .eq('record_share_id', shareData?.id);
-        
-      console.log('Record data fetched. Object type:', recordDetails?.object_type_id, 'Field values:', fieldValues?.length);
-      
-      return {
-        objectTypeId: recordDetails.object_type_id,
-        fieldValues: fieldValues.reduce((acc, item) => {
-          acc[item.field_api_name] = item.value;
-          return acc;
-        }, {} as Record<string, string>),
-        visibleFields: shareFields?.map(f => f.field_api_name) || []
-      };
     },
     enabled: !!recordId && !!shareData
   });
@@ -125,7 +141,7 @@ export function SharedRecordView() {
         
         if (!sharedByUser || !sharedByUser.id) {
           console.error('Missing shared_by_user information:', shareData);
-          toast.error("Cannot determine who shared this record");
+          setLoadingError("Cannot determine who shared this record");
           return;
         }
 
@@ -149,7 +165,7 @@ export function SharedRecordView() {
         }
       } catch (error) {
         console.error('Error loading mappings:', error);
-        toast.error('Could not load field mappings');
+        setLoadingError(error instanceof Error ? error.message : "Could not load field mappings");
       }
     };
     
@@ -159,8 +175,8 @@ export function SharedRecordView() {
   }, [shareData, recordData]);
   
   // Transform record data according to mappings
-  const transformedData = userMappings.length > 0 ? 
-    Object.entries(recordData?.fieldValues || {}).reduce((acc, [sourceField, value]) => {
+  const transformedData = userMappings.length > 0 && recordData?.fieldValues ? 
+    Object.entries(recordData.fieldValues).reduce((acc, [sourceField, value]) => {
       // Find mapping for this source field
       const mapping = userMappings.find(m => m.source_field_api_name === sourceField);
       if (mapping && recordData?.visibleFields.includes(sourceField)) {
@@ -173,6 +189,21 @@ export function SharedRecordView() {
     return (
       <div className="flex justify-center items-center h-64">
         <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+  
+  if (loadingError) {
+    return (
+      <div className="p-4">
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>{loadingError}</AlertDescription>
+        </Alert>
+        <Button variant="outline" className="mt-4" asChild>
+          <Link to="/shared-records">Back to Shared Records</Link>
+        </Button>
       </div>
     );
   }
@@ -227,7 +258,7 @@ export function SharedRecordView() {
           </p>
         </CardHeader>
         <CardContent>
-          {targetFields?.length > 0 ? (
+          {targetFields?.length > 0 && Object.keys(transformedData).length > 0 ? (
             <div className="space-y-6">
               {targetFields
                 .filter(field => Object.keys(transformedData).includes(field.api_name))
@@ -247,6 +278,11 @@ export function SharedRecordView() {
             <p className="text-center py-4">No mapped fields to display.</p>
           )}
         </CardContent>
+        <CardFooter className="flex justify-center">
+          <Button variant="outline" asChild>
+            <Link to="/shared-records">Back to Shared Records</Link>
+          </Button>
+        </CardFooter>
       </Card>
     </div>
   );
