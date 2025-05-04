@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -235,10 +234,10 @@ export function useActions() {
           ...action,
           color: (action.color || 'default') as ActionColor
         })) || [])
-      ] as Action[];
+      ];
       
       console.log(`useActions.getActionsByObjectId: Found ${allActions.length} actions total for ${objectTypeId}`);
-      return allActions;
+      return allActions as Action[];
     } catch (error) {
       console.error("Exception in getActionsByObjectId:", error);
       throw error;

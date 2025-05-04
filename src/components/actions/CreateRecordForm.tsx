@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -133,7 +132,7 @@ export function CreateRecordForm({
 
   // Important: Initialize formula-based default values when the form first loads
   useEffect(() => {
-    if (enabledActionFields.length > 0 && objectFields.length > 0) {
+    if (enabledActionFields.length > 0 && objectFields.length > 0 && formReady) {
       console.log("Evaluating formula-based default values on form load");
       
       const formulaDefaults: Record<string, any> = {};
@@ -183,7 +182,7 @@ export function CreateRecordForm({
       
       // Update formula warnings
       if (Object.keys(newFormulaWarnings).length > 0) {
-        setFormulaWarnings(newFormulaWarnings);
+        setFormulaWarnings(prev => ({...prev, ...newFormulaWarnings}));
       }
       
       // Set all formula values at once if we have any
@@ -344,22 +343,56 @@ export function CreateRecordForm({
     return !hasUnresolvedRequiredFormulas;
   };
 
+  // Validate lookup fields to ensure they contain proper UUIDs
+  const validateLookupFields = () => {
+    const fieldValues = form.getValues();
+    let hasInvalidLookupFields = false;
+    
+    // Check all lookup fields
+    objectFields.filter(field => field.data_type === 'lookup').forEach(field => {
+      const value = fieldValues[field.api_name];
+      
+      // If this is a required field with an empty or invalid UUID format
+      if (field.is_required && 
+          (!value || value === '' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value))) {
+        console.log(`Invalid lookup value for ${field.api_name}: "${value}"`);
+        hasInvalidLookupFields = true;
+        form.setError(field.api_name, { 
+          type: 'manual', 
+          message: 'Bitte wählen Sie einen gültigen Wert aus' 
+        });
+      }
+    });
+    
+    return !hasInvalidLookupFields;
+  };
+
   const handleSubmit = async (data: Record<string, any>) => {
     if (!user) {
       setError("You must be logged in to create records");
       return;
     }
     
+    // Clear any previous errors
+    setError(null);
+    
     // Validate formula fields
     if (!validateFormFormulas()) {
-      setError("Some required formula fields could not be resolved. Please check the form for details.");
+      setError("Einige erforderliche Formelfelder konnten nicht aufgelöst werden. Bitte überprüfen Sie die Lookup-Felder und ergänzen Sie die benötigten Werte.");
+      return;
+    }
+    
+    // Validate lookup fields
+    if (!validateLookupFields()) {
+      setError("Bitte wählen Sie gültige Werte für alle erforderlichen Lookup-Felder aus.");
       return;
     }
     
     setIsSubmitting(true);
-    setError(null);
     
     try {
+      console.log("Creating record with data:", data);
+      
       // Create the record
       const { data: record, error: recordError } = await supabase
         .from("object_records")
@@ -370,7 +403,10 @@ export function CreateRecordForm({
         .select()
         .single();
       
-      if (recordError) throw recordError;
+      if (recordError) {
+        console.error("Error creating object record:", recordError);
+        throw recordError;
+      }
       
       // Create the field values
       const fieldValues = Object.entries(data).map(([api_name, value]) => ({
@@ -379,11 +415,16 @@ export function CreateRecordForm({
         value: value === undefined || value === null ? null : String(value),
       }));
       
+      console.log("Inserting field values:", fieldValues);
+      
       const { error: valuesError } = await supabase
         .from("object_field_values")
         .insert(fieldValues);
       
-      if (valuesError) throw valuesError;
+      if (valuesError) {
+        console.error("Error creating field values:", valuesError);
+        throw valuesError;
+      }
       
       toast.success("Record created successfully");
       onSuccess();
