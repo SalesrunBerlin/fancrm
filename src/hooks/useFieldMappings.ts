@@ -1,2 +1,3 @@
 
-export { useFieldMappings, UserFieldMapping, CreateFieldMapping } from './fieldMapping';
+export { useFieldMappings } from './fieldMapping';
+export type { UserFieldMapping, CreateFieldMapping } from '@/types/FieldMapping';
