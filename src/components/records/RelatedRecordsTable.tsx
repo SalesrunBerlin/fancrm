@@ -34,10 +34,10 @@ export function RelatedRecordsTable({ section }: RelatedRecordsTableProps) {
                       to={`/objects/${section.objectType.id}/${record.id}`}
                       className="text-blue-600 hover:underline"
                     >
-                      <RelatedFieldValue field={field} record={record} />
+                      <RelatedFieldValue field={field} value={record[field.api_name]} />
                     </Link>
                   ) : (
-                    <RelatedFieldValue field={field} record={record} />
+                    <RelatedFieldValue field={field} value={record[field.api_name]} />
                   )}
                 </TableCell>
               ))}

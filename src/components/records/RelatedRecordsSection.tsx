@@ -20,11 +20,15 @@ export function RelatedRecordsSection({ section }: RelatedRecordsSectionProps) {
         <div className="flex flex-col gap-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <CardTitle className="text-lg">{section.objectType.name}</CardTitle>
-            <Badge variant="outline" className="text-xs">
-              {section.relationship.relationship_type}
-            </Badge>
+            {section.relationship && (
+              <Badge variant="outline" className="text-xs">
+                {section.relationship.relationship_type}
+              </Badge>
+            )}
           </div>
-          <p className="text-sm text-muted-foreground">{section.records.length} related records</p>
+          <p className="text-sm text-muted-foreground">
+            {section.records ? section.records.length : 0} related records
+          </p>
         </div>
       </CardHeader>
       <CardContent className="pt-4 px-0 sm:px-2 md:px-4 overflow-hidden">

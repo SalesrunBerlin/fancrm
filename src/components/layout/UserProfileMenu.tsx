@@ -47,15 +47,19 @@ export function UserProfileMenu() {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
+          <DropdownMenuItem onClick={() => navigate("/profile")}>
+            <User className="mr-2 h-4 w-4" />
+            <span>Profil</span>
+          </DropdownMenuItem>
           <DropdownMenuItem onClick={() => navigate("/settings")}>
             <Settings className="mr-2 h-4 w-4" />
-            <span>Settings</span>
+            <span>Einstellungen</span>
           </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={handleLogout}>
           <LogOut className="mr-2 h-4 w-4" />
-          <span>Log out</span>
+          <span>Abmelden</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
