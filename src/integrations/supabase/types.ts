@@ -956,6 +956,20 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "fk_record_shares_shared_by"
+            columns: ["shared_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_record_shares_shared_with"
+            columns: ["shared_with_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "record_shares_record_id_fkey"
             columns: ["record_id"]
             isOneToOne: false
@@ -1141,6 +1155,13 @@ export type Database = {
           visible_fields: string[] | null
         }
         Relationships: [
+          {
+            foreignKeyName: "fk_record_shares_shared_with"
+            columns: ["shared_with_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "object_records_object_type_id_fkey"
             columns: ["object_type_id"]

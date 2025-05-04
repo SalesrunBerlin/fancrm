@@ -28,7 +28,7 @@ export function SharedRecordView() {
         .from('record_shares')
         .select(`
           *,
-          shared_by:shared_by_user_id(id, first_name, last_name, screen_name)
+          profiles!record_shares_shared_by_user_id_fkey(id, first_name, last_name, screen_name)
         `)
         .eq('record_id', recordId)
         .eq('shared_with_user_id', user.id)
@@ -98,13 +98,11 @@ export function SharedRecordView() {
   
   useEffect(() => {
     const loadMappings = async () => {
-      if (!shareData?.shared_by || !recordData?.objectTypeId) return;
+      if (!shareData?.profiles || !recordData?.objectTypeId) return;
       
       try {
-        // Safely access the nested property
-        const sharedById = typeof shareData.shared_by === 'object' && shareData.shared_by !== null 
-          ? (shareData.shared_by as any).id 
-          : null;
+        // Get the shared_by_user_id (source user id) from the profiles reference
+        const sharedById = shareData.profiles.id;
 
         if (!sharedById) {
           toast.error("Could not load share information");
@@ -168,7 +166,7 @@ export function SharedRecordView() {
   const hasEditPermission = shareData.permission_level === 'edit';
   
   // Safely format the user name
-  const sharedByUser = shareData.shared_by as any;
+  const sharedByUser = shareData.profiles;
   const userName = sharedByUser 
     ? (sharedByUser.screen_name || 
       `${sharedByUser.first_name || ''} ${sharedByUser.last_name || ''}`.trim() || 

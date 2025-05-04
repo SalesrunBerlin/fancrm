@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -20,7 +19,7 @@ interface ShareDetails {
   shared_with_user_id: string;
   record_id: string;
   permission_level: string;
-  shared_by?: any; // Using any due to potential error object from Supabase
+  profiles?: any; // Using any due to potential error object from Supabase
   record?: {
     object_type_id: string;
   };
@@ -47,12 +46,12 @@ export default function FieldMappingPage() {
     queryFn: async () => {
       if (!shareId || !user) return null;
       
-      // Get the record share details
+      // Get the record share details using explicit join
       const { data, error } = await supabase
         .from('record_shares')
         .select(`
           *,
-          shared_by:shared_by_user_id(id, first_name, last_name, screen_name),
+          profiles!record_shares_shared_by_user_id_fkey(id, first_name, last_name, screen_name),
           record:record_id(object_type_id)
         `)
         .eq('id', shareId)
@@ -112,13 +111,11 @@ export default function FieldMappingPage() {
   // Get existing mappings
   useEffect(() => {
     const fetchExistingMappings = async () => {
-      if (!shareDetails?.sourceObjectTypeId || !shareDetails.shared_by || !user) return;
+      if (!shareDetails?.sourceObjectTypeId || !shareDetails.profiles || !user) return;
       
       try {
-        // Handle the case when shared_by might be an error object
-        const sharedById = typeof shareDetails.shared_by === 'object' && shareDetails.shared_by 
-          ? (shareDetails.shared_by as any).id
-          : null;
+        // Get the source user ID from the profiles reference
+        const sharedById = shareDetails.profiles.id;
           
         if (!sharedById) {
           console.error('Cannot determine source user ID');
@@ -154,7 +151,7 @@ export default function FieldMappingPage() {
   }, [shareDetails, user]);
 
   const handleSaveMappings = async () => {
-    if (!shareDetails?.sourceObjectTypeId || !shareDetails.shared_by || !selectedObjectTypeId || !user) {
+    if (!shareDetails?.sourceObjectTypeId || !shareDetails.profiles || !selectedObjectTypeId || !user) {
       toast.error("Please select a target object type");
       return;
     }
@@ -171,10 +168,8 @@ export default function FieldMappingPage() {
         return;
       }
       
-      // Get the source user ID
-      const sharedById = typeof shareDetails.shared_by === 'object' && shareDetails.shared_by
-        ? (shareDetails.shared_by as any).id
-        : null;
+      // Get the source user ID from the profiles reference
+      const sharedById = shareDetails.profiles.id;
         
       if (!sharedById) {
         toast.error("Cannot determine source user ID");
@@ -230,7 +225,7 @@ export default function FieldMappingPage() {
   }
 
   // Safely format the user name
-  const sharedByUser = shareDetails.shared_by;
+  const sharedByUser = shareDetails.profiles;
   const sourceName = sharedByUser && typeof sharedByUser === 'object'
     ? (sharedByUser.screen_name || 
       `${sharedByUser.first_name || ''} ${sharedByUser.last_name || ''}`.trim() || 

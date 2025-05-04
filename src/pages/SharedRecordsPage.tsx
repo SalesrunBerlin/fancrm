@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useQuery } from '@tanstack/react-query';
@@ -26,11 +25,12 @@ export default function SharedRecordsPage() {
     queryFn: async () => {
       if (!user) return [];
       
+      // Use explicit join instead of relying on foreign key constraint
       const { data, error } = await supabase
         .from('record_shares')
         .select(`
           *,
-          user_profile:profiles!record_shares_shared_by_user_id_fkey(id, first_name, last_name, avatar_url, screen_name)
+          profiles!record_shares_shared_by_user_id_fkey(id, first_name, last_name, avatar_url, screen_name)
         `)
         .eq('shared_with_user_id', user.id);
         
@@ -50,11 +50,12 @@ export default function SharedRecordsPage() {
     queryFn: async () => {
       if (!user) return [];
       
+      // Use explicit join instead of relying on foreign key constraint
       const { data, error } = await supabase
         .from('record_shares')
         .select(`
           *,
-          user_profile:profiles!record_shares_shared_with_user_id_fkey(id, first_name, last_name, avatar_url, screen_name)
+          profiles!record_shares_shared_with_user_id_fkey(id, first_name, last_name, avatar_url, screen_name)
         `)
         .eq('shared_by_user_id', user.id);
         
@@ -185,7 +186,7 @@ export default function SharedRecordsPage() {
                 <Card key={share.id}>
                   <CardHeader className="pb-2">
                     <div className="flex items-center justify-between">
-                      <CardTitle className="text-lg">Geteilt von {formatUserName(share.user_profile)}</CardTitle>
+                      <CardTitle className="text-lg">Geteilt von {formatUserName(share.profiles)}</CardTitle>
                       {mappingStatuses[share.id] && (
                         <TooltipProvider>
                           <Tooltip>
@@ -257,7 +258,7 @@ export default function SharedRecordsPage() {
                 <Card key={share.id}>
                   <CardHeader className="pb-2">
                     <CardTitle className="text-lg">
-                      Geteilt mit {formatUserName(share.user_profile)}
+                      Geteilt mit {formatUserName(share.profiles)}
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="pb-2">
