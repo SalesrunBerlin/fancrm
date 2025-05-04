@@ -147,8 +147,11 @@ export default function SharedRecordsPage() {
   }, [sharedWithMeRecords, user, activeTab]);
   
   // Format user display name
-  const formatUserName = (userProfile: RecordShare['user_profile']) => {
+  const formatUserName = (userProfile: any) => {
     if (!userProfile) return 'Unknown User';
+    
+    // Handle case when userProfile is an error object from Supabase
+    if (userProfile.error === true) return 'Unknown User';
     
     if (userProfile.screen_name) return userProfile.screen_name;
     
@@ -161,14 +164,14 @@ export default function SharedRecordsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Shared Records"
-        description="View records that have been shared with you or that you have shared with others."
+        title="Freigaben"
+        description="Sehen Sie Datensätze, die mit Ihnen geteilt wurden, oder die Sie mit anderen geteilt haben."
       />
       
       <Tabs defaultValue={activeTab} onValueChange={setActiveTab}>
         <TabsList>
-          <TabsTrigger value="shared-with-me">Shared with me</TabsTrigger>
-          <TabsTrigger value="my-shares">My shares</TabsTrigger>
+          <TabsTrigger value="shared-with-me">Mit mir geteilt</TabsTrigger>
+          <TabsTrigger value="my-shares">Meine Freigaben</TabsTrigger>
         </TabsList>
         
         <TabsContent value="shared-with-me" className="space-y-4">
@@ -182,21 +185,21 @@ export default function SharedRecordsPage() {
                 <Card key={share.id}>
                   <CardHeader className="pb-2">
                     <div className="flex items-center justify-between">
-                      <CardTitle className="text-lg">Shared by {formatUserName(share.user_profile)}</CardTitle>
+                      <CardTitle className="text-lg">Geteilt von {formatUserName(share.user_profile)}</CardTitle>
                       {mappingStatuses[share.id] && (
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <Badge variant={mappingStatuses[share.id].isConfigured ? "success" : "outline"}>
                                 {mappingStatuses[share.id].isConfigured 
-                                  ? `Mapped (${mappingStatuses[share.id].percentage}%)`
-                                  : "Needs mapping"}
+                                  ? `Zugeordnet (${mappingStatuses[share.id].percentage}%)`
+                                  : "Zuordnung erforderlich"}
                               </Badge>
                             </TooltipTrigger>
                             <TooltipContent>
                               {mappingStatuses[share.id].isConfigured 
-                                ? `${mappingStatuses[share.id].percentage}% of fields are mapped`
-                                : "You need to map fields before viewing this record"}
+                                ? `${mappingStatuses[share.id].percentage}% der Felder sind zugeordnet`
+                                : "Sie müssen Felder zuordnen, bevor Sie diesen Datensatz anzeigen können"}
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
@@ -205,8 +208,8 @@ export default function SharedRecordsPage() {
                   </CardHeader>
                   <CardContent className="pb-2">
                     <div className="text-sm text-muted-foreground">
-                      <p>Permission: {share.permission_level === 'read' ? 'Read only' : 'Edit'}</p>
-                      <p>Shared on: {new Date(share.created_at).toLocaleDateString()}</p>
+                      <p>Berechtigung: {share.permission_level === 'read' ? 'Nur Lesen' : 'Bearbeiten'}</p>
+                      <p>Geteilt am: {new Date(share.created_at).toLocaleDateString()}</p>
                     </div>
                   </CardContent>
                   <CardFooter className="flex flex-wrap gap-2">
@@ -214,14 +217,14 @@ export default function SharedRecordsPage() {
                       <Button variant="outline" asChild className="flex-1">
                         <Link to={`/shared-record/${share.record_id}`} className="flex items-center">
                           <ExternalLink className="mr-2 h-4 w-4" />
-                          View Record
+                          Datensatz anzeigen
                         </Link>
                       </Button>
                     ) : (
                       <Button variant="outline" asChild className="flex-1">
                         <Link to={`/field-mapping/${share.id}`} className="flex items-center">
                           <Settings className="mr-2 h-4 w-4" />
-                          Configure Mapping
+                          Feldzuordnung konfigurieren
                         </Link>
                       </Button>
                     )}
@@ -232,11 +235,11 @@ export default function SharedRecordsPage() {
           ) : (
             <Card>
               <CardHeader>
-                <CardTitle>No shared records</CardTitle>
+                <CardTitle>Keine geteilten Datensätze</CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-muted-foreground">
-                  No one has shared any records with you yet.
+                  Es wurden noch keine Datensätze mit Ihnen geteilt.
                 </p>
               </CardContent>
             </Card>
@@ -254,21 +257,21 @@ export default function SharedRecordsPage() {
                 <Card key={share.id}>
                   <CardHeader className="pb-2">
                     <CardTitle className="text-lg">
-                      Shared with {formatUserName(share.user_profile)}
+                      Geteilt mit {formatUserName(share.user_profile)}
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="pb-2">
                     <div className="text-sm text-muted-foreground">
-                      <p>Record type: {(share as any).objectTypeName || 'Record'}</p>
-                      <p>Permission: {share.permission_level === 'read' ? 'Read only' : 'Edit'}</p>
-                      <p>Shared on: {new Date(share.created_at).toLocaleDateString()}</p>
+                      <p>Datensatztyp: {(share as any).objectTypeName || 'Datensatz'}</p>
+                      <p>Berechtigung: {share.permission_level === 'read' ? 'Nur Lesen' : 'Bearbeiten'}</p>
+                      <p>Geteilt am: {new Date(share.created_at).toLocaleDateString()}</p>
                     </div>
                   </CardContent>
                   <CardFooter>
                     <Button variant="outline" asChild className="w-full">
-                      <Link to={`/records/${share.record_id}`} className="flex items-center">
+                      <Link to={`/objects/${share.record_id}`} className="flex items-center">
                         <ExternalLink className="mr-2 h-4 w-4" />
-                        View Record
+                        Datensatz anzeigen
                       </Link>
                     </Button>
                   </CardFooter>
@@ -278,11 +281,11 @@ export default function SharedRecordsPage() {
           ) : (
             <Card>
               <CardHeader>
-                <CardTitle>No shared records</CardTitle>
+                <CardTitle>Keine geteilten Datensätze</CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-muted-foreground">
-                  You haven't shared any records with others yet.
+                  Sie haben noch keine Datensätze mit anderen geteilt.
                 </p>
               </CardContent>
             </Card>

@@ -10,7 +10,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { LayoutDashboard, Settings, FileText, Box, Database, AppWindow } from "lucide-react";
+import { LayoutDashboard, Settings, FileText, Box, Database, AppWindow, Share2 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
 import { useApplications } from "@/hooks/useApplications";
@@ -37,6 +37,11 @@ const navigationItems = [
     title: "Structures",
     icon: FileText,
     path: "/structures"
+  },
+  {
+    title: "Freigaben",
+    icon: Share2,
+    path: "/shared-records"
   },
   {
     title: "Settings",

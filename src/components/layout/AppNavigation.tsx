@@ -57,8 +57,8 @@ export function AppNavigation() {
       icon: <Play className="h-4 w-4" />,
     },
     {
-      label: "Sharing",
-      href: "/collections",
+      label: "Freigaben",
+      href: "/shared-records",
       icon: <Share2 className="h-4 w-4" />,
     },
   ];

@@ -10,7 +10,6 @@ import { Card, CardHeader, CardContent } from '@/components/ui/card';
 import { Loader2, ArrowLeft, Settings } from 'lucide-react';
 import { toast } from 'sonner';
 import { useObjectFields } from '@/hooks/useObjectFields';
-import { RecordField } from '@/components/records/RecordField';
 
 export function SharedRecordView() {
   const { recordId } = useParams<{ recordId: string }>();
@@ -99,11 +98,21 @@ export function SharedRecordView() {
   
   useEffect(() => {
     const loadMappings = async () => {
-      if (!shareData?.shared_by?.id || !recordData?.objectTypeId) return;
+      if (!shareData?.shared_by || !recordData?.objectTypeId) return;
       
       try {
+        // Safely access the nested property
+        const sharedById = typeof shareData.shared_by === 'object' && shareData.shared_by !== null 
+          ? (shareData.shared_by as any).id 
+          : null;
+
+        if (!sharedById) {
+          toast.error("Could not load share information");
+          return;
+        }
+
         const mappings = await getMappingsForShare(
-          shareData.shared_by.id,
+          sharedById,
           recordData.objectTypeId
         );
         
@@ -158,6 +167,14 @@ export function SharedRecordView() {
   // Get the permission level
   const hasEditPermission = shareData.permission_level === 'edit';
   
+  // Safely format the user name
+  const sharedByUser = shareData.shared_by as any;
+  const userName = sharedByUser 
+    ? (sharedByUser.screen_name || 
+      `${sharedByUser.first_name || ''} ${sharedByUser.last_name || ''}`.trim() || 
+      "Another user")
+    : "Another user";
+  
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap justify-between items-center gap-2">
@@ -181,9 +198,7 @@ export function SharedRecordView() {
         <CardHeader>
           <h2 className="text-2xl font-bold">Shared Record View</h2>
           <p className="text-muted-foreground">
-            Shared by {shareData.shared_by?.screen_name || 
-              `${shareData.shared_by?.first_name || ''} ${shareData.shared_by?.last_name || ''}`.trim() || 
-              "Another user"}
+            Shared by {userName}
           </p>
         </CardHeader>
         <CardContent>
@@ -195,13 +210,10 @@ export function SharedRecordView() {
                   <div key={field.id} className="grid grid-cols-1 lg:grid-cols-3 gap-2">
                     <div className="font-medium">{field.name}</div>
                     <div className="lg:col-span-2">
-                      {/* We use the RecordField component to render the value properly */}
-                      <RecordField
-                        field={field}
-                        value={transformedData[field.api_name]}
-                        onChange={() => {}} // This is read-only
-                        readOnly={true}
-                      />
+                      {/* Display the value directly as text */}
+                      <div className="p-2 border rounded bg-gray-50">
+                        {transformedData[field.api_name] || ''}
+                      </div>
                     </div>
                   </div>
                 ))}

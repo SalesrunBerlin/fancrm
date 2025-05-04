@@ -14,6 +14,21 @@ import { Loader2, ArrowLeft, Check, Save } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 
+interface ShareDetails {
+  id: string;
+  shared_by_user_id: string;
+  shared_with_user_id: string;
+  record_id: string;
+  permission_level: string;
+  shared_by?: any; // Using any due to potential error object from Supabase
+  record?: {
+    object_type_id: string;
+  };
+  sourceObjectTypeId?: string;
+  sourceFields?: any[];
+  sharedFields?: any[];
+}
+
 export default function FieldMappingPage() {
   const { shareId } = useParams<{ shareId: string }>();
   const navigate = useNavigate();
@@ -24,9 +39,10 @@ export default function FieldMappingPage() {
   const [selectedObjectTypeId, setSelectedObjectTypeId] = useState<string | null>(null);
   const [fieldMappings, setFieldMappings] = useState<Record<string, string>>({});
   const [isSaving, setIsSaving] = useState(false);
+  const [shareDetails, setShareDetails] = useState<ShareDetails | null>(null);
 
   // Fetch share details
-  const { data: shareDetails, isLoading: isLoadingShare } = useQuery({
+  const { data: rawShareDetails, isLoading: isLoadingShare } = useQuery({
     queryKey: ["share-details", shareId],
     queryFn: async () => {
       if (!shareId || !user) return null;
@@ -48,33 +64,47 @@ export default function FieldMappingPage() {
         throw error;
       }
       
-      // Get the source object fields
-      const sourceObjectTypeId = data?.record?.object_type_id;
-      
-      if (sourceObjectTypeId) {
-        const { data: fieldsData } = await supabase
-          .from('object_fields')
-          .select('*')
-          .eq('object_type_id', sourceObjectTypeId);
-          
-        // Get shared fields
-        const { data: shareFields } = await supabase
-          .from('record_share_fields')
-          .select('*')
-          .eq('record_share_id', shareId);
-          
-        return {
-          ...data,
-          sourceObjectTypeId,
-          sourceFields: fieldsData || [],
-          sharedFields: shareFields || []
-        };
-      }
-      
       return data;
     },
     enabled: !!shareId && !!user
   });
+
+  // Enhance share details with additional data once we have the basic info
+  useEffect(() => {
+    if (!rawShareDetails || !user) return;
+  
+    const fetchAdditionalData = async () => {
+      try {
+        // Get the source object type ID
+        if (rawShareDetails.record?.object_type_id) {
+          // Get the source object fields
+          const { data: fieldsData } = await supabase
+            .from('object_fields')
+            .select('*')
+            .eq('object_type_id', rawShareDetails.record.object_type_id);
+            
+          // Get shared fields
+          const { data: shareFields } = await supabase
+            .from('record_share_fields')
+            .select('*')
+            .eq('record_share_id', shareId);
+          
+          // Update share details with the additional data
+          setShareDetails({
+            ...rawShareDetails,
+            sourceObjectTypeId: rawShareDetails.record.object_type_id,
+            sourceFields: fieldsData || [],
+            sharedFields: shareFields || []
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching additional share data:', error);
+        toast.error('Failed to load complete share details');
+      }
+    };
+    
+    fetchAdditionalData();
+  }, [rawShareDetails, shareId, user]);
   
   // Fetch fields for the selected object type
   const { fields: targetFields, isLoading: isLoadingFields } = useObjectFields(selectedObjectTypeId || undefined);
@@ -82,14 +112,24 @@ export default function FieldMappingPage() {
   // Get existing mappings
   useEffect(() => {
     const fetchExistingMappings = async () => {
-      if (!shareDetails?.sourceObjectTypeId || !shareDetails.shared_by?.id || !user) return;
+      if (!shareDetails?.sourceObjectTypeId || !shareDetails.shared_by || !user) return;
       
       try {
+        // Handle the case when shared_by might be an error object
+        const sharedById = typeof shareDetails.shared_by === 'object' && shareDetails.shared_by 
+          ? (shareDetails.shared_by as any).id
+          : null;
+          
+        if (!sharedById) {
+          console.error('Cannot determine source user ID');
+          return;
+        }
+        
         const { data } = await supabase
           .from('user_field_mappings')
           .select('*')
           .eq('target_user_id', user.id)
-          .eq('source_user_id', shareDetails.shared_by.id)
+          .eq('source_user_id', sharedById)
           .eq('source_object_id', shareDetails.sourceObjectTypeId);
         
         if (data && data.length > 0) {
@@ -114,7 +154,7 @@ export default function FieldMappingPage() {
   }, [shareDetails, user]);
 
   const handleSaveMappings = async () => {
-    if (!shareDetails?.sourceObjectTypeId || !shareDetails.shared_by?.id || !selectedObjectTypeId) {
+    if (!shareDetails?.sourceObjectTypeId || !shareDetails.shared_by || !selectedObjectTypeId || !user) {
       toast.error("Please select a target object type");
       return;
     }
@@ -131,11 +171,22 @@ export default function FieldMappingPage() {
         return;
       }
       
+      // Get the source user ID
+      const sharedById = typeof shareDetails.shared_by === 'object' && shareDetails.shared_by
+        ? (shareDetails.shared_by as any).id
+        : null;
+        
+      if (!sharedById) {
+        toast.error("Cannot determine source user ID");
+        setIsSaving(false);
+        return;
+      }
+      
       // Prepare mapping objects
       const mappingsToSave = mappingEntries.map(([sourceField, targetField]) => ({
-        source_user_id: shareDetails.shared_by.id,
-        target_user_id: user!.id,
-        source_object_id: shareDetails.sourceObjectTypeId,
+        source_user_id: sharedById,
+        target_user_id: user.id,
+        source_object_id: shareDetails.sourceObjectTypeId!,
         target_object_id: selectedObjectTypeId,
         source_field_api_name: sourceField,
         target_field_api_name: targetField,
@@ -178,9 +229,13 @@ export default function FieldMappingPage() {
     );
   }
 
-  const sourceName = shareDetails?.shared_by?.screen_name || 
-                    `${shareDetails?.shared_by?.first_name || ''} ${shareDetails?.shared_by?.last_name || ''}`.trim() || 
-                    "Another user";
+  // Safely format the user name
+  const sharedByUser = shareDetails.shared_by;
+  const sourceName = sharedByUser && typeof sharedByUser === 'object'
+    ? (sharedByUser.screen_name || 
+      `${sharedByUser.first_name || ''} ${sharedByUser.last_name || ''}`.trim() || 
+      "Another user")
+    : "Another user";
 
   // Get the source object name
   const sourceObjectType = objectTypes?.find(ot => ot.id === shareDetails.sourceObjectTypeId);
@@ -194,21 +249,21 @@ export default function FieldMappingPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Map Fields for Shared Record"
-        description={`Map fields from ${sourceName}'s ${sourceObjectName} to your objects to view the shared record.`}
+        title="Feldzuordnung für geteilte Datensätze"
+        description={`Ordnen Sie Felder von ${sourceName}'s ${sourceObjectName} Ihren Objekten zu, um den geteilten Datensatz anzuzeigen.`}
       />
       
       <Button variant="ghost" size="sm" asChild className="mb-2">
         <Link to="/shared-records">
-          <ArrowLeft className="mr-2 h-4 w-4" /> Back to Shared Records
+          <ArrowLeft className="mr-2 h-4 w-4" /> Zurück zu Freigaben
         </Link>
       </Button>
       
       <Card>
         <CardHeader>
-          <h3 className="text-lg font-medium">Step 1: Select Your Object Type</h3>
+          <h3 className="text-lg font-medium">Schritt 1: Wählen Sie Ihren Objekttyp</h3>
           <p className="text-sm text-muted-foreground">
-            Select which of your objects will receive data from {sourceName}'s {sourceObjectName}.
+            Wählen Sie aus, welches Ihrer Objekte die Daten von {sourceName}'s {sourceObjectName} empfangen soll.
           </p>
         </CardHeader>
         <CardContent>
@@ -221,7 +276,7 @@ export default function FieldMappingPage() {
             }}
           >
             <SelectTrigger className="w-full md:w-1/2">
-              <SelectValue placeholder="Select an object type" />
+              <SelectValue placeholder="Objekttyp auswählen" />
             </SelectTrigger>
             <SelectContent>
               {objectTypes?.map((objectType) => (
@@ -237,9 +292,9 @@ export default function FieldMappingPage() {
       {selectedObjectTypeId && (
         <Card>
           <CardHeader>
-            <h3 className="text-lg font-medium">Step 2: Map Fields</h3>
+            <h3 className="text-lg font-medium">Schritt 2: Felder zuordnen</h3>
             <p className="text-sm text-muted-foreground">
-              Match each field from {sourceName}'s {sourceObjectName} to your corresponding fields.
+              Ordnen Sie jedes Feld von {sourceName}'s {sourceObjectName} Ihren entsprechenden Feldern zu.
             </p>
           </CardHeader>
           <CardContent>
@@ -254,7 +309,7 @@ export default function FieldMappingPage() {
                     <div>
                       <label className="block text-sm font-medium mb-1">{sourceField.name}</label>
                       <div className="text-sm text-muted-foreground">
-                        Data type: {sourceField.data_type}
+                        Datentyp: {sourceField.data_type}
                       </div>
                     </div>
                     <Select 
@@ -267,17 +322,17 @@ export default function FieldMappingPage() {
                       }}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Select a field" />
+                        <SelectValue placeholder="Feld auswählen" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">-- Skip this field --</SelectItem>
+                        <SelectItem value="">-- Dieses Feld überspringen --</SelectItem>
                         {targetFields?.map((targetField) => (
                           <SelectItem 
                             key={targetField.id} 
                             value={targetField.api_name}
                             disabled={targetField.data_type !== sourceField.data_type}
                           >
-                            {targetField.name} {targetField.data_type !== sourceField.data_type && '(incompatible type)'}
+                            {targetField.name} {targetField.data_type !== sourceField.data_type && '(inkompatibler Typ)'}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -298,7 +353,7 @@ export default function FieldMappingPage() {
               ) : (
                 <Save className="mr-2 h-4 w-4" />
               )}
-              Save Mappings
+              Zuordnungen speichern
             </Button>
           </CardFooter>
         </Card>
