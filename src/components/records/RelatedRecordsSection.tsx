@@ -9,6 +9,11 @@ interface RelatedRecordsSectionProps {
 }
 
 export function RelatedRecordsSection({ section }: RelatedRecordsSectionProps) {
+  // Add null checking to handle potential undefined values
+  if (!section || !section.objectType) {
+    return null; // Don't render anything if section or objectType is missing
+  }
+
   return (
     <Card className="shadow-sm w-full max-w-full overflow-hidden">
       <CardHeader className="flex flex-row items-center justify-between border-b pb-4">

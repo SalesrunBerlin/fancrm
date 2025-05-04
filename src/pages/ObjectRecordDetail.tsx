@@ -1,4 +1,3 @@
-
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useObjectFields } from "@/hooks/useObjectFields";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
@@ -7,7 +6,7 @@ import { RecordDetailForm } from "@/components/records/RecordDetailForm";
 import { Button } from "@/components/ui/button";
 import { Loader2, ArrowLeft, Edit, Trash2 } from "lucide-react";
 import { format } from "date-fns";
-import { RelatedRecordsSection } from "@/components/records/RelatedRecordsSection";
+import { RelatedRecordsList } from "@/components/records/RelatedRecordsList";
 import { useObjectRecords } from "@/hooks/useObjectRecords";
 import { RecordDeleteDialog } from "@/components/records/RecordDeleteDialog";
 import { useState } from "react";
@@ -106,11 +105,19 @@ export default function ObjectRecordDetail() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
-          <RecordDetailForm record={record} fields={fields} objectTypeId={objectTypeId!} />
+          <RecordDetailForm 
+            record={record} 
+            fields={fields} 
+            objectTypeId={objectTypeId!}
+            onFieldChange={() => {}} // Provide an empty function since this is view-only mode
+            editedValues={{}} // Provide an empty object for editedValues
+          />
         </div>
         
         <div className="space-y-6">
-          <RelatedRecordsSection objectTypeId={objectTypeId!} recordId={recordId!} />
+          {recordId && objectTypeId && (
+            <RelatedRecordsList objectTypeId={objectTypeId} recordId={recordId} />
+          )}
         </div>
       </div>
 

@@ -31,7 +31,10 @@ export function RelatedRecordsList({ objectTypeId, recordId }: RelatedRecordsLis
   return (
     <div className="space-y-8 w-full max-w-full">
       {relatedSections.map((section) => (
-        <RelatedRecordsSection key={section.relationship.id + "-" + section.objectType.id} section={section} />
+        section && <RelatedRecordsSection 
+          key={`${section.relationship?.id || 'unknown'}-${section.objectType?.id || 'unknown'}`} 
+          section={section} 
+        />
       ))}
     </div>
   );
