@@ -8,8 +8,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { Loader2, Plus, Users, Trash2 } from 'lucide-react';
+import { Loader2, Plus, Users, Trash2, AlertTriangle } from 'lucide-react';
 import { useCollections } from '@/hooks/useCollections';
+import { toast } from 'sonner';
 
 export default function CollectionsPage() {
   const { user } = useAuth();
@@ -23,11 +24,17 @@ export default function CollectionsPage() {
   const { 
     collections, 
     isLoading, 
+    error,
     createCollection, 
     deleteCollection 
   } = useCollections();
 
   const handleCreateCollection = async () => {
+    if (!newCollectionName.trim()) {
+      toast.error('Collection name is required');
+      return;
+    }
+    
     try {
       setIsSubmitting(true);
       const result = await createCollection.mutateAsync({
@@ -42,10 +49,39 @@ export default function CollectionsPage() {
       }
     } catch (error) {
       console.error('Error creating collection:', error);
+      // Error is already handled in the mutation
     } finally {
       setIsSubmitting(false);
     }
   };
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <PageHeader
+          title="Sharing Collections"
+          description="Manage groups of records that you want to share with other users."
+        />
+        <Card className="text-center p-8">
+          <div className="space-y-4">
+            <div className="flex justify-center">
+              <AlertTriangle className="h-12 w-12 text-amber-500" />
+            </div>
+            <h3 className="text-lg font-medium">Error loading collections</h3>
+            <p className="text-muted-foreground">
+              {(error as Error).message || 'There was an error loading your collections. Please try again.'}
+            </p>
+            <Button 
+              onClick={() => window.location.reload()}
+              variant="outline"
+            >
+              Retry
+            </Button>
+          </div>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

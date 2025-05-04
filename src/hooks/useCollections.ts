@@ -15,6 +15,7 @@ export function useCollections() {
     queryFn: async (): Promise<CollectionShare[]> => {
       if (!user) return [];
       
+      // Simplified query that relies on RLS policies
       const { data, error } = await supabase
         .from('sharing_collections')
         .select('*');
@@ -26,31 +27,40 @@ export function useCollections() {
       
       // For each collection, get member count and record count
       const collectionsWithCounts = await Promise.all((data || []).map(async (collection) => {
-        // Get member count
-        const { count: memberCount, error: memberError } = await supabase
-          .from('collection_members')
-          .select('*', { count: 'exact', head: true })
-          .eq('collection_id', collection.id);
-        
-        if (memberError) {
-          console.error('Error fetching member count:', memberError);
+        try {
+          // Get member count
+          const { count: memberCount, error: memberError } = await supabase
+            .from('collection_members')
+            .select('*', { count: 'exact', head: true })
+            .eq('collection_id', collection.id);
+          
+          if (memberError) {
+            console.error('Error fetching member count:', memberError);
+          }
+          
+          // Get record count
+          const { count: recordCount, error: recordError } = await supabase
+            .from('collection_records')
+            .select('*', { count: 'exact', head: true })
+            .eq('collection_id', collection.id);
+          
+          if (recordError) {
+            console.error('Error fetching record count:', recordError);
+          }
+          
+          return {
+            ...collection,
+            memberCount: memberCount || 0,
+            recordCount: recordCount || 0
+          };
+        } catch (error) {
+          console.error(`Error processing collection ${collection.id}:`, error);
+          return {
+            ...collection,
+            memberCount: 0,
+            recordCount: 0
+          };
         }
-        
-        // Get record count
-        const { count: recordCount, error: recordError } = await supabase
-          .from('collection_records')
-          .select('*', { count: 'exact', head: true })
-          .eq('collection_id', collection.id);
-        
-        if (recordError) {
-          console.error('Error fetching record count:', recordError);
-        }
-        
-        return {
-          ...collection,
-          memberCount: memberCount || 0,
-          recordCount: recordCount || 0
-        };
       }));
       
       return collectionsWithCounts as any;
