@@ -38,7 +38,7 @@ export function useInitializeObjects() {
         toast.error("Error initializing objects", {
           description: errorMessage
         });
-        throw error; 
+        throw new Error(errorMessage); // Changed from throwing the raw error to throwing an Error with message
       } finally {
         setIsInitializing(false);
       }

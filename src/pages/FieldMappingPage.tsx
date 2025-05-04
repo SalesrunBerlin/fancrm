@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -10,7 +9,7 @@ import { useFieldMappings } from "@/hooks/useFieldMappings";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, ArrowLeft, Check, Save } from "lucide-react";
+import { Loader2, ArrowLeft, Save } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 
@@ -355,7 +354,7 @@ export default function FieldMappingPage() {
                         <SelectValue placeholder="Feld auswählen" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">-- Dieses Feld überspringen --</SelectItem>
+                        <SelectItem value="skip">-- Dieses Feld überspringen --</SelectItem>
                         {targetFields?.map((targetField) => (
                           <SelectItem 
                             key={targetField.id} 
