@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useFormContext } from "react-hook-form";
 import { FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
@@ -14,7 +13,7 @@ interface RecordFieldProps {
     name: string;
     api_name: string;
     data_type: string;
-    is_required: boolean;
+    is_required?: boolean; // Making is_required optional to match ObjectField type
     options?: any;
   };
   form: any;

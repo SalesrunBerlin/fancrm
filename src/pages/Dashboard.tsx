@@ -4,9 +4,19 @@ import { useObjectTypes } from "@/hooks/useObjectTypes";
 import { useObjectRecords } from "@/hooks/useObjectRecords";
 import { Box, Building, Briefcase, Calendar, User } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function Dashboard() {
   const { objectTypes } = useObjectTypes();
+  const { user } = useAuth();
+  
+  // Filter objects to only show those owned by the current user
+  const userObjectTypes = objectTypes?.filter(type => 
+    // Only show objects that:
+    // 1. Are owned by the current user OR
+    // 2. Are system objects that are active
+    (type.owner_id === user?.id || (type.is_system && type.is_active))
+  );
   
   const getIconComponent = (iconName: string | null) => {
     switch(iconName) {
@@ -35,7 +45,7 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        {objectTypes?.filter(type => type.is_active).map((objectType) => (
+        {userObjectTypes?.filter(type => type.is_active).map((objectType) => (
           <Link 
             key={objectType.id} 
             to={`/objects/${objectType.id}`}
