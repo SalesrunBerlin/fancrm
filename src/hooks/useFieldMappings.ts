@@ -3,16 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
-
-type FieldMapping = {
-  id: string;
-  source_user_id: string;
-  target_user_id: string;
-  source_object_id: string;
-  target_object_id: string;
-  source_field_api_name: string;
-  target_field_api_name: string;
-};
+import { UserFieldMapping, CreateFieldMapping } from '@/types/FieldMapping';
 
 export function useFieldMappings() {
   const { user } = useAuth();
@@ -23,13 +14,16 @@ export function useFieldMappings() {
     if (!objectId) return false;
 
     try {
+      console.log('Checking if object exists:', objectId);
       const { data, error } = await supabase
         .from('object_types')
         .select('id')
         .eq('id', objectId)
         .single();
       
-      return !error && data && data.id === objectId;
+      const exists = !error && data && data.id === objectId;
+      console.log('Object exists:', exists);
+      return exists;
     } catch (error) {
       console.error('Error checking object existence:', error);
       return false;
@@ -102,7 +96,7 @@ export function useFieldMappings() {
 
   // Save mappings
   const saveFieldMappings = useMutation({
-    mutationFn: async (mappings: FieldMapping[]) => {
+    mutationFn: async (mappings: CreateFieldMapping[]) => {
       if (!user) throw new Error('User not authenticated');
       if (!mappings.length) throw new Error('No mappings to save');
 
@@ -142,7 +136,6 @@ export function useFieldMappings() {
   });
 
   return {
-    mappings: [],
     checkObjectExists,
     getMappingsForShare,
     getMappingStatus,
@@ -150,4 +143,4 @@ export function useFieldMappings() {
   };
 }
 
-export type { FieldMapping };
+export type { UserFieldMapping, CreateFieldMapping };

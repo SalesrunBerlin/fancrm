@@ -59,9 +59,11 @@ export function TargetObjectCreator({ sourceObject, onObjectCreated }: TargetObj
         console.log("Created object type:", objectData);
         
         // Step 2: Create the fields for the new object
-        const fieldPromises = sourceObject.fields.map(field => {
+        for (const field of sourceObject.fields) {
           console.log("Creating field:", field);
-          return supabase
+          
+          // Create each field as a separate operation to avoid bulk issues
+          const { error: fieldError } = await supabase
             .from('object_fields')
             .insert({
               object_type_id: objectData.id,
@@ -71,15 +73,11 @@ export function TargetObjectCreator({ sourceObject, onObjectCreated }: TargetObj
               owner_id: user.id,
               is_required: field.data_type === 'text' && field.name.toLowerCase().includes('name')
             });
-        });
-        
-        const fieldResults = await Promise.all(fieldPromises);
-        
-        // Check for field creation errors
-        const fieldErrors = fieldResults.filter(result => result.error);
-        if (fieldErrors.length > 0) {
-          console.error("Errors creating fields:", fieldErrors);
-          // We don't throw here as we want to return the object even if some fields failed
+            
+          if (fieldError) {
+            console.error("Error creating field:", field.name, fieldError);
+            // Continue creating other fields but log the error
+          }
         }
         
         return objectData;
@@ -91,6 +89,8 @@ export function TargetObjectCreator({ sourceObject, onObjectCreated }: TargetObj
         }
         setError("Failed to create object type");
         throw new Error("Failed to create object type");
+      } finally {
+        setIsCreating(false);
       }
     },
     onSuccess: (data) => {
@@ -105,9 +105,6 @@ export function TargetObjectCreator({ sourceObject, onObjectCreated }: TargetObj
         description: errorMessage
       });
       setError(errorMessage);
-    },
-    onSettled: () => {
-      setIsCreating(false);
     }
   });
 

@@ -177,7 +177,10 @@ export default function FieldMappingPage() {
       toast.error('Please map at least one field');
       return;
     }
+
+    console.log('Preparing field mappings to save');
     
+    // Use the CreateFieldMapping type which doesn't require an 'id'
     const mappingsToSave = validMappings.map(mapping => ({
       source_user_id: shareData.shared_by_user_id,
       target_user_id: user.id,
@@ -190,8 +193,8 @@ export default function FieldMappingPage() {
     saveFieldMappings.mutate(mappingsToSave, {
       onSuccess: () => {
         toast.success("Mappings saved successfully");
-        // Navigate to shared records page
-        navigate("/shared-records");
+        // Navigate to shared record page
+        navigate(`/shared-record/${shareData.record_id}`);
       }
     });
   };

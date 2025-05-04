@@ -24,7 +24,7 @@ export function SharedRecordView() {
   const { recordId } = useParams<{ recordId: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { mappings, getMappingsForShare } = useFieldMappings();
+  const { getMappingsForShare } = useFieldMappings();
   const [userMappings, setUserMappings] = useState<any[]>([]);
   const [loadingError, setLoadingError] = useState<string | null>(null);
   
@@ -51,11 +51,15 @@ export function SharedRecordView() {
           `)
           .eq('record_id', recordId)
           .eq('shared_with_user_id', user.id)
-          .single();
+          .maybeSingle();
           
         if (error) {
           console.error('Error fetching share:', error);
           throw error;
+        }
+        
+        if (!data) {
+          throw new Error('Share record not found');
         }
         
         console.log('Share data retrieved:', data);
@@ -83,11 +87,27 @@ export function SharedRecordView() {
           .from('object_records')
           .select('object_type_id')
           .eq('id', recordId)
-          .single();
+          .maybeSingle();
           
         if (recordError) {
           console.error('Error fetching record details:', recordError);
           throw recordError;
+        }
+        
+        if (!recordDetails) {
+          throw new Error('Record not found');
+        }
+        
+        // Get object type information
+        const { data: objectTypeData, error: objectTypeError } = await supabase
+          .from('object_types')
+          .select('name, api_name')
+          .eq('id', recordDetails.object_type_id)
+          .maybeSingle();
+          
+        if (objectTypeError) {
+          console.error('Error fetching object type:', objectTypeError);
+          throw objectTypeError;
         }
         
         // Then get the values
@@ -111,6 +131,8 @@ export function SharedRecordView() {
         
         return {
           objectTypeId: recordDetails.object_type_id,
+          objectTypeName: objectTypeData?.name || 'Unknown Object',
+          objectTypeApiName: objectTypeData?.api_name || '',
           fieldValues: fieldValues.reduce((acc, item) => {
             acc[item.field_api_name] = item.value;
             return acc;
@@ -252,7 +274,7 @@ export function SharedRecordView() {
       
       <Card>
         <CardHeader>
-          <h2 className="text-2xl font-bold">Shared Record View</h2>
+          <h2 className="text-2xl font-bold">{recordData.objectTypeName}</h2>
           <p className="text-muted-foreground">
             Shared by {userName}
           </p>

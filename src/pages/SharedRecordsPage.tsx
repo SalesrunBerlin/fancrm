@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useQuery } from '@tanstack/react-query';
@@ -59,7 +58,39 @@ export default function SharedRecordsPage() {
         }
         
         console.log('Records shared with me:', data?.length);
-        return data || [];
+        
+        // For each shared record, get the object type info
+        const enhancedData = await Promise.all((data || []).map(async (share) => {
+          if (!share.record_id) return share;
+          
+          try {
+            // Get the object record
+            const { data: recordData } = await supabase
+              .from('object_records')
+              .select('object_type_id')
+              .eq('id', share.record_id)
+              .maybeSingle();
+              
+            if (!recordData) return share;
+            
+            // Get the object type name
+            const { data: objectTypeData } = await supabase
+              .from('object_types')
+              .select('name')
+              .eq('id', recordData.object_type_id)
+              .maybeSingle();
+              
+            return {
+              ...share,
+              objectTypeName: objectTypeData?.name || 'Unknown Type'
+            };
+          } catch (err) {
+            console.error('Error enhancing shared record data:', err);
+            return share;
+          }
+        }));
+        
+        return enhancedData || [];
       } catch (error) {
         console.error('Error in sharedWithMe query:', error);
         toast.error("Could not load shared records");
@@ -237,7 +268,12 @@ export default function SharedRecordsPage() {
                 <Card key={share.id}>
                   <CardHeader className="pb-2">
                     <div className="flex items-center justify-between">
-                      <CardTitle className="text-lg">Geteilt von {formatUserName(share.shared_by_user)}</CardTitle>
+                      <CardTitle className="text-lg">
+                        {(share as any).objectTypeName || 'Shared Record'} 
+                        <span className="text-sm font-normal ml-2 text-muted-foreground">
+                          von {formatUserName(share.shared_by_user)}
+                        </span>
+                      </CardTitle>
                       {mappingStatuses[share.id] && (
                         <TooltipProvider>
                           <Tooltip>
