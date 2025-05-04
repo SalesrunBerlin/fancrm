@@ -40,6 +40,9 @@ export interface CollectionShare {
   members: CollectionMember[];
   records: string[];
   fields: CollectionField[];
+  // Add missing properties
+  memberCount?: number;
+  recordCount?: number;
 }
 
 export interface CollectionMember {

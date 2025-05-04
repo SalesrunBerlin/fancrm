@@ -1,4 +1,3 @@
-
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useObjectFields } from "@/hooks/useObjectFields";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
@@ -128,8 +127,7 @@ export default function ObjectRecordDetail() {
         open={isDeleteDialogOpen}
         onOpenChange={setIsDeleteDialogOpen}
         onConfirm={handleDeleteRecord}
-        displayName={displayName}
-        objectTypeName={objectType.name}
+        objectTypeName={objectType?.name || ''}
       />
     </div>
   );

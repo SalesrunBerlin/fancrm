@@ -227,3 +227,6 @@ export function useRecordShares(recordId?: string) {
     removeShare
   };
 }
+
+// Export RecordShare for use in other components
+export type { RecordShare };

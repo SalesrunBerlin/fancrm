@@ -41,19 +41,23 @@ export function SharedRecordsBadge({ recordId }: SharedRecordsBadgeProps) {
     queryFn: async (): Promise<number> => {
       if (!user || !recordId) return 0;
       
+      // Fix the in() query by getting the collection IDs first, then using them in the query
+      const { data: collectionsData } = await supabase
+        .from('sharing_collections')
+        .select('id')
+        .eq('owner_id', user.id);
+      
+      if (!collectionsData || collectionsData.length === 0) {
+        return 0;
+      }
+      
+      const collectionIds = collectionsData.map(col => col.id);
+      
       const { count, error } = await supabase
         .from('collection_records')
-        .select(`
-          id,
-          collection_id,
-          record_id
-        `, { count: 'exact', head: true })
+        .select('*', { count: 'exact', head: true })
         .eq('record_id', recordId)
-        .in('collection_id', supabase
-          .from('sharing_collections')
-          .select('id')
-          .eq('owner_id', user.id)
-        );
+        .in('collection_id', collectionIds);
       
       if (error) {
         console.error('Error fetching collection count:', error);
