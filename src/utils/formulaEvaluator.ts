@@ -1,3 +1,4 @@
+
 import { format } from 'date-fns';
 
 type FormulaContext = {
@@ -51,6 +52,20 @@ export function evaluateFormula(expression: string | null | undefined, context: 
   if (result === 'undefined') {
     console.log("Formula evaluated to 'undefined' string - returning null instead");
     return null;
+  }
+  
+  // Additional checks for UUID fields
+  if (result && (
+      result === 'null' || 
+      result === 'undefined' || 
+      result === '' ||
+      !/^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})?$/i.test(result)
+    )) {
+    if (expression.includes('.') && expression.includes('FieldName')) {
+      // This is likely a lookup field reference that couldn't be resolved
+      console.log("Formula appears to be a lookup field that couldn't be resolved:", result);
+      return null;
+    }
   }
   
   console.log("Formula evaluation result:", result);
@@ -132,6 +147,15 @@ function replaceFieldReferences(
           return '';
         }
         
+        // Additional validation for UUID values
+        if (fieldName.toLowerCase().includes('id') && typeof lookupValue === 'string') {
+          // Check if it's a valid UUID format
+          if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(lookupValue)) {
+            console.log(`Invalid UUID format for lookup field ${lookupField}.${fieldName}: ${lookupValue}`);
+            return '';
+          }
+        }
+        
         return String(lookupValue);
       }
 
@@ -166,6 +190,13 @@ function replaceFieldReferences(
         console.log(`Field ${fieldName} has no value, returning empty string`);
         return '';
       } else {
+        // For fields that might be UUIDs, validate the format
+        if (fieldName.toLowerCase().includes('id') && typeof value === 'string') {
+          if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)) {
+            console.log(`Invalid UUID format for field ${fieldName}: ${value}`);
+            return '';
+          }
+        }
         return String(value);
       }
     }

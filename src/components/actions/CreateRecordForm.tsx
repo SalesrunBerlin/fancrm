@@ -62,7 +62,7 @@ export function CreateRecordForm({
   const [enhancedFields, setEnhancedFields] = useState<ObjectField[]>([]);
   const [formulaWarnings, setFormulaWarnings] = useState<Record<string, string>>({});
   const [formReady, setFormReady] = useState(false);
-  const [debugMode, setDebugMode] = useState(false); // Enable for detailed logging
+  const [debugMode, setDebugMode] = useState(true); // Enable debug mode by default for troubleshooting
   
   // Filter only enabled fields or fields that are required by the object
   const enabledActionFields = actionFields.filter(af => 
@@ -169,7 +169,19 @@ export function CreateRecordForm({
               // Use empty string instead of null for form fields
               formulaDefaults[field.api_name] = '';
             } else {
-              formulaDefaults[field.api_name] = formulaValue || '';
+              // Handle lookup fields specially to ensure valid UUIDs
+              if (field.data_type === 'lookup' && formulaValue) {
+                if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(formulaValue)) {
+                  console.warn(`Invalid UUID format from formula for field ${field.api_name}: ${formulaValue}`);
+                  newFormulaWarnings[field.api_name] = 
+                    `Invalid UUID format from formula: ${formulaValue}`;
+                  formulaDefaults[field.api_name] = '';
+                } else {
+                  formulaDefaults[field.api_name] = formulaValue;
+                }
+              } else {
+                formulaDefaults[field.api_name] = formulaValue || '';
+              }
             }
             
             hasFormulaValues = true;
@@ -282,15 +294,27 @@ export function CreateRecordForm({
             }
           );
           
-          // Check if the formula returned null (unresolved)
-          if (formulaValue === null && actionField.formula_expression) {
-            newFormulaWarnings[field.api_name] = 
-              `Formula could not be resolved: ${actionField.formula_expression}`;
-            
-            // Use empty string instead of null for form fields
-            form.setValue(field.api_name, '');
+          // Handle lookup fields specially to ensure valid UUIDs
+          if (field.data_type === 'lookup' && formulaValue) {
+            if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(formulaValue)) {
+              console.warn(`Invalid UUID format from formula for field ${field.api_name}: ${formulaValue}`);
+              newFormulaWarnings[field.api_name] = 
+                `Invalid UUID format from formula: ${formulaValue}`;
+              form.setValue(field.api_name, '');
+            } else {
+              form.setValue(field.api_name, formulaValue);
+            }
           } else {
-            form.setValue(field.api_name, formulaValue || '');
+            // Check if the formula returned null (unresolved)
+            if (formulaValue === null && actionField.formula_expression) {
+              newFormulaWarnings[field.api_name] = 
+                `Formula could not be resolved: ${actionField.formula_expression}`;
+              
+              // Use empty string instead of null for form fields
+              form.setValue(field.api_name, '');
+            } else {
+              form.setValue(field.api_name, formulaValue || '');
+            }
           }
         }
       });
@@ -345,6 +369,11 @@ export function CreateRecordForm({
     return !hasUnresolvedRequiredFormulas;
   };
 
+  // Enhanced UUID validation function
+  const isValidUUID = (value: string): boolean => {
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+  };
+
   // Validate lookup fields to ensure they contain proper UUIDs
   const validateLookupFields = () => {
     const fieldValues = form.getValues();
@@ -358,14 +387,23 @@ export function CreateRecordForm({
       if (field.is_required) {
         // Check for null, undefined, empty string, or "undefined" string
         if (!value || value === '' || value === 'undefined' || 
-            !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)) {
+            !isValidUUID(String(value))) {
           console.log(`Invalid lookup value for ${field.api_name}: "${value}"`);
           hasInvalidLookupFields = true;
           form.setError(field.api_name, { 
             type: 'manual', 
-            message: 'Bitte wählen Sie einen gültigen Wert aus' 
+            message: `${field.name} muss einen gültigen Wert haben` 
           });
         }
+      } else if (value && value !== '' && value !== 'undefined' && 
+                !isValidUUID(String(value))) {
+        // For optional fields, if a value is provided, it must be a valid UUID
+        console.log(`Invalid lookup value for optional field ${field.api_name}: "${value}"`);
+        hasInvalidLookupFields = true;
+        form.setError(field.api_name, { 
+          type: 'manual', 
+          message: `${field.name} enthält einen ungültigen Wert` 
+        });
       }
     });
     
@@ -387,7 +425,7 @@ export function CreateRecordForm({
       
       if (field.data_type === 'lookup') {
         if (field.is_required && (!value || value === '' || value === 'undefined' || 
-            !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(value)))) {
+            !isValidUUID(String(value)))) {
           console.warn(`⚠️ Field ${field.name} (${field.api_name}) has invalid UUID value: "${value}"`);
           problematicFields.push(field.api_name);
         }
@@ -408,11 +446,58 @@ export function CreateRecordForm({
     console.groupEnd();
   };
 
+  // Clean form data to prevent invalid values
+  const cleanFormData = (data: Record<string, any>): Record<string, any> => {
+    const cleanedData: Record<string, any> = {};
+
+    // Process each field to ensure proper values
+    Object.entries(data).forEach(([fieldName, value]) => {
+      // Get corresponding field definition
+      const field = objectFields.find(f => f.api_name === fieldName);
+      if (!field) return;
+
+      // Handle different field types appropriately
+      if (field.data_type === 'lookup') {
+        // For lookup fields, validate UUID format if required
+        if (field.is_required) {
+          if (value && value !== 'undefined' && value !== '' && isValidUUID(String(value))) {
+            cleanedData[fieldName] = value;
+          } else {
+            console.log(`Filtering out invalid required lookup field ${fieldName}: "${value}"`);
+            // Don't include invalid values for required lookup fields
+          }
+        } else if (value && value !== 'undefined' && value !== '') {
+          // For optional fields, only include if valid
+          if (isValidUUID(String(value))) {
+            cleanedData[fieldName] = value;
+          } else {
+            console.log(`Filtering out invalid optional lookup value ${fieldName}: "${value}"`);
+          }
+        }
+      } 
+      // Handle other field types
+      else {
+        // Don't include fields with 'undefined' string
+        if (value === 'undefined') {
+          console.log(`Filtering out field ${fieldName} with "undefined" value`);
+        } else if (value === null && field.is_required) {
+          console.log(`Filtering out null value for required field ${fieldName}`);
+        } else {
+          cleanedData[fieldName] = value;
+        }
+      }
+    });
+
+    return cleanedData;
+  };
+
   const handleSubmit = async (data: Record<string, any>) => {
     if (!user) {
       setError("You must be logged in to create records");
       return;
     }
+    
+    console.log("CreateRecordForm: Submit button clicked");
     
     // Turn on debug mode for this submission
     setDebugMode(true);
@@ -435,31 +520,25 @@ export function CreateRecordForm({
       return;
     }
     
-    // Final cleanup of form data to prevent invalid values
-    const cleanedData: Record<string, any> = {};
+    // Clean the form data
+    const cleanedData = cleanFormData(data);
+    console.log("CreateRecordForm: Data after cleaning:", cleanedData);
     
-    // Process each field to ensure proper values
-    Object.entries(data).forEach(([fieldName, value]) => {
-      // Don't include fields with problematic values
-      if (value === 'undefined') {
-        console.log(`Filtering out field ${fieldName} with "undefined" value`);
-        return;
-      }
-      
-      // For lookup fields, ensure they have valid UUIDs
-      const field = objectFields.find(f => f.api_name === fieldName);
-      if (field?.data_type === 'lookup' && field.is_required) {
-        if (!value || value === '' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(value))) {
-          console.log(`Skipping invalid UUID for required lookup field ${fieldName}: ${value}`);
-          return;
-        }
-      }
-      
-      // Add the valid field value to the cleaned data
-      cleanedData[fieldName] = value;
-    });
+    // Check if we have any data left after cleaning
+    if (Object.keys(cleanedData).length === 0) {
+      setError("Keine gültigen Feldwerte gefunden. Bitte überprüfen Sie das Formular.");
+      return;
+    }
     
-    console.log("Submitting cleaned data:", cleanedData);
+    // Check required fields after cleaning
+    const missingRequiredFields = enabledObjectFields
+      .filter(field => field.is_required && !cleanedData[field.api_name])
+      .map(field => field.name);
+    
+    if (missingRequiredFields.length > 0) {
+      setError(`Bitte füllen Sie alle erforderlichen Felder aus: ${missingRequiredFields.join(', ')}`);
+      return;
+    }
     
     setIsSubmitting(true);
     
@@ -481,28 +560,20 @@ export function CreateRecordForm({
         throw recordError;
       }
       
+      console.log("Record created successfully:", record);
+      
       // Create the field values
       const fieldValues = Object.entries(cleanedData).map(([api_name, value]) => {
         // For null or undefined values, set to null
         const processedValue = 
           value === undefined || value === null || value === 'undefined' ? null : String(value);
         
-        // Handle lookup fields specially to ensure valid UUIDs
-        const field = objectFields.find(f => f.api_name === api_name);
-        if (field?.data_type === 'lookup' && processedValue !== null) {
-          // Validate UUID format
-          if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(processedValue)) {
-            console.warn(`Skipping invalid UUID for field ${api_name}: ${processedValue}`);
-            return null; // Skip this field value
-          }
-        }
-        
         return {
           record_id: record.id,
           field_api_name: api_name,
           value: processedValue,
         };
-      }).filter(Boolean); // Filter out any null entries
+      });
       
       console.log("Inserting field values:", fieldValues);
       
@@ -521,8 +592,13 @@ export function CreateRecordForm({
       onSuccess();
     } catch (err: any) {
       console.error("Error creating record:", err);
+      // Provide more specific error messages based on the error
       if (err.message && err.message.includes("invalid input syntax for type uuid")) {
         setError("Ein oder mehrere Felder enthalten ungültige Werte. Bitte überprüfen Sie die Lookup-Felder und Formeln.");
+      } else if (err.message && err.message.includes("violates not-null constraint")) {
+        setError("Ein erforderliches Feld wurde nicht ausgefüllt.");
+      } else if (err.message && err.message.includes("duplicate key value")) {
+        setError("Ein Datensatz mit diesem Schlüsselwert existiert bereits.");
       } else {
         setError(err.message || "Failed to create record");
       }

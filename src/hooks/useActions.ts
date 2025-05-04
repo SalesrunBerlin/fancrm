@@ -58,7 +58,7 @@ export type ActionColor =
 export interface Action {
   id: string;
   name: string;
-  description?: string;
+  description?: string | null;
   action_type: ActionType;
   target_object_id: string;
   source_field_id?: string | null;
@@ -221,8 +221,8 @@ export function useActions() {
         console.error("Error fetching mass actions:", massActionsError);
       }
 
-      // Combine all actions and ensure the colors are properly typed
-      const allActions = [
+      // Fixed TypeScript error: Explicitly ensure all items are properly typed with ActionColor
+      const allActions: Action[] = [
         ...(targetActions?.map(action => ({
           ...action,
           color: (action.color || 'default') as ActionColor
@@ -238,7 +238,7 @@ export function useActions() {
       ];
       
       console.log(`useActions.getActionsByObjectId: Found ${allActions.length} actions total for ${objectTypeId}`);
-      return allActions as Action[];
+      return allActions;
     } catch (error) {
       console.error("Exception in getActionsByObjectId:", error);
       throw error;
