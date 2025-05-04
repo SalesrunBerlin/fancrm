@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { supabase } from "@/integrations/supabase/client";
@@ -67,13 +68,23 @@ export default function ProfilePage() {
   const onSubmit = async (values: ProfileFormValues) => {
     setIsLoading(true);
     try {
-      const { error } = await supabase.from("profiles").upsert({
-        id: user?.id,
-        first_name: values.firstName,
-        last_name: values.lastName,
-        screen_name: values.screenName,
-        updated_at: new Date().toISOString(),
-      });
+      // Logging für Debugging-Zwecke
+      console.log("Updating profile with values:", values);
+      console.log("Current user ID:", user?.id);
+      
+      if (!user?.id) {
+        throw new Error("User ID is missing");
+      }
+      
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          first_name: values.firstName,
+          last_name: values.lastName,
+          screen_name: values.screenName,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", user.id);
 
       if (error) {
         console.error("Error updating profile:", error);
@@ -83,6 +94,12 @@ export default function ProfilePage() {
       } else {
         toast.success("Profile updated successfully!");
       }
+    } catch (error) {
+      console.error("Exception during profile update:", error);
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
+      toast.error("Error updating profile", {
+        description: errorMessage,
+      });
     } finally {
       setIsLoading(false);
     }
@@ -93,7 +110,6 @@ export default function ProfilePage() {
       <PageHeader
         title="My Profile"
         description="View and edit your profile information."
-        // Remove the icon prop since it's not in the PageHeaderProps type
       />
 
       <Card>

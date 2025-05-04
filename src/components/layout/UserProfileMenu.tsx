@@ -13,10 +13,31 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { LogOut, Settings, User } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 export function UserProfileMenu() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const [screenName, setScreenName] = useState<string | null>(null);
+  
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (user?.id) {
+        const { data, error } = await supabase
+          .from("profiles")
+          .select("screen_name")
+          .eq("id", user.id)
+          .single();
+        
+        if (!error && data) {
+          setScreenName(data.screen_name);
+        }
+      }
+    };
+    
+    fetchProfile();
+  }, [user]);
   
   const handleLogout = async () => {
     await logout();
@@ -25,8 +46,9 @@ export function UserProfileMenu() {
 
   // Get user initials for avatar
   const getInitials = () => {
-    if (!user?.email) return "U";
-    return user.email.charAt(0).toUpperCase();
+    if (screenName) return screenName.charAt(0).toUpperCase();
+    if (user?.email) return user.email.charAt(0).toUpperCase();
+    return "U";
   };
 
   return (
@@ -34,7 +56,7 @@ export function UserProfileMenu() {
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="relative h-8 w-8 rounded-full">
           <Avatar className="h-8 w-8">
-            <AvatarImage src="/avatar.png" alt={user?.email || "User"} />
+            <AvatarImage src="/avatar.png" alt={screenName || user?.email || "User"} />
             <AvatarFallback>{getInitials()}</AvatarFallback>
           </Avatar>
         </Button>
@@ -42,7 +64,10 @@ export function UserProfileMenu() {
       <DropdownMenuContent className="w-56" align="end" forceMount>
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium leading-none">{user?.email}</p>
+            <p className="text-sm font-medium leading-none">{screenName || user?.email}</p>
+            {screenName && user?.email && screenName !== user.email && (
+              <p className="text-xs text-muted-foreground">{user.email}</p>
+            )}
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
