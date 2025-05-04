@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
-import { CollectionShare } from '@/types/RecordSharing';
+import { CollectionShare, CollectionMember } from '@/types/RecordSharing';
 
 export function useCollections() {
   const { user } = useAuth();
@@ -50,6 +50,34 @@ export function useCollections() {
     },
     enabled: !!user,
   });
+
+  // Get a single collection by ID
+  const useCollection = (collectionId: string | undefined) => {
+    return useQuery({
+      queryKey: ['collection', collectionId],
+      queryFn: async (): Promise<CollectionShare | null> => {
+        if (!user || !collectionId) return null;
+        
+        const { data, error } = await supabase
+          .from('sharing_collections')
+          .select('*')
+          .eq('id', collectionId)
+          .eq('owner_id', user.id)
+          .single();
+        
+        if (error) {
+          if (error.code === 'PGRST116') {
+            return null; // Not found
+          }
+          console.error('Error fetching collection:', error);
+          throw error;
+        }
+        
+        return data as CollectionShare;
+      },
+      enabled: !!user && !!collectionId,
+    });
+  };
   
   // Create a new collection
   const createCollection = useMutation({
@@ -86,6 +114,46 @@ export function useCollections() {
     }
   });
   
+  // Update a collection
+  const updateCollection = useMutation({
+    mutationFn: async ({ 
+      id, 
+      name, 
+      description 
+    }: { 
+      id: string; 
+      name: string; 
+      description?: string;
+    }) => {
+      if (!user) throw new Error('You must be logged in');
+      if (!name.trim()) throw new Error('Collection name is required');
+      
+      const { data, error } = await supabase
+        .from('sharing_collections')
+        .update({
+          name: name.trim(),
+          description: description?.trim() || null,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', id)
+        .eq('owner_id', user.id)
+        .select();
+      
+      if (error) throw error;
+      return data[0];
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['collections'] });
+      queryClient.invalidateQueries({ queryKey: ['collection', variables.id] });
+      toast.success('Collection updated');
+    },
+    onError: (error: any) => {
+      toast.error('Failed to update collection', {
+        description: error.message
+      });
+    }
+  });
+  
   // Delete a collection
   const deleteCollection = useMutation({
     mutationFn: async (collectionId: string) => {
@@ -104,6 +172,138 @@ export function useCollections() {
     },
     onError: (error: any) => {
       toast.error('Failed to delete collection', {
+        description: error.message
+      });
+    }
+  });
+  
+  // Get collection members
+  const useCollectionMembers = (collectionId: string | undefined) => {
+    return useQuery({
+      queryKey: ['collection-members', collectionId],
+      queryFn: async (): Promise<CollectionMember[]> => {
+        if (!user || !collectionId) return [];
+        
+        const { data, error } = await supabase
+          .from('collection_members')
+          .select(`
+            *,
+            user_profile:profiles!user_id(
+              id,
+              first_name,
+              last_name,
+              avatar_url,
+              screen_name
+            )
+          `)
+          .eq('collection_id', collectionId);
+        
+        if (error) {
+          console.error('Error fetching collection members:', error);
+          throw error;
+        }
+        
+        return data as any;
+      },
+      enabled: !!user && !!collectionId,
+    });
+  };
+  
+  // Add a member to a collection
+  const addMember = useMutation({
+    mutationFn: async ({ 
+      collectionId, 
+      userId, 
+      permissionLevel 
+    }: { 
+      collectionId: string; 
+      userId: string; 
+      permissionLevel: 'read' | 'edit';
+    }) => {
+      if (!user) throw new Error('You must be logged in');
+      
+      const { data, error } = await supabase
+        .from('collection_members')
+        .insert({
+          collection_id: collectionId,
+          user_id: userId,
+          permission_level: permissionLevel
+        })
+        .select();
+      
+      if (error) throw error;
+      return data[0];
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['collection-members', variables.collectionId] });
+      toast.success('Member added to collection');
+    },
+    onError: (error: any) => {
+      toast.error('Failed to add member', {
+        description: error.message
+      });
+    }
+  });
+  
+  // Remove a member from a collection
+  const removeMember = useMutation({
+    mutationFn: async ({ 
+      collectionId, 
+      memberId 
+    }: { 
+      collectionId: string; 
+      memberId: string;
+    }) => {
+      if (!user) throw new Error('You must be logged in');
+      
+      const { error } = await supabase
+        .from('collection_members')
+        .delete()
+        .eq('id', memberId)
+        .eq('collection_id', collectionId);
+      
+      if (error) throw error;
+      return { memberId };
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['collection-members', variables.collectionId] });
+      toast.success('Member removed from collection');
+    },
+    onError: (error: any) => {
+      toast.error('Failed to remove member', {
+        description: error.message
+      });
+    }
+  });
+  
+  // Update member permission level
+  const updateMemberPermission = useMutation({
+    mutationFn: async ({ 
+      collectionId, 
+      memberId, 
+      permissionLevel 
+    }: { 
+      collectionId: string; 
+      memberId: string; 
+      permissionLevel: 'read' | 'edit';
+    }) => {
+      if (!user) throw new Error('You must be logged in');
+      
+      const { error } = await supabase
+        .from('collection_members')
+        .update({ permission_level: permissionLevel })
+        .eq('id', memberId)
+        .eq('collection_id', collectionId);
+      
+      if (error) throw error;
+      return { memberId, permissionLevel };
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['collection-members', variables.collectionId] });
+      toast.success('Member permissions updated');
+    },
+    onError: (error: any) => {
+      toast.error('Failed to update permissions', {
         description: error.message
       });
     }
@@ -186,7 +386,13 @@ export function useCollections() {
     isLoading,
     error,
     createCollection,
+    updateCollection,
     deleteCollection,
+    useCollection,
+    useCollectionMembers,
+    addMember,
+    removeMember,
+    updateMemberPermission,
     addRecordsToCollection,
     removeRecordsFromCollection
   };
