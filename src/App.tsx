@@ -33,6 +33,8 @@ import ActionCreatePage from "./pages/ActionCreatePage";
 import ActionDetailPage from "./pages/ActionDetailPage";
 import ActionExecutePage from "./pages/ActionExecutePage";
 import MassActionPage from "./pages/MassActionPage";
+import CollectionsPage from "./pages/CollectionsPage";
+import CollectionDetailPage from "./pages/CollectionDetailPage";
 
 // Create a client
 const queryClient = new QueryClient({
@@ -82,6 +84,9 @@ function App() {
               <Route path="/actions/execute/:actionId" element={<ActionExecutePage />} />
               <Route path="/actions/execute/:actionId/from/:sourceRecordId" element={<ActionExecutePage />} />
               <Route path="/actions/mass/:actionId" element={<MassActionPage />} />
+              {/* Collections routes */}
+              <Route path="/collections" element={<CollectionsPage />} />
+              <Route path="/collections/:collectionId" element={<CollectionDetailPage />} />
             </Route>
           </Routes>
           <Toaster richColors position="top-right" />

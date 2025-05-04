@@ -1,89 +1,181 @@
 
-import { useNavigate, useLocation } from "react-router-dom";
+import { useState } from "react";
+import { NavLink } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Settings, LayoutDashboard, AppWindow, FileText } from "lucide-react";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
+import { Loader2, LayoutDashboard, Settings, Shapes, AppWindow, Play, Share2 } from "lucide-react";
+
+type NavItem = {
+  label: string;
+  href: string;
+  icon: JSX.Element;
+};
 
 export function AppNavigation() {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const { objectTypes } = useObjectTypes();
+  const { objectTypes, isLoading } = useObjectTypes();
+  const [openGroups, setOpenGroups] = useState<Set<string>>(new Set(["default"]));
 
-  const isActive = (path: string) => {
-    return location.pathname === path;
+  // Toggle a group open/closed
+  const toggleGroup = (group: string) => {
+    const newOpenGroups = new Set(openGroups);
+    if (newOpenGroups.has(group)) {
+      newOpenGroups.delete(group);
+    } else {
+      newOpenGroups.add(group);
+    }
+    setOpenGroups(newOpenGroups);
   };
 
-  return (
-    <ScrollArea className="h-full py-6">
-      <div className="space-y-4 px-3">
-        <div className="px-4 py-2">
-          <h2 className="mb-2 px-2 text-lg font-semibold tracking-tight">
-            General
-          </h2>
-          <div className="space-y-1">
-            <Button
-              variant={isActive("/dashboard") ? "secondary" : "ghost"}
-              className="w-full justify-start"
-              onClick={() => navigate("/dashboard")}
-            >
-              <LayoutDashboard className="mr-2 h-4 w-4" />
-              Dashboard
-            </Button>
+  const defaultNavItems: NavItem[] = [
+    {
+      label: "Dashboard",
+      href: "/",
+      icon: <LayoutDashboard className="h-4 w-4" />,
+    },
+    {
+      label: "Settings",
+      href: "/settings",
+      icon: <Settings className="h-4 w-4" />,
+    },
+  ];
+  
+  // Define navigation items for data management
+  const dataNavItems: NavItem[] = [
+    {
+      label: "Applications",
+      href: "/applications",
+      icon: <AppWindow className="h-4 w-4" />,
+    },
+    {
+      label: "Structures",
+      href: "/structures",
+      icon: <Shapes className="h-4 w-4" />,
+    },
+    {
+      label: "Actions",
+      href: "/actions",
+      icon: <Play className="h-4 w-4" />,
+    },
+    {
+      label: "Sharing",
+      href: "/collections",
+      icon: <Share2 className="h-4 w-4" />,
+    },
+  ];
 
-            <Button
-              variant={isActive("/applications") ? "secondary" : "ghost"}
-              className="w-full justify-start"
-              onClick={() => navigate("/applications")}
-            >
-              <AppWindow className="mr-2 h-4 w-4" />
-              Applications
-            </Button>
-
-            <Button
-              variant={isActive("/structures") ? "secondary" : "ghost"}
-              className="w-full justify-start"
-              onClick={() => navigate("/structures")}
-            >
-              <FileText className="mr-2 h-4 w-4" />
-              Structures
-            </Button>
-
-            <Button
-              variant={isActive("/settings") ? "secondary" : "ghost"}
-              className="w-full justify-start"
-              onClick={() => navigate("/settings")}
-            >
-              <Settings className="mr-2 h-4 w-4" />
-              Settings
-            </Button>
-          </div>
-        </div>
-
-        {objectTypes && objectTypes.length > 0 && (
-          <div className="px-4 py-2">
-            <h2 className="mb-2 px-2 text-lg font-semibold tracking-tight">
-              Custom Objects
-            </h2>
-            <div className="space-y-1">
-              {objectTypes
-                .filter(type => type.show_in_navigation && !type.is_archived)
-                .map(type => (
-                  <Button
-                    key={type.id}
-                    variant={isActive(`/objects/${type.id}`) ? "secondary" : "ghost"}
-                    className="w-full justify-start"
-                    onClick={() => navigate(`/objects/${type.id}`)}
-                  >
-                    <span className="mr-2">{type.icon || "📋"}</span>
-                    {type.name}
-                  </Button>
-                ))}
-            </div>
-          </div>
-        )}
-      </div>
-    </ScrollArea>
+  // Filter just the active object types that should appear in navigation
+  const navigationObjects = objectTypes?.filter(
+    (obj) => obj.show_in_navigation && obj.is_active && !obj.is_archived
   );
+
+  // Grouped by Application objects
+  return (
+    <nav className="grid items-start px-4 py-2 md:px-2">
+      {/* Default Navigation Items */}
+      <NavGroup
+        title="General"
+        groupId="default"
+        isOpen={openGroups.has("default")}
+        toggleOpen={() => toggleGroup("default")}
+      >
+        {defaultNavItems.map((item, index) => (
+          <NavItem key={index} {...item} />
+        ))}
+      </NavGroup>
+
+      {isLoading ? (
+        <div className="flex items-center justify-center py-4">
+          <Loader2 className="h-4 w-4 animate-spin" />
+        </div>
+      ) : (
+        <>
+          {/* Data Management */}
+          <NavGroup
+            title="Data Management"
+            groupId="data"
+            isOpen={openGroups.has("data")}
+            toggleOpen={() => toggleGroup("data")}
+          >
+            {dataNavItems.map((item, index) => (
+              <NavItem key={index} {...item} />
+            ))}
+          </NavGroup>
+
+          {/* Object Types Navigation */}
+          <NavGroup
+            title="Records"
+            groupId="objects"
+            isOpen={openGroups.has("objects")}
+            toggleOpen={() => toggleGroup("objects")}
+          >
+            {navigationObjects?.map((obj) => (
+              <NavItem
+                key={obj.id}
+                label={obj.name}
+                href={`/objects/${obj.id}`}
+                icon={getIconForObjectType(obj.icon)}
+              />
+            ))}
+          </NavGroup>
+        </>
+      )}
+    </nav>
+  );
+}
+
+interface NavGroupProps {
+  title: string;
+  children: React.ReactNode;
+  groupId: string;
+  isOpen: boolean;
+  toggleOpen: () => void;
+}
+
+function NavGroup({
+  title,
+  children,
+  groupId,
+  isOpen,
+  toggleOpen,
+}: NavGroupProps) {
+  return (
+    <div className="grid gap-1">
+      <div
+        className="flex h-8 items-center justify-between text-sm font-medium text-muted-foreground cursor-pointer py-4"
+        onClick={toggleOpen}
+        data-group-id={groupId}
+      >
+        <span>{title}</span>
+        <span className="text-xs">{isOpen ? "−" : "+"}</span>
+      </div>
+      {isOpen && <div className="grid gap-1">{children}</div>}
+    </div>
+  );
+}
+
+interface NavItemProps extends NavItem {}
+
+function NavItem({ label, href, icon }: NavItemProps) {
+  return (
+    <NavLink
+      to={href}
+      className={({ isActive }) =>
+        cn(
+          "group flex items-center rounded-md px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground",
+          isActive
+            ? "bg-accent text-accent-foreground"
+            : "text-muted-foreground"
+        )
+      }
+    >
+      {icon}
+      <span className="ml-3">{label}</span>
+    </NavLink>
+  );
+}
+
+function getIconForObjectType(icon?: string | null) {
+  // Map icon string to Lucide icon
+  // For now, just return a placeholder
+  return <div className="h-4 w-4" />;
 }

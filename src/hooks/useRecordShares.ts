@@ -20,7 +20,7 @@ export function useRecordShares(recordId?: string) {
         .from('record_shares')
         .select(`
           *,
-          user_profile:shared_with_user_id(
+          user_profile:profiles!shared_with_user_id(
             id,
             first_name,
             last_name,
@@ -35,7 +35,7 @@ export function useRecordShares(recordId?: string) {
         throw error;
       }
       
-      return (data || []) as RecordShare[];
+      return (data as any) || [];
     },
     enabled: !!recordId && !!user,
   });
@@ -59,7 +59,7 @@ export function useRecordShares(recordId?: string) {
       }
       
       // Group fields by share_id
-      return (data || []).reduce((acc, field) => {
+      return (data || []).reduce((acc, field: any) => {
         if (!acc[field.record_share_id]) {
           acc[field.record_share_id] = [];
         }

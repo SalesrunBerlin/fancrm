@@ -29,3 +29,36 @@ export interface ShareRecordParams {
   permissionLevel: 'read' | 'edit';
   visibleFields: string[];
 }
+
+export interface CollectionShare {
+  id: string;
+  name: string;
+  description: string | null;
+  owner_id: string;
+  created_at: string;
+  updated_at: string;
+  members: CollectionMember[];
+  records: string[];
+  fields: CollectionField[];
+}
+
+export interface CollectionMember {
+  id: string;
+  collection_id: string;
+  user_id: string;
+  permission_level: 'read' | 'edit';
+  user_profile?: {
+    id: string;
+    first_name: string | null;
+    last_name: string | null;
+    avatar_url: string | null;
+    screen_name: string | null;
+  };
+}
+
+export interface CollectionField {
+  id: string;
+  collection_id: string;
+  object_type_id: string;
+  field_api_name: string;
+}

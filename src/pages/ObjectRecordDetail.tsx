@@ -1,3 +1,4 @@
+
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useObjectFields } from "@/hooks/useObjectFields";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
@@ -12,6 +13,7 @@ import { RecordDeleteDialog } from "@/components/records/RecordDeleteDialog";
 import { useState } from "react";
 import { ShareButton } from "@/components/sharing/ShareButton";
 import { SharedRecordsBadge } from "@/components/sharing/SharedRecordsBadge";
+import { AddToCollectionButton } from "@/components/sharing/AddToCollectionButton";
 import { useAuth } from "@/contexts/AuthContext";
 
 export default function ObjectRecordDetail() {
@@ -75,6 +77,7 @@ export default function ObjectRecordDetail() {
           {isOwner && (
             <>
               <ShareButton recordId={recordId!} objectTypeId={objectTypeId!} />
+              <AddToCollectionButton recordId={recordId!} />
               <SharedRecordsBadge recordId={recordId!} />
             </>
           )}
