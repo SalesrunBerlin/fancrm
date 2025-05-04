@@ -14,6 +14,14 @@ import { useFieldMappings } from '@/hooks/useFieldMappings';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
+interface UserProfile {
+  id: string;
+  first_name: string | null;
+  last_name: string | null;
+  avatar_url: string | null;
+  screen_name: string | null;
+}
+
 export default function SharedRecordsPage() {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('shared-with-me');
@@ -26,10 +34,21 @@ export default function SharedRecordsPage() {
     queryFn: async () => {
       if (!user) return [];
       
-      // Use explicit join instead of foreign key reference
+      console.log('Fetching records shared with me');
+      
+      // Use explicit join with specific column names
       const { data, error } = await supabase
         .from('record_shares')
-        .select('*, shared_by_user:shared_by_user_id(id, first_name, last_name, avatar_url, screen_name)')
+        .select(`
+          *,
+          shared_by_user:profiles!shared_by_user_id(
+            id, 
+            first_name, 
+            last_name, 
+            avatar_url, 
+            screen_name
+          )
+        `)
         .eq('shared_with_user_id', user.id);
         
       if (error) {
@@ -37,6 +56,7 @@ export default function SharedRecordsPage() {
         throw error;
       }
       
+      console.log('Records shared with me:', data?.length);
       return data || [];
     },
     enabled: !!user
@@ -48,10 +68,21 @@ export default function SharedRecordsPage() {
     queryFn: async () => {
       if (!user) return [];
       
-      // Use explicit join instead of foreign key reference
+      console.log('Fetching my shared records');
+      
+      // Use explicit join with specific column names
       const { data, error } = await supabase
         .from('record_shares')
-        .select('*, shared_with_user:shared_with_user_id(id, first_name, last_name, avatar_url, screen_name)')
+        .select(`
+          *,
+          shared_with_user:profiles!shared_with_user_id(
+            id, 
+            first_name, 
+            last_name, 
+            avatar_url, 
+            screen_name
+          )
+        `)
         .eq('shared_by_user_id', user.id);
         
       if (error) {
@@ -85,6 +116,7 @@ export default function SharedRecordsPage() {
         };
       }));
       
+      console.log('My shared records:', enhancedData?.length);
       return enhancedData;
     },
     enabled: !!user && activeTab === 'my-shares'
@@ -94,6 +126,8 @@ export default function SharedRecordsPage() {
   useEffect(() => {
     const checkMappingStatuses = async () => {
       if (!sharedWithMeRecords?.length || !user) return;
+      
+      console.log('Checking mapping statuses for shared records');
       
       const statusPromises = sharedWithMeRecords.map(async (share) => {
         try {
@@ -114,9 +148,17 @@ export default function SharedRecordsPage() {
             
           if (!sharedFields?.length) return [share.id, { isConfigured: false, percentage: 0 }];
           
+          // Get the shared by user ID safely
+          const sharedByUser = share.shared_by_user as UserProfile;
+          
+          if (!sharedByUser || !sharedByUser.id) {
+            console.error('Missing shared_by_user information:', share);
+            return [share.id, { isConfigured: false, percentage: 0 }];
+          }
+          
           // Check mappings status for this share
           const status = await getMappingStatus(
-            share.shared_by_user.id, // Access the ID from the joined object
+            sharedByUser.id,
             recordData.object_type_id,
             sharedFields.map(f => f.field_api_name)
           );
@@ -135,6 +177,7 @@ export default function SharedRecordsPage() {
       
       const statuses = await Promise.all(statusPromises);
       setMappingStatuses(Object.fromEntries(statuses));
+      console.log('Mapping statuses updated');
     };
     
     if (activeTab === 'shared-with-me') {
@@ -147,7 +190,7 @@ export default function SharedRecordsPage() {
     if (!userProfile) return 'Unknown User';
     
     // Handle case when userProfile is not available
-    if (!userProfile || userProfile.error === true) return 'Unknown User';
+    if (!userProfile || typeof userProfile !== 'object') return 'Unknown User';
     
     if (userProfile.screen_name) return userProfile.screen_name;
     

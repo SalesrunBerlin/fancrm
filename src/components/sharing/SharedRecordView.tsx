@@ -11,6 +11,13 @@ import { Loader2, ArrowLeft, Settings } from 'lucide-react';
 import { toast } from 'sonner';
 import { useObjectFields } from '@/hooks/useObjectFields';
 
+type ShareByUser = {
+  id: string;
+  first_name: string | null;
+  last_name: string | null;
+  screen_name: string | null;
+}
+
 export function SharedRecordView() {
   const { recordId } = useParams<{ recordId: string }>();
   const navigate = useNavigate();
@@ -24,9 +31,20 @@ export function SharedRecordView() {
     queryFn: async () => {
       if (!recordId || !user) return null;
       
+      console.log('Fetching share details for record:', recordId);
+      
+      // Use specific column naming in the join to avoid ambiguity
       const { data, error } = await supabase
         .from('record_shares')
-        .select('*, shared_by_user:shared_by_user_id(id, first_name, last_name, screen_name)')
+        .select(`
+          *,
+          shared_by_user:profiles!shared_by_user_id(
+            id,
+            first_name, 
+            last_name, 
+            screen_name
+          )
+        `)
         .eq('record_id', recordId)
         .eq('shared_with_user_id', user.id)
         .single();
@@ -36,6 +54,7 @@ export function SharedRecordView() {
         throw error;
       }
       
+      console.log('Share data retrieved:', data);
       return data;
     },
     enabled: !!recordId && !!user
@@ -43,9 +62,11 @@ export function SharedRecordView() {
   
   // Get the actual record data
   const { data: recordData, isLoading: isLoadingRecord } = useQuery({
-    queryKey: ['shared-record-data', recordId],
+    queryKey: ['shared-record-data', recordId, shareData?.id],
     queryFn: async () => {
-      if (!recordId) return null;
+      if (!recordId || !shareData) return null;
+      
+      console.log('Fetching record data for record:', recordId);
       
       // First get the record object type
       const { data: recordDetails, error: recordError } = await supabase
@@ -76,6 +97,8 @@ export function SharedRecordView() {
         .select('field_api_name')
         .eq('record_share_id', shareData?.id);
         
+      console.log('Record data fetched. Object type:', recordDetails?.object_type_id, 'Field values:', fieldValues?.length);
+      
       return {
         objectTypeId: recordDetails.object_type_id,
         fieldValues: fieldValues.reduce((acc, item) => {
@@ -95,24 +118,32 @@ export function SharedRecordView() {
   
   useEffect(() => {
     const loadMappings = async () => {
-      if (!shareData?.shared_by_user || !recordData?.objectTypeId) return;
+      if (!shareData || !recordData?.objectTypeId) return;
       
       try {
-        // Get the shared_by_user_id (source user id) from the shared_by_user reference
-        const sharedById = shareData.shared_by_user.id;
-
-        if (!sharedById) {
-          toast.error("Could not load share information");
+        // Get the source user ID while handling potential undefined values
+        const sharedByUser = shareData.shared_by_user as ShareByUser;
+        
+        if (!sharedByUser || !sharedByUser.id) {
+          console.error('Missing shared_by_user information:', shareData);
+          toast.error("Cannot determine who shared this record");
           return;
         }
+
+        const sharedById = sharedByUser.id;
+        
+        console.log('Loading mappings for user:', sharedById, 'and object:', recordData.objectTypeId);
 
         const mappings = await getMappingsForShare(
           sharedById,
           recordData.objectTypeId
         );
         
+        console.log('Mappings loaded:', mappings.length);
+        
         if (!mappings.length) {
           // If no mappings found, redirect to mapping page
+          console.log('No mappings found, redirecting to mapping configuration');
           navigate(`/field-mapping/${shareData.id}`);
         } else {
           setUserMappings(mappings);
@@ -163,7 +194,7 @@ export function SharedRecordView() {
   const hasEditPermission = shareData.permission_level === 'edit';
   
   // Safely format the user name
-  const sharedByUser = shareData.shared_by_user;
+  const sharedByUser = shareData.shared_by_user as ShareByUser;
   const userName = sharedByUser 
     ? (sharedByUser.screen_name || 
       `${sharedByUser.first_name || ''} ${sharedByUser.last_name || ''}`.trim() || 

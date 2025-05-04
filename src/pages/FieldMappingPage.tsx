@@ -14,18 +14,20 @@ import { Loader2, ArrowLeft, Check, Save } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 
+interface ShareByUser {
+  id: string;
+  first_name?: string | null;
+  last_name?: string | null;
+  screen_name?: string | null;
+}
+
 interface ShareDetails {
   id: string;
   shared_by_user_id: string;
   shared_with_user_id: string;
   record_id: string;
   permission_level: string;
-  shared_by_user?: {
-    id: string;
-    first_name?: string;
-    last_name?: string;
-    screen_name?: string;
-  };
+  shared_by_user?: ShareByUser;
   record?: {
     object_type_id: string;
   };
@@ -52,12 +54,19 @@ export default function FieldMappingPage() {
     queryFn: async () => {
       if (!shareId || !user) return null;
       
-      // Get the record share details using explicit join
+      console.log('Fetching share details for ID:', shareId);
+      
+      // Get the record share details using explicit join with specific column naming
       const { data, error } = await supabase
         .from('record_shares')
         .select(`
           *,
-          shared_by_user:shared_by_user_id(id, first_name, last_name, screen_name),
+          shared_by_user:profiles!shared_by_user_id(
+            id,
+            first_name,
+            last_name,
+            screen_name
+          ),
           record:record_id(object_type_id)
         `)
         .eq('id', shareId)
@@ -69,6 +78,7 @@ export default function FieldMappingPage() {
         throw error;
       }
       
+      console.log('Share details retrieved:', data);
       return data;
     },
     enabled: !!shareId && !!user
@@ -82,6 +92,8 @@ export default function FieldMappingPage() {
       try {
         // Get the source object type ID
         if (rawShareDetails.record?.object_type_id) {
+          console.log('Fetching additional data for object type:', rawShareDetails.record.object_type_id);
+          
           // Get the source object fields
           const { data: fieldsData } = await supabase
             .from('object_fields')
@@ -94,13 +106,16 @@ export default function FieldMappingPage() {
             .select('*')
             .eq('record_share_id', shareId);
           
-          // Update share details with the additional data
-          setShareDetails({
+          // Create new details object with the additional data
+          const enhancedDetails: ShareDetails = {
             ...rawShareDetails,
             sourceObjectTypeId: rawShareDetails.record.object_type_id,
             sourceFields: fieldsData || [],
             sharedFields: shareFields || []
-          });
+          };
+          
+          console.log('Enhanced share details:', enhancedDetails);
+          setShareDetails(enhancedDetails);
         }
       } catch (error) {
         console.error('Error fetching additional share data:', error);
@@ -128,6 +143,8 @@ export default function FieldMappingPage() {
           return;
         }
         
+        console.log('Fetching existing mappings for source user:', sharedById, 'and object:', shareDetails.sourceObjectTypeId);
+        
         const { data } = await supabase
           .from('user_field_mappings')
           .select('*')
@@ -140,6 +157,8 @@ export default function FieldMappingPage() {
           const targetObjectId = data[0].target_object_id;
           setSelectedObjectTypeId(targetObjectId);
           
+          console.log('Found existing mappings:', data.length, 'Target object ID:', targetObjectId);
+          
           // Set up field mappings from existing data
           const mappings = data.reduce((acc, mapping) => {
             acc[mapping.source_field_api_name] = mapping.target_field_api_name;
@@ -147,6 +166,8 @@ export default function FieldMappingPage() {
           }, {} as Record<string, string>);
           
           setFieldMappings(mappings);
+        } else {
+          console.log('No existing mappings found');
         }
       } catch (error) {
         console.error("Error fetching existing mappings:", error);
@@ -182,6 +203,14 @@ export default function FieldMappingPage() {
         setIsSaving(false);
         return;
       }
+      
+      console.log('Saving mappings:', {
+        sourceUser: sharedById,
+        targetUser: user.id,
+        sourceObject: shareDetails.sourceObjectTypeId,
+        targetObject: selectedObjectTypeId,
+        mappings: mappingEntries
+      });
       
       // Prepare mapping objects
       const mappingsToSave = mappingEntries.map(([sourceField, targetField]) => ({
