@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useQuery } from '@tanstack/react-query';
@@ -25,13 +26,10 @@ export default function SharedRecordsPage() {
     queryFn: async () => {
       if (!user) return [];
       
-      // Use explicit join instead of relying on foreign key constraint
+      // Use explicit join instead of foreign key reference
       const { data, error } = await supabase
         .from('record_shares')
-        .select(`
-          *,
-          profiles!record_shares_shared_by_user_id_fkey(id, first_name, last_name, avatar_url, screen_name)
-        `)
+        .select('*, shared_by_user:shared_by_user_id(id, first_name, last_name, avatar_url, screen_name)')
         .eq('shared_with_user_id', user.id);
         
       if (error) {
@@ -50,13 +48,10 @@ export default function SharedRecordsPage() {
     queryFn: async () => {
       if (!user) return [];
       
-      // Use explicit join instead of relying on foreign key constraint
+      // Use explicit join instead of foreign key reference
       const { data, error } = await supabase
         .from('record_shares')
-        .select(`
-          *,
-          profiles!record_shares_shared_with_user_id_fkey(id, first_name, last_name, avatar_url, screen_name)
-        `)
+        .select('*, shared_with_user:shared_with_user_id(id, first_name, last_name, avatar_url, screen_name)')
         .eq('shared_by_user_id', user.id);
         
       if (error) {
@@ -121,7 +116,7 @@ export default function SharedRecordsPage() {
           
           // Check mappings status for this share
           const status = await getMappingStatus(
-            share.shared_by_user_id,
+            share.shared_by_user.id, // Access the ID from the joined object
             recordData.object_type_id,
             sharedFields.map(f => f.field_api_name)
           );
@@ -151,8 +146,8 @@ export default function SharedRecordsPage() {
   const formatUserName = (userProfile: any) => {
     if (!userProfile) return 'Unknown User';
     
-    // Handle case when userProfile is an error object from Supabase
-    if (userProfile.error === true) return 'Unknown User';
+    // Handle case when userProfile is not available
+    if (!userProfile || userProfile.error === true) return 'Unknown User';
     
     if (userProfile.screen_name) return userProfile.screen_name;
     
@@ -186,7 +181,7 @@ export default function SharedRecordsPage() {
                 <Card key={share.id}>
                   <CardHeader className="pb-2">
                     <div className="flex items-center justify-between">
-                      <CardTitle className="text-lg">Geteilt von {formatUserName(share.profiles)}</CardTitle>
+                      <CardTitle className="text-lg">Geteilt von {formatUserName(share.shared_by_user)}</CardTitle>
                       {mappingStatuses[share.id] && (
                         <TooltipProvider>
                           <Tooltip>
@@ -258,7 +253,7 @@ export default function SharedRecordsPage() {
                 <Card key={share.id}>
                   <CardHeader className="pb-2">
                     <CardTitle className="text-lg">
-                      Geteilt mit {formatUserName(share.profiles)}
+                      Geteilt mit {formatUserName(share.shared_with_user)}
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="pb-2">

@@ -26,10 +26,7 @@ export function SharedRecordView() {
       
       const { data, error } = await supabase
         .from('record_shares')
-        .select(`
-          *,
-          profiles!record_shares_shared_by_user_id_fkey(id, first_name, last_name, screen_name)
-        `)
+        .select('*, shared_by_user:shared_by_user_id(id, first_name, last_name, screen_name)')
         .eq('record_id', recordId)
         .eq('shared_with_user_id', user.id)
         .single();
@@ -98,11 +95,11 @@ export function SharedRecordView() {
   
   useEffect(() => {
     const loadMappings = async () => {
-      if (!shareData?.profiles || !recordData?.objectTypeId) return;
+      if (!shareData?.shared_by_user || !recordData?.objectTypeId) return;
       
       try {
-        // Get the shared_by_user_id (source user id) from the profiles reference
-        const sharedById = shareData.profiles.id;
+        // Get the shared_by_user_id (source user id) from the shared_by_user reference
+        const sharedById = shareData.shared_by_user.id;
 
         if (!sharedById) {
           toast.error("Could not load share information");
@@ -166,7 +163,7 @@ export function SharedRecordView() {
   const hasEditPermission = shareData.permission_level === 'edit';
   
   // Safely format the user name
-  const sharedByUser = shareData.profiles;
+  const sharedByUser = shareData.shared_by_user;
   const userName = sharedByUser 
     ? (sharedByUser.screen_name || 
       `${sharedByUser.first_name || ''} ${sharedByUser.last_name || ''}`.trim() || 
