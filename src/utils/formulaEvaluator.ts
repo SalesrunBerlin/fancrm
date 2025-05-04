@@ -1,4 +1,3 @@
-
 import { format } from 'date-fns';
 
 type FormulaContext = {
@@ -38,6 +37,20 @@ export function evaluateFormula(expression: string | null | undefined, context: 
     if (result === expression) {
       return null;
     }
+  }
+
+  // Special handling for empty string values that might be used as UUIDs
+  // If the formula evaluation resulted in an empty string and there are no more
+  // unresolved references, return null to prevent database errors
+  if (result === '') {
+    console.log("Formula evaluated to empty string - returning null instead");
+    return null;
+  }
+
+  // Prevent returning the string "undefined" which would cause database errors
+  if (result === 'undefined') {
+    console.log("Formula evaluated to 'undefined' string - returning null instead");
+    return null;
   }
   
   console.log("Formula evaluation result:", result);
@@ -112,7 +125,14 @@ function replaceFieldReferences(
       // If we have lookup field values
       if (lookupFieldsValues && lookupFieldsValues[lookupField]) {
         const lookupValue = lookupFieldsValues[lookupField][fieldName];
-        return lookupValue !== undefined ? String(lookupValue) : '';
+        
+        // Return null for undefined or null values - important for UUID fields
+        if (lookupValue === undefined || lookupValue === null) {
+          console.log(`Lookup value for ${lookupField}.${fieldName} is undefined or null, returning null`);
+          return '';
+        }
+        
+        return String(lookupValue);
       }
 
       // Otherwise try to find the lookup record ID first
@@ -140,11 +160,13 @@ function replaceFieldReferences(
       
       // Otherwise, try to replace with field value
       const value = fieldValues[fieldName];
-      if (value !== undefined) {
-        return String(value);
-      } else {
+      
+      // Return empty string for undefined values to prevent "undefined" string in the result
+      if (value === undefined || value === null) {
         console.log(`Field ${fieldName} has no value, returning empty string`);
-        return ''; // Return empty string instead of keeping the unresolved reference
+        return '';
+      } else {
+        return String(value);
       }
     }
   );

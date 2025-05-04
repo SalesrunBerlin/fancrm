@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -61,6 +62,7 @@ export function CreateRecordForm({
   const [enhancedFields, setEnhancedFields] = useState<ObjectField[]>([]);
   const [formulaWarnings, setFormulaWarnings] = useState<Record<string, string>>({});
   const [formReady, setFormReady] = useState(false);
+  const [debugMode, setDebugMode] = useState(false); // Enable for detailed logging
   
   // Filter only enabled fields or fields that are required by the object
   const enabledActionFields = actionFields.filter(af => 
@@ -352,19 +354,58 @@ export function CreateRecordForm({
     objectFields.filter(field => field.data_type === 'lookup').forEach(field => {
       const value = fieldValues[field.api_name];
       
-      // If this is a required field with an empty or invalid UUID format
-      if (field.is_required && 
-          (!value || value === '' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value))) {
-        console.log(`Invalid lookup value for ${field.api_name}: "${value}"`);
-        hasInvalidLookupFields = true;
-        form.setError(field.api_name, { 
-          type: 'manual', 
-          message: 'Bitte wählen Sie einen gültigen Wert aus' 
-        });
+      // If this is a required field, ensure it has a valid UUID
+      if (field.is_required) {
+        // Check for null, undefined, empty string, or "undefined" string
+        if (!value || value === '' || value === 'undefined' || 
+            !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)) {
+          console.log(`Invalid lookup value for ${field.api_name}: "${value}"`);
+          hasInvalidLookupFields = true;
+          form.setError(field.api_name, { 
+            type: 'manual', 
+            message: 'Bitte wählen Sie einen gültigen Wert aus' 
+          });
+        }
       }
     });
     
     return !hasInvalidLookupFields;
+  };
+
+  // Special debug function to check all values before submission
+  const debugFormValues = (data: Record<string, any>) => {
+    if (!debugMode) return;
+    
+    console.group("🐞 DEBUG: Form values before submission");
+    console.log("Raw form values:", data);
+    
+    // Check for problematic values
+    const problematicFields: string[] = [];
+    
+    objectFields.forEach(field => {
+      const value = data[field.api_name];
+      
+      if (field.data_type === 'lookup') {
+        if (field.is_required && (!value || value === '' || value === 'undefined' || 
+            !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(value)))) {
+          console.warn(`⚠️ Field ${field.name} (${field.api_name}) has invalid UUID value: "${value}"`);
+          problematicFields.push(field.api_name);
+        }
+      }
+      
+      if (value === 'undefined') {
+        console.warn(`⚠️ Field ${field.name} (${field.api_name}) has literal "undefined" string value`);
+        problematicFields.push(field.api_name);
+      }
+    });
+    
+    if (problematicFields.length > 0) {
+      console.warn("⚠️ Found problematic fields:", problematicFields);
+    } else {
+      console.log("✅ No obvious problematic values detected");
+    }
+    
+    console.groupEnd();
   };
 
   const handleSubmit = async (data: Record<string, any>) => {
@@ -372,6 +413,12 @@ export function CreateRecordForm({
       setError("You must be logged in to create records");
       return;
     }
+    
+    // Turn on debug mode for this submission
+    setDebugMode(true);
+    
+    // Debug check values before proceeding
+    debugFormValues(data);
     
     // Clear any previous errors
     setError(null);
@@ -388,10 +435,36 @@ export function CreateRecordForm({
       return;
     }
     
+    // Final cleanup of form data to prevent invalid values
+    const cleanedData: Record<string, any> = {};
+    
+    // Process each field to ensure proper values
+    Object.entries(data).forEach(([fieldName, value]) => {
+      // Don't include fields with problematic values
+      if (value === 'undefined') {
+        console.log(`Filtering out field ${fieldName} with "undefined" value`);
+        return;
+      }
+      
+      // For lookup fields, ensure they have valid UUIDs
+      const field = objectFields.find(f => f.api_name === fieldName);
+      if (field?.data_type === 'lookup' && field.is_required) {
+        if (!value || value === '' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(value))) {
+          console.log(`Skipping invalid UUID for required lookup field ${fieldName}: ${value}`);
+          return;
+        }
+      }
+      
+      // Add the valid field value to the cleaned data
+      cleanedData[fieldName] = value;
+    });
+    
+    console.log("Submitting cleaned data:", cleanedData);
+    
     setIsSubmitting(true);
     
     try {
-      console.log("Creating record with data:", data);
+      console.log("Creating record with data:", cleanedData);
       
       // Create the record
       const { data: record, error: recordError } = await supabase
@@ -409,21 +482,39 @@ export function CreateRecordForm({
       }
       
       // Create the field values
-      const fieldValues = Object.entries(data).map(([api_name, value]) => ({
-        record_id: record.id,
-        field_api_name: api_name,
-        value: value === undefined || value === null ? null : String(value),
-      }));
+      const fieldValues = Object.entries(cleanedData).map(([api_name, value]) => {
+        // For null or undefined values, set to null
+        const processedValue = 
+          value === undefined || value === null || value === 'undefined' ? null : String(value);
+        
+        // Handle lookup fields specially to ensure valid UUIDs
+        const field = objectFields.find(f => f.api_name === api_name);
+        if (field?.data_type === 'lookup' && processedValue !== null) {
+          // Validate UUID format
+          if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(processedValue)) {
+            console.warn(`Skipping invalid UUID for field ${api_name}: ${processedValue}`);
+            return null; // Skip this field value
+          }
+        }
+        
+        return {
+          record_id: record.id,
+          field_api_name: api_name,
+          value: processedValue,
+        };
+      }).filter(Boolean); // Filter out any null entries
       
       console.log("Inserting field values:", fieldValues);
       
-      const { error: valuesError } = await supabase
-        .from("object_field_values")
-        .insert(fieldValues);
-      
-      if (valuesError) {
-        console.error("Error creating field values:", valuesError);
-        throw valuesError;
+      if (fieldValues.length > 0) {
+        const { error: valuesError } = await supabase
+          .from("object_field_values")
+          .insert(fieldValues);
+        
+        if (valuesError) {
+          console.error("Error creating field values:", valuesError);
+          throw valuesError;
+        }
       }
       
       toast.success("Record created successfully");
