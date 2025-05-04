@@ -1,311 +1,55 @@
 
-import { useState, useEffect } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
-import { useFieldMappings } from '@/hooks/useFieldMappings';
-import { Button } from '@/components/ui/button';
-import { Card, CardHeader, CardContent, CardFooter } from '@/components/ui/card';
-import { Loader2, ArrowLeft, Settings } from 'lucide-react';
-import { toast } from 'sonner';
+import { useParams } from 'react-router-dom';
 import { useObjectFields } from '@/hooks/useObjectFields';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertCircle } from 'lucide-react';
-
-type ShareByUser = {
-  id: string;
-  first_name: string | null;
-  last_name: string | null;
-  screen_name: string | null;
-}
+import { RecordViewHeader } from './RecordViewHeader';
+import { RecordDataView } from './RecordDataView';
+import { RecordLoadingState } from './RecordLoadingState';
+import { RecordViewError } from './RecordViewError';
+import { RecordNotFound } from './RecordNotFound';
+import { useSharedRecordData } from '@/hooks/useSharedRecordData';
 
 export function SharedRecordView() {
   const { recordId } = useParams<{ recordId: string }>();
-  const navigate = useNavigate();
-  const { user } = useAuth();
-  const { getMappingsForShare } = useFieldMappings();
-  const [userMappings, setUserMappings] = useState<any[]>([]);
-  const [loadingError, setLoadingError] = useState<string | null>(null);
-  
-  // Fetch share details (who shared this record with the current user)
-  const { data: shareData, isLoading: isLoadingShare, error: shareError } = useQuery({
-    queryKey: ['record-share', recordId],
-    queryFn: async () => {
-      if (!recordId || !user) return null;
-      
-      console.log('Fetching share details for record:', recordId);
-      
-      try {
-        // Use specific column naming in the join to avoid ambiguity
-        const { data, error } = await supabase
-          .from('record_shares')
-          .select(`
-            *,
-            shared_by_user:profiles!shared_by_user_id(
-              id,
-              first_name, 
-              last_name, 
-              screen_name
-            )
-          `)
-          .eq('record_id', recordId)
-          .eq('shared_with_user_id', user.id)
-          .maybeSingle();
-          
-        if (error) {
-          console.error('Error fetching share:', error);
-          throw error;
-        }
-        
-        if (!data) {
-          throw new Error('Share record not found');
-        }
-        
-        console.log('Share data retrieved:', data);
-        return data;
-      } catch (error) {
-        console.error('Error in share query:', error);
-        setLoadingError(error instanceof Error ? error.message : "Failed to load share data");
-        return null;
-      }
-    },
-    enabled: !!recordId && !!user
-  });
-  
-  // Get the actual record data
-  const { data: recordData, isLoading: isLoadingRecord } = useQuery({
-    queryKey: ['shared-record-data', recordId, shareData?.id],
-    queryFn: async () => {
-      if (!recordId || !shareData) return null;
-      
-      console.log('Fetching record data for record:', recordId);
-      
-      try {
-        // First get the record object type
-        const { data: recordDetails, error: recordError } = await supabase
-          .from('object_records')
-          .select('object_type_id')
-          .eq('id', recordId)
-          .maybeSingle();
-          
-        if (recordError) {
-          console.error('Error fetching record details:', recordError);
-          throw recordError;
-        }
-        
-        if (!recordDetails) {
-          throw new Error('Record not found');
-        }
-        
-        // Get object type information
-        const { data: objectTypeData, error: objectTypeError } = await supabase
-          .from('object_types')
-          .select('name, api_name')
-          .eq('id', recordDetails.object_type_id)
-          .maybeSingle();
-          
-        if (objectTypeError) {
-          console.error('Error fetching object type:', objectTypeError);
-          throw objectTypeError;
-        }
-        
-        // Then get the values
-        const { data: fieldValues, error: valuesError } = await supabase
-          .from('object_field_values')
-          .select('field_api_name, value')
-          .eq('record_id', recordId);
-          
-        if (valuesError) {
-          console.error('Error fetching field values:', valuesError);
-          throw valuesError;
-        }
-        
-        // Get visible fields based on record share
-        const { data: shareFields } = await supabase
-          .from('record_share_fields')
-          .select('field_api_name')
-          .eq('record_share_id', shareData?.id);
-          
-        console.log('Record data fetched. Object type:', recordDetails?.object_type_id, 'Field values:', fieldValues?.length);
-        
-        return {
-          objectTypeId: recordDetails.object_type_id,
-          objectTypeName: objectTypeData?.name || 'Unknown Object',
-          objectTypeApiName: objectTypeData?.api_name || '',
-          fieldValues: fieldValues.reduce((acc, item) => {
-            acc[item.field_api_name] = item.value;
-            return acc;
-          }, {} as Record<string, string>),
-          visibleFields: shareFields?.map(f => f.field_api_name) || []
-        };
-      } catch (error) {
-        console.error('Error in record data query:', error);
-        setLoadingError(error instanceof Error ? error.message : "Failed to load record data");
-        return null;
-      }
-    },
-    enabled: !!recordId && !!shareData
-  });
+  const { 
+    shareData, 
+    recordData, 
+    userMappings,
+    transformedData, 
+    loadingError, 
+    isLoading,
+    userName
+  } = useSharedRecordData(recordId);
   
   // Get the fields of the mapped target object
   const { fields: targetFields } = useObjectFields(
     userMappings.length > 0 ? userMappings[0]?.target_object_id : undefined
   );
-  
-  useEffect(() => {
-    const loadMappings = async () => {
-      if (!shareData || !recordData?.objectTypeId) return;
-      
-      try {
-        // Get the source user ID while handling potential undefined values
-        const sharedByUser = shareData.shared_by_user as ShareByUser;
-        
-        if (!sharedByUser || !sharedByUser.id) {
-          console.error('Missing shared_by_user information:', shareData);
-          setLoadingError("Cannot determine who shared this record");
-          return;
-        }
 
-        const sharedById = sharedByUser.id;
-        
-        console.log('Loading mappings for user:', sharedById, 'and object:', recordData.objectTypeId);
-
-        const mappings = await getMappingsForShare(
-          sharedById,
-          recordData.objectTypeId
-        );
-        
-        console.log('Mappings loaded:', mappings.length);
-        
-        if (!mappings.length) {
-          // If no mappings found, redirect to mapping page
-          console.log('No mappings found, redirecting to mapping configuration');
-          navigate(`/field-mapping/${shareData.id}`);
-        } else {
-          setUserMappings(mappings);
-        }
-      } catch (error) {
-        console.error('Error loading mappings:', error);
-        setLoadingError(error instanceof Error ? error.message : "Could not load field mappings");
-      }
-    };
-    
-    if (shareData && recordData) {
-      loadMappings();
-    }
-  }, [shareData, recordData]);
-  
-  // Transform record data according to mappings
-  const transformedData = userMappings.length > 0 && recordData?.fieldValues ? 
-    Object.entries(recordData.fieldValues).reduce((acc, [sourceField, value]) => {
-      // Find mapping for this source field
-      const mapping = userMappings.find(m => m.source_field_api_name === sourceField);
-      if (mapping && recordData?.visibleFields.includes(sourceField)) {
-        acc[mapping.target_field_api_name] = value;
-      }
-      return acc;
-    }, {} as Record<string, string>) : {};
-
-  if (isLoadingShare || isLoadingRecord) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
-    );
+  // Handle loading state
+  if (isLoading) {
+    return <RecordLoadingState />;
   }
   
+  // Handle error state
   if (loadingError) {
-    return (
-      <div className="p-4">
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Error</AlertTitle>
-          <AlertDescription>{loadingError}</AlertDescription>
-        </Alert>
-        <Button variant="outline" className="mt-4" asChild>
-          <Link to="/shared-records">Back to Shared Records</Link>
-        </Button>
-      </div>
-    );
+    return <RecordViewError message={loadingError} />;
   }
   
+  // Handle not found state
   if (!shareData || !recordData) {
-    return (
-      <div className="p-8 text-center">
-        <h2 className="text-2xl font-bold mb-4">Record Not Found</h2>
-        <p className="mb-4">The shared record you're looking for doesn't exist or you don't have permission to view it.</p>
-        <Button asChild>
-          <Link to="/shared-records">Back to Shared Records</Link>
-        </Button>
-      </div>
-    );
+    return <RecordNotFound />;
   }
-  
-  // Get the permission level
-  const hasEditPermission = shareData.permission_level === 'edit';
-  
-  // Safely format the user name
-  const sharedByUser = shareData.shared_by_user as ShareByUser;
-  const userName = sharedByUser 
-    ? (sharedByUser.screen_name || 
-      `${sharedByUser.first_name || ''} ${sharedByUser.last_name || ''}`.trim() || 
-      "Another user")
-    : "Another user";
   
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap justify-between items-center gap-2">
-        <Button variant="ghost" size="sm" asChild className="mb-2">
-          <Link to="/shared-records">
-            <ArrowLeft className="mr-2 h-4 w-4" /> Back to Shared Records
-          </Link>
-        </Button>
-        
-        <Button 
-          variant="outline" 
-          size="sm"
-          onClick={() => navigate(`/field-mapping/${shareData.id}`)}
-        >
-          <Settings className="mr-2 h-4 w-4" />
-          Adjust Field Mappings
-        </Button>
-      </div>
+      <RecordViewHeader shareId={shareData.id} />
       
-      <Card>
-        <CardHeader>
-          <h2 className="text-2xl font-bold">{recordData.objectTypeName}</h2>
-          <p className="text-muted-foreground">
-            Shared by {userName}
-          </p>
-        </CardHeader>
-        <CardContent>
-          {targetFields?.length > 0 && Object.keys(transformedData).length > 0 ? (
-            <div className="space-y-6">
-              {targetFields
-                .filter(field => Object.keys(transformedData).includes(field.api_name))
-                .map(field => (
-                  <div key={field.id} className="grid grid-cols-1 lg:grid-cols-3 gap-2">
-                    <div className="font-medium">{field.name}</div>
-                    <div className="lg:col-span-2">
-                      {/* Display the value directly as text */}
-                      <div className="p-2 border rounded bg-gray-50">
-                        {transformedData[field.api_name] || ''}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-            </div>
-          ) : (
-            <p className="text-center py-4">No mapped fields to display.</p>
-          )}
-        </CardContent>
-        <CardFooter className="flex justify-center">
-          <Button variant="outline" asChild>
-            <Link to="/shared-records">Back to Shared Records</Link>
-          </Button>
-        </CardFooter>
-      </Card>
+      <RecordDataView 
+        objectTypeName={recordData.objectTypeName}
+        sharedByUserName={userName}
+        fields={targetFields || []}
+        transformedData={transformedData}
+      />
     </div>
   );
 }
