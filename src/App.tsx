@@ -35,6 +35,9 @@ import ActionExecutePage from "./pages/ActionExecutePage";
 import MassActionPage from "./pages/MassActionPage";
 import CollectionsPage from "./pages/CollectionsPage";
 import CollectionDetailPage from "./pages/CollectionDetailPage";
+import SharedRecordsPage from "./pages/SharedRecordsPage";
+import FieldMappingPage from "./pages/FieldMappingPage";
+import SharedRecordPage from "./pages/SharedRecordPage";
 
 // Create a client
 const queryClient = new QueryClient({
@@ -87,6 +90,10 @@ function App() {
               {/* Collections routes */}
               <Route path="/collections" element={<CollectionsPage />} />
               <Route path="/collections/:collectionId" element={<CollectionDetailPage />} />
+              {/* Shared records routes */}
+              <Route path="/shared-records" element={<SharedRecordsPage />} />
+              <Route path="/field-mapping/:shareId" element={<FieldMappingPage />} />
+              <Route path="/shared-record/:recordId" element={<SharedRecordPage />} />
             </Route>
           </Routes>
           <Toaster richColors position="top-right" />

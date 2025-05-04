@@ -1025,6 +1025,57 @@ export type Database = {
         }
         Relationships: []
       }
+      user_field_mappings: {
+        Row: {
+          created_at: string
+          id: string
+          source_field_api_name: string
+          source_object_id: string
+          source_user_id: string
+          target_field_api_name: string
+          target_object_id: string
+          target_user_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          source_field_api_name: string
+          source_object_id: string
+          source_user_id: string
+          target_field_api_name: string
+          target_object_id: string
+          target_user_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          source_field_api_name?: string
+          source_object_id?: string
+          source_user_id?: string
+          target_field_api_name?: string
+          target_object_id?: string
+          target_user_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_field_mappings_source_object_id_fkey"
+            columns: ["source_object_id"]
+            isOneToOne: false
+            referencedRelation: "object_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_field_mappings_target_object_id_fkey"
+            columns: ["target_object_id"]
+            isOneToOne: false
+            referencedRelation: "object_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       collection_access: {
