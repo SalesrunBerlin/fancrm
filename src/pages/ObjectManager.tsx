@@ -20,17 +20,30 @@ import {
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 import { isArchived } from "@/patches/ObjectTypePatches";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function ObjectManager() {
   // Fetch all objects including archived ones
   const { objectTypes: allObjectTypes, isLoading, deleteObjectType, publishedObjects } = useObjectTypes();
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState("all");
   const [objectToDelete, setObjectToDelete] = useState<ObjectType | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
+  // Filter objects to only show those owned by the current user
+  // Exclude objects that are published but not owned by the user
+  const filteredObjectTypes = allObjectTypes?.filter(type => 
+    // Only show objects that:
+    // 1. Are owned by the current user
+    // 2. Are system objects
+    (type.owner_id === user?.id || type.is_system) &&
+    // Don't show published objects from other users
+    !(type.is_published && type.owner_id !== user?.id)
+  ) || [];
+
   // Split objects into active and archived
-  const activeObjects = allObjectTypes?.filter(obj => !isArchived(obj)) || [];
-  const archivedObjects = allObjectTypes?.filter(obj => isArchived(obj)) || [];
+  const activeObjects = filteredObjectTypes.filter(obj => !isArchived(obj));
+  const archivedObjects = filteredObjectTypes.filter(obj => isArchived(obj));
 
   const getIconComponent = (iconName: string | null) => {
     switch(iconName) {

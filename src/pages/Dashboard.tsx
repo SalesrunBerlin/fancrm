@@ -11,11 +11,14 @@ export default function Dashboard() {
   const { user } = useAuth();
   
   // Filter objects to only show those owned by the current user
+  // Exclude objects that are published but not owned by the user
   const userObjectTypes = objectTypes?.filter(type => 
     // Only show objects that:
-    // 1. Are owned by the current user OR
-    // 2. Are system objects that are active
-    (type.owner_id === user?.id || (type.is_system && type.is_active))
+    // 1. Are owned by the current user
+    // 2. Are system objects that are active (but not published from other users)
+    (type.owner_id === user?.id || (type.is_system && type.is_active)) &&
+    // Don't show published objects from other users
+    !(type.is_published && type.owner_id !== user?.id)
   );
   
   const getIconComponent = (iconName: string | null) => {
