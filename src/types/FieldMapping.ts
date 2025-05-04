@@ -16,3 +16,15 @@ export interface MappingStatus {
   mappedFields: number;
   totalFields: number;
 }
+
+export interface ObjectTypeInfo {
+  id: string;
+  name: string;
+  api_name: string;
+  fields: {
+    id: string;
+    name: string;
+    api_name: string;
+    data_type: string;
+  }[];
+}

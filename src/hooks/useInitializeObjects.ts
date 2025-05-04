@@ -24,7 +24,6 @@ export function useInitializeObjects() {
         if (error) throw error;
         return data;
       } catch (error) {
-        // Fixed error handling with proper type assertions
         let errorMessage = "An unexpected error occurred";
         
         if (error instanceof Error) {
@@ -38,7 +37,7 @@ export function useInitializeObjects() {
         toast.error("Error initializing objects", {
           description: errorMessage
         });
-        throw new Error(errorMessage); // Changed from throwing the raw error to throwing an Error with message
+        throw new Error(errorMessage);
       } finally {
         setIsInitializing(false);
       }

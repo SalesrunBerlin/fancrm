@@ -30,6 +30,25 @@ export function useFieldMappings() {
     enabled: !!user
   });
 
+  // Check if an object type exists for the user
+  const checkObjectExists = async (objectId: string): Promise<boolean> => {
+    if (!user) return false;
+    
+    const { data, error } = await supabase
+      .from('object_types')
+      .select('id')
+      .eq('id', objectId)
+      .eq('owner_id', user.id)
+      .maybeSingle();
+    
+    if (error) {
+      console.error('Error checking if object exists:', error);
+      return false;
+    }
+    
+    return !!data;
+  };
+
   // Get mappings for a specific share (source user and object)
   const getMappingsForShare = async (sourceUserId: string, sourceObjectId: string): Promise<UserFieldMapping[]> => {
     if (!user) return [];
@@ -74,10 +93,12 @@ export function useFieldMappings() {
     }
   };
 
-  // Create or update mappings
+  // Create or update mappings with proper error handling using our new constraint
   const saveFieldMappings = useMutation({
     mutationFn: async (mappings: Omit<UserFieldMapping, 'id' | 'created_at' | 'updated_at'>[]) => {
       if (!user) throw new Error('User not authenticated');
+      
+      console.log('Saving field mappings:', mappings);
       
       const { data, error } = await supabase
         .from('user_field_mappings')
@@ -86,7 +107,10 @@ export function useFieldMappings() {
             ...mapping,
             target_user_id: user.id
           })),
-          { onConflict: 'source_user_id,target_user_id,source_object_id,source_field_api_name' }
+          { 
+            onConflict: 'source_user_id,target_user_id,source_object_id,source_field_api_name',
+            ignoreDuplicates: false 
+          }
         );
       
       if (error) {
@@ -112,6 +136,7 @@ export function useFieldMappings() {
     isLoadingMappings,
     getMappingsForShare,
     getMappingStatus,
-    saveFieldMappings
+    saveFieldMappings,
+    checkObjectExists
   };
 }
