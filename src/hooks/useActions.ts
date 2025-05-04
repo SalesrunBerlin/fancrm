@@ -205,7 +205,7 @@ export function useActions() {
               }
               
               return false;
-            });
+            }) as Action[]; // Explicit cast to Action[]
           }
         }
       }
@@ -238,7 +238,7 @@ export function useActions() {
       ];
       
       console.log(`useActions.getActionsByObjectId: Found ${allActions.length} actions total for ${objectTypeId}`);
-      return allActions;
+      return allActions as Action[]; // Explicit cast to Action[]
     } catch (error) {
       console.error("Exception in getActionsByObjectId:", error);
       throw error;

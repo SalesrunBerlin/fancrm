@@ -1,3 +1,4 @@
+
 import { format } from 'date-fns';
 
 type FormulaContext = {
@@ -102,12 +103,16 @@ function replaceFieldReferences(
       // If we have lookup field values
       if (lookupFieldsValues && lookupFieldsValues[lookupField]) {
         const lookupValue = lookupFieldsValues[lookupField][fieldName];
-        return lookupValue !== undefined ? String(lookupValue) : match;
+        return lookupValue !== undefined && lookupValue !== null 
+          ? String(lookupValue) 
+          : match;
       }
 
       // Otherwise try to find the lookup record ID first
       const lookupId = fieldValues[lookupField];
-      if (!lookupId) return match;
+      if (!lookupId || lookupId === 'undefined' || lookupId === 'null') {
+        return '';
+      }
 
       console.log(`Found lookup ID: ${lookupId} for field ${lookupField}, but no resolved values available`);
       return match;
@@ -127,9 +132,24 @@ function replaceFieldReferences(
       
       // Otherwise, try to replace with field value
       const value = fieldValues[fieldName];
-      return value !== undefined ? String(value) : match;
+      
+      // Handle undefined, null, or invalid UUID values
+      if (value === undefined || value === null || value === 'undefined' || value === 'null') {
+        return '';
+      }
+      
+      return String(value);
     }
   );
   
   return result;
+}
+
+/**
+ * Validates if a string is a valid UUID
+ * Used to prevent storing invalid UUIDs in lookup fields
+ */
+export function isValidUuid(str: string): boolean {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(str);
 }

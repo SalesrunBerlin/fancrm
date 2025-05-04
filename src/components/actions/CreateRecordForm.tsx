@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -15,8 +16,7 @@ import { getAlertVariantClass } from "@/patches/FixAlertVariants";
 import { ActionFieldWithDetails } from "@/hooks/useActionFields";
 import { RecordField } from "@/components/records/RecordField";
 import { ObjectField } from "@/hooks/useObjectTypes";
-import { evaluateFormula } from "@/utils/formulaEvaluator";
-import { useFieldPicklistValues } from "@/hooks/useFieldPicklistValues";
+import { evaluateFormula, isValidUuid } from "@/utils/formulaEvaluator";
 
 interface CreateRecordFormProps {
   objectTypeId: string;
@@ -59,6 +59,7 @@ export function CreateRecordForm({
   const [error, setError] = useState<string | null>(null);
   const [lookupFieldsValues, setLookupFieldsValues] = useState<Record<string, Record<string, any>>>({});
   const [enhancedFields, setEnhancedFields] = useState<ObjectField[]>([]);
+  const [userEditedFields, setUserEditedFields] = useState<Set<string>>(new Set());
   
   // Filter only enabled fields or fields that are required by the object
   const enabledActionFields = actionFields.filter(af => 
@@ -70,6 +71,23 @@ export function CreateRecordForm({
     enabledActionFields.some(af => af.field_id === objField.id) || objField.is_required
   );
   
+  // Build form schema based on fields
+  const formSchema = buildFormSchema(enabledObjectFields);
+  
+  // Prepare default values from action fields and initialValues
+  const defaultValues: Record<string, any> = { ...initialValues };
+  
+  // Create form with the schema and default values
+  const form = useForm({
+    resolver: zodResolver(formSchema),
+    defaultValues,
+  });
+
+  // Track when user edits a field to prevent auto-updates from formula
+  const trackUserEdit = (fieldName: string) => {
+    setUserEditedFields(prev => new Set(prev).add(fieldName));
+  };
+
   // Enhance picklist fields with their values
   useEffect(() => {
     const enhancePicklistFields = async () => {
@@ -114,20 +132,8 @@ export function CreateRecordForm({
     
     enhancePicklistFields();
   }, [enabledObjectFields]);
-  
-  // Build form schema based on fields
-  const formSchema = buildFormSchema(enabledObjectFields);
-  
-  // Prepare default values from action fields and initialValues
-  const defaultValues: Record<string, any> = { ...initialValues };
-  
-  // Create form with the schema and default values
-  const form = useForm({
-    resolver: zodResolver(formSchema),
-    defaultValues,
-  });
 
-  // Important: Initialize formula-based default values when the form first loads
+  // Initialize formula-based default values when the form first loads
   useEffect(() => {
     if (enabledActionFields.length > 0 && objectFields.length > 0) {
       console.log("Evaluating formula-based default values on form load");
@@ -140,7 +146,7 @@ export function CreateRecordForm({
         const field = objectFields.find(f => f.id === actionField.field_id);
         if (field) {
           // Skip if we already have an initial value for this field
-          if (defaultValues[field.api_name]) return;
+          if (initialValues[field.api_name]) return;
           
           // Check if this field has a formula
           if (actionField.formula_type === 'dynamic' && actionField.formula_expression) {
@@ -170,11 +176,14 @@ export function CreateRecordForm({
       if (hasFormulaValues) {
         console.log("Setting formula default values:", formulaDefaults);
         Object.entries(formulaDefaults).forEach(([fieldName, value]) => {
-          form.setValue(fieldName, value);
+          // Only set value if user hasn't edited the field
+          if (!userEditedFields.has(fieldName)) {
+            form.setValue(fieldName, value);
+          }
         });
       }
     }
-  }, [enabledActionFields, objectFields, form]);
+  }, [enabledActionFields, objectFields, form, initialValues, lookupFieldsValues, userEditedFields]);
   
   useEffect(() => {
     // First, collect all lookup fields that have values
@@ -215,7 +224,7 @@ export function CreateRecordForm({
           if (!targetObjectTypeId) continue;
           
           const recordId = form.getValues(fieldApiName);
-          if (!recordId) continue;
+          if (!recordId || recordId === 'undefined' || recordId === 'null' || !isValidUuid(recordId)) continue;
           
           try {
             // Fetch the record values
@@ -251,19 +260,22 @@ export function CreateRecordForm({
       enabledActionFields.forEach(actionField => {
         const field = objectFields.find(f => f.id === actionField.field_id);
         if (field && actionField.formula_type === 'dynamic' && actionField.formula_expression) {
-          const newValue = evaluateFormula(
-            actionField.formula_expression, 
-            { 
-              fieldValues: form.getValues(), 
-              lookupFieldsValues 
-            }
-          );
-          
-          form.setValue(field.api_name, newValue);
+          // Only update if user hasn't edited the field manually
+          if (!userEditedFields.has(field.api_name)) {
+            const newValue = evaluateFormula(
+              actionField.formula_expression, 
+              { 
+                fieldValues: form.getValues(), 
+                lookupFieldsValues 
+              }
+            );
+            
+            form.setValue(field.api_name, newValue);
+          }
         }
       });
     }
-  }, [lookupFieldsValues, enabledActionFields, objectFields, form]);
+  }, [lookupFieldsValues, enabledActionFields, objectFields, form, userEditedFields]);
 
   // Get pre-selected fields
   const preselectedFields = enabledActionFields
@@ -289,6 +301,26 @@ export function CreateRecordForm({
     setError(null);
     
     try {
+      // Clean the data before submission
+      const cleanedData = Object.entries(data).reduce((acc, [key, value]) => {
+        // Handle undefined, "undefined", null, "null" values
+        if (value === undefined || value === "undefined" || value === null || value === "null") {
+          acc[key] = null;
+        } else if (typeof value === 'string' && value.trim() === '') {
+          // Handle empty strings
+          acc[key] = null;
+        } else {
+          // Handle lookup fields - ensure they contain valid UUIDs
+          const field = objectFields.find(f => f.api_name === key);
+          if (field?.data_type === 'lookup' && typeof value === 'string' && !isValidUuid(value)) {
+            acc[key] = null;
+          } else {
+            acc[key] = value;
+          }
+        }
+        return acc;
+      }, {} as Record<string, any>);
+      
       // Create the record
       const { data: record, error: recordError } = await supabase
         .from("object_records")
@@ -301,8 +333,8 @@ export function CreateRecordForm({
       
       if (recordError) throw recordError;
       
-      // Create the field values
-      const fieldValues = Object.entries(data).map(([api_name, value]) => ({
+      // Create the field values with cleaned data
+      const fieldValues = Object.entries(cleanedData).map(([api_name, value]) => ({
         record_id: record.id,
         field_api_name: api_name,
         value: value === undefined ? null : String(value),
@@ -319,9 +351,30 @@ export function CreateRecordForm({
     } catch (err: any) {
       console.error("Error creating record:", err);
       setError(err.message || "Failed to create record");
+      toast.error("Failed to create record", { 
+        description: err.message || "An error occurred while creating the record"
+      });
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  // Custom onFieldChange handler to track user edits
+  const handleFieldChange = (fieldName: string, value: any) => {
+    trackUserEdit(fieldName);
+    form.setValue(fieldName, value);
+  };
+
+  // Render a field with the custom change handler
+  const renderField = (field: ObjectField) => {
+    return (
+      <RecordField
+        key={field.id}
+        field={field}
+        form={form}
+        onCustomChange={(value) => handleFieldChange(field.api_name, value)}
+      />
+    );
   };
 
   return (
@@ -341,13 +394,7 @@ export function CreateRecordForm({
             </h3>
             
             <div className="space-y-4 p-4 border rounded-md bg-muted/30">
-              {preselectedFields.map((field) => (
-                <RecordField
-                  key={field.id}
-                  field={field}
-                  form={form}
-                />
-              ))}
+              {preselectedFields.map((field) => renderField(field))}
             </div>
           </div>
         )}
@@ -363,13 +410,7 @@ export function CreateRecordForm({
             </h3>
             
             <div className="space-y-4">
-              {remainingFields.map((field) => (
-                <RecordField
-                  key={field.id}
-                  field={field}
-                  form={form}
-                />
-              ))}
+              {remainingFields.map((field) => renderField(field))}
             </div>
           </div>
         )}
