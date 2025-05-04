@@ -100,10 +100,20 @@ export function useFieldMappings() {
       
       console.log('Saving field mappings:', mappings);
       
+      // Filter out any mappings where target_field_api_name is "do_not_map"
+      const validMappings = mappings.filter(mapping => 
+        mapping.target_field_api_name && mapping.target_field_api_name !== "do_not_map"
+      );
+      
+      if (validMappings.length === 0) {
+        // If no valid mappings after filtering, stop here
+        return [];
+      }
+      
       const { data, error } = await supabase
         .from('user_field_mappings')
         .upsert(
-          mappings.map(mapping => ({
+          validMappings.map(mapping => ({
             ...mapping,
             target_user_id: user.id
           })),

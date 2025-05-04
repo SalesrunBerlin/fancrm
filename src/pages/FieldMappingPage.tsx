@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { useFieldMappings } from "@/hooks/useFieldMappings";
@@ -157,8 +156,8 @@ export default function FieldMappingPage() {
       return;
     }
     
-    // Filter out mappings without target fields
-    const validMappings = mappings.filter(m => m.target_field_api_name);
+    // Filter out mappings with "do_not_map" value
+    const validMappings = mappings.filter(m => m.target_field_api_name && m.target_field_api_name !== "do_not_map");
     
     if (validMappings.length === 0) {
       toast.error('Please map at least one field');
@@ -271,14 +270,14 @@ export default function FieldMappingPage() {
                             </div>
                             <div className="col-span-2">
                               <Select
-                                value={mappings.find(m => m.source_field_api_name === sourceField.api_name)?.target_field_api_name || ""}
+                                value={mappings.find(m => m.source_field_api_name === sourceField.api_name)?.target_field_api_name || "do_not_map"}
                                 onValueChange={(value) => handleFieldMappingChange(sourceField.api_name, value)}
                               >
                                 <SelectTrigger>
                                   <SelectValue placeholder="Select field" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  <SelectItem value="">Do not map</SelectItem>
+                                  <SelectItem value="do_not_map">Do not map</SelectItem>
                                   {targetFields
                                     ?.filter(tf => tf.data_type === sourceField.data_type)
                                     .map(field => (
