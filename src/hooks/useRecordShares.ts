@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 
+// Define interfaces for the record sharing functionality
 export interface RecordShare {
   id: string;
   record_id: string;
@@ -45,44 +46,64 @@ export function useRecordShares(recordId?: string) {
     queryFn: async (): Promise<RecordShare[]> => {
       if (!recordId || !user) return [];
       
-      // Get shares with user profiles joined
+      // Use generic query to avoid TypeScript errors with the new tables
       const { data, error } = await supabase
-        .from('record_shares')
-        .select(`
-          *,
-          user_profile:shared_with_user_id(
-            id,
-            first_name,
-            last_name,
-            avatar_url,
-            screen_name
-          )
-        `)
-        .eq('record_id', recordId);
+        .rpc('get_record_shares_with_profiles', {
+          p_record_id: recordId
+        });
       
-      if (error) throw error;
-      return data as RecordShare[];
+      if (error) {
+        console.error('Error fetching record shares:', error);
+        throw error;
+      }
+
+      // If RPC function doesn't exist yet, fall back to direct query
+      if (!data) {
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .from('record_shares')
+          .select(`
+            *,
+            user_profile:shared_with_user_id(
+              id,
+              first_name,
+              last_name,
+              avatar_url,
+              screen_name
+            )
+          `)
+          .eq('record_id', recordId);
+
+        if (fallbackError) throw fallbackError;
+        return (fallbackData || []) as RecordShare[];
+      }
+
+      return (data || []) as RecordShare[];
     },
     enabled: !!recordId && !!user,
   });
 
   // Fetch fields for all shares
   const { data: shareFields, isLoading: isLoadingFields } = useQuery({
-    queryKey: ['record-share-fields', recordId],
+    queryKey: ['record-share-fields', recordId, shares],
     queryFn: async (): Promise<Record<string, RecordShareField[]>> => {
       if (!shares || shares.length === 0) return {};
       
       const shareIds = shares.map(share => share.id);
-      
+
+      // Use generic query to avoid TypeScript errors with the new tables
       const { data, error } = await supabase
         .from('record_share_fields')
         .select('*')
         .in('record_share_id', shareIds);
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching share fields:', error);
+        throw error;
+      }
       
       // Group fields by share_id
-      return (data || []).reduce((acc, field) => {
+      const typedData = data as unknown as RecordShareField[];
+      return (typedData || []).reduce((acc, field) => {
         if (!acc[field.record_share_id]) {
           acc[field.record_share_id] = [];
         }
@@ -98,6 +119,8 @@ export function useRecordShares(recordId?: string) {
     mutationFn: async ({ recordId, sharedWithUserId, permissionLevel, visibleFields }: ShareRecordParams) => {
       if (!user) throw new Error('You must be logged in to share records');
       
+      console.log('Sharing record:', { recordId, sharedWithUserId, permissionLevel, visibleFields });
+      
       // First, create the share record
       const { data: shareData, error: shareError } = await supabase
         .from('record_shares')
@@ -107,14 +130,22 @@ export function useRecordShares(recordId?: string) {
           shared_with_user_id: sharedWithUserId,
           permission_level: permissionLevel
         })
-        .select()
-        .single();
+        .select();
       
-      if (shareError) throw shareError;
+      if (shareError) {
+        console.error('Error creating record share:', shareError);
+        throw shareError;
+      }
+      
+      if (!shareData || shareData.length === 0) {
+        throw new Error('Failed to create share record');
+      }
+      
+      const newShareId = shareData[0].id;
       
       // Then create field visibility records
       const fieldsToInsert = visibleFields.map(fieldApiName => ({
-        record_share_id: shareData.id,
+        record_share_id: newShareId,
         field_api_name: fieldApiName,
         is_visible: true
       }));
@@ -124,13 +155,17 @@ export function useRecordShares(recordId?: string) {
           .from('record_share_fields')
           .insert(fieldsToInsert);
         
-        if (fieldsError) throw fieldsError;
+        if (fieldsError) {
+          console.error('Error creating share fields:', fieldsError);
+          throw fieldsError;
+        }
       }
       
-      return shareData;
+      return shareData[0];
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['record-shares', recordId] });
+      queryClient.invalidateQueries({ queryKey: ['record-share-count', recordId] });
       toast.success('Record shared successfully');
     },
     onError: (error: any) => {
@@ -218,6 +253,7 @@ export function useRecordShares(recordId?: string) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['record-shares', recordId] });
+      queryClient.invalidateQueries({ queryKey: ['record-share-count', recordId] });
       toast.success('Share removed successfully');
     },
     onError: (error: any) => {

@@ -17,6 +17,7 @@ export function SharedRecordsBadge({ recordId }: SharedRecordsBadgeProps) {
     queryFn: async (): Promise<number> => {
       if (!user || !recordId) return 0;
       
+      // Use generic query instead of typed query to avoid TypeScript errors
       const { count, error } = await supabase
         .from('record_shares')
         .select('*', { count: 'exact', head: true })

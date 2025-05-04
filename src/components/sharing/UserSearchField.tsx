@@ -1,174 +1,174 @@
 
 import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Input } from '@/components/ui/input';
+import { 
+  Command, 
+  CommandEmpty, 
+  CommandGroup, 
+  CommandInput, 
+  CommandItem, 
+  CommandList 
+} from '@/components/ui/command';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Command, CommandEmpty, CommandGroup, CommandItem, CommandList } from '@/components/ui/command';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Check } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { Loader2 } from 'lucide-react';
+import { Label } from '@/components/ui/label';
 
-interface User {
+interface UserProfile {
   id: string;
   first_name: string | null;
   last_name: string | null;
-  screen_name: string | null;
   avatar_url: string | null;
+  screen_name: string | null;
 }
 
 interface UserSearchFieldProps {
-  onSelect: (user: User) => void;
-  selectedUserId?: string;
-  placeholder?: string;
-  excludeCurrentUser?: boolean;
+  selectedUserId: string;
+  onSelect: (userId: string) => void;
+  label?: string;
+  description?: string;
 }
 
 export function UserSearchField({
-  onSelect,
   selectedUserId,
-  placeholder = 'Search users...',
-  excludeCurrentUser = true
+  onSelect,
+  label = "Select User",
+  description
 }: UserSearchFieldProps) {
-  const [open, setOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [users, setUsers] = useState<User[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const { user: currentUser } = useAuth();
-
-  // Search for users
-  useEffect(() => {
-    if (searchTerm.length < 2) return; // Require at least 2 characters
-    
-    const searchUsers = async () => {
-      setIsLoading(true);
-      try {
-        // Search by first name, last name, or screen name
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('id, first_name, last_name, screen_name, avatar_url')
-          .or(`first_name.ilike.%${searchTerm}%, last_name.ilike.%${searchTerm}%, screen_name.ilike.%${searchTerm}%`)
-          .limit(10);
-        
-        if (error) throw error;
-        
-        // Filter out current user if needed
-        let filteredUsers = data as User[];
-        if (excludeCurrentUser && currentUser) {
-          filteredUsers = filteredUsers.filter(user => user.id !== currentUser.id);
-        }
-        
-        setUsers(filteredUsers);
-      } catch (error) {
-        console.error('Error searching users:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
-    searchUsers();
-  }, [searchTerm, excludeCurrentUser, currentUser]);
-
-  // Fetch selected user details on load if we have an ID
-  useEffect(() => {
-    if (selectedUserId && !selectedUser) {
-      const getUser = async () => {
-        try {
-          const { data, error } = await supabase
-            .from('profiles')
-            .select('id, first_name, last_name, screen_name, avatar_url')
-            .eq('id', selectedUserId)
-            .single();
-          
-          if (error) throw error;
-          setSelectedUser(data);
-        } catch (error) {
-          console.error('Error fetching selected user:', error);
-        }
-      };
+  const { user } = useAuth();
+  const [searchQuery, setSearchQuery] = useState('');
+  
+  const { data: profiles, isLoading } = useQuery({
+    queryKey: ['user-profiles', searchQuery],
+    queryFn: async (): Promise<UserProfile[]> => {
+      if (!user) return [];
       
-      getUser();
+      let query = supabase
+        .from('profiles')
+        .select('id, first_name, last_name, avatar_url, screen_name');
+        
+      if (searchQuery) {
+        query = query.or(`first_name.ilike.%${searchQuery}%,last_name.ilike.%${searchQuery}%,screen_name.ilike.%${searchQuery}%`);
+      }
+      
+      // Don't include the current user
+      query = query.neq('id', user.id);
+      
+      // Limit results for performance
+      query = query.limit(10);
+      
+      const { data, error } = await query;
+      
+      if (error) {
+        console.error('Error fetching profiles:', error);
+        throw error;
+      }
+      
+      return data as UserProfile[];
+    },
+    enabled: !!user,
+  });
+
+  // Reset search when selection changes
+  useEffect(() => {
+    if (selectedUserId) {
+      setSearchQuery('');
     }
-  }, [selectedUserId, selectedUser]);
-
-  const handleSelectUser = (user: User) => {
-    setSelectedUser(user);
-    onSelect(user);
-    setOpen(false);
+  }, [selectedUserId]);
+  
+  const handleSelect = (userId: string) => {
+    onSelect(userId);
+    setSearchQuery('');
   };
-
-  const getDisplayName = (user: User | null) => {
-    if (!user) return '';
-    return user.first_name && user.last_name
-      ? `${user.first_name} ${user.last_name}`
-      : user.screen_name || 'User';
-  };
-
-  const getInitials = (user: User | null) => {
-    if (!user) return '';
-    if (user.first_name && user.last_name) {
-      return `${user.first_name[0]}${user.last_name[0]}`.toUpperCase();
+  
+  const getDisplayName = (profile: UserProfile) => {
+    if (profile.first_name && profile.last_name) {
+      return `${profile.first_name} ${profile.last_name}`;
     }
-    return (user.screen_name?.[0] || 'U').toUpperCase();
+    
+    return profile.screen_name || 'User';
   };
+  
+  const getInitials = (profile: UserProfile) => {
+    const firstInitial = profile.first_name ? profile.first_name.charAt(0) : '';
+    const lastInitial = profile.last_name ? profile.last_name.charAt(0) : '';
+    
+    return (firstInitial + lastInitial).toUpperCase() || profile.screen_name?.charAt(0).toUpperCase() || '?';
+  };
+  
+  // Find the selected user profile
+  const selectedUser = profiles?.find(p => p.id === selectedUserId);
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <div className="flex items-center space-x-4 w-full border rounded-md p-2 cursor-pointer">
-          {selectedUser ? (
-            <>
-              <Avatar className="h-8 w-8">
-                <AvatarImage src={selectedUser.avatar_url || undefined} alt={getDisplayName(selectedUser)} />
-                <AvatarFallback>{getInitials(selectedUser)}</AvatarFallback>
-              </Avatar>
-              <div className="flex-1 text-sm">{getDisplayName(selectedUser)}</div>
-            </>
-          ) : (
-            <span className="text-muted-foreground">{placeholder}</span>
-          )}
+    <div className="space-y-2">
+      {label && <Label>{label}</Label>}
+      {description && <p className="text-sm text-muted-foreground">{description}</p>}
+      
+      {selectedUser ? (
+        <div className="flex items-center justify-between p-2 border rounded-md">
+          <div className="flex items-center space-x-3">
+            <Avatar>
+              <AvatarImage src={selectedUser.avatar_url || undefined} />
+              <AvatarFallback>{getInitials(selectedUser)}</AvatarFallback>
+            </Avatar>
+            <div>
+              <p className="font-medium">{getDisplayName(selectedUser)}</p>
+              {selectedUser.screen_name && selectedUser.first_name && selectedUser.last_name && (
+                <p className="text-sm text-muted-foreground">@{selectedUser.screen_name}</p>
+              )}
+            </div>
+          </div>
+          <button 
+            className="text-sm text-blue-600 hover:underline" 
+            onClick={() => onSelect('')}
+          >
+            Change
+          </button>
         </div>
-      </PopoverTrigger>
-      <PopoverContent className="p-0" align="start" sideOffset={5}>
-        <Command>
-          <Input
+      ) : (
+        <Command className="rounded-md border">
+          <CommandInput 
             placeholder="Search users..."
-            className="border-none focus:ring-0"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            value={searchQuery}
+            onValueChange={setSearchQuery}
           />
           <CommandList>
-            {isLoading && (
-              <CommandEmpty>Loading...</CommandEmpty>
-            )}
-            {!isLoading && users.length === 0 && (
-              <CommandEmpty>No users found</CommandEmpty>
-            )}
+            <CommandEmpty>
+              {isLoading ? (
+                <div className="flex items-center justify-center p-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span className="ml-2">Searching...</span>
+                </div>
+              ) : (
+                'No users found'
+              )}
+            </CommandEmpty>
             <CommandGroup>
-              {users.map((user) => (
-                <CommandItem
-                  key={user.id}
-                  onSelect={() => handleSelectUser(user)}
-                  className="flex items-center gap-2"
+              {profiles?.map((profile) => (
+                <CommandItem 
+                  key={profile.id}
+                  onSelect={() => handleSelect(profile.id)}
+                  className="cursor-pointer"
                 >
-                  <Avatar className="h-7 w-7">
-                    <AvatarImage src={user.avatar_url || undefined} alt={getDisplayName(user)} />
-                    <AvatarFallback>{getInitials(user)}</AvatarFallback>
-                  </Avatar>
-                  <span>{getDisplayName(user)}</span>
-                  <Check
-                    className={cn(
-                      "ml-auto h-4 w-4",
-                      selectedUserId === user.id ? "opacity-100" : "opacity-0"
-                    )}
-                  />
+                  <div className="flex items-center space-x-2">
+                    <Avatar className="h-7 w-7">
+                      <AvatarImage src={profile.avatar_url || undefined} />
+                      <AvatarFallback className="text-xs">{getInitials(profile)}</AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <p>{getDisplayName(profile)}</p>
+                      {profile.screen_name && profile.first_name && profile.last_name && (
+                        <p className="text-xs text-muted-foreground">@{profile.screen_name}</p>
+                      )}
+                    </div>
+                  </div>
                 </CommandItem>
               ))}
             </CommandGroup>
           </CommandList>
         </Command>
-      </PopoverContent>
-    </Popover>
+      )}
+    </div>
   );
 }

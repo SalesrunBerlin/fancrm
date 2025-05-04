@@ -1,33 +1,18 @@
 
 import { useState, useEffect } from 'react';
-import { 
-  Sheet, 
-  SheetContent, 
-  SheetDescription, 
-  SheetHeader, 
-  SheetTitle 
-} from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { UserSearchField } from './UserSearchField';
-import { FieldSelectionList } from './FieldSelectionList';
 import { useObjectFields } from '@/hooks/useObjectFields';
 import { useRecordShares, RecordShare } from '@/hooks/useRecordShares';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { UserSearchField } from './UserSearchField';
+import { FieldSelectionList } from './FieldSelectionList';
+import { Separator } from '@/components/ui/separator';
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from '@/components/ui/label';
-import { toast } from 'sonner';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Loader2, Trash2, Edit2 } from 'lucide-react';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { Loader2, Trash2, Edit2, Eye } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface ShareRecordSheetProps {
   open: boolean;
@@ -36,301 +21,279 @@ interface ShareRecordSheetProps {
   objectTypeId: string;
 }
 
-interface SelectedUser {
-  id: string;
-  first_name: string | null;
-  last_name: string | null;
-  screen_name: string | null;
-  avatar_url: string | null;
-}
-
 export function ShareRecordSheet({
   open,
   onOpenChange,
   recordId,
   objectTypeId
 }: ShareRecordSheetProps) {
-  const [activeTab, setActiveTab] = useState('share');
-  const [selectedUser, setSelectedUser] = useState<SelectedUser | null>(null);
-  const [selectedFields, setSelectedFields] = useState<string[]>([]);
+  const [activeTab, setActiveTab] = useState<string>('share');
+  const [selectedUserId, setSelectedUserId] = useState<string>('');
   const [permissionLevel, setPermissionLevel] = useState<'read' | 'edit'>('read');
-  const [editingShare, setEditingShare] = useState<RecordShare | null>(null);
-  const [shareToDelete, setShareToDelete] = useState<RecordShare | null>(null);
-  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [selectedFields, setSelectedFields] = useState<string[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
-  const { fields, isLoading: fieldsLoading } = useObjectFields(objectTypeId);
+  const { fields, isLoading: isLoadingFields } = useObjectFields(objectTypeId);
   const { 
     shares, 
     shareFields, 
-    isLoading: sharesLoading,
     shareRecord, 
     updateShare, 
-    removeShare 
+    removeShare, 
+    isLoading: isLoadingShares 
   } = useRecordShares(recordId);
 
-  // Reset form when sheet opens
+  // Reset form when the sheet is opened
   useEffect(() => {
     if (open) {
-      setSelectedUser(null);
-      setSelectedFields([]);
+      setSelectedUserId('');
       setPermissionLevel('read');
-      setEditingShare(null);
+      setSelectedFields([]);
       setActiveTab('share');
     }
   }, [open]);
 
-  // When editing a share, populate the form with its data
+  // Update selected fields when fields are loaded
   useEffect(() => {
-    if (editingShare && shareFields) {
-      const fields = shareFields[editingShare.id] || [];
-      const visibleFieldApiNames = fields.filter(f => f.is_visible).map(f => f.field_api_name);
-      setSelectedFields(visibleFieldApiNames);
-      setPermissionLevel(editingShare.permission_level);
-      setSelectedUser({
-        id: editingShare.shared_with_user_id,
-        first_name: editingShare.user_profile?.first_name || null,
-        last_name: editingShare.user_profile?.last_name || null,
-        screen_name: editingShare.user_profile?.screen_name || null,
-        avatar_url: editingShare.user_profile?.avatar_url || null
-      });
-      setActiveTab('share');
+    if (fields && fields.length > 0 && selectedFields.length === 0) {
+      const defaultFields = fields.map(field => field.api_name);
+      setSelectedFields(defaultFields);
     }
-  }, [editingShare, shareFields]);
+  }, [fields]);
 
-  const handleShareRecord = async () => {
-    if (!selectedUser) {
+  const handleShare = async () => {
+    if (!selectedUserId) {
       toast.error('Please select a user to share with');
       return;
     }
-
+    
     if (selectedFields.length === 0) {
       toast.error('Please select at least one field to share');
       return;
     }
-
+    
+    setIsSubmitting(true);
+    
     try {
-      if (editingShare) {
-        await updateShare.mutateAsync({
-          shareId: editingShare.id,
-          permissionLevel,
-          visibleFields: selectedFields
-        });
-        setEditingShare(null);
-      } else {
-        await shareRecord.mutateAsync({
-          recordId,
-          sharedWithUserId: selectedUser.id,
-          permissionLevel,
-          visibleFields: selectedFields
-        });
-      }
+      await shareRecord.mutateAsync({
+        recordId,
+        sharedWithUserId: selectedUserId,
+        permissionLevel,
+        visibleFields: selectedFields
+      });
       
-      // Reset form after successful share
-      setSelectedUser(null);
-      setSelectedFields([]);
-      setPermissionLevel('read');
-      
-      // Switch to the Manage tab to see the updated shares
+      setSelectedUserId('');
       setActiveTab('manage');
     } catch (error) {
       console.error('Error sharing record:', error);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  const handleDeleteShare = async () => {
-    if (!shareToDelete) return;
-    
+  const handleUpdateShare = async (shareId: string, newPermissionLevel: 'read' | 'edit') => {
     try {
-      await removeShare.mutateAsync(shareToDelete.id);
-      setConfirmDialogOpen(false);
-      setShareToDelete(null);
+      await updateShare.mutateAsync({
+        shareId,
+        permissionLevel: newPermissionLevel
+      });
+    } catch (error) {
+      console.error('Error updating share:', error);
+    }
+  };
+
+  const handleRemoveShare = async (shareId: string) => {
+    try {
+      await removeShare.mutateAsync(shareId);
     } catch (error) {
       console.error('Error removing share:', error);
     }
   };
 
-  const getDisplayName = (user: any) => {
-    if (!user) return 'User';
-    return user.first_name && user.last_name
-      ? `${user.first_name} ${user.last_name}`
-      : user.screen_name || 'User';
+  const isLoading = isLoadingFields || isLoadingShares;
+  
+  // Function to get initials from user profile
+  const getUserInitials = (profile: RecordShare['user_profile']) => {
+    if (!profile) return '??';
+    
+    const firstInitial = profile.first_name ? profile.first_name.charAt(0) : '';
+    const lastInitial = profile.last_name ? profile.last_name.charAt(0) : '';
+    
+    return (firstInitial + lastInitial).toUpperCase() || profile.screen_name?.charAt(0).toUpperCase() || '?';
   };
-
-  const getInitials = (user: any) => {
-    if (!user) return '';
-    if (user.first_name && user.last_name) {
-      return `${user.first_name[0]}${user.last_name[0]}`.toUpperCase();
+  
+  // Function to get display name from user profile
+  const getUserDisplayName = (profile: RecordShare['user_profile']) => {
+    if (!profile) return 'Unknown User';
+    
+    if (profile.first_name && profile.last_name) {
+      return `${profile.first_name} ${profile.last_name}`;
     }
-    return (user.screen_name?.[0] || 'U').toUpperCase();
-  };
-
-  const openConfirmDeleteDialog = (share: RecordShare) => {
-    setShareToDelete(share);
-    setConfirmDialogOpen(true);
+    
+    return profile.screen_name || 'User';
   };
 
   return (
-    <>
-      <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent className="sm:max-w-md overflow-y-auto">
-          <SheetHeader>
-            <SheetTitle>Share Record</SheetTitle>
-            <SheetDescription>
-              Share this record with other users in your organization.
-            </SheetDescription>
-          </SheetHeader>
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent className="sm:max-w-md">
+        <SheetHeader>
+          <SheetTitle>Share Record</SheetTitle>
+          <SheetDescription>
+            Share this record with other users and control which fields they can see.
+          </SheetDescription>
+        </SheetHeader>
+        
+        <Tabs defaultValue="share" value={activeTab} onValueChange={setActiveTab} className="mt-6">
+          <TabsList className="grid grid-cols-2">
+            <TabsTrigger value="share">Share</TabsTrigger>
+            <TabsTrigger value="manage">Manage</TabsTrigger>
+          </TabsList>
           
-          <div className="py-6">
-            <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="share">Share</TabsTrigger>
-                <TabsTrigger value="manage">Manage Shares</TabsTrigger>
-              </TabsList>
+          <TabsContent value="share" className="space-y-6 pt-4">
+            <div className="space-y-4">
+              <UserSearchField
+                selectedUserId={selectedUserId}
+                onSelect={setSelectedUserId}
+                label="Select User"
+                description="Search for a user to share this record with"
+              />
               
-              <TabsContent value="share" className="space-y-4 mt-4">
-                <div className="space-y-2">
-                  <Label>User</Label>
-                  <UserSearchField
-                    onSelect={setSelectedUser}
-                    selectedUserId={selectedUser?.id}
-                    placeholder="Select a user to share with"
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label>Permission</Label>
-                  <RadioGroup 
-                    value={permissionLevel} 
-                    onValueChange={(value) => setPermissionLevel(value as 'read' | 'edit')}
-                  >
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="read" id="r-read" />
-                      <Label htmlFor="r-read">Read only</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="edit" id="r-edit" />
-                      <Label htmlFor="r-edit">Edit</Label>
-                    </div>
-                  </RadioGroup>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label>Visible Fields</Label>
-                  {fieldsLoading ? (
-                    <div className="flex justify-center p-4">
-                      <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-                    </div>
-                  ) : (
-                    <FieldSelectionList
-                      fields={fields || []}
-                      selectedFields={selectedFields}
-                      onChange={setSelectedFields}
-                      defaultSelectAll={true}
-                    />
-                  )}
-                </div>
-                
-                <Button 
-                  className="w-full mt-4" 
-                  onClick={handleShareRecord}
-                  disabled={!selectedUser || selectedFields.length === 0}
-                >
-                  {editingShare ? 'Update Share' : 'Share Record'}
-                </Button>
-              </TabsContent>
-              
-              <TabsContent value="manage" className="mt-4">
-                {sharesLoading ? (
-                  <div className="flex justify-center p-8">
-                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                  </div>
-                ) : shares && shares.length > 0 ? (
-                  <div className="space-y-4">
-                    {shares.map((share) => (
-                      <div 
-                        key={share.id} 
-                        className="p-4 border rounded-md flex items-center justify-between"
-                      >
-                        <div className="flex items-center gap-3">
-                          <Avatar className="h-8 w-8">
-                            <AvatarImage 
-                              src={share.user_profile?.avatar_url || undefined} 
-                              alt={getDisplayName(share.user_profile)} 
-                            />
-                            <AvatarFallback>
-                              {getInitials(share.user_profile)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <p className="font-medium">
-                              {getDisplayName(share.user_profile)}
-                            </p>
-                            <p className="text-sm text-muted-foreground">
-                              {share.permission_level === 'read' ? 'Read only' : 'Can edit'}
-                            </p>
-                          </div>
-                        </div>
-                        
-                        <div className="flex space-x-2">
-                          <Button 
-                            size="icon" 
-                            variant="ghost"
-                            onClick={() => setEditingShare(share)}
-                          >
-                            <Edit2 className="h-4 w-4" />
-                            <span className="sr-only">Edit</span>
-                          </Button>
-                          <Button 
-                            size="icon" 
-                            variant="ghost" 
-                            className="text-red-500 hover:text-red-600 hover:bg-red-50"
-                            onClick={() => openConfirmDeleteDialog(share)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                            <span className="sr-only">Delete</span>
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <p>No shares found for this record.</p>
-                    <Button 
-                      variant="outline" 
-                      className="mt-2"
-                      onClick={() => setActiveTab('share')}
+              {selectedUserId && (
+                <>
+                  <Separator />
+                  
+                  <div className="space-y-2">
+                    <Label>Permission Level</Label>
+                    <RadioGroup 
+                      defaultValue="read" 
+                      value={permissionLevel}
+                      onValueChange={(value) => setPermissionLevel(value as 'read' | 'edit')}
+                      className="flex flex-col space-y-1"
                     >
-                      Share with someone
-                    </Button>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="read" id="read" />
+                        <Label htmlFor="read" className="flex items-center">
+                          <Eye className="h-4 w-4 mr-2 text-muted-foreground" />
+                          Read only
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="edit" id="edit" />
+                        <Label htmlFor="edit" className="flex items-center">
+                          <Edit2 className="h-4 w-4 mr-2 text-muted-foreground" />
+                          Can edit
+                        </Label>
+                      </div>
+                    </RadioGroup>
                   </div>
-                )}
-              </TabsContent>
-            </Tabs>
-          </div>
-        </SheetContent>
-      </Sheet>
-      
-      <AlertDialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Remove share</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to remove access for {shareToDelete && getDisplayName(shareToDelete.user_profile)}?
-              This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteShare}
-              className="bg-red-500 hover:bg-red-600"
-            >
-              Remove
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </>
+                  
+                  <Separator />
+                  
+                  <div className="space-y-2">
+                    <Label>Visible Fields</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Select which fields this user will be able to see
+                    </p>
+                    
+                    {isLoading ? (
+                      <div className="flex justify-center p-4">
+                        <Loader2 className="h-6 w-6 animate-spin" />
+                      </div>
+                    ) : (
+                      <FieldSelectionList
+                        fields={fields || []}
+                        selectedFields={selectedFields}
+                        onChange={setSelectedFields}
+                      />
+                    )}
+                  </div>
+                  
+                  <Button
+                    className="w-full mt-4"
+                    onClick={handleShare}
+                    disabled={isSubmitting || !selectedUserId || selectedFields.length === 0}
+                  >
+                    {isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                    Share Record
+                  </Button>
+                </>
+              )}
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="manage" className="space-y-6 pt-4">
+            {isLoading ? (
+              <div className="flex justify-center p-8">
+                <Loader2 className="h-6 w-6 animate-spin" />
+              </div>
+            ) : shares && shares.length > 0 ? (
+              <div className="space-y-4">
+                {shares.map((share) => (
+                  <div key={share.id} className="flex items-start justify-between p-3 border rounded-md">
+                    <div className="flex items-center space-x-3">
+                      <Avatar>
+                        <AvatarImage src={share.user_profile?.avatar_url || undefined} />
+                        <AvatarFallback>{getUserInitials(share.user_profile)}</AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <p className="font-medium">{getUserDisplayName(share.user_profile)}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {share.permission_level === 'read' ? 'Read access' : 'Edit access'}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {shareFields && shareFields[share.id] ? (
+                            `${shareFields[share.id].length} fields visible`
+                          ) : (
+                            'Loading fields...'
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex space-x-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleUpdateShare(
+                          share.id,
+                          share.permission_level === 'read' ? 'edit' : 'read'
+                        )}
+                        title={share.permission_level === 'read' ? 'Change to edit access' : 'Change to read access'}
+                      >
+                        {share.permission_level === 'read' ? (
+                          <Edit2 className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleRemoveShare(share.id)}
+                        className="text-red-500 hover:text-red-600"
+                        title="Remove access"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center p-8 text-muted-foreground">
+                <p>No shares yet</p>
+                <p className="text-sm">Share this record with others using the Share tab</p>
+                <Button
+                  variant="outline"
+                  className="mt-4"
+                  onClick={() => setActiveTab('share')}
+                >
+                  Share Now
+                </Button>
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
+      </SheetContent>
+    </Sheet>
   );
 }
