@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -60,9 +59,6 @@ export function CreateRecordForm({
   const [error, setError] = useState<string | null>(null);
   const [lookupFieldsValues, setLookupFieldsValues] = useState<Record<string, Record<string, any>>>({});
   const [enhancedFields, setEnhancedFields] = useState<ObjectField[]>([]);
-  const [formulaWarnings, setFormulaWarnings] = useState<Record<string, string>>({});
-  const [formReady, setFormReady] = useState(false);
-  const [debugMode, setDebugMode] = useState(true); // Enable debug mode by default for troubleshooting
   
   // Filter only enabled fields or fields that are required by the object
   const enabledActionFields = actionFields.filter(af => 
@@ -114,7 +110,6 @@ export function CreateRecordForm({
       }
       
       setEnhancedFields(enhanced);
-      setFormReady(true);
     };
     
     enhancePicklistFields();
@@ -134,11 +129,10 @@ export function CreateRecordForm({
 
   // Important: Initialize formula-based default values when the form first loads
   useEffect(() => {
-    if (enabledActionFields.length > 0 && objectFields.length > 0 && formReady) {
+    if (enabledActionFields.length > 0 && objectFields.length > 0) {
       console.log("Evaluating formula-based default values on form load");
       
       const formulaDefaults: Record<string, any> = {};
-      const newFormulaWarnings: Record<string, string> = {};
       let hasFormulaValues = false;
       
       // Process action fields to set default values with formulas
@@ -161,29 +155,7 @@ export function CreateRecordForm({
             console.log(`Evaluating formula for ${field.api_name}:`, 
               actionField.formula_expression, "-->", formulaValue);
             
-            // Check if the formula returned null (unresolved)
-            if (formulaValue === null && actionField.formula_expression) {
-              newFormulaWarnings[field.api_name] = 
-                `Formula could not be resolved: ${actionField.formula_expression}`;
-              
-              // Use empty string instead of null for form fields
-              formulaDefaults[field.api_name] = '';
-            } else {
-              // Handle lookup fields specially to ensure valid UUIDs
-              if (field.data_type === 'lookup' && formulaValue) {
-                if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(formulaValue)) {
-                  console.warn(`Invalid UUID format from formula for field ${field.api_name}: ${formulaValue}`);
-                  newFormulaWarnings[field.api_name] = 
-                    `Invalid UUID format from formula: ${formulaValue}`;
-                  formulaDefaults[field.api_name] = '';
-                } else {
-                  formulaDefaults[field.api_name] = formulaValue;
-                }
-              } else {
-                formulaDefaults[field.api_name] = formulaValue || '';
-              }
-            }
-            
+            formulaDefaults[field.api_name] = formulaValue;
             hasFormulaValues = true;
           } 
           // Otherwise use the static default value
@@ -194,11 +166,6 @@ export function CreateRecordForm({
         }
       });
       
-      // Update formula warnings
-      if (Object.keys(newFormulaWarnings).length > 0) {
-        setFormulaWarnings(prev => ({...prev, ...newFormulaWarnings}));
-      }
-      
       // Set all formula values at once if we have any
       if (hasFormulaValues) {
         console.log("Setting formula default values:", formulaDefaults);
@@ -207,7 +174,7 @@ export function CreateRecordForm({
         });
       }
     }
-  }, [enabledActionFields, objectFields, form, formReady]);
+  }, [enabledActionFields, objectFields, form]);
   
   useEffect(() => {
     // First, collect all lookup fields that have values
@@ -280,13 +247,11 @@ export function CreateRecordForm({
   // Update form values when lookup values change
   useEffect(() => {
     if (Object.keys(lookupFieldsValues).length > 0) {
-      const newFormulaWarnings: Record<string, string> = {};
-      
       // Re-evaluate formulas with the new lookup values
       enabledActionFields.forEach(actionField => {
         const field = objectFields.find(f => f.id === actionField.field_id);
         if (field && actionField.formula_type === 'dynamic' && actionField.formula_expression) {
-          const formulaValue = evaluateFormula(
+          const newValue = evaluateFormula(
             actionField.formula_expression, 
             { 
               fieldValues: form.getValues(), 
@@ -294,33 +259,9 @@ export function CreateRecordForm({
             }
           );
           
-          // Handle lookup fields specially to ensure valid UUIDs
-          if (field.data_type === 'lookup' && formulaValue) {
-            if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(formulaValue)) {
-              console.warn(`Invalid UUID format from formula for field ${field.api_name}: ${formulaValue}`);
-              newFormulaWarnings[field.api_name] = 
-                `Invalid UUID format from formula: ${formulaValue}`;
-              form.setValue(field.api_name, '');
-            } else {
-              form.setValue(field.api_name, formulaValue);
-            }
-          } else {
-            // Check if the formula returned null (unresolved)
-            if (formulaValue === null && actionField.formula_expression) {
-              newFormulaWarnings[field.api_name] = 
-                `Formula could not be resolved: ${actionField.formula_expression}`;
-              
-              // Use empty string instead of null for form fields
-              form.setValue(field.api_name, '');
-            } else {
-              form.setValue(field.api_name, formulaValue || '');
-            }
-          }
+          form.setValue(field.api_name, newValue);
         }
       });
-      
-      // Update formula warnings
-      setFormulaWarnings(prev => ({...prev, ...newFormulaWarnings}));
     }
   }, [lookupFieldsValues, enabledActionFields, objectFields, form]);
 
@@ -338,213 +279,16 @@ export function CreateRecordForm({
     !preselectedFields.some(pf => pf.id === field.id)
   );
 
-  // Validate if all formulas are resolved
-  const validateFormFormulas = () => {
-    const fieldValues = form.getValues();
-    const newFormulaWarnings: Record<string, string> = {};
-    let hasUnresolvedRequiredFormulas = false;
-    
-    // Check all formula fields
-    enabledActionFields.forEach(actionField => {
-      const field = objectFields.find(f => f.id === actionField.field_id);
-      if (field && actionField.formula_type === 'dynamic' && actionField.formula_expression) {
-        // If field is required but value is empty or still has formula syntax
-        const value = fieldValues[field.api_name];
-        if (field.is_required && (!value || value === '')) {
-          if (actionField.formula_expression.includes('.')) {
-            // It's a lookup formula that likely failed
-            newFormulaWarnings[field.api_name] = 
-              `Required formula field could not be resolved: ${actionField.formula_expression}`;
-            hasUnresolvedRequiredFormulas = true;
-          }
-        }
-      }
-    });
-    
-    // Update formula warnings
-    if (Object.keys(newFormulaWarnings).length > 0) {
-      setFormulaWarnings(prev => ({...prev, ...newFormulaWarnings}));
-    }
-    
-    return !hasUnresolvedRequiredFormulas;
-  };
-
-  // Enhanced UUID validation function
-  const isValidUUID = (value: string): boolean => {
-    return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
-  };
-
-  // Validate lookup fields to ensure they contain proper UUIDs
-  const validateLookupFields = () => {
-    const fieldValues = form.getValues();
-    let hasInvalidLookupFields = false;
-    
-    // Check all lookup fields
-    objectFields.filter(field => field.data_type === 'lookup').forEach(field => {
-      const value = fieldValues[field.api_name];
-      
-      // If this is a required field, ensure it has a valid UUID
-      if (field.is_required) {
-        // Check for null, undefined, empty string, or "undefined" string
-        if (!value || value === '' || value === 'undefined' || 
-            !isValidUUID(String(value))) {
-          console.log(`Invalid lookup value for ${field.api_name}: "${value}"`);
-          hasInvalidLookupFields = true;
-          form.setError(field.api_name, { 
-            type: 'manual', 
-            message: `${field.name} muss einen gültigen Wert haben` 
-          });
-        }
-      } else if (value && value !== '' && value !== 'undefined' && 
-                !isValidUUID(String(value))) {
-        // For optional fields, if a value is provided, it must be a valid UUID
-        console.log(`Invalid lookup value for optional field ${field.api_name}: "${value}"`);
-        hasInvalidLookupFields = true;
-        form.setError(field.api_name, { 
-          type: 'manual', 
-          message: `${field.name} enthält einen ungültigen Wert` 
-        });
-      }
-    });
-    
-    return !hasInvalidLookupFields;
-  };
-
-  // Special debug function to check all values before submission
-  const debugFormValues = (data: Record<string, any>) => {
-    if (!debugMode) return;
-    
-    console.group("🐞 DEBUG: Form values before submission");
-    console.log("Raw form values:", data);
-    
-    // Check for problematic values
-    const problematicFields: string[] = [];
-    
-    objectFields.forEach(field => {
-      const value = data[field.api_name];
-      
-      if (field.data_type === 'lookup') {
-        if (field.is_required && (!value || value === '' || value === 'undefined' || 
-            !isValidUUID(String(value)))) {
-          console.warn(`⚠️ Field ${field.name} (${field.api_name}) has invalid UUID value: "${value}"`);
-          problematicFields.push(field.api_name);
-        }
-      }
-      
-      if (value === 'undefined') {
-        console.warn(`⚠️ Field ${field.name} (${field.api_name}) has literal "undefined" string value`);
-        problematicFields.push(field.api_name);
-      }
-    });
-    
-    if (problematicFields.length > 0) {
-      console.warn("⚠️ Found problematic fields:", problematicFields);
-    } else {
-      console.log("✅ No obvious problematic values detected");
-    }
-    
-    console.groupEnd();
-  };
-
-  // Clean form data to prevent invalid values
-  const cleanFormData = (data: Record<string, any>): Record<string, any> => {
-    const cleanedData: Record<string, any> = {};
-
-    // Process each field to ensure proper values
-    Object.entries(data).forEach(([fieldName, value]) => {
-      // Get corresponding field definition
-      const field = objectFields.find(f => f.api_name === fieldName);
-      if (!field) return;
-
-      // Handle different field types appropriately
-      if (field.data_type === 'lookup') {
-        // For lookup fields, validate UUID format if required
-        if (field.is_required) {
-          if (value && value !== 'undefined' && value !== '' && isValidUUID(String(value))) {
-            cleanedData[fieldName] = value;
-          } else {
-            console.log(`Filtering out invalid required lookup field ${fieldName}: "${value}"`);
-            // Don't include invalid values for required lookup fields
-          }
-        } else if (value && value !== 'undefined' && value !== '') {
-          // For optional fields, only include if valid
-          if (isValidUUID(String(value))) {
-            cleanedData[fieldName] = value;
-          } else {
-            console.log(`Filtering out invalid optional lookup value ${fieldName}: "${value}"`);
-          }
-        }
-      } 
-      // Handle other field types
-      else {
-        // Don't include fields with 'undefined' string
-        if (value === 'undefined') {
-          console.log(`Filtering out field ${fieldName} with "undefined" value`);
-        } else if (value === null && field.is_required) {
-          console.log(`Filtering out null value for required field ${fieldName}`);
-        } else {
-          cleanedData[fieldName] = value;
-        }
-      }
-    });
-
-    return cleanedData;
-  };
-
   const handleSubmit = async (data: Record<string, any>) => {
     if (!user) {
       setError("You must be logged in to create records");
       return;
     }
     
-    console.log("CreateRecordForm: Submit button clicked");
-    
-    // Turn on debug mode for this submission
-    setDebugMode(true);
-    
-    // Debug check values before proceeding
-    debugFormValues(data);
-    
-    // Clear any previous errors
+    setIsSubmitting(true);
     setError(null);
     
-    // Validate formula fields
-    if (!validateFormFormulas()) {
-      setError("Einige erforderliche Formelfelder konnten nicht aufgelöst werden. Bitte überprüfen Sie die Lookup-Felder und ergänzen Sie die benötigten Werte.");
-      return;
-    }
-    
-    // Validate lookup fields
-    if (!validateLookupFields()) {
-      setError("Bitte wählen Sie gültige Werte für alle erforderlichen Lookup-Felder aus.");
-      return;
-    }
-    
-    // Clean the form data
-    const cleanedData = cleanFormData(data);
-    console.log("CreateRecordForm: Data after cleaning:", cleanedData);
-    
-    // Check if we have any data left after cleaning
-    if (Object.keys(cleanedData).length === 0) {
-      setError("Keine gültigen Feldwerte gefunden. Bitte überprüfen Sie das Formular.");
-      return;
-    }
-    
-    // Check required fields after cleaning
-    const missingRequiredFields = enabledObjectFields
-      .filter(field => field.is_required && !cleanedData[field.api_name])
-      .map(field => field.name);
-    
-    if (missingRequiredFields.length > 0) {
-      setError(`Bitte füllen Sie alle erforderlichen Felder aus: ${missingRequiredFields.join(', ')}`);
-      return;
-    }
-    
-    setIsSubmitting(true);
-    
     try {
-      console.log("Creating record with data:", cleanedData);
-      
       // Create the record
       const { data: record, error: recordError } = await supabase
         .from("object_records")
@@ -555,69 +299,30 @@ export function CreateRecordForm({
         .select()
         .single();
       
-      if (recordError) {
-        console.error("Error creating object record:", recordError);
-        throw recordError;
-      }
-      
-      console.log("Record created successfully:", record);
+      if (recordError) throw recordError;
       
       // Create the field values
-      const fieldValues = Object.entries(cleanedData).map(([api_name, value]) => {
-        // For null or undefined values, set to null
-        const processedValue = 
-          value === undefined || value === null || value === 'undefined' ? null : String(value);
-        
-        return {
-          record_id: record.id,
-          field_api_name: api_name,
-          value: processedValue,
-        };
-      });
+      const fieldValues = Object.entries(data).map(([api_name, value]) => ({
+        record_id: record.id,
+        field_api_name: api_name,
+        value: value === undefined ? null : String(value),
+      }));
       
-      console.log("Inserting field values:", fieldValues);
+      const { error: valuesError } = await supabase
+        .from("object_field_values")
+        .insert(fieldValues);
       
-      if (fieldValues.length > 0) {
-        const { error: valuesError } = await supabase
-          .from("object_field_values")
-          .insert(fieldValues);
-        
-        if (valuesError) {
-          console.error("Error creating field values:", valuesError);
-          throw valuesError;
-        }
-      }
+      if (valuesError) throw valuesError;
       
       toast.success("Record created successfully");
       onSuccess();
     } catch (err: any) {
       console.error("Error creating record:", err);
-      // Provide more specific error messages based on the error
-      if (err.message && err.message.includes("invalid input syntax for type uuid")) {
-        setError("Ein oder mehrere Felder enthalten ungültige Werte. Bitte überprüfen Sie die Lookup-Felder und Formeln.");
-      } else if (err.message && err.message.includes("violates not-null constraint")) {
-        setError("Ein erforderliches Feld wurde nicht ausgefüllt.");
-      } else if (err.message && err.message.includes("duplicate key value")) {
-        setError("Ein Datensatz mit diesem Schlüsselwert existiert bereits.");
-      } else {
-        setError(err.message || "Failed to create record");
-      }
+      setError(err.message || "Failed to create record");
     } finally {
       setIsSubmitting(false);
     }
   };
-
-  // Find fields with unresolved lookup references
-  const unresolvedLookupFields = Object.keys(formulaWarnings).filter(fieldName => {
-    const warning = formulaWarnings[fieldName];
-    return warning.includes("could not be resolved") && warning.includes(".");
-  });
-
-  // Get the field names with unresolved lookup references
-  const unresolvedFieldNames = unresolvedLookupFields.map(apiName => {
-    const field = objectFields.find(f => f.api_name === apiName);
-    return field?.name || apiName;
-  });
 
   return (
     <Form {...form}>
@@ -626,21 +331,6 @@ export function CreateRecordForm({
           <Alert className={getAlertVariantClass("destructive")}>
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
-        
-        {unresolvedFieldNames.length > 0 && (
-          <Alert className={getAlertVariantClass("warning")}>
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              <div>Achtung: Die folgenden Felder konnten nicht automatisch gefüllt werden, da Lookup-Werte fehlen:</div>
-              <ul className="list-disc pl-5 text-sm mt-1">
-                {unresolvedFieldNames.map(fieldName => (
-                  <li key={fieldName} className="mt-1">{fieldName}</li>
-                ))}
-              </ul>
-              <div className="mt-2 text-sm">Bitte füllen Sie die entsprechenden Lookup-Felder aus, damit die Formeln berechnet werden können.</div>
-            </AlertDescription>
           </Alert>
         )}
         

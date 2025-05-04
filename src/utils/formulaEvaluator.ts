@@ -1,4 +1,3 @@
-
 import { format } from 'date-fns';
 
 type FormulaContext = {
@@ -13,8 +12,8 @@ type FormulaContext = {
  * @param context Optional context data like field values
  * @returns The evaluated result as a string
  */
-export function evaluateFormula(expression: string | null | undefined, context: FormulaContext = {}): string | null {
-  if (!expression) return null;
+export function evaluateFormula(expression: string | null | undefined, context: FormulaContext = {}): string {
+  if (!expression) return '';
   
   console.log("Evaluating formula:", expression, "with context:", context);
   
@@ -29,43 +28,6 @@ export function evaluateFormula(expression: string | null | undefined, context: 
   // Handle field references - if fieldValues are provided
   if (context.fieldValues) {
     result = replaceFieldReferences(result, context.fieldValues, context.lookupFieldsValues);
-  }
-  
-  // If the result still contains unresolved formula references, return null instead of the unresolved formula
-  if (result.includes('{') && result.includes('}')) {
-    console.log("Formula contains unresolved references:", result);
-    // If the formula completely matches the original expression (nothing was replaced), return null
-    if (result === expression) {
-      return null;
-    }
-  }
-
-  // Special handling for empty string values that might be used as UUIDs
-  // If the formula evaluation resulted in an empty string and there are no more
-  // unresolved references, return null to prevent database errors
-  if (result === '') {
-    console.log("Formula evaluated to empty string - returning null instead");
-    return null;
-  }
-
-  // Prevent returning the string "undefined" which would cause database errors
-  if (result === 'undefined') {
-    console.log("Formula evaluated to 'undefined' string - returning null instead");
-    return null;
-  }
-  
-  // Additional checks for UUID fields
-  if (result && (
-      result === 'null' || 
-      result === 'undefined' || 
-      result === '' ||
-      !/^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})?$/i.test(result)
-    )) {
-    if (expression.includes('.') && expression.includes('FieldName')) {
-      // This is likely a lookup field reference that couldn't be resolved
-      console.log("Formula appears to be a lookup field that couldn't be resolved:", result);
-      return null;
-    }
   }
   
   console.log("Formula evaluation result:", result);
@@ -140,34 +102,15 @@ function replaceFieldReferences(
       // If we have lookup field values
       if (lookupFieldsValues && lookupFieldsValues[lookupField]) {
         const lookupValue = lookupFieldsValues[lookupField][fieldName];
-        
-        // Return null for undefined or null values - important for UUID fields
-        if (lookupValue === undefined || lookupValue === null) {
-          console.log(`Lookup value for ${lookupField}.${fieldName} is undefined or null, returning null`);
-          return '';
-        }
-        
-        // Additional validation for UUID values
-        if (fieldName.toLowerCase().includes('id') && typeof lookupValue === 'string') {
-          // Check if it's a valid UUID format
-          if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(lookupValue)) {
-            console.log(`Invalid UUID format for lookup field ${lookupField}.${fieldName}: ${lookupValue}`);
-            return '';
-          }
-        }
-        
-        return String(lookupValue);
+        return lookupValue !== undefined ? String(lookupValue) : match;
       }
 
       // Otherwise try to find the lookup record ID first
       const lookupId = fieldValues[lookupField];
-      if (!lookupId) {
-        console.log(`Lookup field ${lookupField} has no value, returning empty string`);
-        return '';
-      }
+      if (!lookupId) return match;
 
       console.log(`Found lookup ID: ${lookupId} for field ${lookupField}, but no resolved values available`);
-      return ''; // Return empty string instead of keeping the unresolved reference
+      return match;
     }
   );
 
@@ -184,21 +127,7 @@ function replaceFieldReferences(
       
       // Otherwise, try to replace with field value
       const value = fieldValues[fieldName];
-      
-      // Return empty string for undefined values to prevent "undefined" string in the result
-      if (value === undefined || value === null) {
-        console.log(`Field ${fieldName} has no value, returning empty string`);
-        return '';
-      } else {
-        // For fields that might be UUIDs, validate the format
-        if (fieldName.toLowerCase().includes('id') && typeof value === 'string') {
-          if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)) {
-            console.log(`Invalid UUID format for field ${fieldName}: ${value}`);
-            return '';
-          }
-        }
-        return String(value);
-      }
+      return value !== undefined ? String(value) : match;
     }
   );
   

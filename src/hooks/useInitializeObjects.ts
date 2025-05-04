@@ -22,7 +22,7 @@ export function useInitializeObjects() {
         });
         
         if (error) throw error;
-        return data;
+        return data as unknown;
       } catch (error) {
         // Fixed error handling with proper type assertions
         let errorMessage = "An unexpected error occurred";
