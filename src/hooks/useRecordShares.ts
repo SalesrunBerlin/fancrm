@@ -3,38 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
-
-// Define interfaces for the record sharing functionality
-export interface RecordShare {
-  id: string;
-  record_id: string;
-  shared_by_user_id: string;
-  shared_with_user_id: string;
-  permission_level: 'read' | 'edit';
-  created_at: string;
-  updated_at: string;
-  user_profile?: {
-    id: string;
-    first_name: string | null;
-    last_name: string | null;
-    avatar_url: string | null;
-    screen_name: string | null;
-  };
-}
-
-export interface RecordShareField {
-  id: string;
-  record_share_id: string;
-  field_api_name: string;
-  is_visible: boolean;
-}
-
-export interface ShareRecordParams {
-  recordId: string;
-  sharedWithUserId: string;
-  permissionLevel: 'read' | 'edit';
-  visibleFields: string[];
-}
+import { RecordShare, RecordShareField, ShareRecordParams } from '@/types/RecordSharing';
 
 export function useRecordShares(recordId?: string) {
   const { user } = useAuth();
@@ -46,37 +15,26 @@ export function useRecordShares(recordId?: string) {
     queryFn: async (): Promise<RecordShare[]> => {
       if (!recordId || !user) return [];
       
-      // Use generic query to avoid TypeScript errors with the new tables
+      // Try to get shares with associated user profiles
       const { data, error } = await supabase
-        .rpc('get_record_shares_with_profiles', {
-          p_record_id: recordId
-        });
+        .from('record_shares')
+        .select(`
+          *,
+          user_profile:shared_with_user_id(
+            id,
+            first_name,
+            last_name,
+            avatar_url,
+            screen_name
+          )
+        `)
+        .eq('record_id', recordId);
       
       if (error) {
         console.error('Error fetching record shares:', error);
         throw error;
       }
-
-      // If RPC function doesn't exist yet, fall back to direct query
-      if (!data) {
-        const { data: fallbackData, error: fallbackError } = await supabase
-          .from('record_shares')
-          .select(`
-            *,
-            user_profile:shared_with_user_id(
-              id,
-              first_name,
-              last_name,
-              avatar_url,
-              screen_name
-            )
-          `)
-          .eq('record_id', recordId);
-
-        if (fallbackError) throw fallbackError;
-        return (fallbackData || []) as RecordShare[];
-      }
-
+      
       return (data || []) as RecordShare[];
     },
     enabled: !!recordId && !!user,
@@ -89,8 +47,7 @@ export function useRecordShares(recordId?: string) {
       if (!shares || shares.length === 0) return {};
       
       const shareIds = shares.map(share => share.id);
-
-      // Use generic query to avoid TypeScript errors with the new tables
+      
       const { data, error } = await supabase
         .from('record_share_fields')
         .select('*')
@@ -102,12 +59,11 @@ export function useRecordShares(recordId?: string) {
       }
       
       // Group fields by share_id
-      const typedData = data as unknown as RecordShareField[];
-      return (typedData || []).reduce((acc, field) => {
+      return (data || []).reduce((acc, field) => {
         if (!acc[field.record_share_id]) {
           acc[field.record_share_id] = [];
         }
-        acc[field.record_share_id].push(field);
+        acc[field.record_share_id].push(field as RecordShareField);
         return acc;
       }, {} as Record<string, RecordShareField[]>);
     },
@@ -118,8 +74,6 @@ export function useRecordShares(recordId?: string) {
   const shareRecord = useMutation({
     mutationFn: async ({ recordId, sharedWithUserId, permissionLevel, visibleFields }: ShareRecordParams) => {
       if (!user) throw new Error('You must be logged in to share records');
-      
-      console.log('Sharing record:', { recordId, sharedWithUserId, permissionLevel, visibleFields });
       
       // First, create the share record
       const { data: shareData, error: shareError } = await supabase
