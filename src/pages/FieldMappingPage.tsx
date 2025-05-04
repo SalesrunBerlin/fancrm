@@ -4,19 +4,14 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useFieldMappings } from "@/hooks/useFieldMappings";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
 import { useObjectFields } from "@/hooks/useObjectFields";
-import { Button } from "@/components/ui/button";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, ArrowRightIcon, ArrowLeft } from "lucide-react";
-import { UserFieldMapping, ObjectTypeInfo } from "@/types/FieldMapping";
+import { Loader2 } from "lucide-react";
+import { ObjectTypeInfo } from "@/types/FieldMapping";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import { TargetObjectCreator } from "@/components/settings/TargetObjectCreator";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertCircle } from "lucide-react";
+import { MappingStatusAlert } from "@/components/mapping/MappingStatusAlert";
+import { MappingForm } from "@/components/mapping/MappingForm";
 
 export default function FieldMappingPage() {
   const navigate = useNavigate();
@@ -220,22 +215,7 @@ export default function FieldMappingPage() {
   if (error) {
     return (
       <div className="p-6">
-        <Card className="border-red-500">
-          <CardHeader>
-            <CardTitle className="text-red-500">Error</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertTitle>Error Loading Data</AlertTitle>
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-            <Button onClick={handleGoBack} variant="outline" className="mt-4">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Shared Records
-            </Button>
-          </CardContent>
-        </Card>
+        <MappingStatusAlert error={error} onGoBack={handleGoBack} />
       </div>
     );
   }
@@ -249,103 +229,20 @@ export default function FieldMappingPage() {
 
       {sourceObjectInfo && (
         <div className="grid gap-6 md:grid-cols-2">
-          <Card className="md:col-span-2">
-            <CardHeader>
-              <CardTitle>Object Mapping</CardTitle>
-              <CardDescription>
-                Select the target object in your system that should receive data from {sourceObjectInfo.name}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {targetObjectExists === false ? (
-                <TargetObjectCreator 
-                  sourceObject={sourceObjectInfo}
-                  onObjectCreated={handleObjectCreated}
-                />
-              ) : (
-                <div className="space-y-4">
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div>
-                      <h3 className="text-sm font-medium mb-2">Source Object</h3>
-                      <div className="p-3 border rounded-md bg-muted">
-                        {sourceObjectInfo.name}
-                      </div>
-                    </div>
-                    <div>
-                      <h3 className="text-sm font-medium mb-2">Target Object</h3>
-                      <Select 
-                        value={selectedTargetObjectId || undefined} 
-                        onValueChange={handleTargetObjectChange}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select target object" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {objectTypes?.map(obj => (
-                            <SelectItem key={obj.id} value={obj.id}>{obj.name}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  {selectedTargetObjectId && (
-                    <Tabs defaultValue="fields" className="mt-6">
-                      <TabsList className="grid w-full grid-cols-1">
-                        <TabsTrigger value="fields">Field Mappings</TabsTrigger>
-                      </TabsList>
-                      <TabsContent value="fields" className="mt-4 space-y-4">
-                        {sourceObjectInfo.fields.map(sourceField => (
-                          <div key={sourceField.id} className="grid grid-cols-5 items-center gap-4">
-                            <div className="col-span-2">
-                              <div className="font-medium">{sourceField.name}</div>
-                              <div className="text-sm text-muted-foreground">{sourceField.api_name}</div>
-                            </div>
-                            <div className="flex justify-center">
-                              <ArrowRightIcon className="h-4 w-4" />
-                            </div>
-                            <div className="col-span-2">
-                              <Select
-                                value={mappings.find(m => m.source_field_api_name === sourceField.api_name)?.target_field_api_name || "do_not_map"}
-                                onValueChange={(value) => handleFieldMappingChange(sourceField.api_name, value)}
-                              >
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select field" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="do_not_map">Do not map</SelectItem>
-                                  {targetFields
-                                    ?.filter(tf => tf.data_type === sourceField.data_type)
-                                    .map(field => (
-                                      <SelectItem key={field.id} value={field.api_name}>
-                                        {field.name}
-                                      </SelectItem>
-                                    ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                          </div>
-                        ))}
-                      </TabsContent>
-                    </Tabs>
-                  )}
-                </div>
-              )}
-            </CardContent>
-            <CardFooter className="flex justify-between">
-              <Button variant="outline" onClick={handleGoBack}>
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Back
-              </Button>
-              <Button
-                onClick={handleSaveMappings}
-                disabled={!selectedTargetObjectId || targetObjectExists === false || saveFieldMappings.isPending}
-              >
-                {saveFieldMappings.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Save Mappings
-              </Button>
-            </CardFooter>
-          </Card>
+          <MappingForm
+            sourceObjectInfo={sourceObjectInfo}
+            targetObjectExists={targetObjectExists}
+            selectedTargetObjectId={selectedTargetObjectId}
+            objectTypes={objectTypes || []}
+            targetFields={targetFields || []}
+            mappings={mappings}
+            isSubmitting={saveFieldMappings.isPending}
+            onTargetObjectChange={handleTargetObjectChange}
+            onFieldMappingChange={handleFieldMappingChange}
+            onObjectCreated={handleObjectCreated}
+            onSubmit={handleSaveMappings}
+            onGoBack={handleGoBack}
+          />
         </div>
       )}
     </div>
