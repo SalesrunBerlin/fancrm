@@ -3,23 +3,45 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, Settings } from 'lucide-react';
 
 interface RecordViewErrorProps {
   message: string;
 }
 
 export function RecordViewError({ message }: RecordViewErrorProps) {
+  // Check if the error is related to missing field mappings
+  const isMappingError = message.includes('Feldzuordnung') || 
+                         message.includes('mapping') || 
+                         message.includes('Keine Feldzuordnungen gefunden');
+                         
   return (
-    <div className="p-4">
+    <div className="p-4 space-y-4">
       <Alert variant="destructive">
         <AlertCircle className="h-4 w-4" />
-        <AlertTitle>Error</AlertTitle>
+        <AlertTitle>Fehler</AlertTitle>
         <AlertDescription>{message}</AlertDescription>
       </Alert>
-      <Button variant="outline" className="mt-4" asChild>
-        <Link to="/shared-records">Back to Shared Records</Link>
-      </Button>
+      
+      {isMappingError ? (
+        <div className="space-y-4">
+          <p className="text-sm">
+            Um einen geteilten Datensatz anzuzeigen, müssen Sie zuerst die Felder dem entsprechenden Objekt in Ihrem System zuordnen.
+          </p>
+          <div className="flex gap-2">
+            <Button variant="default" asChild>
+              <Link to="/shared-records">
+                <Settings className="mr-2 h-4 w-4" />
+                Zu Freigaben und Feldzuordnung
+              </Link>
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <Button variant="outline" className="mt-4" asChild>
+          <Link to="/shared-records">Zurück zu Freigaben</Link>
+        </Button>
+      )}
     </div>
   );
 }

@@ -48,14 +48,14 @@ export function useSharedRecordData(recordId: string | undefined) {
         }
         
         if (!data) {
-          throw new Error('Share record not found');
+          throw new Error('Freigabe nicht gefunden');
         }
         
         console.log('Share data retrieved:', data);
         return data;
       } catch (error) {
         console.error('Error in share query:', error);
-        setLoadingError(error instanceof Error ? error.message : "Failed to load share data");
+        setLoadingError(error instanceof Error ? error.message : "Fehler beim Laden der Freigabedaten");
         return null;
       }
     },
@@ -84,7 +84,7 @@ export function useSharedRecordData(recordId: string | undefined) {
         }
         
         if (!recordDetails) {
-          throw new Error('Record not found');
+          throw new Error('Datensatz nicht gefunden');
         }
         
         // Get object type information
@@ -120,7 +120,7 @@ export function useSharedRecordData(recordId: string | undefined) {
         
         return {
           objectTypeId: recordDetails.object_type_id,
-          objectTypeName: objectTypeData?.name || 'Unknown Object',
+          objectTypeName: objectTypeData?.name || 'Unbekanntes Objekt',
           objectTypeApiName: objectTypeData?.api_name || '',
           fieldValues: fieldValues.reduce((acc, item) => {
             acc[item.field_api_name] = item.value;
@@ -130,7 +130,7 @@ export function useSharedRecordData(recordId: string | undefined) {
         };
       } catch (error) {
         console.error('Error in record data query:', error);
-        setLoadingError(error instanceof Error ? error.message : "Failed to load record data");
+        setLoadingError(error instanceof Error ? error.message : "Fehler beim Laden der Daten");
         return null;
       }
     },
@@ -148,7 +148,7 @@ export function useSharedRecordData(recordId: string | undefined) {
         
         if (!sharedByUser || !sharedByUser.id) {
           console.error('Missing shared_by_user information:', shareData);
-          setLoadingError("Cannot determine who shared this record");
+          setLoadingError("Die Benutzerinformationen konnten nicht ermittelt werden");
           return;
         }
 
@@ -162,10 +162,16 @@ export function useSharedRecordData(recordId: string | undefined) {
         );
         
         console.log('Mappings loaded:', mappings.length);
+        
+        if (mappings.length === 0) {
+          setLoadingError("Keine Feldzuordnungen gefunden. Bitte konfigurieren Sie die Feldzuordnungen für diesen Datensatz.");
+          return;
+        }
+        
         setUserMappings(mappings);
       } catch (error) {
         console.error('Error loading mappings:', error);
-        setLoadingError(error instanceof Error ? error.message : "Could not load field mappings");
+        setLoadingError(error instanceof Error ? error.message : "Fehler beim Laden der Feldzuordnungen");
       }
     };
     
@@ -180,8 +186,8 @@ export function useSharedRecordData(recordId: string | undefined) {
     return sharedByUser 
       ? (sharedByUser.screen_name || 
         `${sharedByUser.first_name || ''} ${sharedByUser.last_name || ''}`.trim() || 
-        "Another user")
-      : "Another user";
+        "Anderer Benutzer")
+      : "Anderer Benutzer";
   };
 
   // Transform record data according to mappings
