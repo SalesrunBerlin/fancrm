@@ -17,8 +17,7 @@ export function useCollections() {
       
       const { data, error } = await supabase
         .from('sharing_collections')
-        .select('*')
-        .eq('owner_id', user.id);
+        .select('*');
       
       if (error) {
         console.error('Error fetching collections:', error);
@@ -28,16 +27,24 @@ export function useCollections() {
       // For each collection, get member count and record count
       const collectionsWithCounts = await Promise.all((data || []).map(async (collection) => {
         // Get member count
-        const { count: memberCount } = await supabase
+        const { count: memberCount, error: memberError } = await supabase
           .from('collection_members')
           .select('*', { count: 'exact', head: true })
           .eq('collection_id', collection.id);
         
+        if (memberError) {
+          console.error('Error fetching member count:', memberError);
+        }
+        
         // Get record count
-        const { count: recordCount } = await supabase
+        const { count: recordCount, error: recordError } = await supabase
           .from('collection_records')
           .select('*', { count: 'exact', head: true })
           .eq('collection_id', collection.id);
+        
+        if (recordError) {
+          console.error('Error fetching record count:', recordError);
+        }
         
         return {
           ...collection,
@@ -62,7 +69,6 @@ export function useCollections() {
           .from('sharing_collections')
           .select('*')
           .eq('id', collectionId)
-          .eq('owner_id', user.id)
           .single();
         
         if (error) {
@@ -100,7 +106,11 @@ export function useCollections() {
         })
         .select();
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error creating collection:', error);
+        throw error;
+      }
+      
       return data[0];
     },
     onSuccess: () => {
@@ -136,10 +146,13 @@ export function useCollections() {
           updated_at: new Date().toISOString()
         })
         .eq('id', id)
-        .eq('owner_id', user.id)
         .select();
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error updating collection:', error);
+        throw error;
+      }
+      
       return data[0];
     },
     onSuccess: (_, variables) => {
@@ -160,10 +173,13 @@ export function useCollections() {
       const { error } = await supabase
         .from('sharing_collections')
         .delete()
-        .eq('id', collectionId)
-        .eq('owner_id', user?.id);
+        .eq('id', collectionId);
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error deleting collection:', error);
+        throw error;
+      }
+      
       return { collectionId };
     },
     onSuccess: () => {
@@ -231,7 +247,11 @@ export function useCollections() {
         })
         .select();
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error adding member:', error);
+        throw error;
+      }
+      
       return data[0];
     },
     onSuccess: (_, variables) => {
@@ -262,7 +282,11 @@ export function useCollections() {
         .eq('id', memberId)
         .eq('collection_id', collectionId);
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error removing member:', error);
+        throw error;
+      }
+      
       return { memberId };
     },
     onSuccess: (_, variables) => {
@@ -295,7 +319,11 @@ export function useCollections() {
         .eq('id', memberId)
         .eq('collection_id', collectionId);
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error updating permissions:', error);
+        throw error;
+      }
+      
       return { memberId, permissionLevel };
     },
     onSuccess: (_, variables) => {
@@ -332,7 +360,11 @@ export function useCollections() {
         .upsert(recordsToInsert)
         .select();
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error adding records:', error);
+        throw error;
+      }
+      
       return data;
     },
     onSuccess: (_, { collectionId }) => {
@@ -366,7 +398,11 @@ export function useCollections() {
         .eq('collection_id', collectionId)
         .in('record_id', recordIds);
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error removing records:', error);
+        throw error;
+      }
+      
       return { collectionId, recordIds };
     },
     onSuccess: (_, { collectionId }) => {

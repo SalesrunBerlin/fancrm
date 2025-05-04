@@ -1,136 +1,49 @@
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { PageHeader } from '@/components/ui/page-header';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { toast } from 'sonner';
 import { Loader2, Plus, Users, Trash2 } from 'lucide-react';
-import { CollectionShare } from '@/types/RecordSharing';
+import { useCollections } from '@/hooks/useCollections';
 
 export default function CollectionsPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
   const [isNewCollectionDialogOpen, setIsNewCollectionDialogOpen] = useState(false);
   const [newCollectionName, setNewCollectionName] = useState('');
   const [newCollectionDescription, setNewCollectionDescription] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Fetch user's collections
-  const { data: collections, isLoading } = useQuery({
-    queryKey: ['collections'],
-    queryFn: async (): Promise<CollectionShare[]> => {
-      if (!user) return [];
-      
-      const { data, error } = await supabase
-        .from('sharing_collections')
-        .select('*')
-        .eq('owner_id', user.id);
-      
-      if (error) {
-        console.error('Error fetching collections:', error);
-        throw error;
-      }
-      
-      // For each collection, get member count
-      const collectionsWithCounts = await Promise.all((data || []).map(async (collection) => {
-        // Get member count
-        const { count: memberCount } = await supabase
-          .from('collection_members')
-          .select('*', { count: 'exact', head: true })
-          .eq('collection_id', collection.id);
-        
-        // Get record count
-        const { count: recordCount } = await supabase
-          .from('collection_records')
-          .select('*', { count: 'exact', head: true })
-          .eq('collection_id', collection.id);
-        
-        return {
-          ...collection,
-          memberCount: memberCount || 0,
-          recordCount: recordCount || 0
-        };
-      }));
-      
-      return collectionsWithCounts as any;
-    },
-    enabled: !!user,
-  });
-  
-  // Create a new collection
-  const createCollection = useMutation({
-    mutationFn: async () => {
-      if (!user) throw new Error('You must be logged in to create collections');
-      if (!newCollectionName.trim()) throw new Error('Collection name is required');
-      
-      setIsSubmitting(true);
-      
-      const { data, error } = await supabase
-        .from('sharing_collections')
-        .insert({
-          name: newCollectionName.trim(),
-          description: newCollectionDescription.trim() || null,
-          owner_id: user.id
-        })
-        .select();
-      
-      if (error) throw error;
-      return data[0];
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['collections'] });
-      setIsNewCollectionDialogOpen(false);
-      setNewCollectionName('');
-      setNewCollectionDescription('');
-      toast.success('Collection created');
-      navigate(`/collections/${data.id}`);
-    },
-    onError: (error: any) => {
-      toast.error('Failed to create collection', {
-        description: error.message
-      });
-    },
-    onSettled: () => {
-      setIsSubmitting(false);
-    }
-  });
-  
-  // Delete a collection
-  const deleteCollection = useMutation({
-    mutationFn: async (collectionId: string) => {
-      const { error } = await supabase
-        .from('sharing_collections')
-        .delete()
-        .eq('id', collectionId)
-        .eq('owner_id', user?.id);
-      
-      if (error) throw error;
-      return { collectionId };
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['collections'] });
-      toast.success('Collection deleted');
-    },
-    onError: (error: any) => {
-      toast.error('Failed to delete collection', {
-        description: error.message
-      });
-    }
-  });
+  // Use the updated useCollections hook
+  const { 
+    collections, 
+    isLoading, 
+    createCollection, 
+    deleteCollection 
+  } = useCollections();
 
   const handleCreateCollection = async () => {
     try {
-      await createCollection.mutateAsync();
+      setIsSubmitting(true);
+      const result = await createCollection.mutateAsync({
+        name: newCollectionName,
+        description: newCollectionDescription
+      });
+      setIsNewCollectionDialogOpen(false);
+      setNewCollectionName('');
+      setNewCollectionDescription('');
+      if (result?.id) {
+        navigate(`/collections/${result.id}`);
+      }
     } catch (error) {
       console.error('Error creating collection:', error);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 

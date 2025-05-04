@@ -1206,6 +1206,14 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      user_is_collection_member: {
+        Args: { collection_uuid: string }
+        Returns: boolean
+      }
+      user_owns_collection: {
+        Args: { collection_uuid: string }
+        Returns: boolean
+      }
     }
     Enums: {
       action_type: "new_record" | "linked_record" | "mass_action"
