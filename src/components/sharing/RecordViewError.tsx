@@ -20,13 +20,14 @@ export function RecordViewError({ message }: RecordViewErrorProps) {
       <Alert variant="destructive">
         <AlertCircle className="h-4 w-4" />
         <AlertTitle>Fehler</AlertTitle>
-        <AlertDescription>{message}</AlertDescription>
+        <AlertDescription className="whitespace-pre-wrap">{message}</AlertDescription>
       </Alert>
       
       {isMappingError ? (
         <div className="space-y-4">
           <p className="text-sm">
             Um einen geteilten Datensatz anzuzeigen, müssen Sie zuerst die Felder dem entsprechenden Objekt in Ihrem System zuordnen.
+            Bitte klicken Sie auf den Button unten, um zur Feldzuordnung zu gelangen.
           </p>
           <div className="flex gap-2">
             <Button variant="default" asChild>

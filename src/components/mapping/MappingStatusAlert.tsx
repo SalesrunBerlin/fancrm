@@ -12,16 +12,22 @@ interface MappingStatusAlertProps {
 
 export function MappingStatusAlert({ error, onGoBack }: MappingStatusAlertProps) {
   return (
-    <div className="p-6">
+    <div className="p-6 space-y-4">
       <Alert variant="destructive">
         <AlertCircle className="h-4 w-4" />
-        <AlertTitle>Error Loading Data</AlertTitle>
-        <AlertDescription>{error}</AlertDescription>
+        <AlertTitle>Fehler beim Laden der Daten</AlertTitle>
+        <AlertDescription className="whitespace-pre-wrap">{error}</AlertDescription>
       </Alert>
-      <Button onClick={onGoBack} variant="outline" className="mt-4">
-        <ArrowLeft className="mr-2 h-4 w-4" />
-        Back to Shared Records
-      </Button>
+      <div className="flex flex-col">
+        <p className="text-muted-foreground mb-4">
+          Möglicherweise wurde der Datensatz gelöscht oder die Freigabe wurde zurückgezogen.
+          Sie können zu Ihren Freigaben zurückkehren und es erneut versuchen.
+        </p>
+        <Button onClick={onGoBack} variant="outline">
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Zurück zu Freigaben
+        </Button>
+      </div>
     </div>
   );
 }

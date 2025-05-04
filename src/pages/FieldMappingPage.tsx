@@ -50,8 +50,14 @@ export default function FieldMappingPage() {
           .eq('id', shareId)
           .maybeSingle();
           
-        if (shareError) throw shareError;
-        if (!share) throw new Error('Share not found');
+        if (shareError) {
+          console.error('Error fetching share:', shareError);
+          throw new Error(`Fehler beim Laden der Freigabe: ${shareError.message}`);
+        }
+        
+        if (!share) {
+          throw new Error('Freigabe nicht gefunden. Die ID ist möglicherweise ungültig oder wurde gelöscht.');
+        }
         
         console.log("Share data:", share);
         setShareData(share);
@@ -63,8 +69,14 @@ export default function FieldMappingPage() {
           .eq('id', share.record_id)
           .maybeSingle();
           
-        if (recordError) throw recordError;
-        if (!sourceRecord) throw new Error('Source record not found');
+        if (recordError) {
+          console.error('Error fetching record:', recordError);
+          throw new Error(`Fehler beim Laden des Datensatzes: ${recordError.message}`);
+        }
+        
+        if (!sourceRecord) {
+          throw new Error('Quelldatensatz nicht gefunden. Der Datensatz wurde möglicherweise gelöscht.');
+        }
         
         console.log("Source record:", sourceRecord);
         
@@ -75,8 +87,14 @@ export default function FieldMappingPage() {
           .eq('id', sourceRecord.object_type_id)
           .maybeSingle();
           
-        if (objError) throw objError;
-        if (!sourceObj) throw new Error('Source object type not found');
+        if (objError) {
+          console.error('Error fetching object type:', objError);
+          throw new Error(`Fehler beim Laden des Objekttyps: ${objError.message}`);
+        }
+        
+        if (!sourceObj) {
+          throw new Error('Quellobjekttyp nicht gefunden. Der Objekttyp wurde möglicherweise gelöscht.');
+        }
         
         console.log("Source object:", sourceObj);
         
@@ -86,7 +104,15 @@ export default function FieldMappingPage() {
           .select('id, name, api_name, data_type')
           .eq('object_type_id', sourceObj.id);
           
-        if (fieldsError) throw fieldsError;
+        if (fieldsError) {
+          console.error('Error fetching fields:', fieldsError);
+          throw new Error(`Fehler beim Laden der Felder: ${fieldsError.message}`);
+        }
+        
+        if (!sourceFields || sourceFields.length === 0) {
+          throw new Error(`Keine Felder für den Objekttyp "${sourceObj.name}" gefunden.`);
+        }
+        
         console.log("Source fields:", sourceFields);
         
         const sourceObjInfo: ObjectTypeInfo = {
@@ -114,8 +140,8 @@ export default function FieldMappingPage() {
         
       } catch (err) {
         console.error('Error fetching share data:', err);
-        setError(err instanceof Error ? err.message : 'Failed to load share data');
-        toast.error('Failed to load mapping data');
+        setError(err instanceof Error ? err.message : 'Fehler beim Laden der Daten');
+        toast.error('Fehler beim Laden der Zuordnungsdaten');
       } finally {
         setIsLoading(false);
       }
@@ -161,7 +187,7 @@ export default function FieldMappingPage() {
 
   const handleSaveMappings = async () => {
     if (!shareData || !sourceObjectInfo || !selectedTargetObjectId || !user) {
-      toast.error('Missing required data for mapping');
+      toast.error('Fehlende Daten für die Zuordnung');
       return;
     }
     
@@ -169,7 +195,7 @@ export default function FieldMappingPage() {
     const validMappings = mappings.filter(m => m.target_field_api_name && m.target_field_api_name !== "do_not_map");
     
     if (validMappings.length === 0) {
-      toast.error('Please map at least one field');
+      toast.error('Bitte ordnen Sie mindestens ein Feld zu');
       return;
     }
 
@@ -187,9 +213,14 @@ export default function FieldMappingPage() {
     
     saveFieldMappings.mutate(mappingsToSave, {
       onSuccess: () => {
-        toast.success("Mappings saved successfully");
+        toast.success("Feldzuordnung erfolgreich gespeichert");
         // Navigate to shared record page
         navigate(`/shared-record/${shareData.record_id}`);
+      },
+      onError: (error) => {
+        toast.error("Fehler beim Speichern der Zuordnungen", {
+          description: error instanceof Error ? error.message : "Unbekannter Fehler"
+        });
       }
     });
   };
@@ -223,8 +254,8 @@ export default function FieldMappingPage() {
   return (
     <div className="space-y-6 container mx-auto py-6">
       <PageHeader
-        title="Field Mapping Configuration"
-        description="Map fields between shared data and your objects"
+        title="Feldzuordnung konfigurieren"
+        description="Ordnen Sie Felder zwischen geteilten Daten und Ihren Objekten zu"
       />
 
       {sourceObjectInfo && (
