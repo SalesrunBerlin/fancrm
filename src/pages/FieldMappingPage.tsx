@@ -1,5 +1,6 @@
+
 import { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { useFieldMappings } from "@/hooks/useFieldMappings";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
 import { useObjectFields } from "@/hooks/useObjectFields";
@@ -8,14 +9,17 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { PageHeader } from "@/components/ui/page-header";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, ArrowRightIcon } from "lucide-react";
+import { Loader2, ArrowRightIcon, ArrowLeft } from "lucide-react";
 import { UserFieldMapping, ObjectTypeInfo } from "@/types/FieldMapping";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { TargetObjectCreator } from "@/components/settings/TargetObjectCreator";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 
 export default function FieldMappingPage() {
+  const navigate = useNavigate();
   const { shareId } = useParams<{ shareId: string }>();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
@@ -42,6 +46,8 @@ export default function FieldMappingPage() {
       setError("");
       
       try {
+        console.log("Fetching data for share ID:", shareId);
+        
         // Get the share record
         const { data: share, error: shareError } = await supabase
           .from('record_shares')
@@ -52,6 +58,7 @@ export default function FieldMappingPage() {
         if (shareError) throw shareError;
         if (!share) throw new Error('Share not found');
         
+        console.log("Share data:", share);
         setShareData(share);
         
         // Get source object info
@@ -64,6 +71,8 @@ export default function FieldMappingPage() {
         if (recordError) throw recordError;
         if (!sourceRecord) throw new Error('Source record not found');
         
+        console.log("Source record:", sourceRecord);
+        
         // Get source object details
         const { data: sourceObj, error: objError } = await supabase
           .from('object_types')
@@ -74,6 +83,8 @@ export default function FieldMappingPage() {
         if (objError) throw objError;
         if (!sourceObj) throw new Error('Source object type not found');
         
+        console.log("Source object:", sourceObj);
+        
         // Get source fields
         const { data: sourceFields, error: fieldsError } = await supabase
           .from('object_fields')
@@ -81,6 +92,7 @@ export default function FieldMappingPage() {
           .eq('object_type_id', sourceObj.id);
           
         if (fieldsError) throw fieldsError;
+        console.log("Source fields:", sourceFields);
         
         const sourceObjInfo: ObjectTypeInfo = {
           id: sourceObj.id,
@@ -115,11 +127,13 @@ export default function FieldMappingPage() {
     };
     
     fetchShareData();
-  }, [shareId, user, objectTypes]);
+  }, [shareId, user, objectTypes, checkObjectExists]);
 
   // Initialize mappings when target object is selected
   useEffect(() => {
     if (sourceObjectInfo && selectedTargetObjectId && targetFields) {
+      console.log("Initializing mappings with target fields:", targetFields);
+      
       // Create initial mappings based on matching field names
       const initialMappings = sourceObjectInfo.fields.map(sourceField => {
         const matchingTargetField = targetFields.find(tf => 
@@ -128,7 +142,7 @@ export default function FieldMappingPage() {
         
         return {
           source_field_api_name: sourceField.api_name,
-          target_field_api_name: matchingTargetField?.api_name || ""
+          target_field_api_name: matchingTargetField?.api_name || "do_not_map"
         };
       });
       
@@ -173,12 +187,23 @@ export default function FieldMappingPage() {
       target_field_api_name: mapping.target_field_api_name
     }));
     
-    saveFieldMappings.mutate(mappingsToSave);
+    saveFieldMappings.mutate(mappingsToSave, {
+      onSuccess: () => {
+        toast.success("Mappings saved successfully");
+        // Navigate to shared records page
+        navigate("/shared-records");
+      }
+    });
   };
 
   const handleObjectCreated = (newObjectId: string) => {
+    console.log("Object created with ID:", newObjectId);
     setSelectedTargetObjectId(newObjectId);
     setTargetObjectExists(true);
+  };
+
+  const handleGoBack = () => {
+    navigate("/shared-records");
   };
 
   if (isLoading) {
@@ -197,7 +222,15 @@ export default function FieldMappingPage() {
             <CardTitle className="text-red-500">Error</CardTitle>
           </CardHeader>
           <CardContent>
-            <p>{error}</p>
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Error Loading Data</AlertTitle>
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+            <Button onClick={handleGoBack} variant="outline" className="mt-4">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to Shared Records
+            </Button>
           </CardContent>
         </Card>
       </div>
@@ -296,7 +329,11 @@ export default function FieldMappingPage() {
                 </div>
               )}
             </CardContent>
-            <CardFooter className="flex justify-end">
+            <CardFooter className="flex justify-between">
+              <Button variant="outline" onClick={handleGoBack}>
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Back
+              </Button>
               <Button
                 onClick={handleSaveMappings}
                 disabled={!selectedTargetObjectId || targetObjectExists === false || saveFieldMappings.isPending}
