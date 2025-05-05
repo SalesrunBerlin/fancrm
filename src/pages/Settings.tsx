@@ -1,7 +1,7 @@
 
 import { Link } from "react-router-dom";
 import { PageHeader } from "@/components/ui/page-header";
-import { AppWindow, Database, PlaySquare, Settings as SettingsIcon } from "lucide-react";
+import { AppWindow, Database, PlaySquare, Settings as SettingsIcon, List } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function Settings() {
@@ -64,7 +64,26 @@ export default function Settings() {
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground">
-                Create and manage structures, publish objects, and define relationships.
+                Create and publish objects, and define relationships.
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
+        
+        <Link to="/actions">
+          <Card className="h-full hover:bg-accent/5 transition-colors">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <List className="h-5 w-5" />
+                Actions
+              </CardTitle>
+              <CardDescription>
+                Manage your object actions and workflows
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                Create and manage actions for creating records, linking records, and mass updates.
               </p>
             </CardContent>
           </Card>

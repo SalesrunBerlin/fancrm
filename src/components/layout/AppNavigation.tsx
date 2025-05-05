@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Settings, LayoutDashboard, AppWindow, FileText } from "lucide-react";
+import { Settings, LayoutDashboard, AppWindow, FileText, List } from "lucide-react";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
 
 export function AppNavigation() {
@@ -39,6 +39,15 @@ export function AppNavigation() {
             >
               <AppWindow className="mr-2 h-4 w-4" />
               Applications
+            </Button>
+
+            <Button
+              variant={isActive("/actions") ? "secondary" : "ghost"}
+              className="w-full justify-start"
+              onClick={() => navigate("/actions")}
+            >
+              <List className="mr-2 h-4 w-4" />
+              Actions
             </Button>
 
             <Button

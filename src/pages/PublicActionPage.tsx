@@ -99,7 +99,7 @@ export default function PublicActionPage() {
           )}
         </CardHeader>
         <CardContent>
-          {isFullyLoaded && (
+          {isFullyLoaded && objectFields && (
             <PublicRecordForm
               objectTypeId={action.target_object_id}
               objectFields={objectFields}
