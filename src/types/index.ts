@@ -33,6 +33,8 @@ export interface ContactType {
   last_name?: string;
   firstName?: string;
   lastName?: string;
+  accountName?: string; // Added for mock data
+  tags?: string[]; // Added for mock data
 }
 
 export interface AccountType {
@@ -42,6 +44,7 @@ export interface AccountType {
   website: string;
   createdAt: string;
   type?: string;
+  employees?: number; // Added for mock data
 }
 
 export interface DealType {
@@ -55,6 +58,7 @@ export interface DealType {
   accountName?: string;
   account?: string;
   value?: number;
+  contactId?: string; // Added for mock data
 }
 
 // Add DuplicateRecord type for imports
@@ -65,4 +69,8 @@ export interface DuplicateRecord {
   sourceRecord: any;
   existingRecord: any;
   resolution?: string;
+  action?: string; // Added missing properties
+  matchScore?: number;
+  importRowIndex?: number;
+  record?: any;
 }
