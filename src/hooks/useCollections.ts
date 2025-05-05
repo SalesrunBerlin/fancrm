@@ -9,19 +9,19 @@ export function useCollections() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   
-  // Fetch all collections owned by the user
-  const { data: collections, isLoading, error } = useQuery({
-    queryKey: ['collections'],
+  // Fetch collections owned by the user (direct database query works fine with our RLS)
+  const { data: ownedCollections, isLoading: isLoadingOwned, error: ownedError } = useQuery({
+    queryKey: ['owned-collections'],
     queryFn: async (): Promise<CollectionShare[]> => {
       if (!user) return [];
       
-      // Simplified query that relies on RLS policies
+      // This query works with our RLS - owners can see their collections
       const { data, error } = await supabase
         .from('sharing_collections')
         .select('*');
       
       if (error) {
-        console.error('Error fetching collections:', error);
+        console.error('Error fetching owned collections:', error);
         throw error;
       }
       
@@ -67,6 +67,39 @@ export function useCollections() {
     },
     enabled: !!user,
   });
+  
+  // Fetch collections where the user is a member (using Edge Function to avoid circular dependencies)
+  const { data: memberCollections, isLoading: isLoadingMember, error: memberError } = useQuery({
+    queryKey: ['member-collections'],
+    queryFn: async (): Promise<CollectionShare[]> => {
+      if (!user) return [];
+      
+      // Use our Edge Function to safely get member collections
+      const { data, error } = await supabase.functions.invoke('collection-operations', {
+        body: { type: 'getMemberCollections' }
+      });
+      
+      if (error) {
+        console.error('Error fetching member collections:', error);
+        throw error;
+      }
+      
+      return data?.data || [];
+    },
+    enabled: !!user,
+  });
+  
+  // Combine owned and member collections
+  const collections = useMemo(() => {
+    const owned = ownedCollections || [];
+    const member = memberCollections || [];
+    
+    // Filter out duplicates (in case user is both owner and member)
+    const ownedIds = new Set(owned.map(c => c.id));
+    const uniqueMember = member.filter(c => !ownedIds.has(c.id));
+    
+    return [...owned, ...uniqueMember];
+  }, [ownedCollections, memberCollections]);
 
   // Get a single collection by ID
   const useCollection = (collectionId: string | undefined) => {
@@ -124,7 +157,7 @@ export function useCollections() {
       return data[0];
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['collections'] });
+      queryClient.invalidateQueries({ queryKey: ['owned-collections'] });
       toast.success('Collection created');
     },
     onError: (error: any) => {
@@ -166,7 +199,7 @@ export function useCollections() {
       return data[0];
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['collections'] });
+      queryClient.invalidateQueries({ queryKey: ['owned-collections'] });
       queryClient.invalidateQueries({ queryKey: ['collection', variables.id] });
       toast.success('Collection updated');
     },
@@ -193,7 +226,8 @@ export function useCollections() {
       return { collectionId };
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['collections'] });
+      queryClient.invalidateQueries({ queryKey: ['owned-collections'] });
+      queryClient.invalidateQueries({ queryKey: ['member-collections'] });
       toast.success('Collection deleted');
     },
     onError: (error: any) => {
@@ -347,7 +381,7 @@ export function useCollections() {
     }
   });
   
-  // Add records to a collection
+  // Add records to a collection (using Edge Function)
   const addRecordsToCollection = useMutation({
     mutationFn: async ({ 
       collectionId, 
@@ -360,15 +394,14 @@ export function useCollections() {
       if (!collectionId) throw new Error('Collection ID is required');
       if (!recordIds.length) throw new Error('No records selected');
       
-      const recordsToInsert = recordIds.map(recordId => ({
-        collection_id: collectionId,
-        record_id: recordId
-      }));
-      
-      const { data, error } = await supabase
-        .from('collection_records')
-        .upsert(recordsToInsert)
-        .select();
+      // Use Edge Function to avoid circular dependencies in RLS
+      const { data, error } = await supabase.functions.invoke('collection-operations', {
+        body: {
+          type: 'addRecordsToCollection',
+          collectionId,
+          recordIds
+        }
+      });
       
       if (error) {
         console.error('Error adding records:', error);
@@ -384,6 +417,51 @@ export function useCollections() {
     },
     onError: (error: any) => {
       toast.error('Failed to add records', {
+        description: error.message
+      });
+    }
+  });
+  
+  // Add fields to a collection (using Edge Function)
+  const addFieldsToCollection = useMutation({
+    mutationFn: async ({ 
+      collectionId, 
+      objectTypeId,
+      fieldApiNames 
+    }: { 
+      collectionId: string;
+      objectTypeId: string;
+      fieldApiNames: string[];
+    }) => {
+      if (!user) throw new Error('You must be logged in');
+      if (!collectionId) throw new Error('Collection ID is required');
+      if (!objectTypeId) throw new Error('Object type ID is required');
+      if (!fieldApiNames.length) throw new Error('No fields selected');
+      
+      // Use Edge Function to avoid circular dependencies in RLS
+      const { data, error } = await supabase.functions.invoke('collection-operations', {
+        body: {
+          type: 'addFieldsToCollection',
+          collectionId,
+          objectTypeId,
+          fieldApiNames
+        }
+      });
+      
+      if (error) {
+        console.error('Error adding fields:', error);
+        throw error;
+      }
+      
+      return data;
+    },
+    onSuccess: (_, { collectionId }) => {
+      queryClient.invalidateQueries({ queryKey: ['collection', collectionId] });
+      queryClient.invalidateQueries({ queryKey: ['collection-fields', collectionId] });
+      toast.success('Fields added to collection');
+    },
+    onError: (error: any) => {
+      toast.error('Failed to add fields', {
         description: error.message
       });
     }
@@ -429,8 +507,8 @@ export function useCollections() {
 
   return {
     collections,
-    isLoading,
-    error,
+    isLoading: isLoadingOwned || isLoadingMember,
+    error: ownedError || memberError,
     createCollection,
     updateCollection,
     deleteCollection,
@@ -440,6 +518,7 @@ export function useCollections() {
     removeMember,
     updateMemberPermission,
     addRecordsToCollection,
+    addFieldsToCollection,
     removeRecordsFromCollection
   };
 }
