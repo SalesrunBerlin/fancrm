@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, QueryObserverResult, RefetchOptions } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -45,14 +44,31 @@ export function useObjectTypes() {
   const { data: objectTypes, isLoading, error, refetch } = useQuery({
     queryKey: ["object-types"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("object_types")
-        .select("*")
-        .order("name");
-      
-      if (error) throw error;
-      return data as ObjectType[];
-    }
+      try {
+        console.info("Fetching object types for user:", user?.id);
+        
+        const { data, error } = await supabase
+          .from("object_types")
+          .select("*")
+          .order("name");
+        
+        if (error) {
+          console.error("Error fetching object types:", error);
+          throw error;
+        }
+        
+        console.info(`Fetched ${data?.length || 0} object types`);
+        return data as ObjectType[];
+      } catch (err) {
+        console.error("Failed to fetch object types:", err);
+        throw err;
+      }
+    },
+    // Only fetch if user is authenticated
+    enabled: !!user,
+    // Add some retry logic
+    retry: 2,
+    retryDelay: 1000
   });
 
   // Create object type mutation
@@ -231,10 +247,33 @@ export function useObjectTypes() {
     onSuccess: () => refetch()
   });
 
-  // Filter for published and archived objects
-  const publishedObjects = objectTypes?.filter(obj => obj.is_published) || [];
-  const archivedObjects = objectTypes?.filter(obj => obj.is_archived) || [];
-  const isLoadingPublished = isLoading;
+  // Fetch published objects in a separate query
+  const { data: publishedObjects, isLoading: isLoadingPublished } = useQuery({
+    queryKey: ["published-objects"],
+    queryFn: async () => {
+      try {
+        console.info("Fetching published objects. Current user:", user?.id);
+        
+        const { data, error } = await supabase
+          .from("object_types")
+          .select("*")
+          .eq("is_published", true)
+          .order("name");
+        
+        if (error) {
+          console.error("Error fetching published objects:", error);
+          throw error;
+        }
+        
+        console.info(`Fetched ${data?.length || 0} published objects:`, data);
+        return data as ObjectType[];
+      } catch (err) {
+        console.error("Failed to fetch published objects:", err);
+        return [];  // Return empty array on error to prevent UI from breaking
+      }
+    },
+    enabled: !!user,
+  });
 
   return {
     objectTypes,

@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
 import { Link } from "react-router-dom";
 import { PageHeader } from "@/components/ui/page-header";
@@ -25,22 +25,36 @@ import { ThemedButton } from "@/components/ui/themed-button";
 
 export default function ObjectManager() {
   // Fetch all objects including archived ones
-  const { objectTypes: allObjectTypes, isLoading, deleteObjectType, publishedObjects } = useObjectTypes();
+  const { objectTypes: allObjectTypes, isLoading, error, deleteObjectType, publishedObjects } = useObjectTypes();
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState("all");
   const [objectToDelete, setObjectToDelete] = useState<ObjectType | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [loadingError, setLoadingError] = useState<string | null>(null);
+  
+  useEffect(() => {
+    // Set loading error if there's an error from the hook
+    if (error) {
+      console.error("Error loading object types:", error);
+      setLoadingError("Failed to load object types. Please try again later.");
+    } else {
+      setLoadingError(null);
+    }
+  }, [error]);
 
+  // Safety check - provide an empty array if objectTypes is undefined
+  const safeObjectTypes = allObjectTypes || [];
+  
   // Filter objects to only show those owned by the current user
   // Exclude objects that are published but not owned by the user
-  const filteredObjectTypes = allObjectTypes?.filter(type => 
+  const filteredObjectTypes = safeObjectTypes.filter(type => 
     // Only show objects that:
     // 1. Are owned by the current user
     // 2. Are system objects
     (type.owner_id === user?.id || type.is_system) &&
     // Don't show published objects from other users
     !(type.is_published && type.owner_id !== user?.id)
-  ) || [];
+  );
 
   // Split objects into active and archived
   const activeObjects = filteredObjectTypes.filter(obj => !isArchived(obj));
@@ -79,7 +93,7 @@ export default function ObjectManager() {
 
   // Check if an object is a source for published objects
   const isSourceForPublishedObjects = (objectId: string) => {
-    return publishedObjects?.some(obj => obj.source_object_id === objectId) || false;
+    return (publishedObjects || []).some(obj => obj.source_object_id === objectId) || false;
   };
 
   // Function to render action buttons as a dropdown on mobile
@@ -170,6 +184,14 @@ export default function ObjectManager() {
               {isLoading ? (
                 <div className="flex items-center justify-center p-4">
                   <Loader2 className="h-6 w-6 animate-spin" />
+                </div>
+              ) : loadingError ? (
+                <div className="text-center py-8 text-red-500">
+                  <p>{loadingError}</p>
+                  <ThemedButton onClick={() => window.location.reload()} className="mt-4">
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                    Reload Page
+                  </ThemedButton>
                 </div>
               ) : activeObjects.length > 0 ? (
                 <div className="space-y-4 overflow-x-auto">
