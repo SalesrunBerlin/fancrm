@@ -27,16 +27,26 @@ export function useAutoNumberConfig(fieldId: string) {
 
 export async function generateAutoNumber(fieldId: string): Promise<string> {
   try {
+    console.log("Generating auto-number for field:", fieldId);
+    
     // Hole die Auto-Number-Konfiguration
-    const { data: config } = await supabase
+    const { data: config, error: configError } = await supabase
       .from('auto_number_configurations')
       .select('*')
       .eq('field_id', fieldId)
       .single();
       
+    if (configError) {
+      console.error("Error fetching auto-number configuration:", configError);
+      throw configError;
+    }
+    
     if (!config) {
+      console.error('Auto-number configuration not found for field:', fieldId);
       throw new Error('Auto-number configuration not found');
     }
+    
+    console.log("Found configuration:", config);
     
     // Rufe die Funktion auf, um eine neue Auto-Number zu generieren
     const { data, error } = await supabase
@@ -47,8 +57,11 @@ export async function generateAutoNumber(fieldId: string): Promise<string> {
       });
       
     if (error) {
+      console.error("Error generating auto-number:", error);
       throw error;
     }
+    
+    console.log("Generated auto-number:", data);
     
     return data;
   } catch (err) {

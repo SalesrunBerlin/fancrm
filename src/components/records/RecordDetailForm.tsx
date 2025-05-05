@@ -1,4 +1,3 @@
-
 import { ObjectField } from "@/hooks/useObjectTypes";
 import { ObjectRecord } from "@/hooks/useObjectRecords";
 import { Input } from "@/components/ui/input";
@@ -163,7 +162,13 @@ export function RecordDetailForm({
             />
           </div>
         );
+      } 
+    
+      // Spezieller Fall für auto_number Felder
+      if (field.data_type === 'auto_number') {
+        return <p className="pt-1 font-medium">{value || "-"}</p>;
       }
+      
       return <p className="pt-1">{value || "-"}</p>;
     }
   };

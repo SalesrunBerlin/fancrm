@@ -66,6 +66,10 @@ export function EditableCell({
       return <TableCell>{formatDate(value)}</TableCell>;
     }
     
+    if (fieldType === 'auto_number' && value) {
+      return <TableCell className="font-medium">{value}</TableCell>;
+    }
+    
     return <TableCell>{value || "-"}</TableCell>;
   }
 

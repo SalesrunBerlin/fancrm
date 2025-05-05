@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
@@ -168,6 +167,7 @@ export default function ObjectRecordDetail() {
                     .map((field) => {
                       const value = record.fieldValues[field.api_name];
                       const isTextField = field.data_type === "text" || field.data_type === "textarea";
+                      const isAutoNumber = field.data_type === "auto_number";
                       
                       return (
                         <div key={field.id} className="py-4 grid grid-cols-1 sm:grid-cols-3 gap-1 w-full max-w-full">
@@ -185,6 +185,10 @@ export default function ObjectRecordDetail() {
                                 />
                               ) : field.data_type === "picklist" && value ? (
                                 <span>{value}</span>
+                              ) : field.data_type === "auto_number" && value ? (
+                                <span className="text-foreground font-medium break-all">
+                                  {value}
+                                </span>
                               ) : (
                                 <span className="text-foreground break-all">
                                   {value !== null && value !== undefined ? String(value) : "—"}
@@ -192,7 +196,7 @@ export default function ObjectRecordDetail() {
                               )}
                             </div>
                             
-                            {/* Star icon for text fields when star mode is active */}
+                            {/* Star icon für text fields bei aktiviertem Star-Modus */}
                             {starModeActive && isTextField && value && (
                               <Button 
                                 variant="ghost" 

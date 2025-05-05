@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
@@ -51,7 +50,7 @@ export default function EditRecordPage() {
         if (!data[field.api_name] || data[field.api_name] === 'undefined') {
           try {
             const autoNumberValue = await generateAutoNumber(field.id);
-            data[field.api_name] = autoNumberValue;
+            data[field.api_name] = autoNumberValue as string;
           } catch (error) {
             console.error(`Failed to generate auto-number for field ${field.api_name}:`, error);
           }

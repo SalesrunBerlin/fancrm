@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
@@ -34,12 +35,14 @@ export default function CreateRecordPage() {
       for (const field of autoNumberFields) {
         try {
           const autoNumberValue = await generateAutoNumber(field.id);
-          data[field.api_name] = autoNumberValue;
+          // Korrektur: Als string behandeln, nicht als Datumsobjekt
+          data[field.api_name] = autoNumberValue as string;
         } catch (error) {
           console.error(`Failed to generate auto-number for field ${field.api_name}:`, error);
         }
       }
       
+      // Hier wird der Record erstellt mit den generierten Auto-Nummern
       const record = await createRecord.mutateAsync({
         field_values: data
       });
@@ -64,8 +67,8 @@ export default function CreateRecordPage() {
   return (
     <div className="space-y-6 w-full max-w-2xl mx-auto px-4 sm:px-6">
       <PageHeader
-        title={`New ${objectType.name}`}
-        description={`Create a new ${objectType.name.toLowerCase()}`}
+        title={`New ${objectType?.name || 'Record'}`}
+        description={`Create a new ${objectType?.name?.toLowerCase() || 'record'}`}
         className="mb-4"
         backTo={`/objects/${objectTypeId}`}
       />
@@ -114,7 +117,7 @@ export default function CreateRecordPage() {
                 ) : (
                   <>
                     <Save className="mr-2 h-4 w-4" />
-                    Create {objectType.name}
+                    Create {objectType?.name || 'Record'}
                   </>
                 )}
               </Button>
@@ -124,4 +127,10 @@ export default function CreateRecordPage() {
       </Card>
     </div>
   );
+
+  function navigateToCreateField() {
+    if (objectTypeId) {
+      navigate(`/settings/objects/${objectTypeId}/fields/new`);
+    }
+  }
 }
