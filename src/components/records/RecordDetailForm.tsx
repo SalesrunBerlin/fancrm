@@ -1,3 +1,4 @@
+
 import { ObjectField } from "@/hooks/useObjectTypes";
 import { ObjectRecord } from "@/hooks/useObjectRecords";
 import { Input } from "@/components/ui/input";
@@ -27,17 +28,16 @@ export function RecordDetailForm({
   record, 
   fields, 
   onFieldChange, 
-  editedValues = {}, // Set default value to empty object
+  editedValues, 
   isEditing = false,
   maxHeight,
   objectTypeId
 }: RecordDetailFormProps) {
   const getFieldValue = (fieldApiName: string) => {
-    // Make sure editedValues is an object before checking if the field exists in it
-    if (editedValues && typeof editedValues === 'object' && fieldApiName in editedValues) {
+    if (fieldApiName in editedValues) {
       return editedValues[fieldApiName];
     }
-    return record?.field_values?.[fieldApiName] || "";
+    return record.field_values?.[fieldApiName] || "";
   };
 
   const renderField = (field: ObjectField) => {

@@ -1,3 +1,0 @@
-
-export { useRecordShares } from './recordSharing';
-export type { RecordShare, RecordShareField, ShareRecordParams } from '@/types/RecordSharing';

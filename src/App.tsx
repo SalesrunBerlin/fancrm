@@ -6,7 +6,6 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import Auth from "@/pages/Auth";
 import Dashboard from "@/pages/Dashboard";
 import Settings from "@/pages/Settings";
-import ProfilePage from "@/pages/ProfilePage";
 import ObjectManager from "@/pages/ObjectManager";
 import Structures from "@/pages/Structures";
 import ObjectRecordsList from "@/pages/ObjectRecordsList";
@@ -33,11 +32,6 @@ import ActionCreatePage from "./pages/ActionCreatePage";
 import ActionDetailPage from "./pages/ActionDetailPage";
 import ActionExecutePage from "./pages/ActionExecutePage";
 import MassActionPage from "./pages/MassActionPage";
-import CollectionsPage from "./pages/CollectionsPage";
-import CollectionDetailPage from "./pages/CollectionDetailPage";
-import SharedRecordsPage from "./pages/SharedRecordsPage";
-import FieldMappingPage from "./pages/FieldMappingPage";
-import SharedRecordPage from "./pages/SharedRecordPage";
 
 // Create a client
 const queryClient = new QueryClient({
@@ -61,7 +55,6 @@ function App() {
               <Route path="/" element={<Dashboard />} />
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/settings" element={<Settings />} />
-              <Route path="/profile" element={<ProfilePage />} />
               <Route path="/settings/object-manager" element={<ObjectManager />} />
               <Route path="/settings/object-manager/new" element={<CreateObjectPage />} />
               <Route path="/settings/objects/:objectTypeId" element={<ObjectTypeDetail />} />
@@ -87,13 +80,6 @@ function App() {
               <Route path="/actions/execute/:actionId" element={<ActionExecutePage />} />
               <Route path="/actions/execute/:actionId/from/:sourceRecordId" element={<ActionExecutePage />} />
               <Route path="/actions/mass/:actionId" element={<MassActionPage />} />
-              {/* Collections routes */}
-              <Route path="/collections" element={<CollectionsPage />} />
-              <Route path="/collections/:collectionId" element={<CollectionDetailPage />} />
-              {/* Shared records routes */}
-              <Route path="/shared-records" element={<SharedRecordsPage />} />
-              <Route path="/field-mapping/:shareId" element={<FieldMappingPage />} />
-              <Route path="/shared-record/:recordId" element={<SharedRecordPage />} />
             </Route>
           </Routes>
           <Toaster richColors position="top-right" />

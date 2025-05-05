@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -12,13 +11,11 @@ import {
 import { Button } from "@/components/ui/button";
 import { ObjectField } from "@/hooks/useObjectTypes";
 import { ObjectRecord } from "@/hooks/useObjectRecords";
-import { Edit, Share2 } from "lucide-react";
+import { Edit } from "lucide-react";
 import { LookupValueDisplay } from "./LookupValueDisplay";
 import { format } from "date-fns";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ObjectActionsSection } from "../actions/ObjectActionsSection";
-import { useAuth } from "@/contexts/AuthContext";
-import { Badge } from "@/components/ui/badge";
 
 interface RecordsTableProps {
   records: ObjectRecord[];
@@ -31,7 +28,6 @@ interface RecordsTableProps {
 export function RecordsTable({ records, fields, objectTypeId, selectable = false, onSelectionChange }: RecordsTableProps) {
   const [selectedRecords, setSelectedRecords] = useState<string[]>([]);
   const navigate = useNavigate();
-  const { user } = useAuth();
 
   if (records.length === 0) {
     return (
@@ -105,11 +101,6 @@ export function RecordsTable({ records, fields, objectTypeId, selectable = false
 
   const allSelected = records.length > 0 && selectedRecords.length === records.length;
 
-  // Function to check if record is shared (i.e., the owner is not the current user)
-  const isSharedRecord = (record: ObjectRecord) => {
-    return user && record.owner_id !== user.id;
-  };
-
   return (
     <div className="rounded-md border overflow-hidden overflow-x-auto">
       <Table>
@@ -136,9 +127,7 @@ export function RecordsTable({ records, fields, objectTypeId, selectable = false
           {records.map((record) => (
             <TableRow 
               key={record.id} 
-              className={`${selectedRecords.includes(record.id) ? "bg-muted/30" : ""} ${
-                isSharedRecord(record) ? "bg-blue-50/50" : ""
-              } hover:bg-muted/50 cursor-pointer transition-colors`}
+              className={`${selectedRecords.includes(record.id) ? "bg-muted/30" : ""} hover:bg-muted/50 cursor-pointer transition-colors`}
             >
               {selectable && (
                 <TableCell onClick={(e) => e.stopPropagation()}>
@@ -153,14 +142,6 @@ export function RecordsTable({ records, fields, objectTypeId, selectable = false
               {/* Actions cell */}
               <TableCell onClick={(e) => e.stopPropagation()} className="whitespace-nowrap">
                 <div className="flex items-center space-x-2">
-                  {/* Shared indicator */}
-                  {isSharedRecord(record) && (
-                    <Badge variant="outline" className="flex items-center mr-2 bg-blue-50">
-                      <Share2 className="h-3 w-3 mr-1" />
-                      Shared
-                    </Badge>
-                  )}
-                  
                   {/* Edit button */}
                   <Button
                     variant="ghost"
