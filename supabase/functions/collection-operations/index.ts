@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.32.0";
 
@@ -256,6 +257,7 @@ serve(async (req) => {
       
       case 'addMemberToCollection': {
         if (!requestData.collectionId || !requestData.userId || !requestData.permissionLevel) {
+          console.error('Missing required parameters:', requestData);
           return new Response(
             JSON.stringify({ error: 'Missing required parameters' }),
             { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -272,13 +274,65 @@ serve(async (req) => {
             { collection_uuid: requestData.collectionId, user_uuid: user.id }
           );
           
+          console.log('User owns collection check result:', isOwner);
+          
           if (!isOwner) {
+            console.error('User is not the owner of the collection');
             return new Response(
               JSON.stringify({ error: 'Not authorized to add members to this collection' }),
               { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
             );
           }
           
+          // Verify the user to be added exists
+          const { data: userExists, error: userExistsError } = await supabaseClient
+            .from('profiles')
+            .select('id')
+            .eq('id', requestData.userId)
+            .single();
+            
+          if (userExistsError || !userExists) {
+            console.error('Target user not found:', userExistsError || 'No user with this ID');
+            return new Response(
+              JSON.stringify({ error: 'User to add was not found' }),
+              { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+          
+          console.log('Target user exists, proceeding with member addition');
+          
+          // Check if member already exists
+          const { data: existingMember, error: existingMemberError } = await supabaseClient
+            .from('collection_members')
+            .select('id')
+            .eq('collection_id', requestData.collectionId)
+            .eq('user_id', requestData.userId)
+            .maybeSingle();
+            
+          if (existingMember) {
+            console.log('Member already exists, updating permission');
+            // Update existing membership instead of creating new one
+            const { data: updatedMember, error: updateError } = await supabaseClient
+              .from('collection_members')
+              .update({
+                permission_level: requestData.permissionLevel,
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', existingMember.id)
+              .select();
+              
+            if (updateError) {
+              console.error('Error updating existing member permission:', updateError);
+              throw new Error(`Error updating member: ${updateError.message}`);
+            }
+            
+            return new Response(
+              JSON.stringify({ data: updatedMember, message: 'Member permission updated' }),
+              { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+          
+          console.log('Adding new member to collection');
           const { data: memberData, error: memberError } = await supabaseClient
             .from('collection_members')
             .insert({
@@ -293,6 +347,7 @@ serve(async (req) => {
             throw new Error(`Error adding member: ${memberError.message}`);
           }
           
+          console.log('Successfully added member:', memberData);
           return new Response(
             JSON.stringify({ data: memberData }),
             { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

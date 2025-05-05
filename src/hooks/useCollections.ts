@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
@@ -343,6 +342,9 @@ export function useCollections() {
           collectionId,
           userId,
           permissionLevel
+        },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`
         }
       });
       
@@ -380,6 +382,9 @@ export function useCollections() {
           type: 'removeMemberFromCollection',
           collectionId,
           memberId
+        },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`
         }
       });
       
@@ -420,6 +425,9 @@ export function useCollections() {
           collectionId,
           memberId,
           permissionLevel
+        },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`
         }
       });
       
@@ -454,12 +462,15 @@ export function useCollections() {
       if (!collectionId) throw new Error('Collection ID is required');
       if (!recordIds.length) throw new Error('No records selected');
       
-      // Use Edge Function to avoid circular dependencies in RLS
+      // Use Edge Function with explicit auth header
       const { data, error } = await supabase.functions.invoke('collection-operations', {
         body: {
           type: 'addRecordsToCollection',
           collectionId,
           recordIds
+        },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`
         }
       });
       
@@ -498,13 +509,16 @@ export function useCollections() {
       if (!objectTypeId) throw new Error('Object type ID is required');
       if (!fieldApiNames.length) throw new Error('No fields selected');
       
-      // Use Edge Function to avoid circular dependencies in RLS
+      // Use Edge Function with explicit auth header
       const { data, error } = await supabase.functions.invoke('collection-operations', {
         body: {
           type: 'addFieldsToCollection',
           collectionId,
           objectTypeId,
           fieldApiNames
+        },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`
         }
       });
       

@@ -31,7 +31,7 @@ export default function CollectionDetailPage() {
   const [isAddRecordsOpen, setIsAddRecordsOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [memberToDelete, setMemberToDelete] = useState<string | null>(null);
-  const { useCollection, useCollectionMembers } = useCollections();
+  const { useCollection, useCollectionMembers, addMember: addMemberHook, removeMember: removeMemberHook, updateMemberPermission: updateMemberPermissionHook } = useCollections();
 
   // Fetch collection details
   const { data: collection, isLoading: isLoadingCollection } = useCollection(collectionId);
@@ -39,7 +39,7 @@ export default function CollectionDetailPage() {
   // Fetch collection members
   const { data: members, isLoading: isLoadingMembers } = useCollectionMembers(collectionId);
   
-  // Add a member to the collection using the edge function
+  // Add a member to the collection using the hook
   const addMember = useMutation({
     mutationFn: async () => {
       if (!user || !collectionId || !session) throw new Error('Missing required data');
@@ -47,21 +47,11 @@ export default function CollectionDetailPage() {
       
       setIsAddingMember(true);
       
-      // Include the session token in the Authorization header
-      const { data, error } = await supabase.functions.invoke('collection-operations', {
-        body: { 
-          type: 'addMemberToCollection',
-          collectionId,
-          userId: selectedUserId,
-          permissionLevel
-        },
-        headers: {
-          Authorization: `Bearer ${session.access_token}`
-        }
+      return addMemberHook.mutateAsync({
+        collectionId,
+        userId: selectedUserId,
+        permissionLevel
       });
-      
-      if (error) throw error;
-      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['collection-members', collectionId] });
@@ -80,25 +70,15 @@ export default function CollectionDetailPage() {
     }
   });
   
-  // Remove a member from the collection using the edge function
+  // Remove a member from the collection using the hook
   const removeMember = useMutation({
     mutationFn: async (memberId: string) => {
       if (!user || !collectionId || !session) throw new Error('Missing required data');
       
-      // Include the session token in the Authorization header
-      const { data, error } = await supabase.functions.invoke('collection-operations', {
-        body: {
-          type: 'removeMemberFromCollection',
-          collectionId,
-          memberId
-        },
-        headers: {
-          Authorization: `Bearer ${session.access_token}`
-        }
+      return removeMemberHook.mutateAsync({
+        collectionId,
+        memberId
       });
-      
-      if (error) throw error;
-      return { memberId };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['collection-members', collectionId] });
@@ -113,26 +93,16 @@ export default function CollectionDetailPage() {
     }
   });
   
-  // Update member permissions using the edge function
+  // Update member permissions using the hook
   const updateMemberPermission = useMutation({
     mutationFn: async ({ memberId, newPermission }: { memberId: string, newPermission: 'read' | 'edit' }) => {
       if (!user || !collectionId || !session) throw new Error('Missing required data');
       
-      // Include the session token in the Authorization header
-      const { data, error } = await supabase.functions.invoke('collection-operations', {
-        body: {
-          type: 'updateMemberPermission',
-          collectionId,
-          memberId,
-          permissionLevel: newPermission
-        },
-        headers: {
-          Authorization: `Bearer ${session.access_token}`
-        }
+      return updateMemberPermissionHook.mutateAsync({
+        collectionId,
+        memberId,
+        permissionLevel: newPermission
       });
-      
-      if (error) throw error;
-      return { memberId, newPermission };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['collection-members', collectionId] });
