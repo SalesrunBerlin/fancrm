@@ -76,7 +76,7 @@ export function UserTable({ users }: UserTableProps) {
                     </div>
                   </TableCell>
                   <TableCell>{user.email}</TableCell>
-                  <TableCell>{user.profile?.screen_name || user.id}</TableCell>
+                  <TableCell>{user.profile?.screen_name || user.id.substring(0, 8)}</TableCell>
                   <TableCell>{user.profile?.role || 'user'}</TableCell>
                   <TableCell>{new Date(user.created_at).toLocaleDateString()}</TableCell>
                   <TableCell>{user.stats?.objectCount}</TableCell>
