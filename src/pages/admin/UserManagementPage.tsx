@@ -9,6 +9,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 export interface UserSummary {
   id: string;
@@ -18,6 +19,7 @@ export interface UserSummary {
   profile?: {
     first_name?: string;
     last_name?: string;
+    screen_name?: string;
     role?: string;
   };
   stats?: {
@@ -48,7 +50,7 @@ export default function UserManagementPage() {
         // Fetch profiles which have user data
         const { data: profilesData, error: profilesError } = await supabase
           .from('profiles')
-          .select('id, first_name, last_name, role, created_at');
+          .select('id, first_name, last_name, role, screen_name, created_at');
         
         if (profilesError) throw profilesError;
         
@@ -56,6 +58,13 @@ export default function UserManagementPage() {
           setUsers([]);
           return;
         }
+        
+        // Fetch user emails from auth.users using service role
+        // Note: In a real implementation, this should be done through a secure server endpoint
+        // with appropriate authentication to protect user data
+        
+        // For now, we'll continue to use the profile ID as email (this would be replaced 
+        // with a proper backend implementation)
         
         // Enrich each profile with object counts
         const enrichedUsers = await Promise.all(
@@ -80,11 +89,12 @@ export default function UserManagementPage() {
             
             return {
               id: profile.id,
-              email: profile.id, // Fallback to id since we can't access auth users
+              email: profile.id, // Fallback to id since we can't directly access auth users emails
               created_at: profile.created_at,
               profile: {
                 first_name: profile.first_name,
                 last_name: profile.last_name,
+                screen_name: profile.screen_name,
                 role: profile.role
               },
               stats: {
@@ -99,6 +109,7 @@ export default function UserManagementPage() {
         setUsers(enrichedUsers);
       } catch (error) {
         console.error('Error fetching users:', error);
+        toast.error("Could not fetch user data");
       } finally {
         setIsLoading(false);
       }

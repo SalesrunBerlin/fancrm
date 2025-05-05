@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { UserSummary } from "@/pages/admin/UserManagementPage";
 import { ThemedButton } from "@/components/ui/themed-button";
 import { Eye, Search } from "lucide-react";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 interface UserTableProps {
   users: UserSummary[];
@@ -17,8 +18,14 @@ export function UserTable({ users }: UserTableProps) {
   const filteredUsers = users.filter(user => 
     user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (user.profile?.first_name?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
-    (user.profile?.last_name?.toLowerCase() || "").includes(searchTerm.toLowerCase())
+    (user.profile?.last_name?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
+    (user.profile?.screen_name?.toLowerCase() || "").includes(searchTerm.toLowerCase())
   );
+
+  const getInitials = (firstName?: string, lastName?: string): string => {
+    if (!firstName && !lastName) return "U";
+    return `${firstName?.[0] || ""}${lastName?.[0] || ""}`.toUpperCase();
+  };
 
   return (
     <div className="space-y-4">
@@ -36,8 +43,9 @@ export function UserTable({ users }: UserTableProps) {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Name</TableHead>
+              <TableHead>User</TableHead>
               <TableHead>Email</TableHead>
+              <TableHead>Screen Name</TableHead>
               <TableHead>Role</TableHead>
               <TableHead>Registered</TableHead>
               <TableHead>Objects</TableHead>
@@ -48,7 +56,7 @@ export function UserTable({ users }: UserTableProps) {
           <TableBody>
             {filteredUsers.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-4 text-muted-foreground">
+                <TableCell colSpan={8} className="text-center py-4 text-muted-foreground">
                   No users found matching your search
                 </TableCell>
               </TableRow>
@@ -56,9 +64,19 @@ export function UserTable({ users }: UserTableProps) {
               filteredUsers.map((user) => (
                 <TableRow key={user.id}>
                   <TableCell>
-                    {user.profile?.first_name || ''} {user.profile?.last_name || ''}
+                    <div className="flex items-center gap-3">
+                      <Avatar className="h-8 w-8">
+                        <AvatarFallback>
+                          {getInitials(user.profile?.first_name, user.profile?.last_name)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span>
+                        {user.profile?.first_name || ''} {user.profile?.last_name || ''}
+                      </span>
+                    </div>
                   </TableCell>
                   <TableCell>{user.email}</TableCell>
+                  <TableCell>{user.profile?.screen_name || user.id}</TableCell>
                   <TableCell>{user.profile?.role || 'user'}</TableCell>
                   <TableCell>{new Date(user.created_at).toLocaleDateString()}</TableCell>
                   <TableCell>{user.stats?.objectCount}</TableCell>

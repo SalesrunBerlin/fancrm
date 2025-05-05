@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { UserSummary } from "./UserManagementPage";
 import { toast } from "sonner";
 import { ThemedButton } from "@/components/ui/themed-button";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 interface ObjectField {
   id: string;
@@ -55,7 +56,7 @@ export default function UserDetailPage() {
         // Fetch user profile
         const { data: profileData, error: profileError } = await supabase
           .from('profiles')
-          .select('id, first_name, last_name, role, created_at')
+          .select('id, first_name, last_name, role, screen_name, created_at')
           .eq('id', userId)
           .single();
         
@@ -156,11 +157,12 @@ export default function UserDetailPage() {
         
         setUser({
           id: profileData.id,
-          email: profileData.id, // Fallback to id
+          email: profileData.id, // Fallback to id since we can't directly access auth users emails
           created_at: profileData.created_at,
           profile: {
             first_name: profileData.first_name,
             last_name: profileData.last_name,
+            screen_name: profileData.screen_name,
             role: profileData.role
           },
           stats: {
@@ -204,6 +206,11 @@ export default function UserDetailPage() {
     ? `${user.profile.first_name} ${user.profile.last_name}`
     : user.email;
 
+  const getInitials = (firstName?: string, lastName?: string): string => {
+    if (!firstName && !lastName) return "U";
+    return `${firstName?.[0] || ""}${lastName?.[0] || ""}`.toUpperCase();
+  };
+
   return (
     <div className="space-y-6">
       <ThemedButton variant="outline" asChild>
@@ -224,6 +231,17 @@ export default function UserDetailPage() {
             <CardTitle>User Information</CardTitle>
           </CardHeader>
           <CardContent>
+            <div className="flex items-center gap-4 mb-4">
+              <Avatar className="h-16 w-16">
+                <AvatarFallback className="text-lg">
+                  {getInitials(user.profile?.first_name, user.profile?.last_name)}
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <h3 className="font-medium text-lg">{userName}</h3>
+                <p className="text-sm text-muted-foreground">{user.email}</p>
+              </div>
+            </div>
             <dl className="space-y-2">
               <div>
                 <dt className="text-sm font-medium text-muted-foreground">Email</dt>
@@ -232,6 +250,10 @@ export default function UserDetailPage() {
               <div>
                 <dt className="text-sm font-medium text-muted-foreground">Name</dt>
                 <dd>{user.profile?.first_name || ''} {user.profile?.last_name || ''}</dd>
+              </div>
+              <div>
+                <dt className="text-sm font-medium text-muted-foreground">Screen Name</dt>
+                <dd>{user.profile?.screen_name || user.id}</dd>
               </div>
               <div>
                 <dt className="text-sm font-medium text-muted-foreground">Registered</dt>
