@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useEffect, useState } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
@@ -35,10 +34,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [userRole, setUserRole] = useState<string | null>(null);
-  const [favoriteColor, setFavoriteColor] = useState<string | null>(null);
+  const [favoriteColor, setFavoriteColor] = useState<string | null>("default");
 
-  // Fetch the user's role from the profiles table
-  const fetchUserRole = async (userId: string) => {
+  // Fetch the user's role and color preference from the profiles table
+  const fetchUserProfile = async (userId: string) => {
     try {
       const { data, error } = await supabase
         .from('profiles')
@@ -47,15 +46,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .single();
       
       if (error) {
-        console.error('Error fetching user role:', error);
+        console.error('Error fetching user profile:', error);
         return null;
       }
       
       // Check if data exists and has the properties we need
       if (data) {
-        if ('favorite_color' in data && data.favorite_color) {
-          setFavoriteColor(data.favorite_color);
+        console.log("Fetched profile data:", data);
+        
+        if ('favorite_color' in data) {
+          const color = data.favorite_color || "default";
+          console.log("Setting favorite color to:", color);
+          setFavoriteColor(color);
         } else {
+          console.log("No favorite_color found in profile, using default");
           setFavoriteColor("default");
         }
         
@@ -64,7 +68,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       return 'admin'; // Default role
     } catch (error) {
-      console.error('Error in fetchUserRole:', error);
+      console.error('Error in fetchUserProfile:', error);
       return null;
     }
   };
@@ -77,13 +81,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setSession(session);
         setUser(session?.user ?? null);
         
-        // Fetch role if user is logged in
+        // Fetch role and color if user is logged in
         if (session?.user) {
-          const role = await fetchUserRole(session.user.id);
+          const role = await fetchUserProfile(session.user.id);
           setUserRole(role);
         } else {
           setUserRole(null);
-          setFavoriteColor(null);
+          setFavoriteColor("default");
         }
         
         setIsLoading(false);
@@ -102,9 +106,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setSession(session);
       setUser(session?.user ?? null);
       
-      // Fetch role if user is logged in
+      // Fetch role and color if user is logged in
       if (session?.user) {
-        const role = await fetchUserRole(session.user.id);
+        const role = await fetchUserProfile(session.user.id);
         setUserRole(role);
       }
       

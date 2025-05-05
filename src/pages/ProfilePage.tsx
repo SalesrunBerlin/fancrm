@@ -55,7 +55,7 @@ export default function ProfilePage() {
                   <AvatarImage src="/avatar.png" alt={user?.email || "User"} />
                   <AvatarFallback className="text-xl">{getInitials()}</AvatarFallback>
                 </Avatar>
-                <Button variant="outline" disabled>Change Avatar</Button>
+                <ThemedButton variant="outline" disabled>Change Avatar</ThemedButton>
               </div>
               
               <div className="flex-1 space-y-4">
@@ -81,17 +81,17 @@ export default function ProfilePage() {
                 <div className="flex justify-end gap-3 pt-4">
                   {isEditing ? (
                     <>
-                      <Button variant="outline" onClick={() => setIsEditing(false)}>
+                      <ThemedButton variant="outline" onClick={() => setIsEditing(false)}>
                         Cancel
-                      </Button>
-                      <Button onClick={handleSaveProfile}>
+                      </ThemedButton>
+                      <ThemedButton onClick={handleSaveProfile}>
                         Save Changes
-                      </Button>
+                      </ThemedButton>
                     </>
                   ) : (
-                    <Button onClick={() => setIsEditing(true)}>
+                    <ThemedButton onClick={() => setIsEditing(true)}>
                       Edit Profile
-                    </Button>
+                    </ThemedButton>
                   )}
                 </div>
               </div>
@@ -147,7 +147,7 @@ export default function ProfilePage() {
                   <h3 className="font-medium">Change Password</h3>
                   <p className="text-sm text-muted-foreground">Update your account password</p>
                 </div>
-                <Button variant="outline">Change Password</Button>
+                <ThemedButton variant="outline">Change Password</ThemedButton>
               </div>
               
               <div className="flex justify-between items-center">
@@ -155,7 +155,7 @@ export default function ProfilePage() {
                   <h3 className="font-medium">Notification Preferences</h3>
                   <p className="text-sm text-muted-foreground">Configure how you receive notifications</p>
                 </div>
-                <Button variant="outline">Configure</Button>
+                <ThemedButton variant="outline">Configure</ThemedButton>
               </div>
             </div>
           </CardContent>

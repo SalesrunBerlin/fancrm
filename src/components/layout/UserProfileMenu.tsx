@@ -13,6 +13,7 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { HelpCircle, LogOut, Settings, User, Shield } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { ThemedButton } from "@/components/ui/themed-button";
 
 export function UserProfileMenu() {
   const { user, logout, isSuperAdmin } = useAuth();
@@ -32,12 +33,12 @@ export function UserProfileMenu() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+        <ThemedButton variant="ghost" className="relative h-8 w-8 rounded-full">
           <Avatar className="h-8 w-8">
             <AvatarImage src="/avatar.png" alt={user?.email || "User"} />
             <AvatarFallback>{getInitials()}</AvatarFallback>
           </Avatar>
-        </Button>
+        </ThemedButton>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-56" align="end" forceMount>
         <DropdownMenuLabel className="font-normal">

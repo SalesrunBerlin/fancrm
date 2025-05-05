@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,6 +8,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import { ThemedButton } from "@/components/ui/themed-button";
 
 export default function Auth() {
   const [email, setEmail] = useState("");
@@ -121,14 +121,14 @@ export default function Auth() {
                 </div>
               </CardContent>
               <CardFooter>
-                <Button type="submit" className="w-full bg-beauty hover:bg-beauty-dark" disabled={loading}>
+                <ThemedButton type="submit" className="w-full" disabled={loading}>
                   {loading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       Anmeldung...
                     </>
                   ) : "Anmelden"}
-                </Button>
+                </ThemedButton>
               </CardFooter>
             </form>
           </TabsContent>
@@ -145,13 +145,13 @@ export default function Auth() {
                   <p className="text-muted-foreground">
                     Bitte überprüfen Sie Ihr E-Mail-Postfach, um Ihr Konto zu bestätigen.
                   </p>
-                  <Button 
+                  <ThemedButton 
                     variant="outline" 
                     className="mt-4" 
                     onClick={() => setRegistrationSuccess(false)}
                   >
                     Zurück zur Registrierung
-                  </Button>
+                  </ThemedButton>
                 </div>
               </CardContent>
             ) : (
@@ -185,14 +185,14 @@ export default function Auth() {
                   </div>
                 </CardContent>
                 <CardFooter>
-                  <Button type="submit" className="w-full bg-beauty hover:bg-beauty-dark" disabled={loading}>
+                  <ThemedButton type="submit" className="w-full" disabled={loading}>
                     {loading ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                         Registrierung...
                       </>
                     ) : "Registrieren"}
-                  </Button>
+                  </ThemedButton>
                 </CardFooter>
               </form>
             )}
