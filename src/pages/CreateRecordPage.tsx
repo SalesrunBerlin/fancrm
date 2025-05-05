@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,7 @@ import { RecordField } from "@/components/records/RecordField";
 import { useEnhancedFields } from "@/hooks/useEnhancedFields";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
 import { useObjectRecords } from "@/hooks/useObjectRecords";
-import type { RecordFormData } from "@/types";
+import type { RecordFormData } from "@/lib/types/records"; // Updated import path
 import { Loader2, Plus, Save } from "lucide-react";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { toast } from "sonner";
@@ -29,20 +29,19 @@ export default function CreateRecordPage() {
     try {
       setIsSubmitting(true);
       
-      // Für jedes Auto-Number-Feld einen Wert generieren
+      // Generate value for each Auto-Number field
       const autoNumberFields = fields.filter(f => f.data_type === 'auto_number');
       
       for (const field of autoNumberFields) {
         try {
           const autoNumberValue = await generateAutoNumber(field.id);
-          // Korrektur: Als string behandeln, nicht als Datumsobjekt
           data[field.api_name] = autoNumberValue as string;
         } catch (error) {
           console.error(`Failed to generate auto-number for field ${field.api_name}:`, error);
         }
       }
       
-      // Hier wird der Record erstellt mit den generierten Auto-Nummern
+      // Create the record with the generated auto numbers
       const record = await createRecord.mutateAsync({
         field_values: data
       });
@@ -127,10 +126,4 @@ export default function CreateRecordPage() {
       </Card>
     </div>
   );
-
-  function navigateToCreateField() {
-    if (objectTypeId) {
-      navigate(`/settings/objects/${objectTypeId}/fields/new`);
-    }
-  }
 }

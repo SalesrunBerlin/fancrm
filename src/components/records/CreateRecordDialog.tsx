@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -7,9 +8,8 @@ import { RecordField } from "./RecordField";
 import { useEnhancedFields } from "@/hooks/useEnhancedFields";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
 import { useObjectRecords } from "@/hooks/useObjectRecords";
-import type { RecordFormData } from "@/lib/types/records";
+import type { RecordFormData } from "@/lib/types/records"; // Updated import path
 import { Loader2 } from "lucide-react";
-import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface CreateRecordDialogProps {
   objectTypeId: string;
@@ -29,7 +29,9 @@ export function CreateRecordDialog({ objectTypeId, open, onOpenChange }: CreateR
     try {
       setIsSubmitting(true);
       // Only pass the form data - the hook will handle adding the object_type_id
-      await createRecord.mutateAsync(data);
+      await createRecord.mutateAsync({
+        field_values: data
+      });
       form.reset();
       onOpenChange(false);
     } catch (error) {
