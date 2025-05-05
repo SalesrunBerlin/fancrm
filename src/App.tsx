@@ -37,6 +37,8 @@ import ProfilePage from "./pages/ProfilePage";
 import HelpPage from "./pages/HelpPage";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import HelpContentEditor from "./pages/admin/HelpContentEditor";
+import HelpTabsManager from "./pages/admin/HelpTabsManager";
+import HelpTabContentEditor from "./pages/admin/HelpTabContentEditor";
 
 // Create a client
 const queryClient = new QueryClient({
@@ -92,6 +94,8 @@ function App() {
               <Route element={<SuperAdminRoute><Layout /></SuperAdminRoute>}>
                 <Route path="/admin" element={<AdminDashboard />} />
                 <Route path="/admin/help-content" element={<HelpContentEditor />} />
+                <Route path="/admin/help-tabs" element={<HelpTabsManager />} />
+                <Route path="/admin/help-content/:tabId" element={<HelpTabContentEditor />} />
               </Route>
             </Route>
           </Routes>

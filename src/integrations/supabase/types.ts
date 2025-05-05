@@ -501,6 +501,7 @@ export type Database = {
           display_order: number
           id: string
           section_id: string
+          section_order: number
           tab_id: string
           title: string
           updated_at: string
@@ -511,6 +512,7 @@ export type Database = {
           display_order?: number
           id?: string
           section_id: string
+          section_order?: number
           tab_id: string
           title: string
           updated_at?: string
@@ -521,8 +523,47 @@ export type Database = {
           display_order?: number
           id?: string
           section_id?: string
+          section_order?: number
           tab_id?: string
           title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "help_content_tab_id_fkey"
+            columns: ["tab_id"]
+            isOneToOne: false
+            referencedRelation: "help_tabs"
+            referencedColumns: ["tab_id"]
+          },
+        ]
+      }
+      help_tabs: {
+        Row: {
+          created_at: string
+          display_order: number
+          icon: string | null
+          id: string
+          name: string
+          tab_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          display_order?: number
+          icon?: string | null
+          id?: string
+          name: string
+          tab_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          display_order?: number
+          icon?: string | null
+          id?: string
+          name?: string
+          tab_id?: string
           updated_at?: string
         }
         Relationships: []

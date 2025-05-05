@@ -2,7 +2,7 @@
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Settings, HelpCircle, Users } from "lucide-react";
+import { Settings, HelpCircle, Users, Tabs } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -17,6 +17,25 @@ export default function AdminDashboard() {
       />
       
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <Link to="/admin/help-tabs">
+          <Card className="h-full hover:bg-accent/5 transition-colors">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Tabs className="h-5 w-5" />
+                Help Tab Management
+              </CardTitle>
+              <CardDescription>
+                Manage help center tabs
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                Create, edit, and organize tabs in the help center.
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
+
         <Link to="/admin/help-content">
           <Card className="h-full hover:bg-accent/5 transition-colors">
             <CardHeader>
