@@ -63,6 +63,7 @@ export interface AccountType {
   createdAt?: string; // Add this to fix mockData type errors
   updatedAt?: string; // Add this to fix mockData type errors
   ownerId?: string; // Add this to fix mockData type errors
+  contactCount?: number; // Add this for compatibility with mockData
 }
 
 export interface DealType {

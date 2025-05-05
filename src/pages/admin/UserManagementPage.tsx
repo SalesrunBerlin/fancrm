@@ -45,55 +45,52 @@ export default function UserManagementPage() {
       try {
         setIsLoading(true);
         
-        // Fetch users with their profiles
-        const { data: usersData, error: usersError } = await supabase
+        // Fetch profiles which have user data
+        const { data: profilesData, error: profilesError } = await supabase
           .from('profiles')
           .select('id, first_name, last_name, role, created_at');
         
-        if (usersError) throw usersError;
+        if (profilesError) throw profilesError;
         
-        // For each user, get their authentication info
+        if (!profilesData) {
+          setUsers([]);
+          return;
+        }
+        
+        // Enrich each profile with object counts
         const enrichedUsers = await Promise.all(
-          usersData.map(async (profile) => {
-            // Get auth user data
-            const { data: userData, error: userError } = await supabase
-              .from('auth_users_view')
-              .select('email, created_at, last_sign_in_at')
-              .eq('id', profile.id)
-              .single();
-            
+          profilesData.map(async (profile) => {
             // Get object counts
-            const { data: objectsCount, error: objectsError } = await supabase
+            const { data: objectsData, error: objectsError } = await supabase
               .from('object_types')
-              .select('id', { count: 'exact', head: true })
+              .select('id')
               .eq('owner_id', profile.id);
             
             // Get field counts
-            const { data: fieldsCount, error: fieldsError } = await supabase
+            const { data: fieldsData, error: fieldsError } = await supabase
               .from('object_fields')
-              .select('id', { count: 'exact', head: true })
+              .select('id')
               .eq('owner_id', profile.id);
             
             // Get record counts
-            const { data: recordsCount, error: recordsError } = await supabase
+            const { data: recordsData, error: recordsError } = await supabase
               .from('object_records')
-              .select('id', { count: 'exact', head: true })
+              .select('id')
               .eq('owner_id', profile.id);
             
             return {
               id: profile.id,
-              email: userData?.email || 'Unknown',
-              created_at: userData?.created_at || profile.created_at,
-              last_sign_in_at: userData?.last_sign_in_at,
+              email: profile.id, // Fallback to id since we can't access auth users
+              created_at: profile.created_at,
               profile: {
                 first_name: profile.first_name,
                 last_name: profile.last_name,
                 role: profile.role
               },
               stats: {
-                objectCount: objectsCount?.count || 0,
-                fieldCount: fieldsCount?.count || 0,
-                recordCount: recordsCount?.count || 0
+                objectCount: objectsData?.length || 0,
+                fieldCount: fieldsData?.length || 0,
+                recordCount: recordsData?.length || 0
               }
             };
           })

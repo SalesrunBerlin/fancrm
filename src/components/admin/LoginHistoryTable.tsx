@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 
 interface LoginHistoryTableProps {
   loginHistory: Array<{
-    timestamp: string;
+    timestamp: number | string;
     event_message: string;
   }>;
 }
@@ -14,7 +14,7 @@ export function LoginHistoryTable({ loginHistory }: LoginHistoryTableProps) {
     try {
       const data = JSON.parse(message);
       return {
-        event: data.msg || 'Event',
+        event: data.msg || data.action || 'Event',
         status: data.status || '-',
         path: data.path || '-',
         ipAddress: data.remote_addr || '-',
@@ -54,11 +54,14 @@ export function LoginHistoryTable({ loginHistory }: LoginHistoryTableProps) {
           ) : (
             loginHistory.map((item, index) => {
               const event = parseEventMessage(item.event_message);
+              // Handle both string and number timestamp formats
+              const timestamp = typeof item.timestamp === 'number' 
+                ? new Date(item.timestamp).toLocaleString() 
+                : new Date(parseInt(item.timestamp as string)).toLocaleString();
+                
               return (
                 <TableRow key={index}>
-                  <TableCell>
-                    {new Date(item.timestamp / 1000).toLocaleString()}
-                  </TableCell>
+                  <TableCell>{timestamp}</TableCell>
                   <TableCell>
                     <Badge variant={event.success ? "default" : "destructive"}>
                       {event.event}
