@@ -1,6 +1,5 @@
 
 import { useObjectTypes } from "@/hooks/useObjectTypes";
-import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Loader2, Plus, Building, User, Briefcase, Calendar, Box } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -14,6 +13,7 @@ import {
 import { ObjectTypeForm } from "./ObjectTypeForm";
 import { Badge } from "@/components/ui/badge";
 import { ObjectType } from "@/hooks/useObjectTypes";
+import { ThemedButton } from "@/components/ui/themed-button";
 
 export function ObjectTypesList() {
   const { objectTypes, isLoading } = useObjectTypes();
@@ -45,10 +45,10 @@ export function ObjectTypesList() {
         <div className="flex space-x-2">
           <Dialog>
             <DialogTrigger asChild>
-              <Button>
+              <ThemedButton>
                 <Plus className="mr-2 h-4 w-4" />
                 Create Object
-              </Button>
+              </ThemedButton>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
@@ -102,10 +102,10 @@ export function ObjectTypesList() {
             </p>
             <Dialog>
               <DialogTrigger asChild>
-                <Button>
+                <ThemedButton>
                   <Plus className="mr-2 h-4 w-4" />
                   Create Object
-                </Button>
+                </ThemedButton>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>

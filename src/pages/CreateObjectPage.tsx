@@ -1,12 +1,12 @@
 
 import { useNavigate, Link } from "react-router-dom";
-import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { ArrowLeft } from "lucide-react";
 import { ObjectTypeForm } from "@/components/settings/ObjectTypeForm";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEffect } from "react";
 import { toast } from "sonner";
+import { ThemedButton } from "@/components/ui/themed-button";
 
 export default function CreateObjectPage() {
   const navigate = useNavigate();
@@ -28,12 +28,12 @@ export default function CreateObjectPage() {
 
   return (
     <div className="space-y-4 container px-4 py-4 md:px-6 md:py-6">
-      <Button variant="outline" asChild>
+      <ThemedButton variant="outline" asChild>
         <Link to="/settings/object-manager">
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back to Object Manager
         </Link>
-      </Button>
+      </ThemedButton>
       
       {!isLoading && !user && (
         <div className="p-4 mb-4 bg-yellow-100 text-yellow-800 rounded-md">

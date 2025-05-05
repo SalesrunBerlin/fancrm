@@ -1,3 +1,4 @@
+
 import {
   Archive,
   ArrowLeft,
@@ -15,12 +16,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Button } from "@/components/ui/button";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
 import { toast } from "sonner";
 import { useState } from "react";
 import { ApplicationAssignmentDialog } from "@/components/settings/ApplicationAssignmentDialog";
+import { ThemedButton } from "@/components/ui/themed-button";
 
 interface ObjectTypeDetailHeaderProps {
   objectTypeId: string;
@@ -67,23 +68,23 @@ export function ObjectTypeDetailHeader({ objectTypeId, objectName }: ObjectTypeD
       <div className="mb-4 flex items-center justify-between md:mb-0">
         <div className="flex items-center">
           <Link to="/settings/object-manager">
-            <Button variant="ghost" size="sm" className="mr-2 px-0">
+            <ThemedButton variant="ghost" size="sm" className="mr-2 px-0">
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back
-            </Button>
+            </ThemedButton>
           </Link>
           <h1 className="font-semibold text-lg">{objectName}</h1>
         </div>
         <div className="flex items-center">
-          <Button size="sm" onClick={() => setShowAppAssignmentDialog(true)}>
+          <ThemedButton size="sm" onClick={() => setShowAppAssignmentDialog(true)}>
             <AppWindow className="mr-2 h-4 w-4" />
             Applications
-          </Button>
+          </ThemedButton>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm">
+              <ThemedButton variant="ghost" size="sm">
                 <MoreVertical className="h-4 w-4" />
-              </Button>
+              </ThemedButton>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={handleArchive}>

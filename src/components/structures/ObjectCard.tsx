@@ -1,12 +1,12 @@
 
 import { Card, CardHeader, CardTitle, CardContent, CardFooter, CardDescription } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
 import { ObjectType } from "@/hooks/useObjectTypes";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Eye, AppWindow } from "lucide-react";
+import { ThemedButton } from "@/components/ui/themed-button";
 
 interface ObjectCardProps {
   objectType: ObjectType;
@@ -108,18 +108,18 @@ export function ObjectCard({ objectType, onPublish, showPublishButton = false }:
       <CardFooter className="pt-2 mt-auto flex flex-col gap-2">
         <div className="flex w-full gap-2">
           <Link to={`/settings/objects/${objectType.id}`} className="flex-1">
-            <Button variant="outline" className="w-full">
+            <ThemedButton variant="outline" className="w-full">
               Manage
-            </Button>
+            </ThemedButton>
           </Link>
           {showPublishButton && !objectType.is_published && !objectType.is_template && (
-            <Button 
+            <ThemedButton 
               variant="outline" 
               className="flex-1"
               onClick={() => onPublish?.(objectType.id)}
             >
               Publish
-            </Button>
+            </ThemedButton>
           )}
         </div>
       </CardFooter>

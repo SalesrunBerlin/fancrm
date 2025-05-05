@@ -1,12 +1,12 @@
+
 import { useState } from "react";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
-import { Button } from "@/components/ui/button";
+import { Link } from "react-router-dom";
 import { PageHeader } from "@/components/ui/page-header";
 import { 
   Plus, Loader2, Building, User, Briefcase, Calendar, Box, 
   Archive, RefreshCw, Eye, Trash2, MoreHorizontal
 } from "lucide-react";
-import { Link } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { ObjectType } from "@/hooks/useObjectTypes";
@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { isArchived } from "@/patches/ObjectTypePatches";
 import { useAuth } from "@/contexts/AuthContext";
+import { ThemedButton } from "@/components/ui/themed-button";
 
 export default function ObjectManager() {
   // Fetch all objects including archived ones
@@ -88,9 +89,9 @@ export default function ObjectManager() {
       <div className="flex sm:hidden">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm">
+            <ThemedButton variant="outline" size="sm">
               <MoreHorizontal className="h-4 w-4" />
-            </Button>
+            </ThemedButton>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             {isArchived ? (
@@ -140,12 +141,12 @@ export default function ObjectManager() {
         title="Object Manager"
         description="Manage all your custom and standard objects"
         actions={
-          <Button asChild>
+          <ThemedButton asChild>
             <Link to="/settings/object-manager/new">
               <Plus className="mr-2 h-4 w-4" />
               Create Object
             </Link>
-          </Button>
+          </ThemedButton>
         }
       />
 
@@ -213,7 +214,7 @@ export default function ObjectManager() {
                           <div className="hidden sm:flex gap-2">
                             {!objectType.is_system && (
                               <>
-                                <Button 
+                                <ThemedButton 
                                   variant="outline" 
                                   size="sm"
                                   className="text-amber-500 hover:text-amber-600 hover:bg-amber-50"
@@ -222,16 +223,16 @@ export default function ObjectManager() {
                                   <Link to={`/settings/objects/${objectType.id}/archive`}>
                                     <Archive className="h-4 w-4" />
                                   </Link>
-                                </Button>
+                                </ThemedButton>
                                 {!isSourceForPublishedObjects(objectType.id) && (
-                                  <Button 
+                                  <ThemedButton 
                                     variant="outline" 
                                     size="sm"
                                     className="text-red-500 hover:text-red-600 hover:bg-red-50"
                                     onClick={(e) => handleDeleteObject(objectType, e)}
                                   >
                                     <Trash2 className="h-4 w-4" />
-                                  </Button>
+                                  </ThemedButton>
                                 )}
                               </>
                             )}
@@ -246,12 +247,12 @@ export default function ObjectManager() {
                   <p className="text-muted-foreground mb-4">
                     No object types found. Create your first custom object to get started.
                   </p>
-                  <Button asChild>
+                  <ThemedButton asChild>
                     <Link to="/settings/object-manager/new">
                       <Plus className="mr-2 h-4 w-4" />
                       Create Object
                     </Link>
-                  </Button>
+                  </ThemedButton>
                 </div>
               )}
             </CardContent>
@@ -299,7 +300,7 @@ export default function ObjectManager() {
                           
                           {/* Desktop action buttons - hidden on mobile */}
                           <div className="hidden sm:flex items-center gap-2">
-                            <Button 
+                            <ThemedButton 
                               variant="outline" 
                               size="sm"
                               className="text-green-600 hover:text-green-700 hover:bg-green-50"
@@ -308,8 +309,8 @@ export default function ObjectManager() {
                               <Link to={`/settings/objects/${objectType.id}/restore`}>
                                 <RefreshCw className="h-4 w-4" />
                               </Link>
-                            </Button>
-                            <Button 
+                            </ThemedButton>
+                            <ThemedButton 
                               variant="outline" 
                               size="sm"
                               asChild
@@ -317,16 +318,16 @@ export default function ObjectManager() {
                               <Link to={`/settings/objects/${objectType.id}`}>
                                 <Eye className="h-4 w-4" />
                               </Link>
-                            </Button>
+                            </ThemedButton>
                             {!objectType.is_system && !isSourceForPublishedObjects(objectType.id) && (
-                              <Button 
+                              <ThemedButton 
                                 variant="outline" 
                                 size="sm"
                                 className="text-red-500 hover:text-red-600 hover:bg-red-50"
                                 onClick={(e) => handleDeleteObject(objectType, e)}
                               >
                                 <Trash2 className="h-4 w-4" />
-                              </Button>
+                              </ThemedButton>
                             )}
                           </div>
                         </div>

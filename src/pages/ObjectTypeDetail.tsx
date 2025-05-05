@@ -4,13 +4,13 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
 import { useObjectFields } from "@/hooks/useObjectFields";
 import { ObjectFieldsList } from "@/components/settings/ObjectFieldsList";
-import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { ArrowLeft, List, Plus, Archive, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { DefaultFieldSelector } from "@/components/settings/DefaultFieldSelector";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { ThemedButton } from "@/components/ui/themed-button";
 
 export default function ObjectTypeDetail() {
   const { objectTypeId } = useParams<{ objectTypeId: string }>();
@@ -40,10 +40,10 @@ export default function ObjectTypeDetail() {
           title="Object Type Not Found"
           description="The requested object type does not exist or is not accessible."
           actions={
-            <Button variant="outline" onClick={() => navigate("/settings/object-manager")}>
+            <ThemedButton variant="outline" onClick={() => navigate("/settings/object-manager")}>
               <ArrowLeft className="mr-2 h-4 w-4" />
               <span className="md:inline">Back to Object Manager</span>
-            </Button>
+            </ThemedButton>
           }
         />
       </div>
@@ -103,7 +103,7 @@ export default function ObjectTypeDetail() {
         description={currentObjectType.description || `API Name: ${currentObjectType.api_name}`}
         actions={
           <div className="flex flex-row gap-2 w-full justify-end">
-            <Button 
+            <ThemedButton 
               variant="outline" 
               size="responsive"
               asChild
@@ -112,18 +112,18 @@ export default function ObjectTypeDetail() {
                 <ArrowLeft className="h-4 w-4" />
                 <span className="hidden md:inline">Back</span>
               </Link>
-            </Button>
+            </ThemedButton>
             {!isPublishedByOthers && !currentObjectType.is_system && !isArchived && (
               <>
-                <Button 
+                <ThemedButton 
                   variant="default"
                   size="responsive"
                   onClick={() => navigate(`/settings/objects/${objectTypeId}/fields/new`)}
                 >
                   <Plus className="h-4 w-4" />
                   <span className="hidden md:inline">New Field</span>
-                </Button>
-                <Button 
+                </ThemedButton>
+                <ThemedButton 
                   onClick={handleTogglePublish}
                   disabled={isPublishing}
                   size="responsive"
@@ -133,26 +133,26 @@ export default function ObjectTypeDetail() {
                   <span className="hidden md:inline">
                     {currentObjectType.is_published ? "Unpublish" : "Publish"}
                   </span>
-                </Button>
-                <Button 
+                </ThemedButton>
+                <ThemedButton 
                   variant="warning"
                   size="responsive"
                   onClick={() => navigate(`/settings/objects/${objectTypeId}/archive`)}
                 >
                   <Archive className="h-4 w-4" />
                   <span className="hidden md:inline">Archive</span>
-                </Button>
+                </ThemedButton>
               </>
             )}
             {isArchived && (
-              <Button
+              <ThemedButton
                 variant="success" 
                 size="responsive"
                 onClick={() => navigate(`/settings/objects/${objectTypeId}/restore`)}
               >
                 <Archive className="h-4 w-4" />
                 <span className="hidden md:inline">Restore</span>
-              </Button>
+              </ThemedButton>
             )}
           </div>
         }
