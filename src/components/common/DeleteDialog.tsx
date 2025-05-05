@@ -10,8 +10,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
+import { ThemedButton } from "@/components/ui/themed-button";
 
 export interface DeleteDialogProps {
   open: boolean;
@@ -66,7 +66,7 @@ export function DeleteDialog({
           <AlertDialogCancel onClick={handleCancel} disabled={isDeleting}>
             {cancelButtonText}
           </AlertDialogCancel>
-          <Button
+          <ThemedButton
             variant="destructive"
             onClick={handleConfirm}
             disabled={isDeleting}
@@ -78,7 +78,7 @@ export function DeleteDialog({
               </>
             ) : buttonText}
             {children}
-          </Button>
+          </ThemedButton>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

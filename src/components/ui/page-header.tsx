@@ -2,8 +2,8 @@
 import React from "react";
 import { cn } from "@/lib/utils";
 import { ArrowLeft } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
+import { ThemedButton } from "@/components/ui/themed-button";
 
 export interface PageHeaderProps {
   title: string;
@@ -36,7 +36,7 @@ export function PageHeader({
     <div className={cn("flex flex-col md:flex-row items-start md:items-center justify-between space-y-2 md:space-y-0 pb-4", className)}>
       <div className="flex items-center gap-2">
         {backTo && (
-          <Button 
+          <ThemedButton 
             variant="ghost" 
             size="icon" 
             className="h-8 w-8 mr-1" 
@@ -44,7 +44,7 @@ export function PageHeader({
             aria-label="Back"
           >
             <ArrowLeft className="h-4 w-4" />
-          </Button>
+          </ThemedButton>
         )}
         {backButton}
         <div>

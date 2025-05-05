@@ -1,11 +1,9 @@
-
 import { useState, useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
 import { useObjectRecords } from "@/hooks/useObjectRecords";
 import { useEnhancedFields } from "@/hooks/useEnhancedFields";
 import { PageHeader } from "@/components/ui/page-header";
-import { Button } from "@/components/ui/button";
 import { Loader2, Plus, Upload, Trash2 } from "lucide-react";
 import { RecordsTable } from "@/components/records/RecordsTable";
 import { Card } from "@/components/ui/card";
@@ -16,6 +14,7 @@ import { DeleteDialog } from "@/components/common/DeleteDialog";
 import { toast } from "sonner";
 import { EnhancedObjectField, toSafeObjectField } from "@/patches/FixObjectFieldType";
 import { ObjectActionsSection } from "@/components/actions/ObjectActionsSection";
+import { ThemedButton } from "@/components/ui/themed-button";
 
 export default function ObjectRecordsList() {
   const { objectTypeId } = useParams<{ objectTypeId: string }>();
@@ -143,7 +142,7 @@ export default function ObjectRecordsList() {
               objectTypeId={objectTypeId!}
               onVisibilityChange={handleVisibilityChange}
             />
-            <Button 
+            <ThemedButton 
               variant="outline"
               asChild
             >
@@ -151,22 +150,22 @@ export default function ObjectRecordsList() {
                 <Upload className="mr-1.5 h-4 w-4" />
                 Import
               </Link>
-            </Button>
+            </ThemedButton>
             {selectedRecords.length > 0 && (
-              <Button 
+              <ThemedButton 
                 variant="destructive"
                 onClick={() => setIsDeleteDialogOpen(true)}
               >
                 <Trash2 className="mr-1.5 h-4 w-4" />
                 Delete Selected ({selectedRecords.length})
-              </Button>
+              </ThemedButton>
             )}
-            <Button asChild>
+            <ThemedButton asChild>
               <Link to={`/objects/${objectTypeId}/new`}>
                 <Plus className="mr-1.5 h-4 w-4" />
                 New {objectType.name}
               </Link>
-            </Button>
+            </ThemedButton>
           </>
         }
       />
