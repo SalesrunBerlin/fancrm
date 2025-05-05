@@ -45,6 +45,7 @@ serve(async (req) => {
     } = await supabaseClient.auth.getUser();
     
     if (userError || !user) {
+      console.error('User authentication error:', userError?.message);
       return new Response(
         JSON.stringify({ error: 'Unauthorized', details: userError?.message }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -52,11 +53,23 @@ serve(async (req) => {
     }
     
     // Parse the request body
-    const requestData: CollectionOperation = await req.json();
+    let requestData: CollectionOperation;
+    try {
+      requestData = await req.json();
+    } catch (error) {
+      console.error('Error parsing request body:', error);
+      return new Response(
+        JSON.stringify({ error: 'Invalid request body' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    console.log('Processing operation:', requestData.type, 'for user:', user.id);
     
     // Handle different operation types
     switch(requestData.type) {
       case 'getMemberCollections': {
+        console.log('Fetching member collections for user:', user.id);
         // Get collections where the user is a member
         const { data: memberCollectionsData, error: memberError } = await supabaseClient
           .from('collection_members')
@@ -64,18 +77,21 @@ serve(async (req) => {
           .eq('user_id', user.id);
         
         if (memberError) {
+          console.error('Error fetching member collections:', memberError);
           throw new Error(`Error fetching member collections: ${memberError.message}`);
         }
         
-        // Get the full collection data
-        const collectionIds = memberCollectionsData.map(m => m.collection_id);
-        
-        if (collectionIds.length === 0) {
+        // If user is not a member of any collections, return empty array
+        if (!memberCollectionsData || memberCollectionsData.length === 0) {
           return new Response(
             JSON.stringify({ data: [] }),
             { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
+        
+        // Get the full collection data
+        const collectionIds = memberCollectionsData.map(m => m.collection_id);
+        console.log('Found collection IDs:', collectionIds);
         
         const { data: collections, error: collectionsError } = await supabaseClient
           .from('sharing_collections')
@@ -83,11 +99,12 @@ serve(async (req) => {
           .in('id', collectionIds);
         
         if (collectionsError) {
+          console.error('Error fetching collections:', collectionsError);
           throw new Error(`Error fetching collections: ${collectionsError.message}`);
         }
         
         // Enhance collections with member and record counts
-        const collectionsWithCounts = await Promise.all(collections.map(async (collection) => {
+        const collectionsWithCounts = await Promise.all((collections || []).map(async (collection) => {
           try {
             // Get member count
             const { count: memberCount, error: countError } = await supabaseClient
@@ -95,11 +112,19 @@ serve(async (req) => {
               .select('*', { count: 'exact', head: true })
               .eq('collection_id', collection.id);
               
+            if (countError) {
+              console.error(`Error counting members for collection ${collection.id}:`, countError);
+            }
+            
             // Get record count
             const { count: recordCount, error: recordError } = await supabaseClient
               .from('collection_records')
               .select('*', { count: 'exact', head: true })
               .eq('collection_id', collection.id);
+            
+            if (recordError) {
+              console.error(`Error counting records for collection ${collection.id}:`, recordError);
+            }
             
             return {
               ...collection,
@@ -116,6 +141,7 @@ serve(async (req) => {
           }
         }));
         
+        console.log('Returning collections with counts, total:', collectionsWithCounts.length);
         return new Response(
           JSON.stringify({ data: collectionsWithCounts }),
           { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

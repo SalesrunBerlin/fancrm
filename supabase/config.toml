@@ -136,5 +136,6 @@ analytics_retention_days = 90
 port = 54321
 function_timeout_seconds = 30
 enabled = true
+
 [functions.collection-operations]
 verify_jwt = true
