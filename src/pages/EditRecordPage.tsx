@@ -14,6 +14,7 @@ import { Loader2, Plus, X, Save } from "lucide-react";
 import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/card";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/ui/page-header";
+import { generateAutoNumber } from "@/hooks/useAutoNumberFields";
 
 export default function EditRecordPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -42,6 +43,21 @@ export default function EditRecordPage() {
     
     try {
       setIsSubmitting(true);
+      
+      // Verarbeite Auto-Number Felder
+      const autoNumberFields = fields.filter(field => field.data_type === 'auto_number');
+      for (const field of autoNumberFields) {
+        // Wenn kein Wert vorhanden ist, generiere einen neuen
+        if (!data[field.api_name] || data[field.api_name] === 'undefined') {
+          try {
+            const autoNumberValue = await generateAutoNumber(field.id);
+            data[field.api_name] = autoNumberValue;
+          } catch (error) {
+            console.error(`Failed to generate auto-number for field ${field.api_name}:`, error);
+          }
+        }
+      }
+      
       await updateRecord.mutateAsync({
         id: recordId,
         field_values: data

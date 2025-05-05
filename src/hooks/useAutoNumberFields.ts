@@ -27,7 +27,7 @@ export function useAutoNumberConfig(fieldId: string) {
 
 export async function generateAutoNumber(fieldId: string): Promise<string> {
   try {
-    // Get the auto-number configuration
+    // Hole die Auto-Number-Konfiguration
     const { data: config } = await supabase
       .from('auto_number_configurations')
       .select('*')
@@ -38,7 +38,7 @@ export async function generateAutoNumber(fieldId: string): Promise<string> {
       throw new Error('Auto-number configuration not found');
     }
     
-    // Call the function to generate a new auto-number
+    // Rufe die Funktion auf, um eine neue Auto-Number zu generieren
     const { data, error } = await supabase
       .rpc('generate_auto_number', {
         field_id: fieldId,
