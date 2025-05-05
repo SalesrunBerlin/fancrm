@@ -41,6 +41,7 @@ import HelpTabsManager from "./pages/admin/HelpTabsManager";
 import HelpTabContentEditor from "./pages/admin/HelpTabContentEditor";
 import UserManagementPage from "./pages/admin/UserManagementPage";
 import UserDetailPage from "./pages/admin/UserDetailPage";
+import PublicActionPage from "./pages/PublicActionPage";
 
 // Create a client
 const queryClient = new QueryClient({
@@ -59,6 +60,9 @@ function App() {
         <AuthProvider>
           <Routes>
             <Route path="/auth" element={<Auth />} />
+            
+            {/* Public route for accessing public actions */}
+            <Route path="/public-action/:token" element={<PublicActionPage />} />
             
             <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
               <Route path="/" element={<Dashboard />} />

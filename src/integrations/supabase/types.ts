@@ -80,6 +80,7 @@ export type Database = {
           created_at: string
           description: string | null
           id: string
+          is_public: boolean
           lookup_field_id: string | null
           name: string
           owner_id: string
@@ -93,6 +94,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          is_public?: boolean
           lookup_field_id?: string | null
           name: string
           owner_id: string
@@ -106,6 +108,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          is_public?: boolean
           lookup_field_id?: string | null
           name?: string
           owner_id?: string
@@ -953,6 +956,47 @@ export type Database = {
         }
         Relationships: []
       }
+      public_action_tokens: {
+        Row: {
+          action_id: string
+          created_at: string
+          created_by: string | null
+          expires_at: string | null
+          id: string
+          is_active: boolean
+          name: string | null
+          token: string
+        }
+        Insert: {
+          action_id: string
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string | null
+          token: string
+        }
+        Update: {
+          action_id?: string
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string | null
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "public_action_tokens_action_id_fkey"
+            columns: ["action_id"]
+            isOneToOne: false
+            referencedRelation: "actions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       record_field_values: {
         Row: {
           created_at: string
@@ -1318,6 +1362,13 @@ export type Database = {
       generate_auto_number: {
         Args: { field_id: string; prefix?: string; format_pattern?: string }
         Returns: string
+      }
+      get_auth_logs: {
+        Args: { target_user_id: string }
+        Returns: {
+          log_timestamp: number
+          event_message: string
+        }[]
       }
       get_user_collection_membership: {
         Args: { user_uuid: string; collection_uuid: string }

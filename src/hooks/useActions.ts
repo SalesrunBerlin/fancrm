@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { PublicActionToken } from "@/types";
 
 export type ActionType = 'new_record' | 'linked_record' | 'mass_action';
 export type ActionColor = 
@@ -67,6 +68,7 @@ export interface Action {
   owner_id: string;
   created_at: string;
   updated_at: string;
+  is_public: boolean;
 }
 
 export interface ActionField {
@@ -89,6 +91,7 @@ export interface ActionCreateInput {
   source_field_id?: string | null;
   lookup_field_id?: string | null;
   color?: ActionColor;
+  is_public?: boolean;
 }
 
 export function useActions() {
@@ -126,6 +129,48 @@ export function useActions() {
     },
     enabled: !!user,
   });
+
+  // Get action by token
+  const getActionByToken = async (token: string): Promise<Action | null> => {
+    try {
+      console.log(`useActions: Fetching action by token ${token}`);
+      const { data: tokenData, error: tokenError } = await supabase
+        .from("public_action_tokens")
+        .select("action_id, is_active, expires_at")
+        .eq("token", token)
+        .single();
+
+      if (tokenError) {
+        console.error("Error fetching action token:", tokenError);
+        return null;
+      }
+
+      if (!tokenData.is_active || (tokenData.expires_at && new Date(tokenData.expires_at) < new Date())) {
+        console.error("Token is inactive or expired");
+        return null;
+      }
+
+      const { data: actionData, error: actionError } = await supabase
+        .from("actions")
+        .select("*")
+        .eq("id", tokenData.action_id)
+        .eq("is_public", true)
+        .single();
+
+      if (actionError) {
+        console.error("Error fetching action:", actionError);
+        return null;
+      }
+
+      return {
+        ...actionData,
+        color: (actionData.color || 'default') as ActionColor
+      } as Action;
+    } catch (error) {
+      console.error("Error in getActionByToken:", error);
+      return null;
+    }
+  };
 
   // Get actions by object type ID - including both target and source actions
   const getActionsByObjectId = async (objectTypeId: string): Promise<Action[]> => {
@@ -296,11 +341,12 @@ export function useActions() {
       
       setIsLoading(true);
       
-      // Ensure color has a default value if not provided
+      // Ensure color has a default value if not provided and set is_public if provided
       const dataWithDefaults = {
         ...actionData,
         color: (actionData.color || 'default') as ActionColor,
         owner_id: user.id,
+        is_public: actionData.is_public || false
       };
       
       const { data, error } = await supabase
@@ -397,14 +443,105 @@ export function useActions() {
     },
   });
 
+  // Create a public token for an action
+  const createPublicToken = useMutation({
+    mutationFn: async ({ actionId, name, expiresAt }: { actionId: string, name?: string, expiresAt?: Date }) => {
+      if (!user) throw new Error("User not authenticated");
+      
+      setIsLoading(true);
+      
+      // Generate a secure random token
+      const tokenBytes = new Uint8Array(24);
+      window.crypto.getRandomValues(tokenBytes);
+      const token = Array.from(tokenBytes).map(b => b.toString(16).padStart(2, '0')).join('');
+      
+      const { data, error } = await supabase
+        .from("public_action_tokens")
+        .insert({
+          action_id: actionId,
+          token,
+          name: name || null,
+          created_by: user.id,
+          expires_at: expiresAt ? expiresAt.toISOString() : null
+        })
+        .select()
+        .single();
+
+      if (error) {
+        throw error;
+      }
+
+      return data as PublicActionToken;
+    },
+    onSuccess: () => {
+      toast.success("Public link created successfully");
+      queryClient.invalidateQueries({ queryKey: ["action-tokens"] });
+    },
+    onError: (error) => {
+      toast.error("Failed to create public link");
+      console.error("Error creating public token:", error);
+    },
+    onSettled: () => {
+      setIsLoading(false);
+    },
+  });
+
+  // Get tokens for an action
+  const getActionTokens = async (actionId: string): Promise<PublicActionToken[]> => {
+    if (!user) return [];
+    
+    try {
+      const { data, error } = await supabase
+        .from("public_action_tokens")
+        .select("*")
+        .eq("action_id", actionId)
+        .order("created_at", { ascending: false });
+      
+      if (error) throw error;
+      
+      return data as PublicActionToken[];
+    } catch (error) {
+      console.error("Error fetching action tokens:", error);
+      return [];
+    }
+  };
+
+  // Deactivate a public token
+  const deactivateToken = useMutation({
+    mutationFn: async (tokenId: string) => {
+      if (!user) throw new Error("User not authenticated");
+      
+      const { error } = await supabase
+        .from("public_action_tokens")
+        .update({ is_active: false })
+        .eq("id", tokenId);
+      
+      if (error) throw error;
+      
+      return tokenId;
+    },
+    onSuccess: () => {
+      toast.success("Token deactivated successfully");
+      queryClient.invalidateQueries({ queryKey: ["action-tokens"] });
+    },
+    onError: (error) => {
+      toast.error("Failed to deactivate token");
+      console.error("Error deactivating token:", error);
+    }
+  });
+
   return {
     actions,
     getAction,
     getActionsByObjectId,
     getActionsByRecordId,
+    getActionByToken,
     createAction,
     updateAction,
     deleteAction,
+    createPublicToken,
+    getActionTokens,
+    deactivateToken,
     refetch,
     isLoading,
   };
