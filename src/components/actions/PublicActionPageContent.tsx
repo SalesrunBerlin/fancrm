@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { PublicRecordForm } from "@/components/actions/PublicRecordForm";
 import { Action } from "@/hooks/useActions";

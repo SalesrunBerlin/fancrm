@@ -7,15 +7,12 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 import { getAlertVariantClass } from "@/patches/FixAlertVariants";
 import { useActions, Action } from "@/hooks/useActions";
-import { useObjectTypes } from "@/hooks/useObjectTypes";
 import { supabase } from "@/integrations/supabase/client";
-import { PublicRecordForm } from "@/components/actions/PublicRecordForm";
 import { PublicActionPageContent } from "@/components/actions/PublicActionPageContent";
 
 export default function PublicActionPage() {
   const { token } = useParams<{ token: string }>();
   const { getActionByToken } = useActions();
-  const { objectTypes } = useObjectTypes();
   
   const [action, setAction] = useState<Action | null>(null);
   const [loading, setLoading] = useState(true);
@@ -31,6 +28,7 @@ export default function PublicActionPage() {
       }
 
       try {
+        console.log("Fetching action with token:", token);
         const actionData = await getActionByToken(token);
         
         if (!actionData) {
@@ -38,6 +36,8 @@ export default function PublicActionPage() {
           setLoading(false);
           return;
         }
+        
+        console.log("Action data retrieved:", actionData);
         
         if (actionData.action_type !== "new_record") {
           setError("This action type is not supported for public forms");
