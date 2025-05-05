@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { PageHeader } from "@/components/ui/page-header";
@@ -85,14 +84,19 @@ export default function UserDetailPage() {
         
         if (recordsError) throw recordsError;
         
-        // Fetch auth logs
+        // Fetch auth logs using the custom RPC function
         const { data: authLogsData, error: authLogsError } = await supabase
           .rpc('get_auth_logs', { target_user_id: userId });
         
-        let historyData = [];
+        if (authLogsError) {
+          console.error('Error fetching auth logs:', authLogsError);
+          toast.error("Could not fetch login history");
+        }
         
-        if (authLogsError || !authLogsData || authLogsData.length === 0) {
-          console.error('Could not fetch auth logs, using mock data:', authLogsError);
+        // Use the data from the RPC function or fallback to mock if there's an error
+        const historyData = Array.isArray(authLogsData) ? authLogsData : [];
+        
+        if (historyData.length === 0) {
           // Use the mock data for login history
           const today = new Date();
           const yesterday = new Date();
@@ -100,9 +104,9 @@ export default function UserDetailPage() {
           const lastWeek = new Date();
           lastWeek.setDate(today.getDate() - 7);
           
-          historyData = [
+          setLoginHistory([
             {
-              timestamp: today.getTime(),
+              log_timestamp: today.getTime(),
               event_message: JSON.stringify({
                 msg: "Login",
                 status: "200",
@@ -112,7 +116,7 @@ export default function UserDetailPage() {
               })
             },
             {
-              timestamp: yesterday.getTime(),
+              log_timestamp: yesterday.getTime(),
               event_message: JSON.stringify({
                 msg: "Login",
                 status: "200",
@@ -122,7 +126,7 @@ export default function UserDetailPage() {
               })
             },
             {
-              timestamp: lastWeek.getTime(),
+              log_timestamp: lastWeek.getTime(),
               event_message: JSON.stringify({
                 msg: "Login",
                 status: "200",
@@ -131,13 +135,11 @@ export default function UserDetailPage() {
                 time: lastWeek.toISOString()
               })
             }
-          ];
+          ]);
         } else {
-          historyData = authLogsData;
+          setLoginHistory(historyData);
         }
           
-        setLoginHistory(historyData);
-        
         // Process the objects, fields, and records data to get comprehensive user objects
         const processedObjects = objectsData?.map(obj => {
           const objectFields = fieldsData?.filter(f => f.object_type_id === obj.id) || [];

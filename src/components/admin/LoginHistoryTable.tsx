@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 
 interface LoginHistoryTableProps {
   loginHistory: Array<{
-    timestamp: number | string;
+    log_timestamp: number | string;
     event_message: string;
   }>;
 }
@@ -56,12 +56,13 @@ export function LoginHistoryTable({ loginHistory }: LoginHistoryTableProps) {
             <TableHead>Date & Time</TableHead>
             <TableHead>Event</TableHead>
             <TableHead>Status</TableHead>
+            <TableHead>IP Address</TableHead> 
           </TableRow>
         </TableHeader>
         <TableBody>
           {loginHistory.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={3} className="text-center py-4 text-muted-foreground">
+              <TableCell colSpan={4} className="text-center py-4 text-muted-foreground">
                 No login history available
               </TableCell>
             </TableRow>
@@ -70,13 +71,14 @@ export function LoginHistoryTable({ loginHistory }: LoginHistoryTableProps) {
               const event = parseEventMessage(item.event_message);
               return (
                 <TableRow key={index}>
-                  <TableCell>{formatDate(item.timestamp)}</TableCell>
+                  <TableCell>{formatDate(item.log_timestamp)}</TableCell>
                   <TableCell>
-                    <Badge className="bg-blue-400 hover:bg-blue-500">
+                    <Badge variant="info">
                       {event.event}
                     </Badge>
                   </TableCell>
                   <TableCell>{event.status}</TableCell>
+                  <TableCell>{event.ipAddress}</TableCell>
                 </TableRow>
               );
             })
