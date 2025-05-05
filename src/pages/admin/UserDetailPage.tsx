@@ -1,15 +1,33 @@
+
 import { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { UserRoleSelector } from "@/components/admin/UserRoleSelector";
 import { LoginHistoryTable } from "@/components/admin/LoginHistoryTable";
+import { UserObjectsList } from "@/components/admin/UserObjectsList";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { UserSummary } from "./UserManagementPage";
 import { toast } from "sonner";
 import { ThemedButton } from "@/components/ui/themed-button";
+
+interface ObjectField {
+  id: string;
+  name: string;
+  api_name: string;
+  data_type: string;
+  is_required: boolean;
+}
+
+interface UserObject {
+  id: string;
+  name: string;
+  api_name: string;
+  fields: ObjectField[];
+  recordCount: number;
+}
 
 export default function UserDetailPage() {
   const { userId } = useParams();
@@ -18,6 +36,7 @@ export default function UserDetailPage() {
   const [user, setUser] = useState<UserSummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loginHistory, setLoginHistory] = useState<any[]>([]);
+  const [userObjects, setUserObjects] = useState<UserObject[]>([]);
 
   useEffect(() => {
     // Redirect if not a Super Admin
@@ -45,7 +64,7 @@ export default function UserDetailPage() {
         // Get object statistics
         const { data: objectsData, error: objectsError } = await supabase
           .from('object_types')
-          .select('id')
+          .select('id, name, api_name')
           .eq('owner_id', userId);
         
         if (objectsError) throw objectsError;
@@ -53,57 +72,87 @@ export default function UserDetailPage() {
         // Get field counts
         const { data: fieldsData, error: fieldsError } = await supabase
           .from('object_fields')
-          .select('id')
+          .select('id, name, api_name, data_type, is_required, object_type_id')
           .eq('owner_id', userId);
+        
+        if (fieldsError) throw fieldsError;
         
         // Get record counts
         const { data: recordsData, error: recordsError } = await supabase
           .from('object_records')
-          .select('id')
+          .select('id, object_type_id')
           .eq('owner_id', userId);
-          
-        // Instead of trying to access auth_logs_view which doesn't exist,
-        // let's use mock data for login history
-        const today = new Date();
-        const yesterday = new Date();
-        yesterday.setDate(today.getDate() - 1);
-        const lastWeek = new Date();
-        lastWeek.setDate(today.getDate() - 7);
         
-        const mockLoginHistory = [
-          {
-            timestamp: today.getTime(),
-            event_message: JSON.stringify({
-              msg: "Login",
-              status: "200",
-              path: "/token",
-              remote_addr: "192.168.1.1",
-              time: today.toISOString()
-            })
-          },
-          {
-            timestamp: yesterday.getTime(),
-            event_message: JSON.stringify({
-              msg: "Login",
-              status: "200",
-              path: "/token",
-              remote_addr: "192.168.1.1",
-              time: yesterday.toISOString()
-            })
-          },
-          {
-            timestamp: lastWeek.getTime(),
-            event_message: JSON.stringify({
-              msg: "Login",
-              status: "200",
-              path: "/token",
-              remote_addr: "192.168.1.1",
-              time: lastWeek.toISOString()
-            })
-          }
-        ];
+        if (recordsError) throw recordsError;
+        
+        // Fetch auth logs
+        const { data: authLogsData, error: authLogsError } = await supabase
+          .rpc('get_auth_logs', { target_user_id: userId });
+        
+        let historyData = [];
+        
+        if (authLogsError || !authLogsData || authLogsData.length === 0) {
+          console.error('Could not fetch auth logs, using mock data:', authLogsError);
+          // Use the mock data for login history
+          const today = new Date();
+          const yesterday = new Date();
+          yesterday.setDate(today.getDate() - 1);
+          const lastWeek = new Date();
+          lastWeek.setDate(today.getDate() - 7);
           
-        setLoginHistory(mockLoginHistory);
+          historyData = [
+            {
+              timestamp: today.getTime(),
+              event_message: JSON.stringify({
+                msg: "Login",
+                status: "200",
+                path: "/token",
+                remote_addr: "192.168.1.1",
+                time: today.toISOString()
+              })
+            },
+            {
+              timestamp: yesterday.getTime(),
+              event_message: JSON.stringify({
+                msg: "Login",
+                status: "200",
+                path: "/token",
+                remote_addr: "192.168.1.1",
+                time: yesterday.toISOString()
+              })
+            },
+            {
+              timestamp: lastWeek.getTime(),
+              event_message: JSON.stringify({
+                msg: "Login",
+                status: "200",
+                path: "/token",
+                remote_addr: "192.168.1.1",
+                time: lastWeek.toISOString()
+              })
+            }
+          ];
+        } else {
+          historyData = authLogsData;
+        }
+          
+        setLoginHistory(historyData);
+        
+        // Process the objects, fields, and records data to get comprehensive user objects
+        const processedObjects = objectsData?.map(obj => {
+          const objectFields = fieldsData?.filter(f => f.object_type_id === obj.id) || [];
+          const objectRecords = recordsData?.filter(r => r.object_type_id === obj.id) || [];
+          
+          return {
+            id: obj.id,
+            name: obj.name,
+            api_name: obj.api_name,
+            fields: objectFields,
+            recordCount: objectRecords.length
+          };
+        }) || [];
+        
+        setUserObjects(processedObjects);
         
         setUser({
           id: profileData.id,
@@ -241,6 +290,8 @@ export default function UserDetailPage() {
           </CardContent>
         </Card>
       </div>
+      
+      <UserObjectsList userObjects={userObjects} />
       
       <Card>
         <CardHeader>
