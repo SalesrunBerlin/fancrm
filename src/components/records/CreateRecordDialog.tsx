@@ -37,7 +37,8 @@ export function CreateRecordDialog({ objectTypeId, open, onOpenChange }: CreateR
       for (const field of autoNumberFields) {
         try {
           const autoNumberValue = await generateAutoNumber(field.id);
-          data[field.api_name] = autoNumberValue;
+          // Use type assertion to indicate this is a valid field value
+          data[field.api_name] = autoNumberValue as any;
         } catch (error) {
           console.error(`Failed to generate auto-number for field ${field.api_name}:`, error);
           toast.error(`Failed to generate auto-number for field ${field.name}`);

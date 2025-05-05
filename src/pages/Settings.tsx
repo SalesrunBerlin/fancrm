@@ -1,7 +1,7 @@
 
 import { Link } from "react-router-dom";
 import { PageHeader } from "@/components/ui/page-header";
-import { AppWindow, Database, PlaySquare } from "lucide-react";
+import { AppWindow, Database, PlaySquare, Settings as SettingsIcon } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function Settings() {
@@ -12,7 +12,7 @@ export default function Settings() {
         description="Manage your application settings"
       />
       
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         <Link to="/settings/object-manager">
           <Card className="h-full hover:bg-accent/5 transition-colors">
             <CardHeader>
@@ -33,7 +33,7 @@ export default function Settings() {
         </Link>
         
         <Link to="/applications">
-          <Card className="h-full hover:bg-accent/5 transition-colors border-2 border-primary/20">
+          <Card className="h-full hover:bg-accent/5 transition-colors">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <AppWindow className="h-5 w-5" />
@@ -51,26 +51,26 @@ export default function Settings() {
           </Card>
         </Link>
         
-        <Link to="/actions">
+        <Link to="/structures">
           <Card className="h-full hover:bg-accent/5 transition-colors">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <PlaySquare className="h-5 w-5" />
-                Actions
+                Structures
               </CardTitle>
               <CardDescription>
-                Create and manage actions for your objects
+                Define and customize your data structures
               </CardDescription>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground">
-                Define custom actions like creating new records with pre-selected fields and default values.
+                Create and manage structures, publish objects, and define relationships.
               </p>
             </CardContent>
           </Card>
         </Link>
         
-        {/* Placeholder for future setting sections */}
+        {/* Additional settings cards can be added here in the future */}
         <Card className="h-full opacity-60">
           <CardHeader>
             <CardTitle>User Management</CardTitle>

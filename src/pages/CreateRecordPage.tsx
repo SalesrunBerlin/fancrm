@@ -38,7 +38,8 @@ export default function CreateRecordPage() {
           console.log(`Generating auto-number for field: ${field.name} (${field.id})`);
           const autoNumberValue = await generateAutoNumber(field.id);
           console.log(`Generated auto-number value: ${autoNumberValue}`);
-          data[field.api_name] = autoNumberValue;
+          // Use type assertion to indicate this is a valid field value
+          data[field.api_name] = autoNumberValue as any;
         } catch (error) {
           console.error(`Failed to generate auto-number for field ${field.api_name}:`, error);
           toast.error(`Failed to generate auto-number for field ${field.name}`);
