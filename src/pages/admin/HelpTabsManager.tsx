@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
@@ -280,6 +279,34 @@ export default function HelpTabsManager() {
 
   const handleTabClick = (tab: HelpTab) => {
     navigate(`/admin/help-content/${tab.tab_id}`);
+  };
+
+  const swapTabOrder = async (tab1Id: string, tab2Id: string, order1: number, order2: number) => {
+    try {
+      // Call the Postgres function to swap tab orders atomically
+      const { error } = await supabase.rpc('swap_tab_order', {
+        tab_id_1: tab1Id,
+        tab_id_2: tab2Id,
+        new_order_1: order1,
+        new_order_2: order2
+      });
+
+      if (error) throw error;
+
+      // Update the UI without refetching from the server
+      setTabs(currentTabs => currentTabs.map(tab => {
+        if (tab.id === tab1Id) return { ...tab, display_order: order1 };
+        if (tab.id === tab2Id) return { ...tab, display_order: order2 };
+        return tab;
+      }));
+
+      toast.success("Tab order updated");
+    } catch (error: any) {
+      toast.error("Failed to update tab order", {
+        description: error.message
+      });
+      console.error("Error swapping tabs:", error);
+    }
   };
 
   if (loading) {

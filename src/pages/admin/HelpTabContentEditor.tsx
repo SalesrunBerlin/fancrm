@@ -1,15 +1,14 @@
-
 import React, { useState, useEffect } from "react";
 import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate, useParams } from "react-router-dom";
-import { Loader2, Plus, Save, Trash2, ArrowUpDown } from "lucide-react";
+import { Loader2, Plus, Save, Trash2, ArrowUpDown, Eye } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -28,6 +27,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
+import { ContentPreview } from "@/components/ui/content-preview";
 
 interface HelpTab {
   id: string;
@@ -43,6 +44,7 @@ interface HelpContentItem {
   section_id: string;
   title: string;
   content: string;
+  content_html: string;
   display_order: number;
   section_order: number;
   created_at: string;
@@ -64,9 +66,13 @@ export default function HelpTabContentEditor() {
     section_id: '',
     title: '',
     content: '',
+    content_html: '',
     display_order: 0,
     section_order: 0
   });
+  const [previewItem, setPreviewItem] = useState<HelpContentItem | null>(null);
+  const [showPreviewDialog, setShowPreviewDialog] = useState(false);
+  const [activeEditorTab, setActiveEditorTab] = useState<Record<string, "edit" | "preview">>({});
   
   const navigate = useNavigate();
 
@@ -105,6 +111,14 @@ export default function HelpTabContentEditor() {
       
       if (contentError) throw contentError;
       setContentItems(contentData || []);
+      
+      // Initialize tabs for each content item
+      const initialTabStates: Record<string, "edit" | "preview"> = {};
+      contentData?.forEach(item => {
+        initialTabStates[item.id] = "edit";
+      });
+      setActiveEditorTab(initialTabStates);
+      
     } catch (error: any) {
       toast.error("Failed to load content", {
         description: error.message
@@ -138,6 +152,7 @@ export default function HelpTabContentEditor() {
           .update({
             title: item.title,
             content: item.content,
+            content_html: item.content_html,
             display_order: item.display_order,
             section_id: item.section_id,
             section_order: item.section_order
@@ -174,6 +189,7 @@ export default function HelpTabContentEditor() {
           section_id: newItem.section_id,
           title: newItem.title,
           content: newItem.content,
+          content_html: newItem.content_html || newItem.content, // Use HTML content if available, otherwise fallback to plain text
           display_order: contentItems.length > 0 
             ? Math.max(...contentItems.map(item => item.display_order)) + 1 
             : 0,
@@ -194,6 +210,7 @@ export default function HelpTabContentEditor() {
         section_id: '',
         title: '',
         content: '',
+        content_html: '',
         display_order: 0,
         section_order: 0
       });
@@ -281,6 +298,13 @@ export default function HelpTabContentEditor() {
     }
   };
 
+  const toggleEditorTab = (itemId: string, tab: "edit" | "preview") => {
+    setActiveEditorTab(prev => ({
+      ...prev,
+      [itemId]: tab
+    }));
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -327,7 +351,7 @@ export default function HelpTabContentEditor() {
       <PageHeader 
         title={`Edit Content: ${tab.name}`}
         description={`Manage content for the "${tab.name}" tab (ID: ${tab.tab_id})`}
-        backTo="/admin/help-tabs"
+        backTo="/admin/help-content"
         actions={
           <div className="flex gap-2">
             <Button
@@ -391,6 +415,17 @@ export default function HelpTabContentEditor() {
                         <Button
                           variant="ghost"
                           size="icon"
+                          className="h-8 w-8"
+                          onClick={() => {
+                            setPreviewItem(item);
+                            setShowPreviewDialog(true);
+                          }}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           className="h-8 w-8 text-destructive"
                           onClick={() => {
                             setItemToDelete(item);
@@ -429,15 +464,36 @@ export default function HelpTabContentEditor() {
                           onChange={(e) => handleContentChange(item, 'title', e.target.value)}
                         />
                       </div>
+                      
                       <div className="space-y-2">
-                        <Label htmlFor={`content-${item.id}`}>Content</Label>
-                        <Textarea
-                          id={`content-${item.id}`}
-                          rows={5}
-                          value={editedContent[item.id]?.content ?? item.content}
-                          onChange={(e) => handleContentChange(item, 'content', e.target.value)}
-                          className="min-h-[150px]"
-                        />
+                        <Label>Content</Label>
+                        <Tabs 
+                          value={activeEditorTab[item.id] || "edit"} 
+                          onValueChange={(value) => toggleEditorTab(item.id, value as "edit" | "preview")}
+                          className="w-full"
+                        >
+                          <TabsList className="grid grid-cols-2 w-32 mb-2">
+                            <TabsTrigger value="edit">Edit</TabsTrigger>
+                            <TabsTrigger value="preview">Preview</TabsTrigger>
+                          </TabsList>
+                          <TabsContent value="edit" className="mt-0">
+                            <RichTextEditor
+                              value={editedContent[item.id]?.content_html ?? item.content_html || item.content}
+                              onChange={(value) => {
+                                handleContentChange(item, 'content_html', value);
+                                // Keep the plain text version updated as a fallback
+                                const plainText = value.replace(/<[^>]+>/g, '');
+                                handleContentChange(item, 'content', plainText);
+                              }}
+                              className="min-h-[150px]"
+                            />
+                          </TabsContent>
+                          <TabsContent value="preview" className="mt-0 border rounded-md p-4 min-h-[150px]">
+                            <ContentPreview 
+                              content={editedContent[item.id]?.content_html ?? item.content_html || item.content}
+                            />
+                          </TabsContent>
+                        </Tabs>
                       </div>
                     </CardContent>
                     <CardFooter className="border-t pt-4 text-xs text-muted-foreground">
@@ -498,20 +554,57 @@ export default function HelpTabContentEditor() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="new-content">Content</Label>
-              <Textarea
-                id="new-content"
-                rows={5}
-                value={newItem.content}
-                onChange={(e) => setNewItem({...newItem, content: e.target.value})}
-                placeholder="Content of the help item"
-                className="min-h-[150px]"
-              />
+              <Tabs defaultValue="edit" className="w-full">
+                <TabsList className="grid grid-cols-2 w-32 mb-2">
+                  <TabsTrigger value="edit">Edit</TabsTrigger>
+                  <TabsTrigger value="preview">Preview</TabsTrigger>
+                </TabsList>
+                <TabsContent value="edit" className="mt-0">
+                  <RichTextEditor
+                    value={newItem.content_html || ""}
+                    onChange={(value) => {
+                      setNewItem({
+                        ...newItem, 
+                        content_html: value,
+                        content: value.replace(/<[^>]+>/g, '') // Store a plain text version
+                      });
+                    }}
+                    minHeight="200px"
+                  />
+                </TabsContent>
+                <TabsContent value="preview" className="mt-0 border rounded-md p-4 min-h-[200px]">
+                  <ContentPreview content={newItem.content_html || ""} />
+                </TabsContent>
+              </Tabs>
             </div>
           </div>
           
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowNewItemDialog(false)}>Cancel</Button>
             <Button onClick={handleAddItem}>Add Item</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Preview Dialog */}
+      <Dialog open={showPreviewDialog} onOpenChange={setShowPreviewDialog}>
+        <DialogContent className="sm:max-w-3xl h-[80vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle>Content Preview</DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 overflow-auto border rounded-lg p-4 my-4">
+            {previewItem && (
+              <ContentPreview 
+                content={
+                  editedContent[previewItem.id]?.content_html || 
+                  previewItem.content_html || 
+                  previewItem.content
+                } 
+              />
+            )}
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setShowPreviewDialog(false)}>Close</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

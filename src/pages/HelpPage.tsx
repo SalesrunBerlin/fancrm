@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import * as LucideIcons from "lucide-react";
+import { ContentPreview } from "@/components/ui/content-preview";
 
 interface HelpTab {
   id: string;
@@ -27,6 +28,7 @@ interface HelpContentItem {
   section_id: string;
   title: string;
   content: string;
+  content_html: string;
   display_order: number;
   section_order: number;
 }
@@ -112,6 +114,11 @@ export default function HelpPage() {
     return <LucideIcons.HelpCircle className="h-6 w-6" />;
   };
 
+  // Helper function to get the appropriate content (HTML or plain text)
+  const getContent = (item: HelpContentItem) => {
+    return item.content_html || item.content;
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -171,10 +178,11 @@ export default function HelpPage() {
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                      <p>
-                        {(tabContent['welcome']?.[0]?.content) || 
-                         'This application helps you manage your data through custom objects, fields, and relationships.'}
-                      </p>
+                      {tabContent['welcome']?.[0] ? (
+                        <ContentPreview content={getContent(tabContent['welcome'][0])} />
+                      ) : (
+                        <p>This application helps you manage your data through custom objects, fields, and relationships.</p>
+                      )}
                       
                       <div className="space-y-4 mt-4">
                         {tabContent['steps']?.map((step, index) => (
@@ -184,12 +192,10 @@ export default function HelpPage() {
                             </div>
                             <div>
                               <h3 className="text-lg font-medium">{step.title}</h3>
-                              <p className="text-muted-foreground mt-1">{step.content}</p>
-                              {step.section_id === 'create-object' && (
-                                <Button variant="link" asChild className="px-0">
-                                  <Link to="/settings/object-manager/new">Create Object</Link>
-                                </Button>
-                              )}
+                              <ContentPreview 
+                                content={getContent(step)}
+                                className="text-muted-foreground mt-1"
+                              />
                             </div>
                           </div>
                         ))}
@@ -232,7 +238,10 @@ export default function HelpPage() {
                                 <Video className="h-10 w-10 text-muted-foreground/60" />
                               </div>
                               <h3 className="font-medium">{video.title}</h3>
-                              <p className="text-sm text-muted-foreground">{video.content}</p>
+                              <ContentPreview 
+                                content={getContent(video)}
+                                className="text-sm text-muted-foreground"
+                              />
                             </div>
                           ))}
 
@@ -276,7 +285,9 @@ export default function HelpPage() {
                           tabContent[sectionId].map((item, index) => (
                             <AccordionItem key={item.id} value={`item-${index}`}>
                               <AccordionTrigger>{item.title}</AccordionTrigger>
-                              <AccordionContent>{item.content}</AccordionContent>
+                              <AccordionContent>
+                                <ContentPreview content={getContent(item)} />
+                              </AccordionContent>
                             </AccordionItem>
                           ))
                         )}
@@ -324,7 +335,10 @@ export default function HelpPage() {
                               {method.section_id === 'video' && <Video className="h-10 w-10 text-primary mx-auto mb-4" />}
                               
                               <h3 className="font-medium mb-2">{method.title}</h3>
-                              <p className="text-sm text-muted-foreground mb-4">{method.content}</p>
+                              <ContentPreview
+                                content={getContent(method)}
+                                className="text-sm text-muted-foreground mb-4"
+                              />
                               <Button variant="outline" size="sm">
                                 {method.section_id === 'email' && 'support@example.com'}
                                 {method.section_id === 'chat' && 'Start Chat'}
@@ -367,10 +381,10 @@ export default function HelpPage() {
                       {tabContent['support-hours'] && (
                         <div className="border rounded-lg p-4 bg-muted/50">
                           <h3 className="font-medium mb-2">Support Hours</h3>
-                          <p className="text-sm whitespace-pre-line">
-                            {tabContent['support-hours'][0]?.content || 
-                             'Monday to Friday: 9am - 6pm ET\nWeekend: Limited support for urgent issues'}
-                          </p>
+                          <ContentPreview
+                            content={getContent(tabContent['support-hours'][0])} 
+                            className="text-sm"
+                          />
                         </div>
                       )}
                     </CardContent>
@@ -396,7 +410,10 @@ export default function HelpPage() {
                                 <CardTitle className="text-base">{item.title}</CardTitle>
                               </CardHeader>
                               <CardContent>
-                                <p className="text-sm text-muted-foreground mb-4">{item.content}</p>
+                                <ContentPreview 
+                                  content={getContent(item)}
+                                  className="text-sm text-muted-foreground mb-4"
+                                />
                                 <Button size="sm" variant="outline" className="w-full">Read Guide</Button>
                               </CardContent>
                             </Card>

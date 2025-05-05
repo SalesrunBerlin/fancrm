@@ -497,6 +497,7 @@ export type Database = {
       help_content: {
         Row: {
           content: string
+          content_html: string | null
           created_at: string
           display_order: number
           id: string
@@ -508,6 +509,7 @@ export type Database = {
         }
         Insert: {
           content: string
+          content_html?: string | null
           created_at?: string
           display_order?: number
           id?: string
@@ -519,6 +521,7 @@ export type Database = {
         }
         Update: {
           content?: string
+          content_html?: string | null
           created_at?: string
           display_order?: number
           id?: string
@@ -1331,6 +1334,15 @@ export type Database = {
       }
       refresh_published_objects_view: {
         Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      swap_tab_order: {
+        Args: {
+          tab_id_1: string
+          tab_id_2: string
+          new_order_1: number
+          new_order_2: number
+        }
         Returns: undefined
       }
       user_is_collection_member: {
