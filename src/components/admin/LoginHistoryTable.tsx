@@ -64,7 +64,7 @@ export function LoginHistoryTable({ loginHistory }: LoginHistoryTableProps) {
                   <TableCell>{formatDate(item.timestamp)}</TableCell>
                   <TableCell>
                     <Badge className="bg-blue-400 hover:bg-blue-500">
-                      Login
+                      {event.event}
                     </Badge>
                   </TableCell>
                   <TableCell>{event.status}</TableCell>

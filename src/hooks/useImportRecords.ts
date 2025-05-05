@@ -1,9 +1,10 @@
+
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { findDuplicateRecords } from "@/utils/importDuplicateUtils";
-import type { DuplicateRecord } from "@/utils/importDuplicateUtils";
+import type { DuplicateRecord } from "@/types";
 import { parseImportText, createInitialColumnMappings, getSampleValuesForColumn, guessDataTypeForColumn as guessDataType } from "@/utils/importDataUtils";
 import { createRecord, updateRecord, importRecords as importRecordsService } from "@/services/recordImportService";
 
