@@ -11,11 +11,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/contexts/AuthContext";
-import { HelpCircle, LogOut, Settings, User } from "lucide-react";
+import { HelpCircle, LogOut, Settings, User, Shield } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 export function UserProfileMenu() {
-  const { user, logout } = useAuth();
+  const { user, logout, isSuperAdmin } = useAuth();
   const navigate = useNavigate();
   
   const handleLogout = async () => {
@@ -59,6 +59,12 @@ export function UserProfileMenu() {
             <HelpCircle className="mr-2 h-4 w-4" />
             <span>Help</span>
           </DropdownMenuItem>
+          {isSuperAdmin && (
+            <DropdownMenuItem onClick={() => navigate("/admin")}>
+              <Shield className="mr-2 h-4 w-4" />
+              <span>Admin</span>
+            </DropdownMenuItem>
+          )}
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={handleLogout}>

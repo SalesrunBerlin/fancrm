@@ -11,6 +11,8 @@ interface AuthContextType {
   logout: () => Promise<void>;
   login: (email: string, password: string) => Promise<void>;
   signup: (email: string, password: string) => Promise<{success: boolean, error?: string}>;
+  userRole: string | null;
+  isSuperAdmin: boolean;
 }
 
 const AuthContext = createContext<AuthContextType>({ 
@@ -19,21 +21,54 @@ const AuthContext = createContext<AuthContextType>({
   isLoading: true,
   logout: async () => {},
   login: async () => {},
-  signup: async () => ({ success: false })
+  signup: async () => ({ success: false }),
+  userRole: null,
+  isSuperAdmin: false
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [userRole, setUserRole] = useState<string | null>(null);
+
+  // Fetch the user's role from the profiles table
+  const fetchUserRole = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', userId)
+        .single();
+      
+      if (error) {
+        console.error('Error fetching user role:', error);
+        return null;
+      }
+      
+      return data?.role || 'admin'; // Default to 'admin' if no role is set
+    } catch (error) {
+      console.error('Error in fetchUserRole:', error);
+      return null;
+    }
+  };
 
   useEffect(() => {
     // Set up auth state listener first
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+      async (event, session) => {
         // Handle auth state changes
         setSession(session);
         setUser(session?.user ?? null);
+        
+        // Fetch role if user is logged in
+        if (session?.user) {
+          const role = await fetchUserRole(session.user.id);
+          setUserRole(role);
+        } else {
+          setUserRole(null);
+        }
+        
         setIsLoading(false);
         
         // Show appropriate toast messages
@@ -46,9 +81,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     );
 
     // Then check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
+      
+      // Fetch role if user is logged in
+      if (session?.user) {
+        const role = await fetchUserRole(session.user.id);
+        setUserRole(role);
+      }
+      
       setIsLoading(false);
     });
 
@@ -116,8 +158,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // Check if the current user has SuperAdmin role
+  const isSuperAdmin = userRole === 'SuperAdmin';
+
   return (
-    <AuthContext.Provider value={{ user, session, isLoading, logout, login, signup }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      session, 
+      isLoading, 
+      logout, 
+      login, 
+      signup, 
+      userRole, 
+      isSuperAdmin 
+    }}>
       {children}
     </AuthContext.Provider>
   );

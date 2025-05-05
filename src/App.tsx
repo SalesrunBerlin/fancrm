@@ -13,6 +13,7 @@ import ObjectRecordDetail from "@/pages/ObjectRecordDetail";
 import ObjectTypeDetail from "@/pages/ObjectTypeDetail";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { SuperAdminRoute } from "@/components/auth/SuperAdminRoute";
 import ObjectFieldEditPage from "@/pages/ObjectFieldEditPage";
 import CreateRecordPage from "@/pages/CreateRecordPage";
 import EditRecordPage from "@/pages/EditRecordPage";
@@ -34,6 +35,8 @@ import ActionExecutePage from "./pages/ActionExecutePage";
 import MassActionPage from "./pages/MassActionPage";
 import ProfilePage from "./pages/ProfilePage";
 import HelpPage from "./pages/HelpPage";
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import HelpContentEditor from "./pages/admin/HelpContentEditor";
 
 // Create a client
 const queryClient = new QueryClient({
@@ -84,6 +87,12 @@ function App() {
               <Route path="/actions/execute/:actionId" element={<ActionExecutePage />} />
               <Route path="/actions/execute/:actionId/from/:sourceRecordId" element={<ActionExecutePage />} />
               <Route path="/actions/mass/:actionId" element={<MassActionPage />} />
+              
+              {/* Admin routes - only accessible to SuperAdmin users */}
+              <Route element={<SuperAdminRoute><Layout /></SuperAdminRoute>}>
+                <Route path="/admin" element={<AdminDashboard />} />
+                <Route path="/admin/help-content" element={<HelpContentEditor />} />
+              </Route>
             </Route>
           </Routes>
           <Toaster richColors position="top-right" />

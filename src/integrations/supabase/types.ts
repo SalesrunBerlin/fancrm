@@ -494,6 +494,39 @@ export type Database = {
           },
         ]
       }
+      help_content: {
+        Row: {
+          content: string
+          created_at: string
+          display_order: number
+          id: string
+          section_id: string
+          tab_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          display_order?: number
+          id?: string
+          section_id: string
+          tab_id: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          display_order?: number
+          id?: string
+          section_id?: string
+          tab_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       object_application_assignments: {
         Row: {
           application_id: string
