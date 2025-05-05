@@ -1,12 +1,11 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { PageHeader } from '@/components/ui/page-header';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Loader2, ArrowLeft, UserPlus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -18,10 +17,12 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import { supabase } from '@/integrations/supabase/client';
+import { useCollections } from '@/hooks/useCollections';
 
 export default function CollectionDetailPage() {
   const { collectionId } = useParams<{ collectionId: string }>();
-  const { user } = useAuth();
+  const { user, session } = useAuth();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState('members');
   const [isAddMemberOpen, setIsAddMemberOpen] = useState(false);
@@ -31,82 +32,34 @@ export default function CollectionDetailPage() {
   const [isAddRecordsOpen, setIsAddRecordsOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [memberToDelete, setMemberToDelete] = useState<string | null>(null);
+  const { useCollection, useCollectionMembers } = useCollections();
 
   // Fetch collection details
-  const { data: collection, isLoading: isLoadingCollection } = useQuery({
-    queryKey: ['collection', collectionId],
-    queryFn: async (): Promise<CollectionShare | null> => {
-      if (!user || !collectionId) return null;
-      
-      const { data, error } = await supabase
-        .from('sharing_collections')
-        .select('*')
-        .eq('id', collectionId)
-        .eq('owner_id', user.id)
-        .single();
-      
-      if (error) {
-        if (error.code === 'PGRST116') {
-          return null; // Not found
-        }
-        console.error('Error fetching collection:', error);
-        throw error;
-      }
-      
-      return data as CollectionShare;
-    },
-    enabled: !!user && !!collectionId,
-  });
+  const { data: collection, isLoading: isLoadingCollection } = useCollection(collectionId);
   
   // Fetch collection members
-  const { data: members, isLoading: isLoadingMembers } = useQuery({
-    queryKey: ['collection-members', collectionId],
-    queryFn: async (): Promise<CollectionMember[]> => {
-      if (!user || !collectionId) return [];
-      
-      const { data, error } = await supabase
-        .from('collection_members')
-        .select(`
-          *,
-          user_profile:profiles!user_id(
-            id,
-            first_name,
-            last_name,
-            avatar_url,
-            screen_name
-          )
-        `)
-        .eq('collection_id', collectionId);
-      
-      if (error) {
-        console.error('Error fetching collection members:', error);
-        throw error;
-      }
-      
-      return data as any;
-    },
-    enabled: !!user && !!collectionId,
-  });
+  const { data: members, isLoading: isLoadingMembers } = useCollectionMembers(collectionId);
   
-  // Add a member to the collection
+  // Add a member to the collection using the edge function
   const addMember = useMutation({
     mutationFn: async () => {
-      if (!user || !collectionId) throw new Error('Missing required data');
+      if (!user || !collectionId || !session) throw new Error('Missing required data');
       if (!selectedUserId) throw new Error('No user selected');
       
       setIsAddingMember(true);
       
-      const { data, error } = await supabase
-        .from('collection_members')
-        .insert({
-          collection_id: collectionId,
-          user_id: selectedUserId,
-          permission_level: permissionLevel
-        })
-        .select();
+      // Use the edge function instead of direct database access
+      const { data, error } = await supabase.functions.invoke('collection-operations', {
+        body: { 
+          type: 'addMemberToCollection',
+          collectionId,
+          userId: selectedUserId,
+          permissionLevel
+        }
+      });
       
       if (error) throw error;
-      return data[0];
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['collection-members', collectionId] });
@@ -125,16 +78,19 @@ export default function CollectionDetailPage() {
     }
   });
   
-  // Remove a member from the collection
+  // Remove a member from the collection using the edge function
   const removeMember = useMutation({
     mutationFn: async (memberId: string) => {
-      if (!user || !collectionId) throw new Error('Missing required data');
+      if (!user || !collectionId || !session) throw new Error('Missing required data');
       
-      const { error } = await supabase
-        .from('collection_members')
-        .delete()
-        .eq('id', memberId)
-        .eq('collection_id', collectionId);
+      // Use the edge function instead of direct database access
+      const { data, error } = await supabase.functions.invoke('collection-operations', {
+        body: {
+          type: 'removeMemberFromCollection',
+          collectionId,
+          memberId
+        }
+      });
       
       if (error) throw error;
       return { memberId };
@@ -152,16 +108,20 @@ export default function CollectionDetailPage() {
     }
   });
   
-  // Update member permissions
+  // Update member permissions using the edge function
   const updateMemberPermission = useMutation({
     mutationFn: async ({ memberId, newPermission }: { memberId: string, newPermission: 'read' | 'edit' }) => {
-      if (!user || !collectionId) throw new Error('Missing required data');
+      if (!user || !collectionId || !session) throw new Error('Missing required data');
       
-      const { error } = await supabase
-        .from('collection_members')
-        .update({ permission_level: newPermission })
-        .eq('id', memberId)
-        .eq('collection_id', collectionId);
+      // Use the edge function instead of direct database access
+      const { data, error } = await supabase.functions.invoke('collection-operations', {
+        body: {
+          type: 'updateMemberPermission',
+          collectionId,
+          memberId,
+          permissionLevel: newPermission
+        }
+      });
       
       if (error) throw error;
       return { memberId, newPermission };

@@ -7,7 +7,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-type CollectionOperationType = 'getMemberCollections' | 'addRecordsToCollection' | 'addFieldsToCollection';
+type CollectionOperationType = 'getMemberCollections' | 'addRecordsToCollection' | 'addFieldsToCollection' | 'addMemberToCollection' | 'removeMemberFromCollection' | 'updateMemberPermission';
 
 interface CollectionOperation {
   type: CollectionOperationType;
@@ -15,6 +15,9 @@ interface CollectionOperation {
   recordIds?: string[];
   objectTypeId?: string;
   fieldApiNames?: string[];
+  userId?: string;
+  memberId?: string;
+  permissionLevel?: 'read' | 'edit';
 }
 
 serve(async (req) => {
@@ -250,6 +253,155 @@ serve(async (req) => {
           JSON.stringify({ data: insertedData }),
           { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
+      }
+      
+      // New operations for member management
+      case 'addMemberToCollection': {
+        if (!requestData.collectionId || !requestData.userId || !requestData.permissionLevel) {
+          return new Response(
+            JSON.stringify({ error: 'Missing required parameters' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        
+        console.log(`Adding member ${requestData.userId} to collection ${requestData.collectionId} with permission ${requestData.permissionLevel}`);
+        
+        try {
+          // Explicitly use a service role query to bypass RLS for this operation
+          // We've already verified the user is authenticated above
+          const { data: isOwner } = await supabaseClient.rpc(
+            'user_owns_collection_safe',
+            { collection_uuid: requestData.collectionId, user_uuid: user.id }
+          );
+          
+          if (!isOwner) {
+            return new Response(
+              JSON.stringify({ error: 'Not authorized to add members to this collection' }),
+              { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+          
+          const { data: memberData, error: memberError } = await supabaseClient
+            .from('collection_members')
+            .insert({
+              collection_id: requestData.collectionId,
+              user_id: requestData.userId,
+              permission_level: requestData.permissionLevel
+            })
+            .select();
+          
+          if (memberError) {
+            console.error('Error adding member to collection:', memberError);
+            throw new Error(`Error adding member: ${memberError.message}`);
+          }
+          
+          return new Response(
+            JSON.stringify({ data: memberData }),
+            { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        } catch (error) {
+          console.error('Error in addMemberToCollection:', error);
+          return new Response(
+            JSON.stringify({ error: error.message || 'Error adding member' }),
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+      }
+      
+      case 'removeMemberFromCollection': {
+        if (!requestData.collectionId || !requestData.memberId) {
+          return new Response(
+            JSON.stringify({ error: 'Missing required parameters' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        
+        console.log(`Removing member ${requestData.memberId} from collection ${requestData.collectionId}`);
+        
+        try {
+          // Verify user is the collection owner
+          const { data: isOwner } = await supabaseClient.rpc(
+            'user_owns_collection_safe', 
+            { collection_uuid: requestData.collectionId, user_uuid: user.id }
+          );
+          
+          if (!isOwner) {
+            return new Response(
+              JSON.stringify({ error: 'Not authorized to remove members from this collection' }),
+              { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+          
+          const { data: memberData, error: memberError } = await supabaseClient
+            .from('collection_members')
+            .delete()
+            .eq('id', requestData.memberId)
+            .eq('collection_id', requestData.collectionId);
+          
+          if (memberError) {
+            console.error('Error removing member from collection:', memberError);
+            throw new Error(`Error removing member: ${memberError.message}`);
+          }
+          
+          return new Response(
+            JSON.stringify({ success: true }),
+            { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        } catch (error) {
+          console.error('Error in removeMemberFromCollection:', error);
+          return new Response(
+            JSON.stringify({ error: error.message || 'Error removing member' }),
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+      }
+      
+      case 'updateMemberPermission': {
+        if (!requestData.collectionId || !requestData.memberId || !requestData.permissionLevel) {
+          return new Response(
+            JSON.stringify({ error: 'Missing required parameters' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        
+        console.log(`Updating member ${requestData.memberId} permission to ${requestData.permissionLevel}`);
+        
+        try {
+          // Verify user is the collection owner
+          const { data: isOwner } = await supabaseClient.rpc(
+            'user_owns_collection_safe',
+            { collection_uuid: requestData.collectionId, user_uuid: user.id }
+          );
+          
+          if (!isOwner) {
+            return new Response(
+              JSON.stringify({ error: 'Not authorized to update members in this collection' }),
+              { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+          
+          const { data: memberData, error: memberError } = await supabaseClient
+            .from('collection_members')
+            .update({ permission_level: requestData.permissionLevel })
+            .eq('id', requestData.memberId)
+            .eq('collection_id', requestData.collectionId);
+          
+          if (memberError) {
+            console.error('Error updating member permission:', memberError);
+            throw new Error(`Error updating member: ${memberError.message}`);
+          }
+          
+          return new Response(
+            JSON.stringify({ success: true }),
+            { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        } catch (error) {
+          console.error('Error in updateMemberPermission:', error);
+          return new Response(
+            JSON.stringify({ error: error.message || 'Error updating member permission' }),
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
       }
       
       default:

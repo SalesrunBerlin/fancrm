@@ -1190,6 +1190,10 @@ export type Database = {
         }
         Returns: string
       }
+      get_user_collection_membership: {
+        Args: { user_uuid: string; collection_uuid: string }
+        Returns: boolean
+      }
       initialize_deal_statuses: {
         Args: Record<PropertyKey, never>
         Returns: undefined
@@ -1212,6 +1216,10 @@ export type Database = {
       }
       user_owns_collection: {
         Args: { collection_uuid: string }
+        Returns: boolean
+      }
+      user_owns_collection_safe: {
+        Args: { collection_uuid: string; user_uuid: string }
         Returns: boolean
       }
     }

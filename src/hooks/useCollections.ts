@@ -80,8 +80,7 @@ export function useCollections() {
       try {
         // Use our Edge Function with explicit auth header to safely get member collections
         const { data, error } = await supabase.functions.invoke('collection-operations', {
-          body: { type: 'getMemberCollections' },
-          // The Auth header is automatically added by the Supabase client
+          body: { type: 'getMemberCollections' }
         });
         
         if (error) {
@@ -117,21 +116,50 @@ export function useCollections() {
       queryFn: async (): Promise<CollectionShare | null> => {
         if (!user || !collectionId) return null;
         
-        const { data, error } = await supabase
+        // Try to get as owner first
+        const { data: ownerData, error: ownerError } = await supabase
           .from('sharing_collections')
           .select('*')
           .eq('id', collectionId)
-          .single();
+          .eq('owner_id', user.id)
+          .maybeSingle();
         
-        if (error) {
-          if (error.code === 'PGRST116') {
-            return null; // Not found
-          }
-          console.error('Error fetching collection:', error);
-          throw error;
+        if (ownerError) {
+          console.error('Error fetching collection as owner:', ownerError);
         }
         
-        return data as CollectionShare;
+        if (ownerData) {
+          return ownerData as CollectionShare;
+        }
+        
+        // If not owner, check if user is a member
+        const { data: memberCheckData, error: memberCheckError } = await supabase.rpc(
+          'get_user_collection_membership',
+          { user_uuid: user.id, collection_uuid: collectionId }
+        );
+        
+        if (memberCheckError) {
+          console.error('Error checking collection membership:', memberCheckError);
+        }
+        
+        // Only attempt to fetch collection data if user is a member
+        if (memberCheckData) {
+          const { data: collectionData, error: collectionError } = await supabase
+            .from('sharing_collections')
+            .select('*')
+            .eq('id', collectionId)
+            .maybeSingle();
+            
+          if (collectionError) {
+            console.error('Error fetching collection as member:', collectionError);
+          }
+          
+          if (collectionData) {
+            return collectionData as CollectionShare;
+          }
+        }
+        
+        return null;
       },
       enabled: !!user && !!collectionId,
     });
@@ -255,6 +283,22 @@ export function useCollections() {
       queryFn: async (): Promise<CollectionMember[]> => {
         if (!user || !collectionId) return [];
         
+        // First check if user is owner or member
+        const { data: isOwner } = await supabase.rpc(
+          'user_owns_collection_safe',
+          { collection_uuid: collectionId, user_uuid: user.id }
+        );
+        
+        const { data: isMember } = await supabase.rpc(
+          'get_user_collection_membership',
+          { user_uuid: user.id, collection_uuid: collectionId }
+        );
+        
+        if (!isOwner && !isMember) {
+          console.log('User is neither owner nor member of this collection');
+          return [];
+        }
+        
         const { data, error } = await supabase
           .from('collection_members')
           .select(`
@@ -280,7 +324,7 @@ export function useCollections() {
     });
   };
   
-  // Add a member to a collection
+  // Add a member to a collection using edge function
   const addMember = useMutation({
     mutationFn: async ({ 
       collectionId, 
@@ -291,23 +335,23 @@ export function useCollections() {
       userId: string; 
       permissionLevel: 'read' | 'edit';
     }) => {
-      if (!user) throw new Error('You must be logged in');
+      if (!user || !session) throw new Error('You must be logged in');
       
-      const { data, error } = await supabase
-        .from('collection_members')
-        .insert({
-          collection_id: collectionId,
-          user_id: userId,
-          permission_level: permissionLevel
-        })
-        .select();
+      const { data, error } = await supabase.functions.invoke('collection-operations', {
+        body: {
+          type: 'addMemberToCollection',
+          collectionId,
+          userId,
+          permissionLevel
+        }
+      });
       
       if (error) {
         console.error('Error adding member:', error);
         throw error;
       }
       
-      return data[0];
+      return data;
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['collection-members', variables.collectionId] });
@@ -320,7 +364,7 @@ export function useCollections() {
     }
   });
   
-  // Remove a member from a collection
+  // Remove a member from a collection using edge function
   const removeMember = useMutation({
     mutationFn: async ({ 
       collectionId, 
@@ -329,13 +373,15 @@ export function useCollections() {
       collectionId: string; 
       memberId: string;
     }) => {
-      if (!user) throw new Error('You must be logged in');
+      if (!user || !session) throw new Error('You must be logged in');
       
-      const { error } = await supabase
-        .from('collection_members')
-        .delete()
-        .eq('id', memberId)
-        .eq('collection_id', collectionId);
+      const { data, error } = await supabase.functions.invoke('collection-operations', {
+        body: {
+          type: 'removeMemberFromCollection',
+          collectionId,
+          memberId
+        }
+      });
       
       if (error) {
         console.error('Error removing member:', error);
@@ -355,7 +401,7 @@ export function useCollections() {
     }
   });
   
-  // Update member permission level
+  // Update member permission level using edge function
   const updateMemberPermission = useMutation({
     mutationFn: async ({ 
       collectionId, 
@@ -366,13 +412,16 @@ export function useCollections() {
       memberId: string; 
       permissionLevel: 'read' | 'edit';
     }) => {
-      if (!user) throw new Error('You must be logged in');
+      if (!user || !session) throw new Error('You must be logged in');
       
-      const { error } = await supabase
-        .from('collection_members')
-        .update({ permission_level: permissionLevel })
-        .eq('id', memberId)
-        .eq('collection_id', collectionId);
+      const { data, error } = await supabase.functions.invoke('collection-operations', {
+        body: {
+          type: 'updateMemberPermission',
+          collectionId,
+          memberId,
+          permissionLevel
+        }
+      });
       
       if (error) {
         console.error('Error updating permissions:', error);
@@ -401,7 +450,7 @@ export function useCollections() {
       collectionId: string; 
       recordIds: string[];
     }) => {
-      if (!user) throw new Error('You must be logged in');
+      if (!user || !session) throw new Error('You must be logged in');
       if (!collectionId) throw new Error('Collection ID is required');
       if (!recordIds.length) throw new Error('No records selected');
       
@@ -444,7 +493,7 @@ export function useCollections() {
       objectTypeId: string;
       fieldApiNames: string[];
     }) => {
-      if (!user) throw new Error('You must be logged in');
+      if (!user || !session) throw new Error('You must be logged in');
       if (!collectionId) throw new Error('Collection ID is required');
       if (!objectTypeId) throw new Error('Object type ID is required');
       if (!fieldApiNames.length) throw new Error('No fields selected');
