@@ -27,9 +27,12 @@ serve(async (req) => {
     // Get authorization header
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
+      console.error('No authorization header provided');
       return new Response(JSON.stringify({ error: 'No authorization header' }), 
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
+    
+    console.log('Auth header exists, creating Supabase client');
     
     // Create Supabase client with auth
     const supabaseClient = createClient(
@@ -45,12 +48,14 @@ serve(async (req) => {
     } = await supabaseClient.auth.getUser();
     
     if (userError || !user) {
-      console.error('User authentication error:', userError?.message);
+      console.error('User authentication error:', userError?.message || 'Auth session missing!');
       return new Response(
         JSON.stringify({ error: 'Unauthorized', details: userError?.message }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+    
+    console.log('User authenticated successfully:', user.id);
     
     // Parse the request body
     let requestData: CollectionOperation;
@@ -156,6 +161,8 @@ serve(async (req) => {
           );
         }
         
+        console.log(`Adding ${requestData.recordIds.length} records to collection: ${requestData.collectionId}`);
+        
         // First, verify user is the collection owner
         const { data: collectionData, error: collectionError } = await supabaseClient
           .from('sharing_collections')
@@ -165,6 +172,7 @@ serve(async (req) => {
           .single();
         
         if (collectionError || !collectionData) {
+          console.error('Not authorized to modify this collection:', collectionError);
           return new Response(
             JSON.stringify({ error: 'Not authorized to modify this collection' }),
             { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -183,9 +191,11 @@ serve(async (req) => {
           .select();
         
         if (insertError) {
+          console.error('Error adding records to collection:', insertError);
           throw new Error(`Error adding records to collection: ${insertError.message}`);
         }
         
+        console.log(`Successfully added ${insertedData?.length || 0} records to collection`);
         return new Response(
           JSON.stringify({ data: insertedData }),
           { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -200,6 +210,8 @@ serve(async (req) => {
           );
         }
         
+        console.log(`Adding ${requestData.fieldApiNames.length} fields to collection: ${requestData.collectionId}`);
+        
         // Verify user is the collection owner
         const { data: collectionData, error: collectionError } = await supabaseClient
           .from('sharing_collections')
@@ -209,6 +221,7 @@ serve(async (req) => {
           .single();
         
         if (collectionError || !collectionData) {
+          console.error('Not authorized to modify this collection:', collectionError);
           return new Response(
             JSON.stringify({ error: 'Not authorized to modify this collection' }),
             { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -228,9 +241,11 @@ serve(async (req) => {
           .select();
         
         if (insertError) {
+          console.error('Error adding fields to collection:', insertError);
           throw new Error(`Error adding fields to collection: ${insertError.message}`);
         }
         
+        console.log(`Successfully added ${insertedData?.length || 0} fields to collection`);
         return new Response(
           JSON.stringify({ data: insertedData }),
           { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

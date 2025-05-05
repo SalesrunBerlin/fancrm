@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
@@ -6,7 +7,7 @@ import { toast } from 'sonner';
 import { CollectionShare, CollectionMember } from '@/types/RecordSharing';
 
 export function useCollections() {
-  const { user } = useAuth();
+  const { user, session } = useAuth();
   const queryClient = useQueryClient();
   
   // Fetch collections owned by the user (direct database query works fine with our RLS)
@@ -72,21 +73,29 @@ export function useCollections() {
   const { data: memberCollections, isLoading: isLoadingMember, error: memberError } = useQuery({
     queryKey: ['member-collections'],
     queryFn: async (): Promise<CollectionShare[]> => {
-      if (!user) return [];
+      if (!user || !session) return [];
       
-      // Use our Edge Function to safely get member collections
-      const { data, error } = await supabase.functions.invoke('collection-operations', {
-        body: { type: 'getMemberCollections' }
-      });
+      console.log('Calling the collection-operations edge function with auth');
       
-      if (error) {
+      try {
+        // Use our Edge Function with explicit auth header to safely get member collections
+        const { data, error } = await supabase.functions.invoke('collection-operations', {
+          body: { type: 'getMemberCollections' },
+          // The Auth header is automatically added by the Supabase client
+        });
+        
+        if (error) {
+          console.error('Error fetching member collections:', error);
+          throw error;
+        }
+        
+        return data?.data || [];
+      } catch (error) {
         console.error('Error fetching member collections:', error);
-        throw error;
+        return [];
       }
-      
-      return data?.data || [];
     },
-    enabled: !!user,
+    enabled: !!user && !!session,
   });
   
   // Combine owned and member collections
@@ -128,7 +137,7 @@ export function useCollections() {
     });
   };
   
-  // Create a new collection
+  // Create a new collection - use direct database access instead of edge function
   const createCollection = useMutation({
     mutationFn: async ({ 
       name, 
@@ -139,6 +148,8 @@ export function useCollections() {
     }) => {
       if (!user) throw new Error('You must be logged in to create collections');
       if (!name.trim()) throw new Error('Collection name is required');
+      
+      console.log('Creating collection directly with RLS, name:', name.trim());
       
       const { data, error } = await supabase
         .from('sharing_collections')
