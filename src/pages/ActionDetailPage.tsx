@@ -7,13 +7,14 @@ import { useActions } from "@/hooks/useActions";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
 import { ActionFieldsManager } from "@/components/actions/ActionFieldsManager";
 import { Card, CardContent } from "@/components/ui/card";
-import { Loader2, Trash, Share2 } from "lucide-react";
+import { Loader2, Trash } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 import { DeleteDialog } from "@/components/common/DeleteDialog";
 import { getAlertVariantClass } from "@/patches/FixAlertVariants";
 import { supabase } from "@/integrations/supabase/client";
+import { ActionSharingDialog } from "@/components/actions/ActionSharingDialog";
 
 export default function ActionDetailPage() {
   const { actionId } = useParams<{ actionId: string }>();
@@ -84,8 +85,20 @@ export default function ActionDetailPage() {
     }
   };
 
-  const navigateToSharingPage = () => {
-    navigate(`/actions/${actionId}/sharing`);
+  const handlePublicToggle = async (isPublic: boolean) => {
+    if (!actionId) return;
+    
+    try {
+      await updateAction.mutateAsync({
+        id: actionId,
+        is_public: isPublic
+      });
+      
+      // After successful update, update the local action state
+      setAction(prev => ({ ...prev, is_public: isPublic }));
+    } catch (err: any) {
+      setError(err.message || "Failed to update public status");
+    }
   };
 
   if (isLoadingAction || !objectTypes) {
@@ -123,10 +136,12 @@ export default function ActionDetailPage() {
         actions={
           <>
             {action?.action_type === "new_record" && (
-              <Button variant="outline" size="sm" onClick={navigateToSharingPage}>
-                <Share2 className="h-4 w-4 mr-2" />
-                Sharing Settings
-              </Button>
+              <ActionSharingDialog 
+                actionId={actionId as string}
+                actionName={action.name}
+                isPublic={action.is_public || false}
+                onPublicToggle={handlePublicToggle}
+              />
             )}
             <Button
               variant="destructive"
