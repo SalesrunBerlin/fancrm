@@ -5,6 +5,10 @@ export interface DuplicateRecord {
   matchScore: number;
   action: 'skip' | 'update' | 'create';
   matchingFields: Record<string, {importValue: string, existingValue: string}>;
+  existingRecord?: Record<string, string>;
+  record?: Record<string, string>;
+  fields?: Record<string, string>;
+  id?: string;
 }
 
 export interface RecordFormData {
@@ -26,11 +30,21 @@ export interface ContactType {
   phone?: string;
   accountId?: string;
   accountName?: string;
+  tags?: string[];  // Add tags property that's used in mockData
 }
 
 export interface AccountType {
   id: string;
   name: string;
+  type?: string;  // Add type property that's used in mockData
+  website?: string | null;
+  industry?: string;
+  employees?: number;
+  createdAt?: string;
+  updatedAt?: string;
+  ownerId?: string;
+  contactCount?: number;
+  tags?: string[];
 }
 
 export interface DealType {
@@ -42,4 +56,8 @@ export interface DealType {
   stage?: string;
   accountName?: string;
   account?: string;
+  probability?: number; // Add probability property that's used in mockData
+  contactId?: string;
+  accountId?: string;
+  closeDate?: string;
 }

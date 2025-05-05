@@ -199,7 +199,7 @@ export function DuplicateRecordsResolver({
                         <div className="text-sm font-medium">Import Record</div>
                         <Table>
                           <TableBody>
-                            {Object.entries(duplicate.record).map(([field, value], idx) => {
+                            {duplicate.record && Object.entries(duplicate.record).map(([field, value], idx) => {
                               // Find the field name from the api name
                               const fieldObj = fields.find(f => f.api_name === field);
                               const fieldName = fieldObj ? fieldObj.name : field;
@@ -223,7 +223,7 @@ export function DuplicateRecordsResolver({
                         <div className="text-sm font-medium">Existing Record</div>
                         <Table>
                           <TableBody>
-                            {Object.entries(duplicate.existingRecord)
+                            {duplicate.existingRecord && Object.entries(duplicate.existingRecord)
                               .filter(([key]) => key !== 'id') // Filter out id field
                               .map(([field, value], idx) => {
                                 // Find field name
@@ -235,7 +235,7 @@ export function DuplicateRecordsResolver({
                                       {fieldName}
                                     </TableCell>
                                     <TableCell className="py-1 text-sm">
-                                      {value ? value.toString() : <span className="text-muted-foreground italic">Empty</span>}
+                                      {value ? String(value) : <span className="text-muted-foreground italic">Empty</span>}
                                     </TableCell>
                                   </TableRow>
                                 );
