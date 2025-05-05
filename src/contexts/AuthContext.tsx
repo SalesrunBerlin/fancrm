@@ -51,11 +51,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return null;
       }
       
-      if (data?.favorite_color) {
-        setFavoriteColor(data.favorite_color);
+      // Check if data exists and has the properties we need
+      if (data) {
+        if ('favorite_color' in data) {
+          setFavoriteColor(data.favorite_color);
+        }
+        
+        return data?.role || 'admin'; // Default to 'admin' if no role is set
       }
       
-      return data?.role || 'admin'; // Default to 'admin' if no role is set
+      return 'admin'; // Default role
     } catch (error) {
       console.error('Error in fetchUserRole:', error);
       return null;

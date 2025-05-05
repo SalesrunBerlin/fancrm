@@ -28,7 +28,12 @@ export function useColorPreference() {
 
         if (error) throw error;
         
-        setFavoriteColor(data?.favorite_color || "default");
+        // Check if data exists and has favorite_color property
+        if (data && 'favorite_color' in data) {
+          setFavoriteColor(data.favorite_color || "default");
+        } else {
+          setFavoriteColor("default");
+        }
       } catch (error: any) {
         console.error("Error fetching color preference:", error);
       } finally {

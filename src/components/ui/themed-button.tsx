@@ -24,18 +24,25 @@ export function ThemedButton({
     // Only apply custom color to default variant
     if (variant !== "default") return "";
     
-    // Extract the color name from the class (e.g., "bg-blue-500" -> "blue")
-    const match = color.match(/bg-([a-z]+)-\d+/);
-    if (!match) return "";
+    // Check if the color is a direct variant from the button component
+    if (color.match(/^[a-z]+$/)) {
+      return "";  // Let the button component handle its own variants
+    }
     
-    const colorName = match[1];
-    return `bg-${colorName}-500 hover:bg-${colorName}-600 text-white`;
+    // For Tailwind classes like "bg-blue-500"
+    const match = color.match(/bg-([a-z]+)-\d+/);
+    if (match) {
+      const colorName = match[1];
+      return `bg-${colorName}-500 hover:bg-${colorName}-600 text-white`;
+    }
+    
+    return "";
   };
   
   return (
     <Button 
       className={cn(getColorClass(), className)} 
-      variant={variant}
+      variant={colorOverride || favoriteColor || variant}
       {...props}
     >
       {children}
