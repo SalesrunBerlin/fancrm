@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.32.0";
 
@@ -255,7 +254,6 @@ serve(async (req) => {
         );
       }
       
-      // New operations for member management
       case 'addMemberToCollection': {
         if (!requestData.collectionId || !requestData.userId || !requestData.permissionLevel) {
           return new Response(

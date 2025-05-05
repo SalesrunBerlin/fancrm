@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -48,13 +47,16 @@ export default function CollectionDetailPage() {
       
       setIsAddingMember(true);
       
-      // Use the edge function instead of direct database access
+      // Include the session token in the Authorization header
       const { data, error } = await supabase.functions.invoke('collection-operations', {
         body: { 
           type: 'addMemberToCollection',
           collectionId,
           userId: selectedUserId,
           permissionLevel
+        },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`
         }
       });
       
@@ -83,12 +85,15 @@ export default function CollectionDetailPage() {
     mutationFn: async (memberId: string) => {
       if (!user || !collectionId || !session) throw new Error('Missing required data');
       
-      // Use the edge function instead of direct database access
+      // Include the session token in the Authorization header
       const { data, error } = await supabase.functions.invoke('collection-operations', {
         body: {
           type: 'removeMemberFromCollection',
           collectionId,
           memberId
+        },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`
         }
       });
       
@@ -113,13 +118,16 @@ export default function CollectionDetailPage() {
     mutationFn: async ({ memberId, newPermission }: { memberId: string, newPermission: 'read' | 'edit' }) => {
       if (!user || !collectionId || !session) throw new Error('Missing required data');
       
-      // Use the edge function instead of direct database access
+      // Include the session token in the Authorization header
       const { data, error } = await supabase.functions.invoke('collection-operations', {
         body: {
           type: 'updateMemberPermission',
           collectionId,
           memberId,
           permissionLevel: newPermission
+        },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`
         }
       });
       
