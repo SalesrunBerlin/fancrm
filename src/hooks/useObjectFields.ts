@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -78,6 +77,22 @@ export function useObjectFields(objectTypeId?: string) {
       const maxOrder = maxOrderResult && maxOrderResult.length > 0 
         ? maxOrderResult[0].display_order || 0 
         : 0;
+
+      // Set additional options for auto-number fields
+      if (fieldInput.data_type === 'auto_number') {
+        // Extract auto_number specific options
+        const autoNumberOptions = {
+          auto_number_prefix: fieldInput.options?.auto_number_prefix || "",
+          auto_number_format: fieldInput.options?.auto_number_format || "0000",
+          auto_number_start: fieldInput.options?.auto_number_start || 1,
+          is_read_only: true // Auto-number fields are always read-only
+        };
+        
+        fieldInput.options = {
+          ...(fieldInput.options || {}),
+          ...autoNumberOptions
+        };
+      }
 
       // Create the new field
       const { data, error } = await supabase

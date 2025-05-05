@@ -170,6 +170,189 @@ export type Database = {
         }
         Relationships: []
       }
+      auto_number_configurations: {
+        Row: {
+          created_at: string
+          current_value: number
+          field_id: string
+          format_pattern: string
+          id: string
+          prefix: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          current_value?: number
+          field_id: string
+          format_pattern?: string
+          id?: string
+          prefix?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          current_value?: number
+          field_id?: string
+          format_pattern?: string
+          id?: string
+          prefix?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "auto_number_configurations_field_id_fkey"
+            columns: ["field_id"]
+            isOneToOne: false
+            referencedRelation: "object_field_relationships"
+            referencedColumns: ["field_id"]
+          },
+          {
+            foreignKeyName: "auto_number_configurations_field_id_fkey"
+            columns: ["field_id"]
+            isOneToOne: false
+            referencedRelation: "object_fields"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      collection_fields: {
+        Row: {
+          collection_id: string | null
+          created_at: string
+          field_api_name: string
+          id: string
+          object_type_id: string | null
+        }
+        Insert: {
+          collection_id?: string | null
+          created_at?: string
+          field_api_name: string
+          id?: string
+          object_type_id?: string | null
+        }
+        Update: {
+          collection_id?: string | null
+          created_at?: string
+          field_api_name?: string
+          id?: string
+          object_type_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "collection_fields_collection_id_fkey"
+            columns: ["collection_id"]
+            isOneToOne: false
+            referencedRelation: "collection_access"
+            referencedColumns: ["collection_id"]
+          },
+          {
+            foreignKeyName: "collection_fields_collection_id_fkey"
+            columns: ["collection_id"]
+            isOneToOne: false
+            referencedRelation: "sharing_collections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "collection_fields_object_type_id_fkey"
+            columns: ["object_type_id"]
+            isOneToOne: false
+            referencedRelation: "object_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      collection_members: {
+        Row: {
+          collection_id: string | null
+          created_at: string
+          id: string
+          permission_level: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          collection_id?: string | null
+          created_at?: string
+          id?: string
+          permission_level: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          collection_id?: string | null
+          created_at?: string
+          id?: string
+          permission_level?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "collection_members_collection_id_fkey"
+            columns: ["collection_id"]
+            isOneToOne: false
+            referencedRelation: "collection_access"
+            referencedColumns: ["collection_id"]
+          },
+          {
+            foreignKeyName: "collection_members_collection_id_fkey"
+            columns: ["collection_id"]
+            isOneToOne: false
+            referencedRelation: "sharing_collections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      collection_records: {
+        Row: {
+          collection_id: string | null
+          created_at: string
+          id: string
+          record_id: string | null
+        }
+        Insert: {
+          collection_id?: string | null
+          created_at?: string
+          id?: string
+          record_id?: string | null
+        }
+        Update: {
+          collection_id?: string | null
+          created_at?: string
+          id?: string
+          record_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "collection_records_collection_id_fkey"
+            columns: ["collection_id"]
+            isOneToOne: false
+            referencedRelation: "collection_access"
+            referencedColumns: ["collection_id"]
+          },
+          {
+            foreignKeyName: "collection_records_collection_id_fkey"
+            columns: ["collection_id"]
+            isOneToOne: false
+            referencedRelation: "sharing_collections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "collection_records_record_id_fkey"
+            columns: ["record_id"]
+            isOneToOne: false
+            referencedRelation: "object_records"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "collection_records_record_id_fkey"
+            columns: ["record_id"]
+            isOneToOne: false
+            referencedRelation: "shared_records"
+            referencedColumns: ["record_id"]
+          },
+        ]
+      }
       contacts: {
         Row: {
           account_id: string | null
@@ -434,6 +617,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "object_records"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "object_field_values_record_id_fkey"
+            columns: ["record_id"]
+            isOneToOne: false
+            referencedRelation: "shared_records"
+            referencedColumns: ["record_id"]
           },
         ]
       }
@@ -730,7 +920,142 @@ export type Database = {
             referencedRelation: "object_records"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "record_field_values_record_id_fkey"
+            columns: ["record_id"]
+            isOneToOne: false
+            referencedRelation: "shared_records"
+            referencedColumns: ["record_id"]
+          },
         ]
+      }
+      record_share_fields: {
+        Row: {
+          created_at: string
+          field_api_name: string
+          id: string
+          is_visible: boolean
+          record_share_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          field_api_name: string
+          id?: string
+          is_visible?: boolean
+          record_share_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          field_api_name?: string
+          id?: string
+          is_visible?: boolean
+          record_share_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "record_share_fields_record_share_id_fkey"
+            columns: ["record_share_id"]
+            isOneToOne: false
+            referencedRelation: "record_shares"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "record_share_fields_record_share_id_fkey"
+            columns: ["record_share_id"]
+            isOneToOne: false
+            referencedRelation: "shared_records"
+            referencedColumns: ["share_id"]
+          },
+        ]
+      }
+      record_shares: {
+        Row: {
+          created_at: string
+          id: string
+          permission_level: string
+          record_id: string | null
+          shared_by_user_id: string
+          shared_with_user_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          permission_level: string
+          record_id?: string | null
+          shared_by_user_id: string
+          shared_with_user_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          permission_level?: string
+          record_id?: string | null
+          shared_by_user_id?: string
+          shared_with_user_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_record_shares_shared_by"
+            columns: ["shared_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_record_shares_shared_with"
+            columns: ["shared_with_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "record_shares_record_id_fkey"
+            columns: ["record_id"]
+            isOneToOne: false
+            referencedRelation: "object_records"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "record_shares_record_id_fkey"
+            columns: ["record_id"]
+            isOneToOne: false
+            referencedRelation: "shared_records"
+            referencedColumns: ["record_id"]
+          },
+        ]
+      }
+      sharing_collections: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          owner_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          owner_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          owner_id?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       user_color_preferences: {
         Row: {
@@ -759,8 +1084,94 @@ export type Database = {
         }
         Relationships: []
       }
+      user_field_mappings: {
+        Row: {
+          created_at: string
+          id: string
+          source_field_api_name: string
+          source_object_id: string
+          source_user_id: string
+          target_field_api_name: string
+          target_object_id: string
+          target_user_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          source_field_api_name: string
+          source_object_id: string
+          source_user_id: string
+          target_field_api_name: string
+          target_object_id: string
+          target_user_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          source_field_api_name?: string
+          source_object_id?: string
+          source_user_id?: string
+          target_field_api_name?: string
+          target_object_id?: string
+          target_user_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_field_mappings_source_object_id_fkey"
+            columns: ["source_object_id"]
+            isOneToOne: false
+            referencedRelation: "object_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_field_mappings_target_object_id_fkey"
+            columns: ["target_object_id"]
+            isOneToOne: false
+            referencedRelation: "object_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
+      collection_access: {
+        Row: {
+          collection_id: string | null
+          collection_name: string | null
+          description: string | null
+          object_type_id: string | null
+          permission_level: string | null
+          record_id: string | null
+          user_id: string | null
+          visible_fields: string[] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "collection_records_record_id_fkey"
+            columns: ["record_id"]
+            isOneToOne: false
+            referencedRelation: "object_records"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "collection_records_record_id_fkey"
+            columns: ["record_id"]
+            isOneToOne: false
+            referencedRelation: "shared_records"
+            referencedColumns: ["record_id"]
+          },
+          {
+            foreignKeyName: "object_records_object_type_id_fkey"
+            columns: ["object_type_id"]
+            isOneToOne: false
+            referencedRelation: "object_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       object_field_relationships: {
         Row: {
           field_id: string | null
@@ -773,6 +1184,32 @@ export type Database = {
           {
             foreignKeyName: "object_fields_object_type_id_fkey"
             columns: ["from_object_id"]
+            isOneToOne: false
+            referencedRelation: "object_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shared_records: {
+        Row: {
+          object_type_id: string | null
+          permission_level: string | null
+          record_id: string | null
+          share_id: string | null
+          shared_with_user_id: string | null
+          visible_fields: string[] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_record_shares_shared_with"
+            columns: ["shared_with_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "object_records_object_type_id_fkey"
+            columns: ["object_type_id"]
             isOneToOne: false
             referencedRelation: "object_types"
             referencedColumns: ["id"]
@@ -798,6 +1235,14 @@ export type Database = {
         }
         Returns: string
       }
+      generate_auto_number: {
+        Args: { field_id: string; prefix?: string; format_pattern?: string }
+        Returns: string
+      }
+      get_user_collection_membership: {
+        Args: { user_uuid: string; collection_uuid: string }
+        Returns: boolean
+      }
       initialize_deal_statuses: {
         Args: Record<PropertyKey, never>
         Returns: undefined
@@ -813,6 +1258,18 @@ export type Database = {
       refresh_published_objects_view: {
         Args: Record<PropertyKey, never>
         Returns: undefined
+      }
+      user_is_collection_member: {
+        Args: { collection_uuid: string }
+        Returns: boolean
+      }
+      user_owns_collection: {
+        Args: { collection_uuid: string }
+        Returns: boolean
+      }
+      user_owns_collection_safe: {
+        Args: { collection_uuid: string; user_uuid: string }
+        Returns: boolean
       }
     }
     Enums: {

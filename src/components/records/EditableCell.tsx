@@ -183,6 +183,15 @@ export function EditableCell({
             className={error ? "border-red-500" : ""}
           />
         );
+      case "auto_number":
+        return (
+          <Input 
+            type="text"
+            value={editValue || ""}
+            disabled={true}
+            className="bg-muted"
+          />
+        );
       default:
         return (
           <Input 

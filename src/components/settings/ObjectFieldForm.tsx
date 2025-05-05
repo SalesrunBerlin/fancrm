@@ -10,6 +10,7 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  FormDescription,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -24,6 +25,8 @@ import { Separator } from "@/components/ui/separator";
 import { PicklistValuesManager } from "./PicklistValuesManager";
 import { ObjectField } from "@/hooks/useObjectTypes";
 import type { CreateFieldInput } from "@/hooks/useObjectFields";
+import { supabase } from "@/integrations/supabase/client";
+import { AutoNumberFieldConfig } from "./AutoNumberFieldConfig";
 
 // Define data type options constant here to ensure it's available throughout the component
 const dataTypeOptions = [
@@ -37,7 +40,8 @@ const dataTypeOptions = [
   { label: "Boolean", value: "boolean" },
   { label: "Picklist", value: "picklist" },
   { label: "Currency", value: "currency" },
-  { label: "Lookup", value: "lookup" }
+  { label: "Lookup", value: "lookup" },
+  { label: "Auto-Number", value: "auto_number" }  // Added new field type
 ];
 
 const fieldSchema = z.object({
@@ -56,6 +60,9 @@ const fieldSchema = z.object({
   options: z.object({
     target_object_type_id: z.string().optional(),
     display_field_api_name: z.string().optional(),
+    auto_number_prefix: z.string().optional(),
+    auto_number_format: z.string().optional(),
+    auto_number_start: z.number().optional(),
   }).optional(),
 });
 
@@ -69,6 +76,7 @@ interface ObjectFieldFormProps {
 export function ObjectFieldForm({ objectTypeId, onComplete, initialName, defaultType }: ObjectFieldFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPicklistValues, setShowPicklistValues] = useState(false);
+  const [showAutoNumberConfig, setShowAutoNumberConfig] = useState(false);
   const [createdFieldId, setCreatedFieldId] = useState<string | null>(null);
   const [createdField, setCreatedField] = useState<ObjectField | null>(null);
   const { objectTypes } = useObjectTypes();
@@ -82,7 +90,10 @@ export function ObjectFieldForm({ objectTypeId, onComplete, initialName, default
       api_name: "",
       data_type: defaultType || "text", // Use defaultType if provided
       is_required: false,
-      options: {}
+      options: {
+        auto_number_prefix: "",
+        auto_number_format: "0000",
+      }
     }
   });
 
@@ -92,11 +103,38 @@ export function ObjectFieldForm({ objectTypeId, onComplete, initialName, default
   useEffect(() => {
     if (dataType === "picklist") {
       setShowPicklistValues(true);
+      setShowAutoNumberConfig(false);
+    } else if (dataType === "auto_number") {
+      setShowPicklistValues(false);
+      setShowAutoNumberConfig(true);
     } else {
       setShowPicklistValues(false);
+      setShowAutoNumberConfig(false);
       setCreatedFieldId(null);
     }
   }, [dataType]);
+
+  const createAutoNumberConfig = async (fieldId: string, options: any) => {
+    try {
+      const { error } = await supabase
+        .from('auto_number_configurations')
+        .insert({
+          field_id: fieldId,
+          prefix: options.auto_number_prefix || '',
+          format_pattern: options.auto_number_format || '0000',
+          current_value: options.auto_number_start || 1
+        });
+      
+      if (error) {
+        throw error;
+      }
+      
+      return true;
+    } catch (err) {
+      console.error("Error creating auto-number configuration:", err);
+      return false;
+    }
+  };
 
   const onSubmit = async (values: z.infer<typeof fieldSchema>) => {
     try {
@@ -122,6 +160,19 @@ export function ObjectFieldForm({ objectTypeId, onComplete, initialName, default
         if (values.data_type === "picklist") {
           setCreatedFieldId(fieldData.id);
           toast.success("Field created! You can now add picklist values.");
+        } else if (values.data_type === "auto_number") {
+          // Create auto-number configuration
+          const success = await createAutoNumberConfig(fieldData.id, values.options || {});
+          if (success) {
+            toast.success("Auto-Number field created successfully");
+            if (onComplete) {
+              onComplete(fieldData as ObjectField);
+            }
+          } else {
+            toast.error("Field created, but auto-number configuration failed");
+            // Still set the created field ID so we can configure it
+            setCreatedFieldId(fieldData.id);
+          }
         } else {
           toast.success("Field created successfully");
           if (onComplete) {
@@ -250,6 +301,10 @@ export function ObjectFieldForm({ objectTypeId, onComplete, initialName, default
           </>
         )}
 
+        {form.watch("data_type") === "auto_number" && (
+          <AutoNumberFieldConfig form={form} />
+        )}
+
         <FormField
           control={form.control}
           name="is_required"
@@ -280,7 +335,7 @@ export function ObjectFieldForm({ objectTypeId, onComplete, initialName, default
         )}
       </form>
 
-      {createdFieldId && (
+      {createdFieldId && showPicklistValues && (
         <div className="mt-6">
           <Separator className="my-4" />
           <h3 className="text-lg font-medium mb-4">Add Picklist Values</h3>

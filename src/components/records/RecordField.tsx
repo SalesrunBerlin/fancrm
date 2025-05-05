@@ -298,6 +298,32 @@ export function RecordField({
           />
         );
 
+      case "auto_number":
+        return (
+          <FormField
+            control={control}
+            name={field.api_name}
+            render={({ field: formField }) => (
+              <FormItem>
+                {!hideLabel && (
+                  <FormLabel className={labelClassName}>
+                    {field.name}
+                    {field.is_required && <span className="text-destructive ml-1">*</span>}
+                  </FormLabel>
+                )}
+                <FormControl>
+                  <Input
+                    {...formField}
+                    disabled={true} // Auto-number fields are always read-only
+                    className="bg-muted"
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        );
+
       // Default case for text and other field types
       default:
         return (
