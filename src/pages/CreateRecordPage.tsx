@@ -8,7 +8,7 @@ import { RecordField } from "@/components/records/RecordField";
 import { useEnhancedFields } from "@/hooks/useEnhancedFields";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
 import { useObjectRecords } from "@/hooks/useObjectRecords";
-import type { RecordFormData } from "@/lib/types/records"; // Updated import path
+import type { RecordFormData } from "@/lib/types/records";
 import { Loader2, Plus, Save } from "lucide-react";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { toast } from "sonner";
@@ -31,13 +31,27 @@ export default function CreateRecordPage() {
       
       // Generate value for each Auto-Number field
       const autoNumberFields = fields.filter(f => f.data_type === 'auto_number');
+      let hasAutoNumberError = false;
       
       for (const field of autoNumberFields) {
         try {
+          console.log(`Generating auto-number for field: ${field.name} (${field.id})`);
           const autoNumberValue = await generateAutoNumber(field.id);
-          data[field.api_name] = autoNumberValue as string;
+          console.log(`Generated auto-number value: ${autoNumberValue}`);
+          data[field.api_name] = autoNumberValue;
         } catch (error) {
           console.error(`Failed to generate auto-number for field ${field.api_name}:`, error);
+          toast.error(`Failed to generate auto-number for field ${field.name}`);
+          hasAutoNumberError = true;
+        }
+      }
+      
+      // If there was an auto-number generation error, allow the user to decide whether to continue
+      if (hasAutoNumberError) {
+        const continueWithErrors = window.confirm("Some auto-number fields could not be generated. Do you want to continue creating the record anyway?");
+        if (!continueWithErrors) {
+          setIsSubmitting(false);
+          return;
         }
       }
       
@@ -45,7 +59,8 @@ export default function CreateRecordPage() {
       const record = await createRecord.mutateAsync({
         field_values: data
       });
-      toast("Record created successfully");
+      
+      toast.success("Record created successfully");
       navigate(`/objects/${objectTypeId}/${record.id}`);
     } catch (error) {
       console.error("Error creating record:", error);

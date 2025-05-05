@@ -316,6 +316,8 @@ export function RecordField({
                     {...formField}
                     disabled={true} // Auto-number fields are always read-only
                     className="bg-muted"
+                    placeholder="Auto-generated upon save"
+                    title="This value will be automatically generated when the record is saved"
                   />
                 </FormControl>
                 <FormMessage />

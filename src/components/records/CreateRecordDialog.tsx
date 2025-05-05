@@ -8,8 +8,10 @@ import { RecordField } from "./RecordField";
 import { useEnhancedFields } from "@/hooks/useEnhancedFields";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
 import { useObjectRecords } from "@/hooks/useObjectRecords";
-import type { RecordFormData } from "@/lib/types/records"; // Updated import path
+import type { RecordFormData } from "@/lib/types/records"; 
 import { Loader2 } from "lucide-react";
+import { generateAutoNumber } from "@/hooks/useAutoNumberFields";
+import { toast } from "sonner";
 
 interface CreateRecordDialogProps {
   objectTypeId: string;
@@ -28,14 +30,31 @@ export function CreateRecordDialog({ objectTypeId, open, onOpenChange }: CreateR
   const onSubmit = async (data: RecordFormData) => {
     try {
       setIsSubmitting(true);
-      // Only pass the form data - the hook will handle adding the object_type_id
+      
+      // Process auto-number fields
+      const autoNumberFields = fields.filter(f => f.data_type === 'auto_number');
+      
+      for (const field of autoNumberFields) {
+        try {
+          const autoNumberValue = await generateAutoNumber(field.id);
+          data[field.api_name] = autoNumberValue;
+        } catch (error) {
+          console.error(`Failed to generate auto-number for field ${field.api_name}:`, error);
+          toast.error(`Failed to generate auto-number for field ${field.name}`);
+        }
+      }
+      
+      // Create the record with field values
       await createRecord.mutateAsync({
         field_values: data
       });
+      
       form.reset();
       onOpenChange(false);
+      toast.success("Record created successfully");
     } catch (error) {
       console.error("Error submitting form:", error);
+      toast.error("Failed to create record. Please try again.");
     } finally {
       setIsSubmitting(false);
     }

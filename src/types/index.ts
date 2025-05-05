@@ -38,15 +38,18 @@ export type ObjectFieldOption = {
 // Re-export the types from lib/types/records for backwards compatibility
 export type { RecordFormData, FieldValue, RecordUpdateData } from '@/lib/types/records';
 
-// Add missing types that were imported elsewhere
+// Add missing types that were imported elsewhere with expanded properties to match mockData
 export interface ContactType {
   id: string;
   firstName: string;
   lastName: string;
   email: string;
   phone: string;
-  company: string;
-  lastContact: string;
+  company?: string;
+  lastContact?: string;
+  name?: string;  // For compatibility with some components
+  accountName?: string; // For compatibility with RecentContacts
+  tags?: string[];
 }
 
 export interface AccountType {
@@ -55,6 +58,8 @@ export interface AccountType {
   industry: string;
   website: string;
   employees: number;
+  type?: string; // For compatibility with mockData
+  tags?: string[];
 }
 
 export interface DealType {
@@ -66,6 +71,10 @@ export interface DealType {
   probability: number;
   contactId: string;
   accountId: string;
+  status?: string; // For compatibility with mockData
+  accountName?: string; // For compatibility with RecentDeals
+  account?: string; // For compatibility with RecentDeals
+  value?: number; // For compatibility with RecentDeals
 }
 
 export interface DuplicateRecord {
@@ -73,4 +82,8 @@ export interface DuplicateRecord {
   fields: Record<string, any>;
   matchScore: number;
   matchFields: string[];
+  action?: 'skip' | 'update' | 'create'; // Required for DuplicateRecordsResolver
+  importRowIndex?: number; // Required for DuplicateRecordsResolver
+  record?: Record<string, any>; // Required for DuplicateRecordsResolver
+  existingRecord?: Record<string, any>; // Required for DuplicateRecordsResolver
 }

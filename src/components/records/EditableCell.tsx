@@ -192,8 +192,10 @@ export function EditableCell({
           <Input 
             type="text"
             value={editValue || ""}
+            placeholder="Auto-generated upon save"
             disabled={true}
-            className="bg-muted"
+            className="bg-muted cursor-not-allowed"
+            title="This value will be automatically generated when the record is saved"
           />
         );
       default:
