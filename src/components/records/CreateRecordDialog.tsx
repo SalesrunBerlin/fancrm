@@ -47,7 +47,7 @@ export function CreateRecordDialog({ objectTypeId, open, onOpenChange }: CreateR
       
       // Create the record with field values
       await createRecord.mutateAsync({
-        field_values: data
+        field_values: data as Record<string, any>
       });
       
       form.reset();

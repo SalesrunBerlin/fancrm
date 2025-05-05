@@ -16,11 +16,11 @@ export default function HelpPage() {
       />
       
       <Tabs defaultValue="getting-started" className="max-w-4xl mx-auto">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="getting-started">Getting Started</TabsTrigger>
-          <TabsTrigger value="guides">Feature Guides</TabsTrigger>
-          <TabsTrigger value="faq">FAQ</TabsTrigger>
-          <TabsTrigger value="contact">Contact Support</TabsTrigger>
+        <TabsList className="w-full grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2">
+          <TabsTrigger value="getting-started" className="w-full">Getting Started</TabsTrigger>
+          <TabsTrigger value="guides" className="w-full">Feature Guides</TabsTrigger>
+          <TabsTrigger value="faq" className="w-full">FAQ</TabsTrigger>
+          <TabsTrigger value="contact" className="w-full">Contact Support</TabsTrigger>
         </TabsList>
         
         <TabsContent value="getting-started" className="mt-6 space-y-4">
