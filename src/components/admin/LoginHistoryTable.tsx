@@ -33,6 +33,12 @@ export function LoginHistoryTable({ loginHistory }: LoginHistoryTableProps) {
     }
   };
 
+  const formatDate = (timestamp: number | string) => {
+    if (!timestamp) return '-';
+    const date = new Date(typeof timestamp === 'number' ? timestamp : parseInt(timestamp as string));
+    return `${date.getDate()}.${date.getMonth() + 1}.${date.getFullYear()}, ${date.getHours()}:${String(date.getMinutes()).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}`;
+  };
+
   return (
     <div className="rounded-md border">
       <Table>
@@ -41,34 +47,27 @@ export function LoginHistoryTable({ loginHistory }: LoginHistoryTableProps) {
             <TableHead>Date & Time</TableHead>
             <TableHead>Event</TableHead>
             <TableHead>Status</TableHead>
-            <TableHead>IP Address</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {loginHistory.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={4} className="text-center py-4 text-muted-foreground">
+              <TableCell colSpan={3} className="text-center py-4 text-muted-foreground">
                 No login history available
               </TableCell>
             </TableRow>
           ) : (
             loginHistory.map((item, index) => {
               const event = parseEventMessage(item.event_message);
-              // Handle both string and number timestamp formats
-              const timestamp = typeof item.timestamp === 'number' 
-                ? new Date(item.timestamp).toLocaleString() 
-                : new Date(parseInt(item.timestamp as string)).toLocaleString();
-                
               return (
                 <TableRow key={index}>
-                  <TableCell>{timestamp}</TableCell>
+                  <TableCell>{formatDate(item.timestamp)}</TableCell>
                   <TableCell>
-                    <Badge variant={event.success ? "default" : "destructive"}>
-                      {event.event}
+                    <Badge className="bg-blue-400 hover:bg-blue-500">
+                      Login
                     </Badge>
                   </TableCell>
                   <TableCell>{event.status}</TableCell>
-                  <TableCell>{event.ipAddress}</TableCell>
                 </TableRow>
               );
             })

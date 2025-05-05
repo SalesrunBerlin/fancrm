@@ -1,20 +1,10 @@
-
 /**
  * Utility functions for handling duplicate records during import
  */
 
 import { ColumnMapping } from "@/hooks/useImportRecords";
 import { supabase } from "@/integrations/supabase/client";
-import { DuplicateRecord as DuplicateRecordType } from "@/types";
-
-export interface DuplicateRecord {
-  importRowIndex: number;
-  existingRecord: Record<string, any>;
-  matchingFields: string[];
-  matchScore: number;
-  action: 'skip' | 'update' | 'create';
-  record: Record<string, string>;
-}
+import { DuplicateRecord } from "@/types"; // Import the unified DuplicateRecord type
 
 /**
  * Checks for potential duplicate records based on provided matchingFields
@@ -25,19 +15,19 @@ export async function findDuplicateRecords(
   columnMappings: ColumnMapping[],
   matchingFields: string[],
   duplicateCheckIntensity: 'low' | 'medium' | 'high'
-): Promise<DuplicateRecordType[]> {
+): Promise<DuplicateRecord[]> {
   if (!importData || matchingFields.length === 0) {
     return [];
   }
 
   try {
-    const foundDuplicates: DuplicateRecordType[] = [];
+    const foundDuplicates: DuplicateRecord[] = [];
     const threshold = {
       low: 0.9,
       medium: 0.7,
       high: 0.5
     }[duplicateCheckIntensity];
-
+    
     // For each import row, check for potential duplicates
     for (let rowIndex = 0; rowIndex < importData.rows.length; rowIndex++) {
       const row = importData.rows[rowIndex];
@@ -123,7 +113,7 @@ export async function findDuplicateRecords(
             });
             
             foundDuplicates.push({
-              id: recordId, // Add id to match the DuplicateRecord type in types/index.ts
+              id: recordId,
               importRowIndex: rowIndex,
               existingRecord: {
                 id: recordId,
@@ -131,9 +121,8 @@ export async function findDuplicateRecords(
               },
               matchingFields: matchingFields,
               matchScore: score,
-              matchFields: matchingFields, // Add matchFields to match the DuplicateRecord type in types/index.ts
-              action: 'skip', // Default action
-              fields: recordData, // Add fields to match the DuplicateRecord type in types/index.ts
+              fields: recordData,
+              action: 'skip',
               record: importRecord
             });
           }

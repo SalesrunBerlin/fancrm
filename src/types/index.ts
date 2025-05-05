@@ -1,4 +1,3 @@
-
 export type ObjectType = {
   id: string;
   created_at: string;
@@ -85,10 +84,9 @@ export interface DuplicateRecord {
   id?: string;
   importRowIndex: number;
   existingRecord: Record<string, any>;
-  matchingFields?: string[];
+  matchingFields: string[]; // Make this required
   matchScore: number;
-  matchFields?: string[];
   fields?: Record<string, any>;
-  action?: 'skip' | 'update' | 'create'; // Required for DuplicateRecordsResolver
-  record?: Record<string, any>; // Required for DuplicateRecordsResolver
+  action?: 'skip' | 'update' | 'create';
+  record?: Record<string, any>;
 }
