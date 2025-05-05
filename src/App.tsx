@@ -32,6 +32,8 @@ import ActionCreatePage from "./pages/ActionCreatePage";
 import ActionDetailPage from "./pages/ActionDetailPage";
 import ActionExecutePage from "./pages/ActionExecutePage";
 import MassActionPage from "./pages/MassActionPage";
+import ProfilePage from "./pages/ProfilePage";
+import HelpPage from "./pages/HelpPage";
 
 // Create a client
 const queryClient = new QueryClient({
@@ -55,6 +57,8 @@ function App() {
               <Route path="/" element={<Dashboard />} />
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/settings" element={<Settings />} />
+              <Route path="/profile" element={<ProfilePage />} />
+              <Route path="/help" element={<HelpPage />} />
               <Route path="/settings/object-manager" element={<ObjectManager />} />
               <Route path="/settings/object-manager/new" element={<CreateObjectPage />} />
               <Route path="/settings/objects/:objectTypeId" element={<ObjectTypeDetail />} />

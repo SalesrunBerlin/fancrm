@@ -1,103 +1,103 @@
 
-import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { Button } from "@/components/ui/button";
 import { Form } from "@/components/ui/form";
+import { PageHeader } from "@/components/ui/page-header";
+import { Button } from "@/components/ui/button";
 import { RecordField } from "@/components/records/RecordField";
 import { useEnhancedFields } from "@/hooks/useEnhancedFields";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
 import { useObjectRecords } from "@/hooks/useObjectRecords";
-import type { RecordFormData } from "@/lib/types/records";
-import { Loader2, Plus, Save } from "lucide-react";
-import { Card, CardContent, CardFooter } from "@/components/ui/card";
-import { toast } from "sonner";
-import { PageHeader } from "@/components/ui/page-header";
+import { Card, CardContent } from "@/components/ui/card";
+import { Loader2, ArrowLeft } from "lucide-react";
 import { generateAutoNumber } from "@/hooks/useAutoNumberFields";
+import { toast } from "sonner";
+import type { RecordFormData } from "@/lib/types/records";
 
 export default function CreateRecordPage() {
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const navigate = useNavigate();
   const { objectTypeId } = useParams<{ objectTypeId: string }>();
+  const navigate = useNavigate();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
   const { objectTypes } = useObjectTypes();
-  const { fields, isLoading } = useEnhancedFields(objectTypeId);
-  const { createRecord } = useObjectRecords(objectTypeId);
+  const { fields, isLoading: isLoadingFields } = useEnhancedFields(objectTypeId!);
+  const { createRecord } = useObjectRecords(objectTypeId!);
+  
   const objectType = objectTypes?.find(type => type.id === objectTypeId);
   const form = useForm<RecordFormData>();
+  
+  if (!objectTypeId) {
+    navigate("/dashboard");
+    return null;
+  }
 
   const onSubmit = async (data: RecordFormData) => {
     try {
       setIsSubmitting(true);
       
-      // Generate value for each Auto-Number field
+      // Process auto-number fields
       const autoNumberFields = fields.filter(f => f.data_type === 'auto_number');
-      let hasAutoNumberError = false;
       
       for (const field of autoNumberFields) {
         try {
-          console.log(`Generating auto-number for field: ${field.name} (${field.id})`);
           const autoNumberValue = await generateAutoNumber(field.id);
-          console.log(`Generated auto-number value: ${autoNumberValue}`);
-          // Use type assertion to indicate this is a valid field value
-          data[field.api_name] = autoNumberValue as any;
+          // Add the auto-number value to the form data
+          data[field.api_name] = autoNumberValue;
         } catch (error) {
           console.error(`Failed to generate auto-number for field ${field.api_name}:`, error);
           toast.error(`Failed to generate auto-number for field ${field.name}`);
-          hasAutoNumberError = true;
         }
       }
       
-      // If there was an auto-number generation error, allow the user to decide whether to continue
-      if (hasAutoNumberError) {
-        const continueWithErrors = window.confirm("Some auto-number fields could not be generated. Do you want to continue creating the record anyway?");
-        if (!continueWithErrors) {
-          setIsSubmitting(false);
-          return;
-        }
-      }
-      
-      // Create the record with the generated auto numbers
-      const record = await createRecord.mutateAsync({
+      // Create the record
+      const result = await createRecord.mutateAsync({
         field_values: data
       });
       
-      toast.success("Record created successfully");
-      navigate(`/objects/${objectTypeId}/${record.id}`);
+      toast.success(`${objectType?.name || 'Record'} created successfully`);
+      
+      if (result?.id) {
+        navigate(`/objects/${objectTypeId}/${result.id}`);
+      } else {
+        navigate(`/objects/${objectTypeId}`);
+      }
     } catch (error) {
-      console.error("Error creating record:", error);
-      toast.error("Failed to create record. Please try again.");
+      console.error("Error submitting form:", error);
+      toast.error(`Failed to create ${objectType?.name || 'record'}. Please try again.`);
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const navigateToCreateField = () => {
-    if (objectTypeId) {
-      navigate(`/settings/objects/${objectTypeId}/fields/new`);
-    }
-  };
-
-  if (!objectType) return null;
-
   return (
-    <div className="space-y-6 w-full max-w-2xl mx-auto px-4 sm:px-6">
-      <PageHeader
+    <div className="space-y-6">
+      <PageHeader 
         title={`New ${objectType?.name || 'Record'}`}
-        description={`Create a new ${objectType?.name?.toLowerCase() || 'record'}`}
-        className="mb-4"
-        backTo={`/objects/${objectTypeId}`}
+        description={`Create a new ${objectType?.name || 'record'} by filling out the fields below.`}
+        backButton={
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="gap-1" 
+            onClick={() => navigate(`/objects/${objectTypeId}`)}
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to list
+          </Button>
+        }
       />
       
-      <Card className="shadow-sm">
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)}>
-            <CardContent className="space-y-6 pt-6">
-              {isLoading ? (
-                <div className="flex justify-center py-8">
-                  <Loader2 className="h-8 w-8 animate-spin" />
+      <Card>
+        <CardContent className="pt-6">
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              {isLoadingFields ? (
+                <div className="flex justify-center py-10">
+                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                 </div>
               ) : (
-                <div className="space-y-6">
+                <div className="space-y-6 max-w-2xl mx-auto">
                   {fields.map((field) => (
                     <RecordField
                       key={field.id}
@@ -106,39 +106,27 @@ export default function CreateRecordPage() {
                     />
                   ))}
                   
-                  {/* Add New Field Button */}
-                  <div className="pt-4 border-t">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={navigateToCreateField}
-                      className="w-full border-dashed flex items-center justify-center"
+                  <div className="flex justify-end gap-3">
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      onClick={() => navigate(`/objects/${objectTypeId}`)}
                     >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add New Field
+                      Cancel
+                    </Button>
+                    <Button 
+                      type="submit" 
+                      disabled={isSubmitting}
+                    >
+                      {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      Create
                     </Button>
                   </div>
                 </div>
               )}
-            </CardContent>
-            <CardFooter className="flex justify-end border-t p-4">
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Creating...
-                  </>
-                ) : (
-                  <>
-                    <Save className="mr-2 h-4 w-4" />
-                    Create {objectType?.name || 'Record'}
-                  </>
-                )}
-              </Button>
-            </CardFooter>
-          </form>
-        </Form>
+            </form>
+          </Form>
+        </CardContent>
       </Card>
     </div>
   );

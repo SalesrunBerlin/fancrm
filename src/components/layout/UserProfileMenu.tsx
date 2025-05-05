@@ -11,7 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/contexts/AuthContext";
-import { LogOut, Settings, User } from "lucide-react";
+import { HelpCircle, LogOut, Settings, User } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 export function UserProfileMenu() {
@@ -47,9 +47,17 @@ export function UserProfileMenu() {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
+          <DropdownMenuItem onClick={() => navigate("/profile")}>
+            <User className="mr-2 h-4 w-4" />
+            <span>Profile</span>
+          </DropdownMenuItem>
           <DropdownMenuItem onClick={() => navigate("/settings")}>
             <Settings className="mr-2 h-4 w-4" />
             <span>Settings</span>
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => navigate("/help")}>
+            <HelpCircle className="mr-2 h-4 w-4" />
+            <span>Help</span>
           </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
