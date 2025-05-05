@@ -2,7 +2,7 @@
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Settings, HelpCircle, Users, Tabs } from "lucide-react";
+import { Settings, HelpCircle, Users, BookOpen } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -21,7 +21,7 @@ export default function AdminDashboard() {
           <Card className="h-full hover:bg-accent/5 transition-colors">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Tabs className="h-5 w-5" />
+                <BookOpen className="h-5 w-5" />
                 Help Tab Management
               </CardTitle>
               <CardDescription>
