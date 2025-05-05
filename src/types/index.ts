@@ -29,6 +29,10 @@ export interface ContactType {
   email: string;
   phone: string;
   createdAt: string;
+  first_name?: string;
+  last_name?: string;
+  firstName?: string;
+  lastName?: string;
 }
 
 export interface AccountType {
@@ -37,6 +41,7 @@ export interface AccountType {
   industry: string;
   website: string;
   createdAt: string;
+  type?: string;
 }
 
 export interface DealType {
@@ -46,4 +51,18 @@ export interface DealType {
   stage: string;
   closeDate: string;
   probability: number;
+  status?: string;
+  accountName?: string;
+  account?: string;
+  value?: number;
+}
+
+// Add DuplicateRecord type for imports
+export interface DuplicateRecord {
+  id: string;
+  rowIndex: number;
+  matchType: string;
+  sourceRecord: any;
+  existingRecord: any;
+  resolution?: string;
 }

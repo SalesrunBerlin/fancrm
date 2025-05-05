@@ -8,8 +8,7 @@ import { AlertCircle } from "lucide-react";
 import { getAlertVariantClass } from "@/patches/FixAlertVariants";
 import { useActions, Action } from "@/hooks/useActions";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
-import { useActionFields } from "@/hooks/useActionFields";
-import { useObjectFields } from "@/hooks/useObjectFields";
+import { supabase } from "@/integrations/supabase/client";
 import { PublicRecordForm } from "@/components/actions/PublicRecordForm";
 
 export default function PublicActionPage() {
@@ -147,9 +146,6 @@ export default function PublicActionPage() {
       console.error("Error in fetchObjectFields:", err);
     }
   };
-
-  // Import supabase client at the top of the file
-  const { supabase } = await import("@/integrations/supabase/client");
 
   if (loading) {
     return (
