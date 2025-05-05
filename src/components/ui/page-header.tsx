@@ -11,9 +11,19 @@ export interface PageHeaderProps {
   actions?: React.ReactNode;
   className?: string;
   backTo?: string;
+  backButton?: React.ReactNode;
+  children?: React.ReactNode;
 }
 
-export function PageHeader({ title, description, actions, className, backTo }: PageHeaderProps) {
+export function PageHeader({ 
+  title, 
+  description, 
+  actions, 
+  className, 
+  backTo, 
+  backButton,
+  children 
+}: PageHeaderProps) {
   const navigate = useNavigate();
   
   const handleBack = () => {
@@ -36,6 +46,7 @@ export function PageHeader({ title, description, actions, className, backTo }: P
             <ArrowLeft className="h-4 w-4" />
           </Button>
         )}
+        {backButton}
         <div>
           <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
           {description && (
@@ -44,6 +55,7 @@ export function PageHeader({ title, description, actions, className, backTo }: P
         </div>
       </div>
       {actions && <div className="flex items-center gap-2">{actions}</div>}
+      {children}
     </div>
   );
 }

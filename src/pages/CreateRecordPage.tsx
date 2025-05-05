@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Form } from "@/components/ui/form";
 import { PageHeader } from "@/components/ui/page-header";
-import { Button } from "@/components/ui/button";
 import { RecordField } from "@/components/records/RecordField";
 import { useEnhancedFields } from "@/hooks/useEnhancedFields";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
@@ -14,6 +13,7 @@ import { Loader2, ArrowLeft } from "lucide-react";
 import { generateAutoNumber } from "@/hooks/useAutoNumberFields";
 import { toast } from "sonner";
 import type { RecordFormData } from "@/lib/types/records";
+import { ThemedButton } from "@/components/ui/themed-button";
 
 export default function CreateRecordPage() {
   const { objectTypeId } = useParams<{ objectTypeId: string }>();
@@ -75,18 +75,17 @@ export default function CreateRecordPage() {
       <PageHeader 
         title={`New ${objectType?.name || 'Record'}`}
         description={`Create a new ${objectType?.name || 'record'} by filling out the fields below.`}
-        backButton={
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className="gap-1" 
-            onClick={() => navigate(`/objects/${objectTypeId}`)}
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to list
-          </Button>
-        }
-      />
+      >
+        <ThemedButton 
+          variant="ghost" 
+          size="sm" 
+          className="gap-1" 
+          onClick={() => navigate(`/objects/${objectTypeId}`)}
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to list
+        </ThemedButton>
+      </PageHeader>
       
       <Card>
         <CardContent className="pt-6">
@@ -107,20 +106,20 @@ export default function CreateRecordPage() {
                   ))}
                   
                   <div className="flex justify-end gap-3">
-                    <Button 
+                    <ThemedButton 
                       type="button" 
                       variant="outline" 
                       onClick={() => navigate(`/objects/${objectTypeId}`)}
                     >
                       Cancel
-                    </Button>
-                    <Button 
+                    </ThemedButton>
+                    <ThemedButton 
                       type="submit" 
                       disabled={isSubmitting}
                     >
                       {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                       Create
-                    </Button>
+                    </ThemedButton>
                   </div>
                 </div>
               )}

@@ -2,6 +2,7 @@
 import { Loader2, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { DeleteDialog } from "@/components/common/DeleteDialog";
+import { ThemedButton } from "@/components/ui/themed-button";
 
 interface RecordDeleteDialogProps {
   open: boolean;

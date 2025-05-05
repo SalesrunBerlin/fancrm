@@ -1,5 +1,5 @@
 
-export type FieldValue = string | number | boolean | Date | null;
+export type FieldValue = string | number | boolean | Date | null | Record<string, any>;
 
 export interface RecordFormData {
   [key: string]: FieldValue;

@@ -1,10 +1,8 @@
-
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Form } from "@/components/ui/form";
-import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -17,6 +15,7 @@ import { ActionFieldWithDetails } from "@/hooks/useActionFields";
 import { RecordField } from "@/components/records/RecordField";
 import { ObjectField } from "@/hooks/useObjectTypes";
 import { evaluateFormula, isValidUuid } from "@/utils/formulaEvaluator";
+import { ThemedButton } from "@/components/ui/themed-button";
 
 interface CreateRecordFormProps {
   objectTypeId: string;
@@ -416,7 +415,7 @@ export function CreateRecordForm({
         )}
         
         <div className="flex justify-end pt-4">
-          <Button type="submit" disabled={isSubmitting}>
+          <ThemedButton type="submit" disabled={isSubmitting}>
             {isSubmitting ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -425,7 +424,7 @@ export function CreateRecordForm({
             ) : (
               "Create Record"
             )}
-          </Button>
+          </ThemedButton>
         </div>
       </form>
     </Form>

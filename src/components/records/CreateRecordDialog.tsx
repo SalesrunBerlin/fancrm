@@ -2,7 +2,6 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { Form } from "@/components/ui/form";
 import { RecordField } from "./RecordField";
 import { useEnhancedFields } from "@/hooks/useEnhancedFields";
@@ -12,6 +11,7 @@ import type { RecordFormData } from "@/lib/types/records";
 import { Loader2 } from "lucide-react";
 import { generateAutoNumber } from "@/hooks/useAutoNumberFields";
 import { toast } from "sonner";
+import { ThemedButton } from "@/components/ui/themed-button";
 
 interface CreateRecordDialogProps {
   objectTypeId: string;
@@ -89,20 +89,20 @@ export function CreateRecordDialog({ objectTypeId, open, onOpenChange }: CreateR
             )}
             
             <div className="flex justify-end gap-3 pt-2">
-              <Button 
+              <ThemedButton 
                 type="button" 
                 variant="outline" 
                 onClick={() => onOpenChange(false)}
               >
                 Cancel
-              </Button>
-              <Button 
+              </ThemedButton>
+              <ThemedButton 
                 type="submit" 
                 disabled={isSubmitting}
               >
                 {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Create
-              </Button>
+              </ThemedButton>
             </div>
           </form>
         </Form>
