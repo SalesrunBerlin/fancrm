@@ -102,7 +102,15 @@ export default function PublicActionPage() {
           {isFullyLoaded && objectFields && (
             <PublicRecordForm
               objectTypeId={action.target_object_id}
-              objectFields={objectFields}
+              objectFields={objectFields.map(field => ({
+                id: field.id,
+                api_name: field.api_name,
+                name: field.name,
+                data_type: field.data_type,
+                is_required: field.is_required || false,
+                options: field.options,
+                default_value: field.default_value
+              }))}
               actionFields={actionFields}
             />
           )}

@@ -95,6 +95,11 @@ export function ActionSharingDialog({
       });
   };
 
+  // Fixed toggle handler to prevent event propagation issues
+  const handleToggleChange = (checked: boolean) => {
+    onPublicToggle(checked);
+  };
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -111,13 +116,21 @@ export function ActionSharingDialog({
           </DialogDescription>
         </DialogHeader>
         
+        {/* Fixed switch implementation with better accessibility */}
         <div className="flex items-center space-x-2 py-4">
-          <Switch 
-            id="public-action" 
-            checked={isPublic}
-            onCheckedChange={(checked) => onPublicToggle(checked)}
-          />
-          <Label htmlFor="public-action">Make this action publicly available</Label>
+          <div className="flex items-center space-x-2">
+            <Switch 
+              id="public-action-toggle" 
+              checked={isPublic}
+              onCheckedChange={handleToggleChange}
+            />
+            <Label 
+              htmlFor="public-action-toggle" 
+              className="cursor-pointer"
+            >
+              Make this action publicly available
+            </Label>
+          </div>
         </div>
         
         {isPublic && (
