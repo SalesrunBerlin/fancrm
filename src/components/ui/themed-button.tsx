@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Button, ButtonProps } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
@@ -29,34 +28,31 @@ export function ThemedButton({
 }: ThemedButtonProps) {
   const { favoriteColor } = useAuth();
   
-  const getColorClass = () => {
-    const color = colorOverride || favoriteColor || "default";
-    if (!color || color === "default") return "";
-    
-    // Only apply custom color to default variant
-    if (variant !== "default") return "";
-    
-    // Check if the color is a direct variant from the button component
-    if (color.match(/^[a-z]+$/)) {
-      return "";  // Let the button component handle its own variants
+  // The main issue is here - we need to properly apply the favorite color as the variant
+  const computedVariant = () => {
+    // If a specific variant other than default is requested, honor that request
+    if (variant !== "default") {
+      return variant;
     }
     
-    // For Tailwind classes like "bg-blue-500"
-    const match = color.match(/bg-([a-z]+)-\d+/);
-    if (match) {
-      const colorName = match[1];
-      return `bg-${colorName}-500 hover:bg-${colorName}-600 text-white`;
+    // If there's a color override, use it
+    if (colorOverride) {
+      return colorOverride as ButtonVariant;
     }
     
-    return "";
+    // Otherwise, use the user's favorite color if available
+    if (favoriteColor && favoriteColor !== "default") {
+      return favoriteColor as ButtonVariant;
+    }
+    
+    // Default fallback
+    return "default";
   };
-  
-  const buttonVariant = (colorOverride || favoriteColor || variant) as ButtonVariant;
   
   return (
     <Button 
-      className={cn(getColorClass(), className)} 
-      variant={buttonVariant}
+      className={className} 
+      variant={computedVariant()}
       {...props}
     >
       {children}

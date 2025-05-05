@@ -5,15 +5,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 export function useColorPreference() {
-  const { user } = useAuth();
-  const [favoriteColor, setFavoriteColor] = useState<string>("default");
+  const { user, favoriteColor: contextFavoriteColor, setFavoriteColor: updateContextFavoriteColor } = useAuth();
   const [loading, setLoading] = useState<boolean>(true);
 
   // Fetch user's color preference
   useEffect(() => {
     const fetchColorPreference = async () => {
       if (!user) {
-        setFavoriteColor("default");
         setLoading(false);
         return;
       }
@@ -30,20 +28,17 @@ export function useColorPreference() {
         
         // Check if data exists and has favorite_color property
         if (data && 'favorite_color' in data) {
-          setFavoriteColor(data.favorite_color || "default");
-        } else {
-          setFavoriteColor("default");
+          updateContextFavoriteColor(data.favorite_color || "default");
         }
       } catch (error: any) {
         console.error("Error fetching color preference:", error);
-        setFavoriteColor("default");
       } finally {
         setLoading(false);
       }
     };
 
     fetchColorPreference();
-  }, [user]);
+  }, [user, updateContextFavoriteColor]);
 
   // Update user's color preference
   const updateColorPreference = async (color: string) => {
@@ -58,7 +53,7 @@ export function useColorPreference() {
 
       if (error) throw error;
       
-      setFavoriteColor(color);
+      updateContextFavoriteColor(color);
       toast.success("Farbpräferenz wurde aktualisiert");
       return true;
     } catch (error: any) {
@@ -71,7 +66,7 @@ export function useColorPreference() {
   };
 
   return {
-    favoriteColor,
+    favoriteColor: contextFavoriteColor,
     updateColorPreference,
     loading
   };
