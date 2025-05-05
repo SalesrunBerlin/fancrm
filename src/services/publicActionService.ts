@@ -1,57 +1,36 @@
 
 import { supabase } from "@/integrations/supabase/client";
 
-export interface PublicRecordFormData {
-  [key: string]: string | null;
-}
-
-/**
- * Creates a new record in the database from a public action
- */
-export const createPublicRecord = async (
-  objectTypeId: string,
-  data: PublicRecordFormData
-) => {
-  console.log("Creating public record with data:", data);
-  
-  // Create record without owner_id
-  const { data: newRecord, error: recordError } = await supabase
-    .from("object_records")
-    .insert([{ 
-      object_type_id: objectTypeId
-    }])
-    .select()
-    .single();
-  
-  if (recordError) {
-    console.error("Error creating public record:", recordError);
-    throw recordError;
-  }
-  
-  // Create field values
-  const fieldValues = [];
-  
-  for (const [fieldApiName, value] of Object.entries(data)) {
-    if (value !== null && value !== undefined) {
-      fieldValues.push({
-        record_id: newRecord.id,
-        field_api_name: fieldApiName,
-        value: value.toString()
-      });
-    }
-  }
-  
-  if (fieldValues.length > 0) {
+export const createPublicRecord = async (objectTypeId: string, formData: Record<string, any>) => {
+  try {
+    // Create the record
+    const { data: record, error: recordError } = await supabase
+      .from("object_records")
+      .insert({
+        object_type_id: objectTypeId,
+        is_public_submission: true, // Mark as public submission
+      })
+      .select()
+      .single();
+    
+    if (recordError) throw recordError;
+    
+    // Create the field values
+    const fieldValues = Object.entries(formData).map(([api_name, value]) => ({
+      record_id: record.id,
+      field_api_name: api_name,
+      value: value === undefined || value === null ? null : String(value),
+    }));
+    
     const { error: valuesError } = await supabase
       .from("object_field_values")
       .insert(fieldValues);
     
-    if (valuesError) {
-      console.error("Error creating field values:", valuesError);
-      throw valuesError;
-    }
+    if (valuesError) throw valuesError;
+    
+    return record;
+  } catch (error) {
+    console.error("Error creating public record:", error);
+    throw error;
   }
-  
-  console.log("Successfully created public record with ID:", newRecord.id);
-  return newRecord;
 };
