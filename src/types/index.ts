@@ -56,7 +56,7 @@ export interface AccountType {
   id: string;
   name: string;
   industry: string;
-  website: string;
+  website: string | null;
   employees: number;
   type?: string; // For compatibility with mockData
   tags?: string[];
@@ -82,12 +82,13 @@ export interface DealType {
 }
 
 export interface DuplicateRecord {
-  id: string;
-  fields: Record<string, any>;
+  id?: string;
+  importRowIndex: number;
+  existingRecord: Record<string, any>;
+  matchingFields?: string[];
   matchScore: number;
-  matchFields: string[];
+  matchFields?: string[];
+  fields?: Record<string, any>;
   action?: 'skip' | 'update' | 'create'; // Required for DuplicateRecordsResolver
-  importRowIndex?: number; // Required for DuplicateRecordsResolver
   record?: Record<string, any>; // Required for DuplicateRecordsResolver
-  existingRecord?: Record<string, any>; // Required for DuplicateRecordsResolver
 }

@@ -5,6 +5,7 @@
 
 import { ColumnMapping } from "@/hooks/useImportRecords";
 import { supabase } from "@/integrations/supabase/client";
+import { DuplicateRecord as DuplicateRecordType } from "@/types";
 
 export interface DuplicateRecord {
   importRowIndex: number;
@@ -24,13 +25,13 @@ export async function findDuplicateRecords(
   columnMappings: ColumnMapping[],
   matchingFields: string[],
   duplicateCheckIntensity: 'low' | 'medium' | 'high'
-): Promise<DuplicateRecord[]> {
+): Promise<DuplicateRecordType[]> {
   if (!importData || matchingFields.length === 0) {
     return [];
   }
 
   try {
-    const foundDuplicates: DuplicateRecord[] = [];
+    const foundDuplicates: DuplicateRecordType[] = [];
     const threshold = {
       low: 0.9,
       medium: 0.7,
@@ -122,6 +123,7 @@ export async function findDuplicateRecords(
             });
             
             foundDuplicates.push({
+              id: recordId, // Add id to match the DuplicateRecord type in types/index.ts
               importRowIndex: rowIndex,
               existingRecord: {
                 id: recordId,
@@ -129,7 +131,9 @@ export async function findDuplicateRecords(
               },
               matchingFields: matchingFields,
               matchScore: score,
+              matchFields: matchingFields, // Add matchFields to match the DuplicateRecord type in types/index.ts
               action: 'skip', // Default action
+              fields: recordData, // Add fields to match the DuplicateRecord type in types/index.ts
               record: importRecord
             });
           }
