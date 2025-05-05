@@ -1,4 +1,3 @@
-
 /**
  * Utility functions for handling duplicate records during import
  */
@@ -86,9 +85,6 @@ export async function findDuplicateRecords(
           let matchCount = 0;
           let totalFields = matchingFields.length;
           
-          // Prepare matchingFieldsData to match the required type
-          const matchingFieldsData: Record<string, {importValue: string, existingValue: string}> = {};
-          
           for (const fieldApiName of matchingFields) {
             const mapping = columnMappings.find(m => 
               m.targetField?.api_name === fieldApiName
@@ -97,12 +93,6 @@ export async function findDuplicateRecords(
             if (mapping) {
               const importValue = row[mapping.sourceColumnIndex];
               const existingValue = recordData[fieldApiName];
-              
-              // Add to matchingFieldsData object
-              matchingFieldsData[fieldApiName] = {
-                importValue: importValue || '',
-                existingValue: existingValue || ''
-              };
               
               if (importValue && existingValue && 
                   importValue.toLowerCase() === existingValue.toLowerCase()) {
@@ -124,16 +114,16 @@ export async function findDuplicateRecords(
             
             foundDuplicates.push({
               id: recordId,
-              recordId,
               importRowIndex: rowIndex,
-              matchScore: score,
-              matchingFields: matchingFieldsData,
-              action: 'skip',
-              record: importRecord,
               existingRecord: {
                 id: recordId,
                 ...recordData
-              }
+              },
+              matchingFields: matchingFields,
+              matchScore: score,
+              fields: recordData,
+              action: 'skip',
+              record: importRecord
             });
           }
         }

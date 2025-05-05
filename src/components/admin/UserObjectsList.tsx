@@ -91,7 +91,7 @@ export function UserObjectsList({ userObjects }: UserObjectsListProps) {
                               </TableCell>
                               <TableCell>
                                 {field.is_required ? (
-                                  <Badge variant="info">Required</Badge>
+                                  <Badge className="bg-blue-400 hover:bg-blue-500">Required</Badge>
                                 ) : (
                                   <Badge variant="outline">Optional</Badge>
                                 )}

@@ -1319,13 +1319,6 @@ export type Database = {
         Args: { field_id: string; prefix?: string; format_pattern?: string }
         Returns: string
       }
-      get_auth_logs: {
-        Args: { target_user_id: string }
-        Returns: {
-          log_timestamp: number
-          event_message: string
-        }[]
-      }
       get_user_collection_membership: {
         Args: { user_uuid: string; collection_uuid: string }
         Returns: boolean
