@@ -13,6 +13,8 @@ interface AuthContextType {
   signup: (email: string, password: string) => Promise<{success: boolean, error?: string}>;
   userRole: string | null;
   isSuperAdmin: boolean;
+  favoriteColor: string | null;
+  setFavoriteColor: (color: string) => void;
 }
 
 const AuthContext = createContext<AuthContextType>({ 
@@ -23,7 +25,9 @@ const AuthContext = createContext<AuthContextType>({
   login: async () => {},
   signup: async () => ({ success: false }),
   userRole: null,
-  isSuperAdmin: false
+  isSuperAdmin: false,
+  favoriteColor: null,
+  setFavoriteColor: () => {}
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -31,19 +35,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [favoriteColor, setFavoriteColor] = useState<string | null>(null);
 
   // Fetch the user's role from the profiles table
   const fetchUserRole = async (userId: string) => {
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('role')
+        .select('role, favorite_color')
         .eq('id', userId)
         .single();
       
       if (error) {
         console.error('Error fetching user role:', error);
         return null;
+      }
+      
+      if (data?.favorite_color) {
+        setFavoriteColor(data.favorite_color);
       }
       
       return data?.role || 'admin'; // Default to 'admin' if no role is set
@@ -67,6 +76,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUserRole(role);
         } else {
           setUserRole(null);
+          setFavoriteColor(null);
         }
         
         setIsLoading(false);
@@ -170,7 +180,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       login, 
       signup, 
       userRole, 
-      isSuperAdmin 
+      isSuperAdmin,
+      favoriteColor,
+      setFavoriteColor
     }}>
       {children}
     </AuthContext.Provider>
