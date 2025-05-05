@@ -10,7 +10,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { LayoutDashboard, Settings, FileText, Box, Database, AppWindow, Share2 } from "lucide-react";
+import { LayoutDashboard, Settings, FileText, Box, Database, AppWindow, Share2, FolderOpen } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
 import { useApplications } from "@/hooks/useApplications";
@@ -24,14 +24,9 @@ const navigationItems = [
     path: "/dashboard"
   },
   {
-    title: "Object Manager",
-    icon: Database,
-    path: "/settings/object-manager"
-  },
-  {
-    title: "Applications",
-    icon: AppWindow,
-    path: "/applications"
+    title: "Collections",
+    icon: FolderOpen,
+    path: "/collections"
   },
   {
     title: "Structures",
