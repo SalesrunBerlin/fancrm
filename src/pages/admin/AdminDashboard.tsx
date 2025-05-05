@@ -55,22 +55,24 @@ export default function AdminDashboard() {
           </Card>
         </Link>
         
-        <Card className="h-full opacity-60">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" />
-              User Management
-            </CardTitle>
-            <CardDescription>
-              Manage users and roles (Coming soon)
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground">
-              View and edit user details, assign roles and manage permissions.
-            </p>
-          </CardContent>
-        </Card>
+        <Link to="/admin/users">
+          <Card className="h-full hover:bg-accent/5 transition-colors">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="h-5 w-5" />
+                User Management
+              </CardTitle>
+              <CardDescription>
+                Manage users and roles
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                View and edit user details, assign roles and monitor user activity.
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
         
         <Card className="h-full opacity-60">
           <CardHeader>

@@ -39,6 +39,8 @@ import AdminDashboard from "./pages/admin/AdminDashboard";
 import HelpContentEditor from "./pages/admin/HelpContentEditor";
 import HelpTabsManager from "./pages/admin/HelpTabsManager";
 import HelpTabContentEditor from "./pages/admin/HelpTabContentEditor";
+import UserManagementPage from "./pages/admin/UserManagementPage";
+import UserDetailPage from "./pages/admin/UserDetailPage";
 
 // Create a client
 const queryClient = new QueryClient({
@@ -96,6 +98,8 @@ function App() {
                 <Route path="/admin/help-content" element={<HelpContentEditor />} />
                 <Route path="/admin/help-tabs" element={<HelpTabsManager />} />
                 <Route path="/admin/help-content/:tabId" element={<HelpTabContentEditor />} />
+                <Route path="/admin/users" element={<UserManagementPage />} />
+                <Route path="/admin/users/:userId" element={<UserDetailPage />} />
               </Route>
             </Route>
           </Routes>

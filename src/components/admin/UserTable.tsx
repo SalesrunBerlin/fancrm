@@ -1,0 +1,81 @@
+
+import { useState } from "react";
+import { Link } from "react-router-dom";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
+import { UserSummary } from "@/pages/admin/UserManagementPage";
+import { ThemedButton } from "@/components/ui/themed-button";
+import { Eye, Search } from "lucide-react";
+
+interface UserTableProps {
+  users: UserSummary[];
+}
+
+export function UserTable({ users }: UserTableProps) {
+  const [searchTerm, setSearchTerm] = useState("");
+  
+  const filteredUsers = users.filter(user => 
+    user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (user.profile?.first_name?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
+    (user.profile?.last_name?.toLowerCase() || "").includes(searchTerm.toLowerCase())
+  );
+
+  return (
+    <div className="space-y-4">
+      <div className="relative">
+        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Search users..."
+          className="pl-8"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+        />
+      </div>
+      
+      <div className="rounded-md border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Name</TableHead>
+              <TableHead>Email</TableHead>
+              <TableHead>Role</TableHead>
+              <TableHead>Registered</TableHead>
+              <TableHead>Objects</TableHead>
+              <TableHead>Records</TableHead>
+              <TableHead>Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filteredUsers.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={7} className="text-center py-4 text-muted-foreground">
+                  No users found matching your search
+                </TableCell>
+              </TableRow>
+            ) : (
+              filteredUsers.map((user) => (
+                <TableRow key={user.id}>
+                  <TableCell>
+                    {user.profile?.first_name || ''} {user.profile?.last_name || ''}
+                  </TableCell>
+                  <TableCell>{user.email}</TableCell>
+                  <TableCell>{user.profile?.role || 'user'}</TableCell>
+                  <TableCell>{new Date(user.created_at).toLocaleDateString()}</TableCell>
+                  <TableCell>{user.stats?.objectCount}</TableCell>
+                  <TableCell>{user.stats?.recordCount}</TableCell>
+                  <TableCell>
+                    <ThemedButton size="sm" variant="outline" asChild>
+                      <Link to={`/admin/users/${user.id}`}>
+                        <Eye className="h-4 w-4 mr-1" /> View
+                      </Link>
+                    </ThemedButton>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
+    </div>
+  );
+}
