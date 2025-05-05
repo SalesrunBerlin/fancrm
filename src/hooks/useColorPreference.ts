@@ -36,6 +36,7 @@ export function useColorPreference() {
         }
       } catch (error: any) {
         console.error("Error fetching color preference:", error);
+        setFavoriteColor("default");
       } finally {
         setLoading(false);
       }

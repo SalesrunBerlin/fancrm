@@ -11,6 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useColorPreference } from "@/hooks/useColorPreference";
 import { ColorPicker } from "@/components/ui/color-picker";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ThemedButton } from "@/components/ui/themed-button";
 
 export default function ProfilePage() {
   const { user } = useAuth();
@@ -124,9 +125,9 @@ export default function ProfilePage() {
                   <div className="mt-6">
                     <h4 className="text-sm font-medium mb-2">Vorschau</h4>
                     <div className="flex flex-wrap gap-2">
-                      <Button>Standard Button</Button>
-                      <Button variant="outline">Outline Button</Button>
-                      <Button variant="secondary">Secondary Button</Button>
+                      <ThemedButton>Standard Button</ThemedButton>
+                      <ThemedButton variant="outline">Outline Button</ThemedButton>
+                      <ThemedButton variant="secondary">Secondary Button</ThemedButton>
                     </div>
                   </div>
                 </div>

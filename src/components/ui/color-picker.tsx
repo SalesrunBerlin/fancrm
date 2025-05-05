@@ -1,7 +1,6 @@
 
 import React, { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
-import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Circle } from "lucide-react";
 
@@ -11,7 +10,7 @@ interface ColorPickerProps {
   className?: string;
 }
 
-// Expanded color options with at least 40 colors, matching the ActionForm component
+// Color options matching the button variants
 const colorOptions = [
   // Default button variants
   { value: "default", label: "Blue (Default)", className: "bg-primary" },
@@ -71,17 +70,11 @@ const colorOptions = [
 ];
 
 export function ColorPicker({ value, onChange, className }: ColorPickerProps) {
-  const [search, setSearch] = useState("");
   const [selectedColor, setSelectedColor] = useState(value || "default");
 
   useEffect(() => {
     setSelectedColor(value || "default");
   }, [value]);
-
-  const filteredColors = search 
-    ? colorOptions.filter(color => 
-        color.label.toLowerCase().includes(search.toLowerCase()))
-    : colorOptions;
 
   const handleColorSelect = (colorValue: string) => {
     setSelectedColor(colorValue);
@@ -117,16 +110,9 @@ export function ColorPicker({ value, onChange, className }: ColorPickerProps) {
         </div>
       </div>
 
-      <Input
-        placeholder="Search colors..."
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        className="mb-2"
-      />
-
       <ScrollArea className="h-[300px] rounded-md border p-2">
         <div className="grid grid-cols-8 gap-2">
-          {filteredColors.map((color) => (
+          {colorOptions.map((color) => (
             <button
               key={color.value}
               type="button"

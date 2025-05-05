@@ -53,8 +53,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       // Check if data exists and has the properties we need
       if (data) {
-        if ('favorite_color' in data) {
+        if ('favorite_color' in data && data.favorite_color) {
           setFavoriteColor(data.favorite_color);
+        } else {
+          setFavoriteColor("default");
         }
         
         return data?.role || 'admin'; // Default to 'admin' if no role is set
