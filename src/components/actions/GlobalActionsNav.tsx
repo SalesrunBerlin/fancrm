@@ -1,9 +1,17 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Play } from "lucide-react";
+import { ChevronDown, Play } from "lucide-react";
 import { useActions, Action, ActionColor } from "@/hooks/useActions";
 import { cn } from "@/lib/utils";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+  DropdownMenuItem
+} from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 // Map ActionColors to Tailwind classes
 const actionColorMap: Record<ActionColor, string> = {
@@ -62,7 +70,7 @@ export function GlobalActionsNav() {
   const [globalActions, setGlobalActions] = useState<Action[]>([]);
   
   // Filter for global actions (new_record type)
-  useEffect(() => {
+  useState(() => {
     if (actions) {
       const filtered = actions
         .filter(action => action.action_type === 'new_record')
@@ -80,49 +88,46 @@ export function GlobalActionsNav() {
     return null;
   }
 
-  // Split actions into rows (4 per row max)
-  const firstRow = globalActions.slice(0, 4);
-  const secondRow = globalActions.length > 4 ? globalActions.slice(4) : [];
-
   return (
     <div className="ml-4">
-      <div className="flex flex-col gap-1 max-w-[240px]">
-        <div className="flex gap-1">
-          {firstRow.map((action) => (
-            <button
-              key={action.id}
-              onClick={() => handleActionClick(action.id)}
-              className={cn(
-                "h-6 w-6 rounded-full flex items-center justify-center transition-transform hover:scale-110",
-                actionColorMap[action.color]
-              )}
-              title={action.name}
-              aria-label={action.name}
-            >
-              <Play className="h-3 w-3" />
-            </button>
-          ))}
-        </div>
-        
-        {secondRow.length > 0 && (
-          <div className="flex gap-1">
-            {secondRow.map((action) => (
-              <button
-                key={action.id}
-                onClick={() => handleActionClick(action.id)}
-                className={cn(
-                  "h-6 w-6 rounded-full flex items-center justify-center transition-transform hover:scale-110",
-                  actionColorMap[action.color]
-                )}
-                title={action.name}
-                aria-label={action.name}
-              >
-                <Play className="h-3 w-3" />
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
+      <TooltipProvider>
+        <Tooltip>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-8 w-8 p-0"
+                  aria-label="Actions"
+                >
+                  <Play className="h-5 w-5 text-primary font-bold" />
+                </Button>
+              </TooltipTrigger>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="min-w-[180px] bg-white">
+              {globalActions.map((action) => (
+                <DropdownMenuItem
+                  key={action.id}
+                  onClick={() => handleActionClick(action.id)}
+                  className="flex items-center gap-2 cursor-pointer"
+                >
+                  <span 
+                    className={cn(
+                      "h-4 w-4 rounded-full flex-shrink-0", 
+                      actionColorMap[action.color]
+                    )}
+                  />
+                  <span>{action.name}</span>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <TooltipContent side="bottom">
+            Quick Actions
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
     </div>
   );
 }
