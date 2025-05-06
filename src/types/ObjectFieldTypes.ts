@@ -1,4 +1,3 @@
-
 // Define our own Json type since it's not exported from database.ts
 export type Json = string | number | boolean | null | { [key: string]: Json } | Json[];
 
@@ -19,6 +18,40 @@ export interface ObjectFieldWithJson {
   owner_id: string;
   created_at: string;
   updated_at?: string;
+}
+
+// Add ObjectField interface to fix TypeScript errors
+export interface ObjectField {
+  id: string;
+  name: string;
+  api_name: string;
+  description?: string;
+  data_type: string;
+  is_required: boolean;
+  is_unique?: boolean;
+  is_system?: boolean;
+  default_value?: string | null;
+  options?: any | null;
+  object_type_id: string;
+  display_order: number;
+  owner_id: string;
+  created_at: string;
+  updated_at?: string;
+}
+
+// Extend ObjectRecord interface to include missing properties
+export interface ObjectRecord {
+  id: string;
+  record_id: string | null;
+  object_type_id: string;
+  created_at: string;
+  updated_at: string;
+  owner_id: string | null;
+  created_by: string | null;
+  last_modified_by: string | null;
+  field_values?: { [key: string]: any };
+  displayName?: string;
+  objectName?: string;
 }
 
 // Helper function to convert ObjectFieldWithJson to ObjectField

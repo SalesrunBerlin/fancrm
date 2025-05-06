@@ -1,33 +1,20 @@
 
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { AlertCircle, ChevronLeft, AlertTriangle, Loader2, Save, Eye, Edit, ExternalLink } from "lucide-react";
+import { AlertCircle, AlertTriangle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { toast } from "sonner";
 import { RecordDetailForm } from "@/components/records/RecordDetailForm";
-import { usePublicRecord, usePublicRelatedRecords } from "@/hooks/usePublicRecord";
+import { usePublicRecord } from "@/hooks/usePublicRecord";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
-import { Label } from "@/components/ui/label";
 import { getAlertVariantClass } from "@/patches/FixAlertVariants";
-import { Separator } from "@/components/ui/separator";
-import { ObjectField, ObjectRecord } from "@/types";
+import { PublicRecordHeader } from "./PublicRecordHeader";
+import { RelatedRecordsTab } from "./RelatedRecordsTab";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface PublicRecordViewProps {
   token: string;
   recordId: string;
-}
-
-interface PublicRecordData extends Omit<ObjectRecord, 'field_values'> {
-  displayName?: string;
-  objectName?: string;
-  fieldValues: { [key: string]: any };
 }
 
 export default function PublicRecordView({ token, recordId }: PublicRecordViewProps) {
@@ -43,7 +30,6 @@ export default function PublicRecordView({ token, recordId }: PublicRecordViewPr
   const [editedValues, setEditedValues] = useState<Record<string, any>>({});
   const [isSaving, setIsSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<string>("details");
-  const navigate = useNavigate();
 
   // Reset edit mode when record changes
   useEffect(() => {
@@ -53,8 +39,33 @@ export default function PublicRecordView({ token, recordId }: PublicRecordViewPr
 
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin" />
+      <div className="container mx-auto px-4 py-8 max-w-5xl">
+        <div className="mb-6">
+          <div className="flex items-center justify-between">
+            <Skeleton className="h-10 w-24" />
+            <Skeleton className="h-10 w-20" />
+          </div>
+          <div className="mt-4">
+            <Skeleton className="h-8 w-1/3 mb-2" />
+            <Skeleton className="h-4 w-1/4" />
+          </div>
+        </div>
+        <Skeleton className="h-12 w-full mb-6" />
+        <Card>
+          <CardHeader>
+            <Skeleton className="h-6 w-40" />
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {[1, 2, 3, 4, 5].map(i => (
+                <div className="grid gap-2" key={i}>
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-10 w-full" />
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -105,88 +116,37 @@ export default function PublicRecordView({ token, recordId }: PublicRecordViewPr
         if (error) throw error;
       }
 
-      toast.success("Record updated successfully");
+      // Reset state and refresh the data
       setEditMode(false);
       setEditedValues({});
       
-      // Refresh the page to show updated data
+      // Reload the page to show updated data
       window.location.reload();
     } catch (err: any) {
       console.error("Error updating record:", err);
-      toast.error("Failed to update record", { description: err.message });
+      // We should add toast notifications here
+      alert(`Failed to update record: ${err.message}`);
     } finally {
       setIsSaving(false);
     }
   };
 
-  const recordName = record.displayName || "Record";
-
   return (
     <div className="container mx-auto px-4 py-8 max-w-5xl">
-      <header className="mb-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center">
-            <Button variant="ghost" size="sm" onClick={handleBackClick}>
-              <ChevronLeft className="h-4 w-4 mr-1" />
-              Back
-            </Button>
-          </div>
-          
-          {allowEdit && (
-            <div>
-              {editMode ? (
-                <div className="flex space-x-2">
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => {
-                      setEditMode(false);
-                      setEditedValues({});
-                    }}
-                  >
-                    Cancel
-                  </Button>
-                  <Button 
-                    size="sm"
-                    onClick={handleSaveChanges}
-                    disabled={isSaving || Object.keys(editedValues).length === 0}
-                  >
-                    {isSaving ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Saving...
-                      </>
-                    ) : (
-                      <>
-                        <Save className="mr-2 h-4 w-4" />
-                        Save Changes
-                      </>
-                    )}
-                  </Button>
-                </div>
-              ) : (
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => setEditMode(true)}
-                >
-                  <Edit className="mr-2 h-4 w-4" />
-                  Edit
-                </Button>
-              )}
-            </div>
-          )}
-        </div>
-        
-        <div className="mt-4">
-          <h1 className="text-2xl font-bold">{recordName}</h1>
-          {record.objectName && (
-            <p className="text-muted-foreground">
-              {record.objectName}
-            </p>
-          )}
-        </div>
-      </header>
+      <PublicRecordHeader 
+        record={record}
+        allowEdit={allowEdit}
+        editMode={editMode}
+        isSaving={isSaving}
+        onBackClick={handleBackClick}
+        onEditClick={() => setEditMode(true)}
+        onCancelEdit={() => {
+          setEditMode(false);
+          setEditedValues({});
+        }}
+        onSaveChanges={handleSaveChanges}
+        hasChanges={Object.keys(editedValues).length > 0}
+      />
 
       <Alert className={`${getAlertVariantClass("default")} mb-6`}>
         <AlertTriangle className="h-4 w-4" />
@@ -213,7 +173,7 @@ export default function PublicRecordView({ token, recordId }: PublicRecordViewPr
               </CardHeader>
               <CardContent>
                 <RecordDetailForm
-                  record={record as any}
+                  record={record}
                   fields={fields}
                   onFieldChange={handleFieldChange}
                   editedValues={editedValues}
@@ -242,7 +202,7 @@ export default function PublicRecordView({ token, recordId }: PublicRecordViewPr
           </CardHeader>
           <CardContent>
             <RecordDetailForm
-              record={record as any}
+              record={record}
               fields={fields}
               onFieldChange={handleFieldChange}
               editedValues={editedValues}
@@ -251,104 +211,6 @@ export default function PublicRecordView({ token, recordId }: PublicRecordViewPr
           </CardContent>
         </Card>
       )}
-    </div>
-  );
-}
-
-interface RelatedRecordsTabProps {
-  token: string;
-  recordId: string;
-  relatedObjectTypeId: string;
-  relationshipId: string;
-  objectTypeName: string;
-}
-
-interface RelatedRecord {
-  id: string;
-  field_values?: { [key: string]: any };
-}
-
-function RelatedRecordsTab({
-  token,
-  recordId,
-  relatedObjectTypeId,
-  relationshipId,
-  objectTypeName
-}: RelatedRecordsTabProps) {
-  const { data: relatedRecords, isLoading, error } = usePublicRelatedRecords(
-    token,
-    recordId,
-    relatedObjectTypeId,
-    relationshipId
-  );
-
-  if (isLoading) {
-    return (
-      <div className="flex justify-center items-center h-32">
-        <Loader2 className="h-6 w-6 animate-spin" />
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <Alert className={`${getAlertVariantClass("destructive")} mb-4`}>
-        <AlertCircle className="h-4 w-4" />
-        <AlertDescription>
-          Failed to load related {objectTypeName} records.
-        </AlertDescription>
-      </Alert>
-    );
-  }
-
-  if (!relatedRecords || relatedRecords.length === 0) {
-    return (
-      <div className="bg-muted/30 rounded-lg p-8 text-center">
-        <p className="text-muted-foreground">No related {objectTypeName} records found.</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-4">
-      <h3 className="text-lg font-medium">Related {objectTypeName} ({relatedRecords.length})</h3>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {relatedRecords.map((record: any) => {
-          // Find a good display value for the record card
-          let displayName = record.id;
-          if (record.field_values) {
-            // Try to find a reasonable display field
-            const nameField = 
-              record.field_values.name || 
-              record.field_values.title || 
-              record.field_values.subject ||
-              record.field_values.first_name && record.field_values.last_name 
-                ? `${record.field_values.first_name} ${record.field_values.last_name}`
-                : null;
-                
-            if (nameField) displayName = nameField;
-          }
-          
-          return (
-            <Card key={record.id} className="overflow-hidden">
-              <CardHeader className="p-4">
-                <CardTitle className="text-base truncate">{displayName}</CardTitle>
-              </CardHeader>
-              <CardContent className="p-4 pt-0">
-                <div className="space-y-2">
-                  {Object.entries(record.field_values || {}).slice(0, 3).map(([field, value]) => (
-                    <div key={field} className="grid grid-cols-3 gap-1">
-                      <div className="text-sm text-muted-foreground">{field}:</div>
-                      <div className="text-sm col-span-2 truncate">{value || "-"}</div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
     </div>
   );
 }

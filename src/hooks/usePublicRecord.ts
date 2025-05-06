@@ -1,20 +1,10 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { ObjectRecord } from "@/hooks/useObjectRecords";
-import { ObjectField } from "@/hooks/useObjectTypes";
+import { ObjectField, ObjectRecord } from "@/types/ObjectFieldTypes";
 
 export interface PublicRecordAccess {
-  record?: {
-    id: string;
-    record_id: string;
-    object_type_id: string;
-    owner_id: string | null;
-    created_at: string;
-    updated_at: string;
-    fieldValues: { [key: string]: any };
-    displayName?: string;
-  };
+  record?: ObjectRecord;
   fields?: ObjectField[];
   visibleFieldNames?: string[];
   relatedObjectTypes?: {
@@ -27,7 +17,7 @@ export interface PublicRecordAccess {
   allowEdit: boolean;
 }
 
-export function usePublicRecord(token?: string, recordId?: string) {
+export function usePublicRecord(token?: string, recordId?: string): PublicRecordAccess {
   // Get the public record and its allowed fields
   const {
     data,
@@ -37,7 +27,7 @@ export function usePublicRecord(token?: string, recordId?: string) {
     queryKey: ["public-record", token, recordId],
     queryFn: async (): Promise<PublicRecordAccess> => {
       if (!token || !recordId) {
-        return { isLoading: false, error: null };
+        return { isLoading: false, error: null, allowEdit: false };
       }
 
       try {
@@ -71,10 +61,18 @@ export function usePublicRecord(token?: string, recordId?: string) {
 
         if (objectFieldsError) throw objectFieldsError;
 
-        // Filter fields to only include visible ones
-        const fields = objectFields.filter((field: ObjectField) => 
-          visibleFieldNames.includes(field.api_name)
-        );
+        // Create properly typed fields array
+        const fields: ObjectField[] = objectFields
+          .filter((field: any) => visibleFieldNames.includes(field.api_name))
+          .map((field: any) => ({
+            ...field,
+            default_value: field.default_value !== null 
+              ? typeof field.default_value === 'object' 
+                ? JSON.stringify(field.default_value) 
+                : String(field.default_value) 
+              : null,
+            options: field.options
+          }));
 
         // Get the record data
         const { data: recordData, error: recordError } = await supabase
@@ -148,13 +146,16 @@ export function usePublicRecord(token?: string, recordId?: string) {
           displayName = valuesObject[objectType.default_field_api_name] || null;
         }
 
+        // Create properly typed ObjectRecord
+        const typedRecord: ObjectRecord = {
+          ...recordData,
+          field_values: valuesObject,
+          displayName,
+          objectName: objectType?.name || 'Object'
+        };
+
         return {
-          record: {
-            ...recordData,
-            fieldValues: valuesObject,
-            displayName,
-            objectName: objectType?.name || 'Object'
-          },
+          record: typedRecord,
           fields,
           visibleFieldNames,
           relatedObjectTypes,
@@ -181,7 +182,7 @@ export function usePublicRecord(token?: string, recordId?: string) {
   };
 }
 
-// Hook to get related records for a public record
+// Hook to get related records for a public record with improved performance
 export function usePublicRelatedRecords(
   token?: string,
   recordId?: string,
@@ -224,49 +225,67 @@ export function usePublicRelatedRecords(
 
         if (relationshipError) throw relationshipError;
 
-        // Get related records based on the relationship type
-        // For now, we're assuming a simple parent-child relationship
-        const { data: relatedRecords, error: recordsError } = await supabase
-          .from("object_records")
-          .select(`
-            id, 
-            record_id, 
-            object_type_id, 
-            created_at, 
-            updated_at
-          `)
-          .eq("object_type_id", relatedObjectTypeId);
+        // Get related records and their field values in a single query
+        const { data: records, error: recordsError } = await supabase
+          .rpc("get_public_related_records", {
+            p_record_id: recordId,
+            p_related_object_type_id: relatedObjectTypeId,
+            p_relationship_id: relationshipId
+          });
 
-        if (recordsError) throw recordsError;
+        if (recordsError) {
+          console.error("Error fetching related records:", recordsError);
+          
+          // Fallback to the old approach if the RPC isn't available
+          const { data: relatedRecords, error: fallbackError } = await supabase
+            .from("object_records")
+            .select(`
+              id, 
+              record_id, 
+              object_type_id, 
+              created_at, 
+              updated_at
+            `)
+            .eq("object_type_id", relatedObjectTypeId);
 
-        // For each related record, get its field values
-        const recordsWithValues = await Promise.all(
-          relatedRecords.map(async (record: any) => {
-            const { data: fieldValues, error: fieldValuesError } = await supabase
-              .from("object_field_values")
-              .select("field_api_name, value")
-              .eq("record_id", record.id);
+          if (fallbackError) throw fallbackError;
 
-            if (fieldValuesError) throw fieldValuesError;
+          // For each related record, get its field values
+          const recordsWithValues = await Promise.all(
+            relatedRecords.map(async (record: any) => {
+              const { data: fieldValues, error: fieldValuesError } = await supabase
+                .from("object_field_values")
+                .select("field_api_name, value")
+                .eq("record_id", record.id);
 
-            const valuesObject = fieldValues.reduce((acc: any, curr: any) => {
-              acc[curr.field_api_name] = curr.value;
-              return acc;
-            }, {});
+              if (fieldValuesError) throw fieldValuesError;
 
-            return {
-              ...record,
-              fieldValues: valuesObject,
-            };
-          })
-        );
+              const valuesObject = fieldValues.reduce((acc: any, curr: any) => {
+                acc[curr.field_api_name] = curr.value;
+                return acc;
+              }, {});
 
-        return recordsWithValues as ObjectRecord[];
+              return {
+                ...record,
+                field_values: valuesObject,
+              };
+            })
+          );
+
+          return recordsWithValues as ObjectRecord[];
+        }
+
+        // Format the records from the RPC 
+        return records.map((record: any) => ({
+          ...record,
+          field_values: record.field_values || {}
+        })) as ObjectRecord[];
       } catch (error) {
         console.error("Error fetching related records:", error);
         throw error;
       }
     },
     enabled: !!token && !!recordId && !!relatedObjectTypeId && !!relationshipId,
+    staleTime: 1000 * 60 * 5, // Cache for 5 minutes
   });
 }
