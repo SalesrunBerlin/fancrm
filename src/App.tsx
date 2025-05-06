@@ -42,6 +42,7 @@ import HelpTabContentEditor from "./pages/admin/HelpTabContentEditor";
 import UserManagementPage from "./pages/admin/UserManagementPage";
 import UserDetailPage from "./pages/admin/UserDetailPage";
 import PublicActionPage from "./pages/PublicActionPage";
+import PublicRecordPage from "./pages/PublicRecordPage";
 
 // Create a client
 const queryClient = new QueryClient({
@@ -61,8 +62,9 @@ function App() {
           <Routes>
             <Route path="/auth" element={<Auth />} />
             
-            {/* Public route for accessing public actions */}
+            {/* Public routes for accessing shared content */}
             <Route path="/public-action/:token" element={<PublicActionPage />} />
+            <Route path="/public-record/:token/:recordId" element={<PublicRecordPage />} />
             
             <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
               <Route path="/" element={<Dashboard />} />

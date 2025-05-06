@@ -351,6 +351,13 @@ export type Database = {
             foreignKeyName: "collection_records_record_id_fkey"
             columns: ["record_id"]
             isOneToOne: false
+            referencedRelation: "public_accessible_records"
+            referencedColumns: ["record_id"]
+          },
+          {
+            foreignKeyName: "collection_records_record_id_fkey"
+            columns: ["record_id"]
+            isOneToOne: false
             referencedRelation: "shared_records"
             referencedColumns: ["record_id"]
           },
@@ -702,6 +709,13 @@ export type Database = {
             foreignKeyName: "object_field_values_record_id_fkey"
             columns: ["record_id"]
             isOneToOne: false
+            referencedRelation: "public_accessible_records"
+            referencedColumns: ["record_id"]
+          },
+          {
+            foreignKeyName: "object_field_values_record_id_fkey"
+            columns: ["record_id"]
+            isOneToOne: false
             referencedRelation: "shared_records"
             referencedColumns: ["record_id"]
           },
@@ -997,6 +1011,178 @@ export type Database = {
           },
         ]
       }
+      public_record_fields: {
+        Row: {
+          created_at: string
+          field_api_name: string
+          id: string
+          is_visible: boolean
+          public_record_share_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          field_api_name: string
+          id?: string
+          is_visible?: boolean
+          public_record_share_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          field_api_name?: string
+          id?: string
+          is_visible?: boolean
+          public_record_share_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "public_record_fields_public_record_share_id_fkey"
+            columns: ["public_record_share_id"]
+            isOneToOne: false
+            referencedRelation: "public_accessible_records"
+            referencedColumns: ["share_id"]
+          },
+          {
+            foreignKeyName: "public_record_fields_public_record_share_id_fkey"
+            columns: ["public_record_share_id"]
+            isOneToOne: false
+            referencedRelation: "public_record_shares"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      public_record_related_objects: {
+        Row: {
+          created_at: string
+          id: string
+          is_visible: boolean
+          public_record_share_id: string
+          related_object_type_id: string
+          relationship_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_visible?: boolean
+          public_record_share_id: string
+          related_object_type_id: string
+          relationship_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_visible?: boolean
+          public_record_share_id?: string
+          related_object_type_id?: string
+          relationship_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "public_record_related_objects_public_record_share_id_fkey"
+            columns: ["public_record_share_id"]
+            isOneToOne: false
+            referencedRelation: "public_accessible_records"
+            referencedColumns: ["share_id"]
+          },
+          {
+            foreignKeyName: "public_record_related_objects_public_record_share_id_fkey"
+            columns: ["public_record_share_id"]
+            isOneToOne: false
+            referencedRelation: "public_record_shares"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "public_record_related_objects_related_object_type_id_fkey"
+            columns: ["related_object_type_id"]
+            isOneToOne: false
+            referencedRelation: "object_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "public_record_related_objects_relationship_id_fkey"
+            columns: ["relationship_id"]
+            isOneToOne: false
+            referencedRelation: "object_relationships"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      public_record_shares: {
+        Row: {
+          allow_edit: boolean
+          created_at: string
+          created_by: string | null
+          expires_at: string | null
+          id: string
+          is_active: boolean
+          name: string | null
+          object_type_id: string
+          record_id: string
+          token: string
+          updated_at: string
+        }
+        Insert: {
+          allow_edit?: boolean
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string | null
+          object_type_id: string
+          record_id: string
+          token: string
+          updated_at?: string
+        }
+        Update: {
+          allow_edit?: boolean
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string | null
+          object_type_id?: string
+          record_id?: string
+          token?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "public_record_shares_object_type_id_fkey"
+            columns: ["object_type_id"]
+            isOneToOne: false
+            referencedRelation: "object_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "public_record_shares_record_id_fkey"
+            columns: ["record_id"]
+            isOneToOne: false
+            referencedRelation: "object_records"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "public_record_shares_record_id_fkey"
+            columns: ["record_id"]
+            isOneToOne: false
+            referencedRelation: "public_accessible_records"
+            referencedColumns: ["record_id"]
+          },
+          {
+            foreignKeyName: "public_record_shares_record_id_fkey"
+            columns: ["record_id"]
+            isOneToOne: false
+            referencedRelation: "shared_records"
+            referencedColumns: ["record_id"]
+          },
+        ]
+      }
       record_field_values: {
         Row: {
           created_at: string
@@ -1043,6 +1229,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "object_records"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "record_field_values_record_id_fkey"
+            columns: ["record_id"]
+            isOneToOne: false
+            referencedRelation: "public_accessible_records"
+            referencedColumns: ["record_id"]
           },
           {
             foreignKeyName: "record_field_values_record_id_fkey"
@@ -1144,6 +1337,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "object_records"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "record_shares_record_id_fkey"
+            columns: ["record_id"]
+            isOneToOne: false
+            referencedRelation: "public_accessible_records"
+            referencedColumns: ["record_id"]
           },
           {
             foreignKeyName: "record_shares_record_id_fkey"
@@ -1284,6 +1484,13 @@ export type Database = {
             foreignKeyName: "collection_records_record_id_fkey"
             columns: ["record_id"]
             isOneToOne: false
+            referencedRelation: "public_accessible_records"
+            referencedColumns: ["record_id"]
+          },
+          {
+            foreignKeyName: "collection_records_record_id_fkey"
+            columns: ["record_id"]
+            isOneToOne: false
             referencedRelation: "shared_records"
             referencedColumns: ["record_id"]
           },
@@ -1308,6 +1515,26 @@ export type Database = {
           {
             foreignKeyName: "object_fields_object_type_id_fkey"
             columns: ["from_object_id"]
+            isOneToOne: false
+            referencedRelation: "object_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      public_accessible_records: {
+        Row: {
+          allow_edit: boolean | null
+          expires_at: string | null
+          is_active: boolean | null
+          object_type_id: string | null
+          record_id: string | null
+          share_id: string | null
+          token: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "object_records_object_type_id_fkey"
+            columns: ["object_type_id"]
             isOneToOne: false
             referencedRelation: "object_types"
             referencedColumns: ["id"]
@@ -1370,6 +1597,19 @@ export type Database = {
           event_message: string
         }[]
       }
+      get_public_visible_fields: {
+        Args: { p_token: string; p_record_id: string }
+        Returns: {
+          field_api_name: string
+        }[]
+      }
+      get_public_visible_related_objects: {
+        Args: { p_token: string; p_record_id: string }
+        Returns: {
+          related_object_type_id: string
+          relationship_id: string
+        }[]
+      }
       get_user_collection_membership: {
         Args: { user_uuid: string; collection_uuid: string }
         Returns: boolean
@@ -1392,6 +1632,10 @@ export type Database = {
       initialize_standard_objects: {
         Args: Record<PropertyKey, never>
         Returns: undefined
+      }
+      is_record_publicly_accessible: {
+        Args: { p_token: string; p_record_id: string }
+        Returns: boolean
       }
       refresh_published_objects_view: {
         Args: Record<PropertyKey, never>

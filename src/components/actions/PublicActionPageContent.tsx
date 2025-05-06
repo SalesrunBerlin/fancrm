@@ -7,6 +7,8 @@ import { CreateRecordForm } from "@/components/actions/CreateRecordForm";
 import { Action } from "@/hooks/useActions";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useObjectFields } from "@/hooks/useObjectFields";
+import { useActionFields } from "@/hooks/useActionFields";
 
 interface PublicActionPageContentProps {
   action: Action;
@@ -15,6 +17,8 @@ interface PublicActionPageContentProps {
 export function PublicActionPageContent({ action }: PublicActionPageContentProps) {
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
+  const { fields: objectFields } = useObjectFields(action.target_object_id);
+  const { fields: actionFields } = useActionFields(action.id);
 
   const handleSubmit = async (formData: any) => {
     try {
@@ -87,8 +91,13 @@ export function PublicActionPageContent({ action }: PublicActionPageContentProps
     return (
       <div className="space-y-4">
         <CreateRecordForm 
-          objectTypeId={action.target_object_id} 
-          onSubmit={handleSubmit}
+          objectTypeId={action.target_object_id}
+          objectFields={objectFields || []}
+          actionFields={actionFields || []}
+          onSuccess={() => {
+            setSuccess(true);
+            setTimeout(() => setSuccess(false), 5000);
+          }}
         />
       </div>
     );

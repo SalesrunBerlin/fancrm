@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
@@ -15,6 +16,7 @@ import { RelatedRecordsList } from "@/components/records/RelatedRecordsList";
 import { LookupValueDisplay } from "@/components/records/LookupValueDisplay";
 import { ObjectActionsSection } from "@/components/actions/ObjectActionsSection";
 import { RecordDetailForm } from "@/components/records/RecordDetailForm";
+import { RecordPublicShareButton } from "@/components/records/RecordPublicShareButton";
 
 export default function ObjectRecordDetail() {
   const navigate = useNavigate();
@@ -102,6 +104,15 @@ export default function ObjectRecordDetail() {
         title={recordName}
         actions={
           <div className="flex flex-wrap gap-2">
+            {/* Add Public Sharing Button */}
+            {recordId && objectTypeId && (
+              <RecordPublicShareButton
+                recordId={recordId}
+                objectTypeId={objectTypeId}
+                recordName={recordName}
+              />
+            )}
+            
             <Button 
               variant={starModeActive ? "secondary" : "outline"}
               onClick={toggleStarMode}
@@ -233,9 +244,9 @@ export default function ObjectRecordDetail() {
       <DeleteDialog
         open={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}
-        onConfirm={handleDelete}
         title={`Delete ${objectType.name}`}
         description={`Are you sure you want to delete this ${objectType.name.toLowerCase()}? This action cannot be undone.`}
+        onConfirm={handleDelete}
       />
     </div>
   );
