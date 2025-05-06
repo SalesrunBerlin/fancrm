@@ -7,6 +7,7 @@ import { UserProfileMenu } from "./UserProfileMenu";
 import { CommandSearch } from "@/components/search/CommandSearch";
 import { NavigationToggle } from "./NavigationToggle";
 import { useLocation, useNavigate } from "react-router-dom";
+import { GlobalActionsNav } from "@/components/actions/GlobalActionsNav";
 
 interface HeaderProps extends React.HTMLAttributes<HTMLElement> {}
 
@@ -51,6 +52,8 @@ export function Header({ className }: HeaderProps) {
             <ArrowLeft className="h-5 w-5" />
           </Button>
         )}
+
+        <GlobalActionsNav />
       </div>
       
       <div className="flex-1 flex justify-end items-center">
