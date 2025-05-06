@@ -39,7 +39,11 @@ export function useReports() {
       updated_at: new Date().toISOString()
     };
     
-    setReports((prev: ReportDefinition[]) => [newReport, ...prev]);
+    setReports((prev) => {
+      const updatedReports = [newReport, ...prev];
+      return updatedReports;
+    });
+    
     toast.success("Report created", {
       description: `"${name}" has been created successfully`
     });
@@ -48,8 +52,8 @@ export function useReports() {
   };
   
   const updateReport = (reportId: string, updates: Partial<Omit<ReportDefinition, "id" | "created_at">>) => {
-    setReports((prev: ReportDefinition[]) => 
-      prev.map(report => 
+    setReports((prev) => {
+      const updatedReports = prev.map(report => 
         report.id === reportId 
           ? { 
               ...report, 
@@ -57,8 +61,9 @@ export function useReports() {
               updated_at: new Date().toISOString() 
             } 
           : report
-      )
-    );
+      );
+      return updatedReports;
+    });
     
     toast.success("Report updated", {
       description: `Changes have been saved successfully`
@@ -68,7 +73,11 @@ export function useReports() {
   const deleteReport = (reportId: string) => {
     const reportToDelete = getReportById(reportId);
     if (reportToDelete) {
-      setReports((prev: ReportDefinition[]) => prev.filter(report => report.id !== reportId));
+      setReports((prev) => {
+        const updatedReports = prev.filter(report => report.id !== reportId);
+        return updatedReports;
+      });
+      
       toast.success("Report deleted", {
         description: `"${reportToDelete.name}" has been deleted`
       });
@@ -90,7 +99,11 @@ export function useReports() {
         updated_at: new Date().toISOString()
       };
       
-      setReports((prev: ReportDefinition[]) => [newReport, ...prev]);
+      setReports((prev) => {
+        const updatedReports = [newReport, ...prev];
+        return updatedReports;
+      });
+      
       toast.success("Report duplicated", {
         description: `Copy of "${reportToCopy.name}" has been created`
       });
@@ -115,4 +128,3 @@ export function useReports() {
     updateLastViewedReport
   };
 }
-

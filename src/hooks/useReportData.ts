@@ -9,13 +9,13 @@ import { useObjectRelationships } from "@/hooks/useObjectRelationships";
 export function useReportData(report: ReportDefinition) {
   const { objectTypes } = useObjectTypes();
   
-  // Fetch records for each object in the report
-  const objectDataQueries = report.objectIds.map(objectTypeId => {
+  // Fetch records for each object in the report - safely handle undefined objectIds
+  const objectDataQueries = (report.objectIds || []).map(objectTypeId => {
     const { records, isLoading, error } = useObjectRecords(
       objectTypeId, 
       report.filters.filter(f => 
         // Filter by fields in this object
-        report.selectedFields
+        (report.selectedFields || [])
           .filter(sf => sf.objectTypeId === objectTypeId)
           .some(sf => sf.fieldApiName === f.fieldApiName)
       )
@@ -26,17 +26,17 @@ export function useReportData(report: ReportDefinition) {
     
     return {
       objectTypeId,
-      records,
-      fields,
+      records: records || [],
+      fields: fields || [],
       isLoading,
       error
     };
   });
   
   // Fetch relationships to understand connections between objects
-  const relationshipsQueries = report.objectIds.map(objectTypeId => {
+  const relationshipsQueries = (report.objectIds || []).map(objectTypeId => {
     const { relationships } = useObjectRelationships(objectTypeId);
-    return { objectTypeId, relationships };
+    return { objectTypeId, relationships: relationships || [] };
   });
   
   // Process and join data
@@ -54,6 +54,11 @@ export function useReportData(report: ReportDefinition) {
         throw new Error(`Error fetching data: ${errors[0].error}`);
       }
       
+      // Safety check for no objects
+      if (!report.objectIds || report.objectIds.length === 0) {
+        return { columns: [], rows: [], totalCount: 0 };
+      }
+      
       // Get object names for better display
       const objectNames = objectTypes?.reduce((acc, obj) => {
         acc[obj.id] = obj.name;
@@ -61,9 +66,14 @@ export function useReportData(report: ReportDefinition) {
       }, {} as Record<string, string>) || {};
       
       // Prepare columns based on selected fields
-      const visibleFields = report.selectedFields
+      const visibleFields = (report.selectedFields || [])
         .filter(f => f.isVisible)
         .sort((a, b) => a.order - b.order);
+      
+      // Safety check for no visible fields
+      if (visibleFields.length === 0) {
+        return { columns: [], rows: [], totalCount: 0 };
+      }
       
       const columns = visibleFields.map(field => {
         // Find field details for proper display name
@@ -81,8 +91,13 @@ export function useReportData(report: ReportDefinition) {
       if (report.objectIds.length === 1) {
         const primaryObjectData = objectDataQueries[0];
         
+        // Handle case where records might be undefined
+        if (!primaryObjectData || !primaryObjectData.records) {
+          return { columns: columns.map(c => c.key), rows: [], totalCount: 0 };
+        }
+        
         // Format rows based on selected fields
-        const rows = primaryObjectData.records?.map(record => {
+        const rows = primaryObjectData.records.map(record => {
           const row: Record<string, any> = { id: record.id };
           
           visibleFields.forEach(field => {
@@ -97,7 +112,7 @@ export function useReportData(report: ReportDefinition) {
           });
           
           return row;
-        }) || [];
+        });
         
         return {
           columns: columns.map(c => c.key),
@@ -107,23 +122,15 @@ export function useReportData(report: ReportDefinition) {
         };
       }
       
-      // For multi-object reports, relationships need to be considered
-      // This is a simplified implementation; real-world joins would be more complex
-      
-      // Start with primary object data
-      const primaryObjectData = objectDataQueries[0];
-      const rows: Record<string, any>[] = [];
-      
-      // This is a placeholder for more complex joining logic
-      // In a real implementation, we would do proper joins based on relationships
+      // For multi-object reports - safety implementation
       return {
         columns: columns.map(c => c.key),
         columnDefs: columns,
-        rows,
-        totalCount: rows.length
+        rows: [],
+        totalCount: 0
       };
     },
-    enabled: report.objectIds.length > 0 && !objectDataQueries.some(q => q.isLoading),
+    enabled: report && report.objectIds && report.objectIds.length > 0 && !objectDataQueries.some(q => q.isLoading),
   });
   
   return {

@@ -1,24 +1,15 @@
 
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Search, Edit, Copy, Trash, Eye } from "lucide-react";
-import { Input } from "@/components/ui/input";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { MoreVertical, Edit, Trash, Copy } from "lucide-react";
 import { ReportDefinition } from "@/types/report";
-import { useReports } from "@/hooks/useReports";
 import { useNavigate } from "react-router-dom";
-import { useObjectTypes } from "@/hooks/useObjectTypes";
-import { 
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { useReports } from "@/hooks/useReports";
+import { format } from "date-fns";
 
 interface SavedReportsListProps {
   reports: ReportDefinition[];
@@ -27,137 +18,106 @@ interface SavedReportsListProps {
 
 export function SavedReportsList({ reports, onEdit }: SavedReportsListProps) {
   const navigate = useNavigate();
-  const { deleteReport, duplicateReport } = useReports();
-  const { objectTypes } = useObjectTypes();
-  
-  const [searchTerm, setSearchTerm] = useState("");
+  const { deleteReport, duplicateReport, updateLastViewedReport } = useReports();
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [reportToDelete, setReportToDelete] = useState<string | null>(null);
   
-  // Filter reports by search term
-  const filteredReports = searchTerm
-    ? reports.filter(report => 
-        report.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        report.description?.toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    : reports;
+  // Safety check to ensure reports is an array
+  const safeReports = Array.isArray(reports) ? reports : [];
   
-  // Get object names for each report
-  const getObjectNames = (objectIds: string[]) => {
-    return objectIds
-      .map(id => objectTypes?.find(obj => obj.id === id)?.name || "Unknown Object")
-      .join(", ");
-  };
-  
-  // Format date for display
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString(undefined, {
-      year: 'numeric', 
-      month: 'short', 
-      day: 'numeric'
-    });
-  };
-  
-  const handleView = (reportId: string) => {
+  const handleViewReport = (reportId: string) => {
+    updateLastViewedReport(reportId);
     navigate(`/reports/${reportId}`);
+  };
+  
+  const handleDeleteClick = (reportId: string) => {
+    setReportToDelete(reportId);
+    setDeleteDialogOpen(true);
+  };
+  
+  const confirmDelete = () => {
+    if (reportToDelete) {
+      deleteReport(reportToDelete);
+      setDeleteDialogOpen(false);
+      setReportToDelete(null);
+    }
   };
   
   const handleDuplicate = (reportId: string) => {
     const newReport = duplicateReport(reportId);
     if (newReport) {
+      updateLastViewedReport(newReport.id);
       navigate(`/reports/${newReport.id}`);
     }
   };
   
-  const confirmDelete = (reportId: string) => {
-    setReportToDelete(reportId);
-  };
+  if (safeReports.length === 0) {
+    return null;
+  }
   
-  const handleDelete = () => {
-    if (reportToDelete) {
-      deleteReport(reportToDelete);
-      setReportToDelete(null);
-    }
-  };
-
   return (
-    <div className="space-y-4">
-      <div className="flex items-center space-x-2">
-        <div className="relative flex-1">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search reports..."
-            className="pl-8"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
-      </div>
-      
+    <>
       <Card>
         <CardContent className="p-0">
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Report Name</TableHead>
-                <TableHead>Objects</TableHead>
-                <TableHead>Last Updated</TableHead>
-                <TableHead className="w-32">Actions</TableHead>
+                <TableHead>Description</TableHead>
+                <TableHead>Last Modified</TableHead>
+                <TableHead className="w-[100px]">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredReports.map(report => (
+              {safeReports.map(report => (
                 <TableRow key={report.id}>
-                  <TableCell className="font-medium">
-                    {report.name}
-                    {report.description && (
-                      <p className="text-xs text-muted-foreground mt-1">{report.description}</p>
-                    )}
-                  </TableCell>
-                  <TableCell>{getObjectNames(report.objectIds)}</TableCell>
-                  <TableCell>{formatDate(report.updated_at)}</TableCell>
                   <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Button variant="ghost" size="sm" onClick={() => handleView(report.id)}>
-                        <Eye className="h-4 w-4" />
-                        <span className="sr-only">View</span>
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={() => onEdit(report.id)}>
-                        <Edit className="h-4 w-4" />
-                        <span className="sr-only">Edit</span>
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={() => handleDuplicate(report.id)}>
-                        <Copy className="h-4 w-4" />
-                        <span className="sr-only">Duplicate</span>
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        className="text-red-500 hover:text-red-600"
-                        onClick={() => confirmDelete(report.id)}
-                      >
-                        <Trash className="h-4 w-4" />
-                        <span className="sr-only">Delete</span>
-                      </Button>
-                    </div>
+                    <Button variant="link" className="p-0 h-auto" onClick={() => handleViewReport(report.id)}>
+                      {report.name}
+                    </Button>
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {report.description || "—"}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {report.updated_at ? format(new Date(report.updated_at), 'MMM d, yyyy') : "—"}
+                  </TableCell>
+                  <TableCell>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <MoreVertical className="h-4 w-4" />
+                          <span className="sr-only">Actions</span>
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => onEdit(report.id)}>
+                          <Edit className="h-4 w-4 mr-2" />
+                          Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleDuplicate(report.id)}>
+                          <Copy className="h-4 w-4 mr-2" />
+                          Duplicate
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          onClick={() => handleDeleteClick(report.id)}
+                          className="text-destructive focus:text-destructive"
+                        >
+                          <Trash className="h-4 w-4 mr-2" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </TableCell>
                 </TableRow>
               ))}
-              
-              {filteredReports.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
-                    {searchTerm 
-                      ? "No reports match your search" 
-                      : "No reports found. Create your first report."}
-                  </TableCell>
-                </TableRow>
-              )}
             </TableBody>
           </Table>
         </CardContent>
       </Card>
       
-      <AlertDialog open={!!reportToDelete} onOpenChange={() => setReportToDelete(null)}>
+      {/* Delete confirmation dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Report</AlertDialogTitle>
@@ -167,12 +127,12 @@ export function SavedReportsList({ reports, onEdit }: SavedReportsListProps) {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction className="bg-red-600 hover:bg-red-700" onClick={handleDelete}>
+            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </>
   );
 }
