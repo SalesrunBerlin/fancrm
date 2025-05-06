@@ -14,6 +14,7 @@ import { useReports } from "@/hooks/useReports";
 import { useNavigate } from "react-router-dom";
 import { Save, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
+import { ReportDefinition } from "@/types/report";
 
 interface ReportBuilderProps {
   reportId?: string | null;
@@ -31,20 +32,26 @@ export function ReportBuilder({ reportId, onClose }: ReportBuilderProps) {
   const [selectedFields, setSelectedFields] = useState<any[]>([]);
   const [filters, setFilters] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState("info");
+  const [originalReport, setOriginalReport] = useState<ReportDefinition | null>(null);
   
   // Load existing report data if editing
   useEffect(() => {
     if (reportId) {
       const report = getReportById(reportId);
       if (report) {
+        console.log("Loading existing report for editing:", report);
         setName(report.name);
         setDescription(report.description || '');
-        setSelectedObjects(report.objectIds);
-        setSelectedFields(report.selectedFields);
-        setFilters(report.filters);
+        setSelectedObjects(report.objectIds || []);
+        setSelectedFields(report.selectedFields || []);
+        setFilters(report.filters || []);
+        setOriginalReport(report);
+      } else {
+        toast.error(`Could not find report with ID ${reportId}`);
+        navigate('/reports');
       }
     }
-  }, [reportId, getReportById]);
+  }, [reportId, getReportById, navigate]);
   
   const handleSave = () => {
     if (!name.trim()) {
@@ -64,29 +71,44 @@ export function ReportBuilder({ reportId, onClose }: ReportBuilderProps) {
       return;
     }
     
-    if (reportId) {
-      // Update existing report
-      updateReport(reportId, {
-        name,
-        description,
-        objectIds: selectedObjects,
-        selectedFields,
-        filters
-      });
-      navigate(`/reports/${reportId}`);
-    } else {
-      // Create new report
-      const newReport = createReport(name, selectedObjects[0], description);
-      updateReport(newReport.id, {
-        objectIds: selectedObjects,
-        selectedFields,
-        filters
-      });
-      navigate(`/reports/${newReport.id}`);
+    try {
+      if (reportId && originalReport) {
+        // Update existing report
+        console.log("Updating existing report:", reportId);
+        updateReport(reportId, {
+          name,
+          description,
+          objectIds: selectedObjects,
+          selectedFields,
+          filters
+        });
+        toast.success("Report updated successfully");
+        navigate(`/reports/${reportId}`);
+      } else {
+        // Create new report
+        console.log("Creating new report with first object:", selectedObjects[0]);
+        const newReport = createReport(name, selectedObjects[0], description);
+        
+        // Update with complete data (all selected objects, fields, filters)
+        updateReport(newReport.id, {
+          objectIds: selectedObjects,
+          selectedFields,
+          filters
+        });
+        
+        toast.success("New report created successfully");
+        navigate(`/reports/${newReport.id}`);
+      }
+      
+      onClose();
+    } catch (error) {
+      console.error("Error saving report:", error);
+      toast.error("Failed to save report");
     }
   };
   
   const handleObjectsChange = (objectIds: string[]) => {
+    console.log("Selected objects changed:", objectIds);
     setSelectedObjects(objectIds);
     
     // If objects change, we need to update selected fields

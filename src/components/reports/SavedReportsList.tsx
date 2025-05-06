@@ -26,6 +26,7 @@ export function SavedReportsList({ reports, onEdit }: SavedReportsListProps) {
   const safeReports = Array.isArray(reports) ? reports : [];
   
   const handleViewReport = (reportId: string) => {
+    console.log("Viewing report:", reportId);
     updateLastViewedReport(reportId);
     navigate(`/reports/${reportId}`);
   };
@@ -46,6 +47,7 @@ export function SavedReportsList({ reports, onEdit }: SavedReportsListProps) {
   const handleDuplicate = (reportId: string) => {
     const newReport = duplicateReport(reportId);
     if (newReport) {
+      console.log("Duplicated report:", newReport);
       updateLastViewedReport(newReport.id);
       navigate(`/reports/${newReport.id}`);
     }

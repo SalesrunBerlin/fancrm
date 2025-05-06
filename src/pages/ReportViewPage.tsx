@@ -8,6 +8,7 @@ import { ReportDisplay } from "@/components/reports/ReportDisplay";
 import { useState, useEffect } from "react";
 import { ReportBuilder } from "@/components/reports/ReportBuilder";
 import { Card } from "@/components/ui/card";
+import { toast } from "sonner";
 
 export default function ReportViewPage() {
   const { reportId } = useParams<{ reportId: string }>();
@@ -21,17 +22,26 @@ export default function ReportViewPage() {
   useEffect(() => {
     if (reportId) {
       console.log(`Loading report with ID: ${reportId}`);
-      const loadedReport = getReportById(reportId);
-      
-      if (loadedReport) {
-        console.log("Found report:", loadedReport);
-        setReport(loadedReport);
-        updateLastViewedReport(reportId);
-      } else {
-        console.error("Report not found:", reportId);
+      try {
+        const loadedReport = getReportById(reportId);
+        
+        if (loadedReport) {
+          console.log("Found report:", loadedReport);
+          setReport(loadedReport);
+          
+          // Track that this report was viewed
+          updateLastViewedReport(reportId);
+          toast.success(`Report "${loadedReport.name}" loaded successfully`);
+        } else {
+          console.error("Report not found:", reportId);
+          toast.error(`Report with ID ${reportId} not found`);
+        }
+      } catch (error) {
+        console.error("Error loading report:", error);
+        toast.error("Failed to load report");
+      } finally {
+        setIsLoading(false);
       }
-      
-      setIsLoading(false);
     }
   }, [reportId, getReportById, updateLastViewedReport]);
   
@@ -64,7 +74,8 @@ export default function ReportViewPage() {
   }
   
   const handleExportCSV = () => {
-    // Export functionality will be implemented in ReportDisplay component
+    // Implement export functionality
+    toast.info("Export CSV functionality will be implemented soon");
   };
   
   const handleEdit = () => {
@@ -73,6 +84,11 @@ export default function ReportViewPage() {
   
   const handleCloseEdit = () => {
     setIsEditing(false);
+    // Reload the report after editing to get latest changes
+    if (reportId) {
+      const refreshedReport = getReportById(reportId);
+      setReport(refreshedReport);
+    }
   };
   
   return (

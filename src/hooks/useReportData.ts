@@ -5,6 +5,7 @@ import { useObjectTypes } from "@/hooks/useObjectTypes";
 import { useObjectFields } from "@/hooks/useObjectFields";
 import { useObjectRecords } from "@/hooks/useObjectRecords";
 import { useObjectRelationships } from "@/hooks/useObjectRelationships";
+import { useMemo } from "react";
 
 export function useReportData(report: ReportDefinition) {
   const { objectTypes } = useObjectTypes();
@@ -18,16 +19,23 @@ export function useReportData(report: ReportDefinition) {
     };
   }
   
-  // Fetch records for each object in the report - safely handle undefined objectIds
-  const objectDataQueries = (report.objectIds || []).map(objectTypeId => {
+  // Memoize objectIds to prevent unnecessary re-fetching
+  const objectIds = useMemo(() => report.objectIds || [], [report.id]);
+  const filters = useMemo(() => report.filters || [], [report.id, JSON.stringify(report.filters)]);
+  const selectedFields = useMemo(() => report.selectedFields || [], [report.id, JSON.stringify(report.selectedFields)]);
+  
+  // Fetch records for each object in the report with memoization
+  const objectDataQueries = useMemo(() => objectIds.map(objectTypeId => {
+    // Filter by fields in this object
+    const objectFilters = filters.filter(f => 
+      selectedFields
+        .filter(sf => sf.objectTypeId === objectTypeId)
+        .some(sf => sf.fieldApiName === f.fieldApiName)
+    );
+    
     const { records, isLoading, error } = useObjectRecords(
       objectTypeId, 
-      report.filters.filter(f => 
-        // Filter by fields in this object
-        (report.selectedFields || [])
-          .filter(sf => sf.objectTypeId === objectTypeId)
-          .some(sf => sf.fieldApiName === f.fieldApiName)
-      )
+      objectFilters
     );
     
     // Get fields for this object
@@ -40,19 +48,19 @@ export function useReportData(report: ReportDefinition) {
       isLoading,
       error
     };
-  });
+  }), [objectIds, JSON.stringify(filters), JSON.stringify(selectedFields)]);
   
-  // Fetch relationships to understand connections between objects
-  const relationshipsQueries = (report.objectIds || []).map(objectTypeId => {
+  // Fetch relationships with memoization
+  const relationshipsQueries = useMemo(() => objectIds.map(objectTypeId => {
     const { relationships } = useObjectRelationships(objectTypeId);
     return { objectTypeId, relationships: relationships || [] };
-  });
+  }), [objectIds]);
   
   // Process and join data
   const result = useQuery({
-    queryKey: ["report-data", report.id, report.objectIds, report.filters, report.selectedFields],
+    queryKey: ["report-data", report.id, objectIds, JSON.stringify(filters), JSON.stringify(selectedFields)],
     queryFn: async () => {
-      console.log("Processing report data for:", report.name);
+      console.log("Processing report data for:", report.name, "ID:", report.id);
       
       // Check if data is still loading
       if (objectDataQueries.some(q => q.isLoading)) {
@@ -68,7 +76,7 @@ export function useReportData(report: ReportDefinition) {
       }
       
       // Safety check for no objects
-      if (!report.objectIds || report.objectIds.length === 0) {
+      if (!objectIds.length) {
         console.warn("No object IDs in report");
         return { columns: [], rows: [], totalCount: 0 };
       }
@@ -80,7 +88,7 @@ export function useReportData(report: ReportDefinition) {
       }, {} as Record<string, string>) || {};
       
       // Prepare columns based on selected fields
-      const visibleFields = (report.selectedFields || [])
+      const visibleFields = selectedFields
         .filter(f => f.isVisible)
         .sort((a, b) => a.order - b.order);
       
@@ -107,7 +115,7 @@ export function useReportData(report: ReportDefinition) {
       console.log("Column definitions:", columns);
       
       // For single-object reports, just return the data
-      if (report.objectIds.length === 1) {
+      if (objectIds.length === 1) {
         const primaryObjectData = objectDataQueries[0];
         
         // Handle case where records might be undefined
@@ -157,7 +165,9 @@ export function useReportData(report: ReportDefinition) {
         totalCount: 0
       };
     },
-    enabled: !!report && !!report.objectIds && report.objectIds.length > 0 && !objectDataQueries.some(q => q.isLoading),
+    enabled: !!report && !!objectIds.length && !objectDataQueries.some(q => q.isLoading),
+    staleTime: 30000, // Cache data for 30 seconds to prevent constant refetching
+    refetchOnWindowFocus: false, // Don't refetch when window regains focus
   });
   
   return {

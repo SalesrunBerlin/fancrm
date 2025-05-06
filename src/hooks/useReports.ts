@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useCallback, useMemo } from "react";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { ReportDefinition, ReportField } from "@/types/report";
 import { FilterCondition } from "@/hooks/useObjectRecords";
@@ -17,25 +17,29 @@ const getDefaultFields = (objectTypeId: string): ReportField[] => {
 };
 
 export function useReports() {
-  const [reports, setReports] = useLocalStorage<ReportDefinition[]>("saved-reports", []);
+  // Use storage key with a version to enable future migrations if needed
+  const [reports, setReports] = useLocalStorage<ReportDefinition[]>("reports-v1", []);
   const [lastViewedReport, setLastViewedReport] = useLocalStorage<string | null>(
-    "last-viewed-report", 
+    "last-viewed-report-v1", 
     null
   );
   
   // Log state for debugging
-  useEffect(() => {
-    console.log("Reports from localStorage:", reports);
+  useMemo(() => {
+    console.log("[useReports] Saved reports:", reports);
+    console.log("[useReports] Last viewed report:", lastViewedReport);
+  }, [reports, lastViewedReport]);
+  
+  // Get a report by its ID
+  const getReportById = useCallback((reportId: string) => {
+    console.log(`[useReports] Looking for report with ID: ${reportId}`, reports);
+    const report = reports.find(r => r.id === reportId);
+    console.log(`[useReports] Found report:`, report);
+    return report || null;
   }, [reports]);
   
-  const getReportById = (reportId: string) => {
-    console.log(`Looking for report with ID: ${reportId}`, reports);
-    const report = reports.find(r => r.id === reportId);
-    console.log(`Found report:`, report);
-    return report || null;
-  };
-  
-  const createReport = (name: string, objectTypeId: string, description?: string): ReportDefinition => {
+  // Create a new report
+  const createReport = useCallback((name: string, objectTypeId: string, description?: string): ReportDefinition => {
     const newReport: ReportDefinition = {
       id: crypto.randomUUID(),
       name,
@@ -48,7 +52,9 @@ export function useReports() {
     };
     
     setReports(prev => {
+      console.log("[useReports] Creating new report:", newReport);
       const updatedReports = [newReport, ...prev];
+      console.log("[useReports] Updated reports list:", updatedReports);
       return updatedReports;
     });
     
@@ -57,10 +63,12 @@ export function useReports() {
     });
     
     return newReport;
-  };
+  }, [setReports]);
   
-  const updateReport = (reportId: string, updates: Partial<Omit<ReportDefinition, "id" | "created_at">>) => {
+  // Update an existing report
+  const updateReport = useCallback((reportId: string, updates: Partial<Omit<ReportDefinition, "id" | "created_at">>) => {
     setReports(prev => {
+      console.log(`[useReports] Updating report ${reportId} with:`, updates);
       const updatedReports = prev.map(report => 
         report.id === reportId 
           ? { 
@@ -70,19 +78,23 @@ export function useReports() {
             } 
           : report
       );
+      console.log("[useReports] Updated reports list:", updatedReports);
       return updatedReports;
     });
     
     toast.success("Report updated", {
       description: `Changes have been saved successfully`
     });
-  };
+  }, [setReports]);
   
-  const deleteReport = (reportId: string) => {
+  // Delete a report
+  const deleteReport = useCallback((reportId: string) => {
     const reportToDelete = getReportById(reportId);
     if (reportToDelete) {
       setReports(prev => {
+        console.log(`[useReports] Deleting report ${reportId}`);
         const updatedReports = prev.filter(report => report.id !== reportId);
+        console.log("[useReports] Updated reports list:", updatedReports);
         return updatedReports;
       });
       
@@ -94,9 +106,10 @@ export function useReports() {
         setLastViewedReport(null);
       }
     }
-  };
+  }, [getReportById, setReports, lastViewedReport, setLastViewedReport]);
   
-  const duplicateReport = (reportId: string) => {
+  // Duplicate a report
+  const duplicateReport = useCallback((reportId: string) => {
     const reportToCopy = getReportById(reportId);
     if (reportToCopy) {
       const newReport: ReportDefinition = {
@@ -108,7 +121,9 @@ export function useReports() {
       };
       
       setReports(prev => {
+        console.log("[useReports] Duplicating report:", newReport);
         const updatedReports = [newReport, ...prev];
+        console.log("[useReports] Updated reports list:", updatedReports);
         return updatedReports;
       });
       
@@ -119,12 +134,13 @@ export function useReports() {
       return newReport;
     }
     return null;
-  };
+  }, [getReportById, setReports]);
   
-  const updateLastViewedReport = (reportId: string) => {
-    console.log(`Setting last viewed report: ${reportId}`);
+  // Track which report was last viewed
+  const updateLastViewedReport = useCallback((reportId: string) => {
+    console.log(`[useReports] Setting last viewed report: ${reportId}`);
     setLastViewedReport(reportId);
-  };
+  }, [setLastViewedReport]);
   
   return {
     reports,

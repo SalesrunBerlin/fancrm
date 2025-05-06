@@ -47,34 +47,47 @@ export function ReportDisplay({ report }: ReportDisplayProps) {
     );
   }
   
+  // Ensure we properly handle the case with or without columnDefs
+  const hasColumnDefs = data.columnDefs && data.columnDefs.length > 0;
+  const columns = hasColumnDefs ? data.columnDefs : data.columns;
+  
   return (
     <Card>
       <CardContent className="p-0">
         <Table>
           <TableHeader>
             <TableRow>
-              {data.columnDefs?.map((column, index) => (
-                <TableHead key={index}>{column.header}</TableHead>
-              )) || (
+              {hasColumnDefs ? 
+                // Use columnDefs if available
+                data.columnDefs.map((column, index) => (
+                  <TableHead key={index}>{column.header}</TableHead>
+                ))
+                : 
+                // Fall back to simple columns array
                 data.columns?.map((column, index) => (
                   <TableHead key={index}>{column}</TableHead>
                 ))
-              )}
+              }
             </TableRow>
           </TableHeader>
           <TableBody>
             {data.rows.map((row, rowIndex) => (
               <TableRow key={rowIndex}>
-                {(data.columnDefs || []).map((column, colIndex) => (
-                  <TableCell key={colIndex}>
-                    {formatCellValue(row[column.key])}
-                  </TableCell>
-                ))}
-                {!data.columnDefs && data.columns?.map((column, colIndex) => (
-                  <TableCell key={colIndex}>
-                    {formatCellValue(row[column])}
-                  </TableCell>
-                ))}
+                {hasColumnDefs ? 
+                  // Use columnDefs for structured data
+                  data.columnDefs.map((column, colIndex) => (
+                    <TableCell key={colIndex}>
+                      {formatCellValue(row[column.key])}
+                    </TableCell>
+                  ))
+                  : 
+                  // Fall back to columns array
+                  data.columns?.map((column, colIndex) => (
+                    <TableCell key={colIndex}>
+                      {formatCellValue(row[column])}
+                    </TableCell>
+                  ))
+                }
               </TableRow>
             ))}
           </TableBody>
