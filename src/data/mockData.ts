@@ -1,4 +1,3 @@
-
 import { ContactType, AccountType, DealType } from "@/types";
 
 export const mockContacts: ContactType[] = [
@@ -119,7 +118,7 @@ export const mockAccounts: AccountType[] = [
     industry: "Beauty",
     employees: 15,
     createdAt: "2023-01-01",
-    ownerId: "user-1",
+    owner_id: "user-1",
     contactCount: 3,
     tags: ["Active", "VIP"]
   },
@@ -131,7 +130,7 @@ export const mockAccounts: AccountType[] = [
     industry: "Beauty",
     employees: 10,
     createdAt: "2023-01-02",
-    ownerId: "user-1",
+    owner_id: "user-1",
     contactCount: 2,
     tags: ["Active"]
   },
@@ -143,7 +142,7 @@ export const mockAccounts: AccountType[] = [
     industry: "Beauty",
     employees: 8,
     createdAt: "2023-01-03",
-    ownerId: "user-1",
+    owner_id: "user-1",
     contactCount: 1,
     tags: ["Active", "New"]
   },
@@ -155,7 +154,7 @@ export const mockAccounts: AccountType[] = [
     industry: "Wellness",
     employees: 12,
     createdAt: "2023-01-04",
-    ownerId: "user-1",
+    owner_id: "user-1",
     contactCount: 1,
     tags: ["Active"]
   },
@@ -167,7 +166,7 @@ export const mockAccounts: AccountType[] = [
     industry: "Beauty",
     employees: 6,
     createdAt: "2023-01-05",
-    ownerId: "user-1",
+    owner_id: "user-1",
     contactCount: 1,
     tags: ["Active"]
   },
@@ -179,7 +178,7 @@ export const mockAccounts: AccountType[] = [
     industry: "Beauty",
     employees: 4,
     createdAt: "2023-01-06",
-    ownerId: "user-1",
+    owner_id: "user-1",
     contactCount: 0,
     tags: ["Prospect"]
   },
@@ -191,7 +190,7 @@ export const mockAccounts: AccountType[] = [
     industry: "Wellness",
     employees: 7,
     createdAt: "2023-01-07",
-    ownerId: "user-1",
+    owner_id: "user-1",
     contactCount: 0,
     tags: ["Prospect", "New Lead"]
   },
@@ -203,7 +202,7 @@ export const mockAccounts: AccountType[] = [
     industry: "Beauty",
     employees: 9,
     createdAt: "2023-01-08",
-    ownerId: "user-1",
+    owner_id: "user-1",
     contactCount: 0,
     tags: ["Prospect"]
   }

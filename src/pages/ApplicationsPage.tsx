@@ -4,7 +4,6 @@ import { Link } from "react-router-dom";
 import { PageHeader } from "@/components/ui/page-header";
 import { useApplications } from "@/hooks/useApplications";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -15,6 +14,9 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { AppWindow, Plus, Settings } from "lucide-react";
 import { toast } from "sonner";
+import { ThemedButton } from "@/components/ui/themed-button";
+import { useAuth } from "@/contexts/AuthContext";
+import { ActionColor } from "@/hooks/useActions";
 
 const formSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -26,6 +28,7 @@ type FormValues = z.infer<typeof formSchema>;
 export default function ApplicationsPage() {
   const [open, setOpen] = useState(false);
   const { applications, isLoading, createApplication, setDefaultApplication } = useApplications();
+  const { favoriteColor } = useAuth();
   
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -67,9 +70,9 @@ export default function ApplicationsPage() {
         actions={
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-              <Button>
+              <ThemedButton variant={(favoriteColor as ActionColor) || "default"}>
                 <Plus className="mr-2 h-4 w-4" /> New Application
-              </Button>
+              </ThemedButton>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
@@ -110,9 +113,13 @@ export default function ApplicationsPage() {
                   />
                   
                   <DialogFooter>
-                    <Button type="submit" disabled={createApplication.isPending}>
+                    <ThemedButton 
+                      type="submit" 
+                      disabled={createApplication.isPending}
+                      variant={(favoriteColor as ActionColor) || "default"}
+                    >
                       {createApplication.isPending ? "Creating..." : "Create Application"}
-                    </Button>
+                    </ThemedButton>
                   </DialogFooter>
                 </form>
               </Form>
@@ -158,20 +165,20 @@ export default function ApplicationsPage() {
               </CardContent>
               <CardFooter className="flex gap-2">
                 <Link to={`/applications/${app.id}`} className="flex-1">
-                  <Button variant="outline" className="w-full">
+                  <ThemedButton variant="outline" className="w-full">
                     <Settings className="mr-2 h-4 w-4" />
                     Manage
-                  </Button>
+                  </ThemedButton>
                 </Link>
                 {!app.is_default && (
-                  <Button 
+                  <ThemedButton 
                     variant="outline" 
                     className="flex-1"
                     onClick={() => handleSetDefault(app.id)}
                     disabled={setDefaultApplication.isPending}
                   >
                     Set Default
-                  </Button>
+                  </ThemedButton>
                 )}
               </CardFooter>
             </Card>

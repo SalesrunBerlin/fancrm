@@ -48,7 +48,7 @@ export function ObjectTypesList() {
         <div className="flex space-x-2">
           <Dialog>
             <DialogTrigger asChild>
-              <ThemedButton variant={(favoriteColor as ActionColor) || "default"}>
+              <ThemedButton>
                 <Plus className="mr-2 h-4 w-4" />
                 Create Object
               </ThemedButton>
@@ -105,7 +105,7 @@ export function ObjectTypesList() {
             </p>
             <Dialog>
               <DialogTrigger asChild>
-                <ThemedButton variant={(favoriteColor as ActionColor) || "default"}>
+                <ThemedButton>
                   <Plus className="mr-2 h-4 w-4" />
                   Create Object
                 </ThemedButton>

@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Play, ChevronDown } from "lucide-react";
+import { Play } from "lucide-react";
 import { ActionColor } from "@/hooks/useActions";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
@@ -50,6 +50,7 @@ export function ExpandableActionButton({
             variant="ghost"
             size="sm"
             className="h-8 p-0 text-blue-500 hover:text-blue-600"
+            useUserColor={false}
           >
             <Play className="h-4 w-4" />
           </ThemedButton>
@@ -78,6 +79,7 @@ export function ExpandableActionButton({
         className="h-7 p-0"
         onClick={onExecute}
         title={actionName}
+        useUserColor={false}
       >
         <Play className="h-3.5 w-3.5" />
       </ThemedButton>
@@ -98,6 +100,7 @@ export function ExpandableActionButton({
           className="h-8 transition-all"
           onClick={handleButtonClick}
           title={actionName}
+          useUserColor={false}
         >
           <Play className="h-4 w-4" />
         </ThemedButton>
@@ -109,6 +112,7 @@ export function ExpandableActionButton({
           size="default"
           className="h-8 transition-all whitespace-nowrap"
           onClick={handleNameClick}
+          useUserColor={false}
         >
           {actionName}
         </ThemedButton>
