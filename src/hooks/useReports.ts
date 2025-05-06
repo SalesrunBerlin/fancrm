@@ -39,7 +39,7 @@ export function useReports() {
       updated_at: new Date().toISOString()
     };
     
-    setReports(prev => [newReport, ...prev]);
+    setReports((prev: ReportDefinition[]) => [newReport, ...prev]);
     toast.success("Report created", {
       description: `"${name}" has been created successfully`
     });
@@ -48,7 +48,7 @@ export function useReports() {
   };
   
   const updateReport = (reportId: string, updates: Partial<Omit<ReportDefinition, "id" | "created_at">>) => {
-    setReports(prev => 
+    setReports((prev: ReportDefinition[]) => 
       prev.map(report => 
         report.id === reportId 
           ? { 
@@ -68,7 +68,7 @@ export function useReports() {
   const deleteReport = (reportId: string) => {
     const reportToDelete = getReportById(reportId);
     if (reportToDelete) {
-      setReports(prev => prev.filter(report => report.id !== reportId));
+      setReports((prev: ReportDefinition[]) => prev.filter(report => report.id !== reportId));
       toast.success("Report deleted", {
         description: `"${reportToDelete.name}" has been deleted`
       });
@@ -90,7 +90,7 @@ export function useReports() {
         updated_at: new Date().toISOString()
       };
       
-      setReports(prev => [newReport, ...prev]);
+      setReports((prev: ReportDefinition[]) => [newReport, ...prev]);
       toast.success("Report duplicated", {
         description: `Copy of "${reportToCopy.name}" has been created`
       });
@@ -115,3 +115,4 @@ export function useReports() {
     updateLastViewedReport
   };
 }
+

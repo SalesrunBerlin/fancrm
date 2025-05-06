@@ -10,7 +10,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { LayoutDashboard, Box } from "lucide-react";
+import { LayoutDashboard, Box, BarChart3 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
 import { useApplications } from "@/hooks/useApplications";
@@ -22,6 +22,11 @@ const navigationItems = [
     title: "Dashboard",
     icon: LayoutDashboard,
     path: "/dashboard"
+  },
+  {
+    title: "Reports",
+    icon: BarChart3,
+    path: "/reports"
   }
 ];
 
