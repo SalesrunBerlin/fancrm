@@ -1374,6 +1374,13 @@ export type Database = {
         Args: { user_uuid: string; collection_uuid: string }
         Returns: boolean
       }
+      get_user_emails: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          id: string
+          email: string
+        }[]
+      }
       initialize_deal_statuses: {
         Args: Record<PropertyKey, never>
         Returns: undefined

@@ -10,6 +10,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { useUserEmails } from "@/hooks/useUserEmails";
 
 export interface UserSummary {
   id: string;
@@ -34,6 +35,7 @@ export default function UserManagementPage() {
   const navigate = useNavigate();
   const [users, setUsers] = useState<UserSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const { userEmails, isLoading: isLoadingEmails } = useUserEmails();
 
   useEffect(() => {
     // Redirect if not a Super Admin
@@ -59,16 +61,12 @@ export default function UserManagementPage() {
           return;
         }
         
-        // For email addresses, we'd normally use a secure server endpoint
-        // For demo purposes, we'll create realistic-looking mock emails
-        
         // Enrich each profile with object counts
         const enrichedUsers = await Promise.all(
           profilesData.map(async (profile) => {
-            // Generate a mock email based on name or ID
-            const mockEmail = profile.first_name && profile.last_name 
-              ? `${profile.first_name.toLowerCase()}.${profile.last_name.toLowerCase()}@example.com`
-              : `user-${profile.id.substring(0, 8)}@example.com`;
+            // Find real email from our userEmails data
+            const userEmailEntry = userEmails.find(ue => ue.id === profile.id);
+            const email = userEmailEntry?.email || `user-${profile.id.substring(0, 8)}@example.com`;
             
             // Get object counts
             const { data: objectsData, error: objectsError } = await supabase
@@ -90,7 +88,7 @@ export default function UserManagementPage() {
             
             return {
               id: profile.id,
-              email: mockEmail, // Use a realistic email format
+              email: email,
               created_at: profile.created_at,
               profile: {
                 first_name: profile.first_name,
@@ -116,10 +114,13 @@ export default function UserManagementPage() {
       }
     };
 
-    fetchUsers();
-  }, []);
+    // Only fetch users when we have emails data
+    if (!isLoadingEmails) {
+      fetchUsers();
+    }
+  }, [userEmails, isLoadingEmails]);
 
-  if (isLoading) {
+  if (isLoading || isLoadingEmails) {
     return (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />

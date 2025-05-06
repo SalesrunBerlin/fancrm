@@ -1,1 +1,35 @@
+
+# This file controls Supabase configuration, it is automatically read by Supabase
 project_id = "ujqnfwwkekgpygkybadn"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "storage", "graphql_public"]
+
+[db]
+port = 54322
+
+[studio]
+port = 54323
+
+[inbucket]
+port = 54324
+
+[auth]
+enabled = true
+site_url = "https://your-app-url.com"
+additional_redirect_urls = ["https://localhost:3000"]
+jwt_expiry = 3600
+enable_refresh_tokens = true
+
+[storage]
+enabled = true
+
+[realtime]
+enabled = true
+
+[edge_functions]
+[edge_functions.get-user-emails]
+# By default verify_jwt is true to protect functions
+verify_jwt = true

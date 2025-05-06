@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { PageHeader } from "@/components/ui/page-header";
@@ -13,6 +12,7 @@ import { UserSummary } from "./UserManagementPage";
 import { toast } from "sonner";
 import { ThemedButton } from "@/components/ui/themed-button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { useUserEmails } from "@/hooks/useUserEmails";
 
 interface ObjectField {
   id: string;
@@ -37,7 +37,8 @@ export default function UserDetailPage() {
   const [user, setUser] = useState<UserSummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loginHistory, setLoginHistory] = useState<any[]>([]);
-  const [userObjects, setUserObjects] = useState<UserObject[]>([]);
+  const [userObjects, setUserObjects] = useState<any[]>([]);
+  const { userEmails, isLoading: isLoadingEmails } = useUserEmails();
 
   useEffect(() => {
     // Redirect if not a Super Admin
@@ -48,7 +49,7 @@ export default function UserDetailPage() {
 
   useEffect(() => {
     const fetchUserDetails = async () => {
-      if (!userId) return;
+      if (!userId || isLoadingEmails) return;
       
       try {
         setIsLoading(true);
@@ -155,13 +156,13 @@ export default function UserDetailPage() {
         
         setUserObjects(processedObjects);
         
-        // Use a mock email for display purposes
-        // In a production environment, use a secure backend function to get the real email
-        const mockEmail = `user-${profileData.id.substring(0, 8)}@example.com`;
+        // Find real email from our userEmails data
+        const userEmailEntry = userEmails.find(ue => ue.id === profileData.id);
+        const email = userEmailEntry?.email || `user-${profileData.id.substring(0, 8)}@example.com`;
         
         setUser({
           id: profileData.id,
-          email: mockEmail, // Use a realistic email format instead of UUID
+          email: email,
           created_at: profileData.created_at,
           profile: {
             first_name: profileData.first_name,
@@ -185,9 +186,9 @@ export default function UserDetailPage() {
     };
 
     fetchUserDetails();
-  }, [userId]);
+  }, [userId, userEmails, isLoadingEmails]);
 
-  if (isLoading) {
+  if (isLoading || isLoadingEmails) {
     return (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
