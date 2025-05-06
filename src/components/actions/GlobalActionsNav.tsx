@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ChevronDown, Play } from "lucide-react";
 import { useActions, Action, ActionColor } from "@/hooks/useActions";
@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useAuth } from "@/contexts/AuthContext";
 
 // Map ActionColors to Tailwind classes
 const actionColorMap: Record<ActionColor, string> = {
@@ -68,9 +69,10 @@ export function GlobalActionsNav() {
   const navigate = useNavigate();
   const { actions } = useActions();
   const [globalActions, setGlobalActions] = useState<Action[]>([]);
+  const { favoriteColor } = useAuth();
   
   // Filter for global actions (new_record type)
-  useState(() => {
+  useEffect(() => {
     if (actions) {
       const filtered = actions
         .filter(action => action.action_type === 'new_record')
@@ -101,7 +103,7 @@ export function GlobalActionsNav() {
                   className="h-8 w-8 p-0"
                   aria-label="Actions"
                 >
-                  <Play className="h-5 w-5 text-primary font-bold" />
+                  <Play className={cn("h-5 w-5 font-bold", favoriteColor ? `text-${favoriteColor}` : "text-primary")} />
                 </Button>
               </TooltipTrigger>
             </DropdownMenuTrigger>

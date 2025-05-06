@@ -9,6 +9,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import { ColorPicker } from "@/components/ui/color-picker";
+import { useColorPreference } from "@/hooks/useColorPreference";
+import { ThemedButton } from "@/components/ui/themed-button";
 
 export default function ProfilePage() {
   const { user, userRole } = useAuth();
@@ -18,6 +21,7 @@ export default function ProfilePage() {
   const [lastName, setLastName] = useState("");
   const [screenName, setScreenName] = useState("");
   const [role, setRole] = useState(userRole || "user");
+  const { favoriteColor, updateColorPreference, loading: colorLoading } = useColorPreference();
 
   useEffect(() => {
     async function fetchProfileData() {
@@ -62,7 +66,8 @@ export default function ProfilePage() {
           first_name: firstName,
           last_name: lastName,
           screen_name: screenName,
-          role: role
+          role: role,
+          // Note: favorite_color is updated separately through the ColorPicker component
         })
         .eq('id', user.id);
 
@@ -81,7 +86,11 @@ export default function ProfilePage() {
     }
   };
 
-  if (isLoading) {
+  const handleColorChange = async (colorValue: string) => {
+    await updateColorPreference(colorValue);
+  };
+
+  if (isLoading || colorLoading) {
     return (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -157,6 +166,29 @@ export default function ProfilePage() {
                 <p className="text-sm text-muted-foreground">
                   Set your role to "SuperAdmin" to access all administrative features.
                 </p>
+              </div>
+
+              {/* Color Preference Section */}
+              <div className="space-y-2 pt-4 border-t">
+                <Label>Button Color Preference</Label>
+                <ColorPicker 
+                  value={favoriteColor || "default"} 
+                  onChange={handleColorChange}
+                />
+                <div className="mt-4">
+                  <p className="text-sm font-medium mb-2">Preview:</p>
+                  <div className="flex gap-2">
+                    <ThemedButton variant={favoriteColor || "default"}>
+                      Save
+                    </ThemedButton>
+                    <ThemedButton variant={favoriteColor || "default"}>
+                      New Record
+                    </ThemedButton>
+                    <ThemedButton variant={favoriteColor || "default"}>
+                      New Field
+                    </ThemedButton>
+                  </div>
+                </div>
               </div>
             </div>
 
