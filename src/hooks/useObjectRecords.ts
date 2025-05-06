@@ -4,6 +4,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import type { RecordFormData } from "@/types";
 
+export interface FilterCondition {
+  id: string;
+  fieldApiName: string;
+  operator: string;
+  value: any;
+}
+
 export interface ObjectRecord {
   id: string;
   record_id: string | null;
@@ -17,7 +24,10 @@ export interface ObjectRecord {
   displayName?: string;
 }
 
-export function useObjectRecords(objectTypeId?: string) {
+export function useObjectRecords(
+  objectTypeId?: string,
+  filters: FilterCondition[] = []
+) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
@@ -27,32 +37,39 @@ export function useObjectRecords(objectTypeId?: string) {
     error,
     refetch,
   } = useQuery({
-    queryKey: ["object-records", objectTypeId],
+    queryKey: ["object-records", objectTypeId, filters],
     queryFn: async (): Promise<ObjectRecord[]> => {
       if (!objectTypeId || !user) {
         return [];
       }
       
       console.log(`Fetching records for object type: ${objectTypeId}`);
+      console.log("Applying filters:", filters);
       
       // Get records
-      const { data: recordsData, error: recordsError } = await supabase
+      let query = supabase
         .from("object_records")
         .select("*")
         .eq("object_type_id", objectTypeId)
         .limit(100);
+      
+      // Apply server-side filters if possible
+      // Note: For most filter types, we'll use client-side filtering
+      // because Supabase doesn't support complex filtering on field_values easily
+      
+      const { data: recordsData, error: recordsError } = await query;
       
       if (recordsError) {
         console.error("Error fetching records:", recordsError);
         throw recordsError;
       }
       
-      // Get field values for all records
-      const recordIds = recordsData.map(record => record.id);
-      
-      if (recordIds.length === 0) {
+      if (recordsData.length === 0) {
         return [];
       }
+      
+      // Get field values for all records
+      const recordIds = recordsData.map(record => record.id);
       
       const { data: fieldValuesData, error: fieldValuesError } = await supabase
         .from("object_field_values")
@@ -74,10 +91,36 @@ export function useObjectRecords(objectTypeId?: string) {
       }, {} as { [key: string]: { [key: string]: any } });
       
       // Add field values to records
-      const recordsWithFieldValues = recordsData.map(record => ({
+      let recordsWithFieldValues = recordsData.map(record => ({
         ...record,
         field_values: fieldValuesByRecordId[record.id] || {}
       }));
+      
+      // Apply client-side filtering
+      if (filters && filters.length > 0) {
+        recordsWithFieldValues = recordsWithFieldValues.filter(record => {
+          return filters.every(filter => {
+            // Skip empty filters
+            if (!filter.value && filter.value !== false) {
+              return true;
+            }
+            
+            const fieldValue = record.field_values?.[filter.fieldApiName];
+            const filterValue = filter.value;
+            
+            // Handle system fields
+            if (filter.fieldApiName === 'created_at' || filter.fieldApiName === 'updated_at') {
+              const dateValue = record[filter.fieldApiName];
+              return applyFilterOperator(filter.operator, dateValue, filterValue);
+            } else if (filter.fieldApiName === 'record_id') {
+              return applyFilterOperator(filter.operator, record.record_id, filterValue);
+            }
+            
+            // Handle regular field values
+            return applyFilterOperator(filter.operator, fieldValue, filterValue);
+          });
+        });
+      }
       
       console.log(`Fetched ${recordsWithFieldValues.length} records with field values`);
       return recordsWithFieldValues;
@@ -228,4 +271,50 @@ export function useObjectRecords(objectTypeId?: string) {
     updateRecord,
     deleteRecord
   };
+}
+
+// Helper function to apply filter operators
+function applyFilterOperator(operator: string, fieldValue: any, filterValue: any): boolean {
+  if (fieldValue === undefined || fieldValue === null) {
+    // If searching for empty values
+    if (filterValue === "" || filterValue === null) {
+      return ["equals", "is"].includes(operator);
+    }
+    return false;
+  }
+
+  // Convert both values to strings for text comparisons
+  const fieldStr = String(fieldValue).toLowerCase();
+  const filterStr = String(filterValue).toLowerCase();
+
+  switch (operator) {
+    case "equals":
+    case "is":
+      return fieldStr === filterStr;
+    
+    case "notEqual":
+    case "isNot":
+      return fieldStr !== filterStr;
+      
+    case "contains":
+      return fieldStr.includes(filterStr);
+      
+    case "startsWith":
+      return fieldStr.startsWith(filterStr);
+      
+    case "greaterThan":
+      return Number(fieldValue) > Number(filterValue);
+      
+    case "lessThan":
+      return Number(fieldValue) < Number(filterValue);
+      
+    case "before":
+      return new Date(fieldValue) < new Date(filterValue);
+      
+    case "after":
+      return new Date(fieldValue) > new Date(filterValue);
+      
+    default:
+      return false;
+  }
 }

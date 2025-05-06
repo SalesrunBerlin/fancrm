@@ -1,14 +1,10 @@
 
+import { useEffect, useState } from "react";
 import { ObjectField } from "@/hooks/useObjectTypes";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-
-interface FilterCondition {
-  id: string;
-  fieldApiName: string;
-  operator: string;
-  value: any;
-}
+import { FilterCondition } from "@/hooks/useObjectRecords";
+import { supabase } from "@/integrations/supabase/client";
 
 interface FilterFieldProps {
   filter: FilterCondition;
@@ -18,49 +14,96 @@ interface FilterFieldProps {
 
 export function FilterField({ filter, fields, onChange }: FilterFieldProps) {
   const selectedField = fields.find(field => field.api_name === filter.fieldApiName);
+  const [picklistOptions, setPicklistOptions] = useState<{ value: string, label: string }[]>([]);
+
+  // Fetch picklist values if needed
+  useEffect(() => {
+    if (selectedField?.data_type === "picklist") {
+      fetchPicklistValues(selectedField.id);
+    }
+  }, [selectedField?.id, selectedField?.data_type]);
+
+  const fetchPicklistValues = async (fieldId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from("field_picklist_values")
+        .select("value, label")
+        .eq("field_id", fieldId)
+        .order("order_position", { ascending: true });
+      
+      if (error) throw error;
+      
+      setPicklistOptions(data.map(item => ({
+        value: item.value,
+        label: item.label || item.value
+      })));
+    } catch (err) {
+      console.error("Error fetching picklist values:", err);
+      setPicklistOptions([]);
+    }
+  };
 
   const getOperatorOptions = (dataType: string) => {
     switch (dataType) {
       case "text":
       case "email":
       case "url":
+      case "rich_text":
+      case "textarea":
         return [
           { value: "equals", label: "Equals" },
           { value: "contains", label: "Contains" },
-          { value: "startsWith", label: "Starts with" }
+          { value: "startsWith", label: "Starts with" },
+          { value: "isNull", label: "Is empty" },
+          { value: "isNotNull", label: "Is not empty" }
         ];
       case "number":
       case "currency":
         return [
           { value: "equals", label: "=" },
+          { value: "notEqual", label: "≠" },
           { value: "greaterThan", label: ">" },
-          { value: "lessThan", label: "<" }
+          { value: "lessThan", label: "<" },
+          { value: "isNull", label: "Is empty" },
+          { value: "isNotNull", label: "Is not empty" }
         ];
       case "date":
       case "datetime":
         return [
           { value: "equals", label: "On" },
           { value: "before", label: "Before" },
-          { value: "after", label: "After" }
+          { value: "after", label: "After" },
+          { value: "isNull", label: "Is empty" },
+          { value: "isNotNull", label: "Is not empty" }
         ];
       case "boolean":
         return [
           { value: "equals", label: "Is" }
         ];
       case "picklist":
+      case "lookup":
         return [
           { value: "equals", label: "Is" },
-          { value: "notEqual", label: "Is not" }
+          { value: "notEqual", label: "Is not" },
+          { value: "isNull", label: "Is empty" },
+          { value: "isNotNull", label: "Is not empty" }
         ];
       default:
         return [
-          { value: "equals", label: "Equals" }
+          { value: "equals", label: "Equals" },
+          { value: "isNull", label: "Is empty" },
+          { value: "isNotNull", label: "Is not empty" }
         ];
     }
   };
 
   const renderValueInput = () => {
     if (!selectedField) return null;
+    
+    // For empty/not empty operators, don't render a value input
+    if (["isNull", "isNotNull"].includes(filter.operator)) {
+      return null;
+    }
     
     switch (selectedField.data_type) {
       case "date":
@@ -108,7 +151,6 @@ export function FilterField({ filter, fields, onChange }: FilterFieldProps) {
           </Select>
         );
       case "picklist":
-        // This is a simplified version - ideally we would get options from field definition
         return (
           <Select
             value={filter.value || ""}
@@ -118,11 +160,25 @@ export function FilterField({ filter, fields, onChange }: FilterFieldProps) {
               <SelectValue placeholder="Select..." />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="option1">Option 1</SelectItem>
-              <SelectItem value="option2">Option 2</SelectItem>
-              <SelectItem value="option3">Option 3</SelectItem>
+              {picklistOptions.map(option => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
+        );
+      case "lookup":
+        // This is a simplified version that just allows text search
+        // A more complete implementation would show a lookup selector
+        return (
+          <Input
+            type="text"
+            value={filter.value || ""}
+            onChange={e => onChange(filter.id, { value: e.target.value })}
+            className="w-full"
+            placeholder="Search by name/id..."
+          />
         );
       default:
         return (
@@ -138,12 +194,27 @@ export function FilterField({ filter, fields, onChange }: FilterFieldProps) {
 
   const operatorOptions = selectedField ? getOperatorOptions(selectedField.data_type) : [];
 
+  // When field changes, update the operator to a suitable default for that field type
+  const handleFieldChange = (fieldApiName: string) => {
+    const field = fields.find(f => f.api_name === fieldApiName);
+    if (field) {
+      const defaultOperators = getOperatorOptions(field.data_type);
+      onChange(filter.id, { 
+        fieldApiName,
+        operator: defaultOperators.length > 0 ? defaultOperators[0].value : "equals",
+        value: field.data_type === "boolean" ? false : ""
+      });
+    } else {
+      onChange(filter.id, { fieldApiName });
+    }
+  };
+
   return (
     <div className="flex flex-wrap gap-2 items-start flex-1">
-      <div className="min-w-[150px]">
+      <div className="min-w-[150px] flex-grow-0">
         <Select
           value={filter.fieldApiName}
-          onValueChange={value => onChange(filter.id, { fieldApiName: value })}
+          onValueChange={handleFieldChange}
         >
           <SelectTrigger>
             <SelectValue placeholder="Select field" />
@@ -158,7 +229,7 @@ export function FilterField({ filter, fields, onChange }: FilterFieldProps) {
         </Select>
       </div>
       
-      <div className="min-w-[120px]">
+      <div className="min-w-[120px] flex-grow-0">
         <Select
           value={filter.operator}
           onValueChange={value => onChange(filter.id, { operator: value })}

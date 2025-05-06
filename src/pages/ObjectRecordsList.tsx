@@ -1,10 +1,11 @@
+
 import { useState, useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
-import { useObjectRecords } from "@/hooks/useObjectRecords";
+import { useObjectRecords, FilterCondition } from "@/hooks/useObjectRecords";
 import { useEnhancedFields } from "@/hooks/useEnhancedFields";
 import { PageHeader } from "@/components/ui/page-header";
-import { Loader2, Plus, Upload, Trash2 } from "lucide-react";
+import { Loader2, Plus, Upload, Trash2, Filter } from "lucide-react";
 import { RecordsTable } from "@/components/records/RecordsTable";
 import { Card } from "@/components/ui/card";
 import { FieldsConfigDialog } from "@/components/records/FieldsConfigDialog";
@@ -17,11 +18,14 @@ import { ObjectActionsSection } from "@/components/actions/ObjectActionsSection"
 import { ThemedButton } from "@/components/ui/themed-button";
 import { useAuth } from "@/contexts/AuthContext";
 import { ActionColor } from "@/hooks/useActions";
+import { ObjectRecordsFilter } from "@/components/records/ObjectRecordsFilter";
+import { Button } from "@/components/ui/button";
 
 export default function ObjectRecordsList() {
   const { objectTypeId } = useParams<{ objectTypeId: string }>();
   const { objectTypes } = useObjectTypes();
-  const { records, isLoading, deleteRecord } = useObjectRecords(objectTypeId);
+  const [activeFilters, setActiveFilters] = useState<FilterCondition[]>([]);
+  const { records, isLoading, deleteRecord } = useObjectRecords(objectTypeId, activeFilters);
   const { fields, isLoading: isLoadingFields } = useEnhancedFields(objectTypeId);
   const objectType = objectTypes?.find(type => type.id === objectTypeId);
   const [allRecords, setAllRecords] = useState<any[]>([]);
@@ -29,6 +33,7 @@ export default function ObjectRecordsList() {
   const [selectedRecords, setSelectedRecords] = useState<string[]>([]);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const { favoriteColor } = useAuth();
+  const [isFilterExpanded, setIsFilterExpanded] = useState(false);
   
   // System fields definition
   const systemFields: EnhancedObjectField[] = [
@@ -109,6 +114,19 @@ export default function ObjectRecordsList() {
     }
   };
 
+  const handleFilterChange = (filters: FilterCondition[]) => {
+    console.log("Filters updated:", filters);
+    setActiveFilters(filters);
+  };
+
+  const toggleFilterPanel = () => {
+    setIsFilterExpanded(!isFilterExpanded);
+  };
+
+  const clearFilters = () => {
+    setActiveFilters([]);
+  };
+
   if (!objectType) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -134,6 +152,9 @@ export default function ObjectRecordsList() {
     ];
   };
 
+  // All available fields for filtering (both regular and system fields)
+  const allFields = [...(fields || []), ...systemFields.map(field => toSafeObjectField(field))];
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -141,6 +162,19 @@ export default function ObjectRecordsList() {
         description={objectType.description || `Manage your ${objectType.name.toLowerCase()}`}
         actions={
           <>
+            <Button
+              variant="outline"
+              onClick={toggleFilterPanel}
+              className="relative"
+            >
+              <Filter className="mr-1.5 h-4 w-4" />
+              Filter
+              {activeFilters.length > 0 && (
+                <span className="absolute top-0 right-0 -mt-1 -mr-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] text-primary-foreground">
+                  {activeFilters.length}
+                </span>
+              )}
+            </Button>
             <FieldsConfigDialog
               objectTypeId={objectTypeId!}
               onVisibilityChange={handleVisibilityChange}
@@ -176,6 +210,66 @@ export default function ObjectRecordsList() {
         }
       />
 
+      {/* Filter panel */}
+      {isFilterExpanded && (
+        <Card className="p-4">
+          <ObjectRecordsFilter 
+            objectTypeId={objectTypeId!} 
+            fields={allFields} 
+            onFilterChange={handleFilterChange}
+            activeFilters={activeFilters}
+          />
+          {activeFilters.length > 0 && (
+            <div className="flex justify-end mt-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={clearFilters}
+              >
+                Clear All Filters
+              </Button>
+            </div>
+          )}
+        </Card>
+      )}
+
+      {/* Show active filters summary if any and panel is collapsed */}
+      {activeFilters.length > 0 && !isFilterExpanded && (
+        <div className="flex flex-wrap gap-2 items-center">
+          <span className="text-sm font-medium">Active Filters:</span>
+          {activeFilters.map(filter => {
+            const fieldName = allFields.find(f => f.api_name === filter.fieldApiName)?.name || filter.fieldApiName;
+            return (
+              <span 
+                key={filter.id} 
+                className="inline-flex items-center px-2 py-1 rounded-md text-xs bg-muted"
+              >
+                {fieldName} {filter.operator} {filter.value}
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-4 w-4 p-0 ml-1" 
+                  onClick={() => {
+                    setActiveFilters(prev => prev.filter(f => f.id !== filter.id));
+                  }}
+                >
+                  <span className="sr-only">Remove</span>
+                  ×
+                </Button>
+              </span>
+            );
+          })}
+          <Button 
+            variant="link" 
+            size="sm" 
+            className="text-xs" 
+            onClick={clearFilters}
+          >
+            Clear All
+          </Button>
+        </div>
+      )}
+
       {/* Regular actions section - will only show new record actions when no records are selected */}
       <ObjectActionsSection 
         objectTypeId={objectTypeId!} 
@@ -204,13 +298,20 @@ export default function ObjectRecordsList() {
             <Loader2 className="h-8 w-8 animate-spin" />
           </div>
         ) : (
-          <RecordsTable 
-            records={allRecords} 
-            fields={getFieldsToDisplay()} 
-            objectTypeId={objectTypeId!}
-            selectable={true}
-            onSelectionChange={handleRecordSelectionChange}
-          />
+          <>
+            {activeFilters.length > 0 && (
+              <div className="bg-muted/30 p-2 px-4 border-b text-sm">
+                Showing {allRecords.length} {allRecords.length === 1 ? 'result' : 'results'} with active filters
+              </div>
+            )}
+            <RecordsTable 
+              records={allRecords} 
+              fields={getFieldsToDisplay()} 
+              objectTypeId={objectTypeId!}
+              selectable={true}
+              onSelectionChange={handleRecordSelectionChange}
+            />
+          </>
         )}
       </Card>
 
