@@ -4,7 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ReportDefinition } from "@/types/report";
 import { useReportData } from "@/hooks/useReportData";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Loader } from "lucide-react";
 
 interface ReportDisplayProps {
   report: ReportDefinition;
@@ -34,8 +34,11 @@ export function ReportDisplay({ report }: ReportDisplayProps) {
   
   if (isLoading) {
     return (
-      <Card className="p-6 text-center">
-        <p className="text-muted-foreground">Loading report data...</p>
+      <Card className="p-6">
+        <div className="flex flex-col items-center gap-4 py-8">
+          <Loader className="h-8 w-8 text-primary animate-spin" />
+          <p className="text-muted-foreground">Loading report data...</p>
+        </div>
       </Card>
     );
   }
@@ -72,7 +75,7 @@ export function ReportDisplay({ report }: ReportDisplayProps) {
   
   return (
     <Card>
-      <CardContent className="p-0">
+      <CardContent className="p-0 overflow-auto">
         <Table>
           <TableHeader>
             <TableRow>

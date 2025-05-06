@@ -4,20 +4,23 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { MoreVertical, Edit, Trash, Copy } from "lucide-react";
+import { MoreVertical, Edit, Trash, Copy, Loader } from "lucide-react";
 import { ReportDefinition } from "@/types/report";
 import { useNavigate } from "react-router-dom";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useReports } from "@/hooks/useReports";
 import { format } from "date-fns";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface SavedReportsListProps {
   reports: ReportDefinition[];
   onEdit: (reportId: string) => void;
+  isLoading?: boolean;
 }
 
-export function SavedReportsList({ reports, onEdit }: SavedReportsListProps) {
+export function SavedReportsList({ reports, onEdit, isLoading = false }: SavedReportsListProps) {
   const navigate = useNavigate();
+  const { session } = useAuth();
   const { deleteReport, duplicateReport, updateLastViewedReport } = useReports();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [reportToDelete, setReportToDelete] = useState<string | null>(null);
@@ -48,14 +51,42 @@ export function SavedReportsList({ reports, onEdit }: SavedReportsListProps) {
     }
   };
   
-  const handleDuplicate = (reportId: string) => {
-    const newReport = duplicateReport(reportId);
+  const handleDuplicate = async (reportId: string) => {
+    const newReport = await duplicateReport(reportId);
     if (newReport) {
       console.log("Duplicated report:", newReport);
       updateLastViewedReport(newReport.id);
       navigate(`/reports/${newReport.id}`);
     }
   };
+  
+  // Show loading state
+  if (isLoading) {
+    return (
+      <Card className="p-8 text-center">
+        <div className="flex flex-col items-center gap-4">
+          <Loader className="h-8 w-8 text-primary animate-spin" />
+          <p className="text-muted-foreground">Loading reports...</p>
+        </div>
+      </Card>
+    );
+  }
+  
+  // Show auth message if not logged in
+  if (!session?.user) {
+    return (
+      <Card className="p-8 text-center">
+        <div className="flex flex-col items-center gap-4">
+          <p className="text-muted-foreground">
+            You need to be logged in to view and manage your reports.
+          </p>
+          <Button onClick={() => navigate("/auth")}>
+            Log In
+          </Button>
+        </div>
+      </Card>
+    );
+  }
   
   if (safeReports.length === 0) {
     return (

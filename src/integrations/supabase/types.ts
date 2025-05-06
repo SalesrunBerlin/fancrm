@@ -1354,6 +1354,45 @@ export type Database = {
           },
         ]
       }
+      reports: {
+        Row: {
+          created_at: string
+          description: string | null
+          filters: Json | null
+          id: string
+          last_viewed_at: string | null
+          name: string
+          object_ids: string[]
+          selected_fields: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          filters?: Json | null
+          id?: string
+          last_viewed_at?: string | null
+          name: string
+          object_ids: string[]
+          selected_fields: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          filters?: Json | null
+          id?: string
+          last_viewed_at?: string | null
+          name?: string
+          object_ids?: string[]
+          selected_fields?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       sharing_collections: {
         Row: {
           created_at: string
