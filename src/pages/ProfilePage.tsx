@@ -12,6 +12,7 @@ import { Loader2 } from "lucide-react";
 import { ColorPicker } from "@/components/ui/color-picker";
 import { useColorPreference } from "@/hooks/useColorPreference";
 import { ThemedButton } from "@/components/ui/themed-button";
+import { ActionColor } from "@/hooks/useActions";
 
 export default function ProfilePage() {
   const { user, userRole } = useAuth();
@@ -178,13 +179,13 @@ export default function ProfilePage() {
                 <div className="mt-4">
                   <p className="text-sm font-medium mb-2">Preview:</p>
                   <div className="flex gap-2">
-                    <ThemedButton variant={favoriteColor || "default"}>
+                    <ThemedButton variant={(favoriteColor as ActionColor) || "default"}>
                       Save
                     </ThemedButton>
-                    <ThemedButton variant={favoriteColor || "default"}>
+                    <ThemedButton variant={(favoriteColor as ActionColor) || "default"}>
                       New Record
                     </ThemedButton>
-                    <ThemedButton variant={favoriteColor || "default"}>
+                    <ThemedButton variant={(favoriteColor as ActionColor) || "default"}>
                       New Field
                     </ThemedButton>
                   </div>
@@ -192,7 +193,11 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            <Button type="submit" disabled={isSaving}>
+            <ThemedButton 
+              type="submit" 
+              disabled={isSaving}
+              variant={(favoriteColor as ActionColor) || "default"}
+            >
               {isSaving ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -201,7 +206,7 @@ export default function ProfilePage() {
               ) : (
                 "Save Changes"
               )}
-            </Button>
+            </ThemedButton>
           </form>
         </CardContent>
       </Card>

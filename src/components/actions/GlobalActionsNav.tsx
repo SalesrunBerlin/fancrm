@@ -90,6 +90,9 @@ export function GlobalActionsNav() {
     return null;
   }
 
+  // Get the color class for the icon based on user preference
+  const iconColorClass = favoriteColor ? actionColorMap[favoriteColor as ActionColor] : "text-primary";
+
   return (
     <div className="ml-4">
       <TooltipProvider>
@@ -103,7 +106,12 @@ export function GlobalActionsNav() {
                   className="h-8 w-8 p-0"
                   aria-label="Actions"
                 >
-                  <Play className={cn("h-5 w-5 font-bold", favoriteColor ? `text-${favoriteColor}` : "text-primary")} />
+                  <Play 
+                    className={cn("h-5 w-5 font-bold")} 
+                    fill={favoriteColor ? `currentColor` : "none"}
+                    color={favoriteColor ? `currentColor` : undefined}
+                    style={{ color: favoriteColor ? `var(--${favoriteColor})` : undefined }}
+                  />
                 </Button>
               </TooltipTrigger>
             </DropdownMenuTrigger>

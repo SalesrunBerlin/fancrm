@@ -12,6 +12,8 @@ import { Loader2 } from "lucide-react";
 import { generateAutoNumber } from "@/hooks/useAutoNumberFields";
 import { toast } from "sonner";
 import { ThemedButton } from "@/components/ui/themed-button";
+import { useAuth } from "@/contexts/AuthContext";
+import { ActionColor } from "@/hooks/useActions";
 
 interface CreateRecordDialogProps {
   objectTypeId: string;
@@ -26,6 +28,7 @@ export function CreateRecordDialog({ objectTypeId, open, onOpenChange }: CreateR
   const { createRecord } = useObjectRecords(objectTypeId);
   const objectType = objectTypes?.find(type => type.id === objectTypeId);
   const form = useForm<RecordFormData>();
+  const { favoriteColor } = useAuth();
 
   const onSubmit = async (data: RecordFormData) => {
     try {
@@ -98,7 +101,8 @@ export function CreateRecordDialog({ objectTypeId, open, onOpenChange }: CreateR
               </ThemedButton>
               <ThemedButton 
                 type="submit" 
-                disabled={isSubmitting}
+                disabled={isSubmitting} 
+                variant={(favoriteColor as ActionColor) || "default"}
               >
                 {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Create

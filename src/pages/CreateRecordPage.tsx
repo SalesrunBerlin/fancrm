@@ -14,11 +14,13 @@ import { generateAutoNumber } from "@/hooks/useAutoNumberFields";
 import { toast } from "sonner";
 import type { RecordFormData } from "@/lib/types/records";
 import { ThemedButton } from "@/components/ui/themed-button";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function CreateRecordPage() {
   const { objectTypeId } = useParams<{ objectTypeId: string }>();
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { favoriteColor } = useAuth();
   
   const { objectTypes } = useObjectTypes();
   const { fields, isLoading: isLoadingFields } = useEnhancedFields(objectTypeId!);
@@ -116,6 +118,7 @@ export default function CreateRecordPage() {
                     <ThemedButton 
                       type="submit" 
                       disabled={isSubmitting}
+                      variant={favoriteColor as ActionColor || "default"}
                     >
                       {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                       Create
