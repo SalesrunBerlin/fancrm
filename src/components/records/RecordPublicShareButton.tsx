@@ -1,5 +1,7 @@
 
+import { Button } from "@/components/ui/button";
 import { PublicShareDialog } from "@/components/sharing/PublicShareDialog";
+import { Globe } from "lucide-react";
 
 interface RecordPublicShareButtonProps {
   recordId: string;
@@ -8,7 +10,6 @@ interface RecordPublicShareButtonProps {
 }
 
 export function RecordPublicShareButton({ recordId, objectTypeId, recordName }: RecordPublicShareButtonProps) {
-  // Pass the props directly to the PublicShareDialog component
   return (
     <PublicShareDialog 
       recordId={recordId} 

@@ -1,4 +1,3 @@
-
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { ObjectField, ObjectRecord } from "@/types/ObjectFieldTypes";
@@ -225,16 +224,27 @@ export function usePublicRelatedRecords(
 
         if (relationshipError) throw relationshipError;
 
-        // Get related records and their field values in a single query
-        const { data: records, error: recordsError } = await supabase
-          .rpc("get_public_related_records", {
-            p_record_id: recordId,
-            p_related_object_type_id: relatedObjectTypeId,
-            p_relationship_id: relationshipId
-          });
+        try {
+          // Try to use the optimized RPC function if available
+          const { data: records, error: recordsError } = await supabase
+            .rpc("get_public_related_records", {
+              p_record_id: recordId,
+              p_related_object_type_id: relatedObjectTypeId,
+              p_relationship_id: relationshipId
+            });
 
-        if (recordsError) {
-          console.error("Error fetching related records:", recordsError);
+          if (recordsError) {
+            throw recordsError;
+          }
+
+          // Format the records from the RPC 
+          return (Array.isArray(records) ? records : []).map((record: any) => ({
+            ...record,
+            field_values: record.field_values || {}
+          })) as ObjectRecord[];
+          
+        } catch (rpcError) {
+          console.error("Error using RPC function, falling back to standard queries:", rpcError);
           
           // Fallback to the old approach if the RPC isn't available
           const { data: relatedRecords, error: fallbackError } = await supabase
@@ -274,12 +284,6 @@ export function usePublicRelatedRecords(
 
           return recordsWithValues as ObjectRecord[];
         }
-
-        // Format the records from the RPC 
-        return records.map((record: any) => ({
-          ...record,
-          field_values: record.field_values || {}
-        })) as ObjectRecord[];
       } catch (error) {
         console.error("Error fetching related records:", error);
         throw error;

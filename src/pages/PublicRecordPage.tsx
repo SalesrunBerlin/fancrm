@@ -15,7 +15,7 @@ export default function PublicRecordPage() {
   useEffect(() => {
     // Validate token format first to avoid unnecessary checks
     if (token && recordId) {
-      // Simple token validation (could be enhanced)
+      // Simple token validation (just ensures basic format)
       const isTokenFormatValid = token.length >= 10;
       
       if (isTokenFormatValid) {

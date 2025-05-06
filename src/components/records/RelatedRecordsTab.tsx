@@ -1,11 +1,15 @@
 
-import React from "react";
-import { usePublicRelatedRecords } from "@/hooks/usePublicRecord";
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle } from "lucide-react";
-import { getAlertVariantClass } from "@/patches/FixAlertVariants";
+import { usePublicRelatedRecords } from "@/hooks/usePublicRecord";
+import { DataTable } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
+import { AlertCircle } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { getAlertVariantClass } from "@/patches/FixAlertVariants";
+import { ObjectRecord } from "@/types/ObjectFieldTypes";
+import { useObjectFields } from "@/hooks/useObjectFields";
+import { Pagination } from "@/components/ui/pagination";
 
 interface RelatedRecordsTabProps {
   token: string;
@@ -22,34 +26,37 @@ export function RelatedRecordsTab({
   relationshipId,
   objectTypeName
 }: RelatedRecordsTabProps) {
-  const { data: relatedRecords, isLoading, error } = usePublicRelatedRecords(
+  const [page, setPage] = useState(1);
+  const [pageSize] = useState(10);
+  
+  const { data: records, isLoading, error } = usePublicRelatedRecords(
     token,
     recordId,
     relatedObjectTypeId,
     relationshipId
   );
-
-  if (isLoading) {
+  
+  const { fields: relatedFields, isLoading: fieldsLoading } = useObjectFields(relatedObjectTypeId);
+  
+  if (isLoading || fieldsLoading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {[1, 2, 3, 4].map(i => (
-          <Card key={i} className="overflow-hidden">
-            <CardHeader className="p-4">
-              <Skeleton className="h-6 w-3/4" />
-            </CardHeader>
-            <CardContent className="p-4 pt-0">
-              <div className="space-y-2">
-                {[1, 2, 3].map(j => (
-                  <div key={j} className="grid grid-cols-3 gap-1">
-                    <Skeleton className="h-4 w-full" />
-                    <Skeleton className="h-4 w-full col-span-2" />
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>
+            <div className="flex items-center justify-between">
+              <Skeleton className="h-6 w-32" />
+              <Skeleton className="h-6 w-16" />
+            </div>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-full" />
+            <Skeleton className="h-8 w-full" />
+            <Skeleton className="h-8 w-full" />
+          </div>
+        </CardContent>
+      </Card>
     );
   }
 
@@ -58,59 +65,80 @@ export function RelatedRecordsTab({
       <Alert className={`${getAlertVariantClass("destructive")} mb-4`}>
         <AlertCircle className="h-4 w-4" />
         <AlertDescription>
-          Failed to load related {objectTypeName} records.
+          {error instanceof Error ? error.message : "Failed to load related records"}
         </AlertDescription>
       </Alert>
     );
   }
 
-  if (!relatedRecords || relatedRecords.length === 0) {
+  // Extract values for display
+  const visibleFields = relatedFields?.filter(field => !field.is_system)
+    .sort((a, b) => a.display_order - b.display_order)
+    .slice(0, 5); // Just show first 5 fields to keep it clean
+
+  if (!records || records.length === 0) {
     return (
-      <div className="bg-muted/30 rounded-lg p-8 text-center">
-        <p className="text-muted-foreground">No related {objectTypeName} records found.</p>
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>{objectTypeName}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-center text-muted-foreground py-8">
+            No related records found
+          </p>
+        </CardContent>
+      </Card>
     );
   }
 
+  // Create columns based on visible fields
+  const columns = [
+    ...(visibleFields?.map(field => ({
+      header: field.name,
+      accessorFn: (record: ObjectRecord) => {
+        const value = record.field_values?.[field.api_name];
+        return value !== undefined && value !== null ? String(value) : "";
+      }
+    })) || [])
+  ];
+
+  // Paginate records
+  const startIndex = (page - 1) * pageSize;
+  const paginatedRecords = records.slice(startIndex, startIndex + pageSize);
+  const totalPages = Math.ceil(records.length / pageSize);
+
   return (
-    <div className="space-y-4">
-      <h3 className="text-lg font-medium">Related {objectTypeName} ({relatedRecords.length})</h3>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {relatedRecords.map((record: any) => {
-          // Find a good display value for the record card
-          let displayName = record.id;
-          if (record.field_values) {
-            const nameField = 
-              record.field_values.name || 
-              record.field_values.title || 
-              record.field_values.subject ||
-              record.field_values.first_name && record.field_values.last_name 
-                ? `${record.field_values.first_name} ${record.field_values.last_name}`
-                : null;
-                
-            if (nameField) displayName = nameField;
+    <Card>
+      <CardHeader>
+        <CardTitle>
+          <div className="flex items-center justify-between">
+            <span>{objectTypeName}</span>
+            <span className="text-sm font-normal text-muted-foreground">
+              ({records.length} {records.length === 1 ? "record" : "records"})
+            </span>
+          </div>
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <DataTable
+          columns={columns}
+          data={paginatedRecords}
+          emptyState={
+            <p className="text-center text-muted-foreground py-8">
+              No related records found
+            </p>
           }
-          
-          return (
-            <Card key={record.id} className="overflow-hidden">
-              <CardHeader className="p-4">
-                <CardTitle className="text-base truncate">{displayName}</CardTitle>
-              </CardHeader>
-              <CardContent className="p-4 pt-0">
-                <div className="space-y-2">
-                  {Object.entries(record.field_values || {}).slice(0, 3).map(([field, value]) => (
-                    <div key={field} className="grid grid-cols-3 gap-1">
-                      <div className="text-sm text-muted-foreground">{field}:</div>
-                      <div className="text-sm col-span-2 truncate">{value || "-"}</div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
-    </div>
+        />
+        {totalPages > 1 && (
+          <div className="mt-4 flex justify-center">
+            <Pagination
+              currentPage={page}
+              totalPages={totalPages}
+              onPageChange={setPage}
+            />
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
