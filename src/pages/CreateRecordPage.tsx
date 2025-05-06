@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import type { RecordFormData } from "@/lib/types/records";
 import { ThemedButton } from "@/components/ui/themed-button";
 import { useAuth } from "@/contexts/AuthContext";
+import { ActionColor } from "@/hooks/useActions";
 
 export default function CreateRecordPage() {
   const { objectTypeId } = useParams<{ objectTypeId: string }>();
@@ -118,7 +119,7 @@ export default function CreateRecordPage() {
                     <ThemedButton 
                       type="submit" 
                       disabled={isSubmitting}
-                      variant={favoriteColor as ActionColor || "default"}
+                      variant={(favoriteColor as ActionColor) || "default"}
                     >
                       {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                       Create

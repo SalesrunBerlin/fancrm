@@ -90,9 +90,6 @@ export function GlobalActionsNav() {
     return null;
   }
 
-  // Get the color class for the icon based on user preference
-  const iconColorClass = favoriteColor ? actionColorMap[favoriteColor as ActionColor] : "text-primary";
-
   return (
     <div className="ml-4">
       <TooltipProvider>
@@ -108,8 +105,8 @@ export function GlobalActionsNav() {
                 >
                   <Play 
                     className={cn("h-5 w-5 font-bold")} 
-                    fill={favoriteColor ? `currentColor` : "none"}
-                    color={favoriteColor ? `currentColor` : undefined}
+                    fill="currentColor" 
+                    color="currentColor"
                     style={{ color: favoriteColor ? `var(--${favoriteColor})` : undefined }}
                   />
                 </Button>
