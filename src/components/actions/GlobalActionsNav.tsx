@@ -107,7 +107,10 @@ export function GlobalActionsNav() {
                     className={cn("h-5 w-5 font-bold")} 
                     fill="currentColor" 
                     color="currentColor"
-                    style={{ color: favoriteColor ? `var(--${favoriteColor})` : undefined }}
+                    style={{ 
+                      color: favoriteColor ? `var(--${favoriteColor})` : undefined,
+                      fill: favoriteColor ? `var(--${favoriteColor})` : "currentColor"
+                    }}
                   />
                 </Button>
               </TooltipTrigger>

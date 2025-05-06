@@ -15,6 +15,8 @@ import { toast } from "sonner";
 import { EnhancedObjectField, toSafeObjectField } from "@/patches/FixObjectFieldType";
 import { ObjectActionsSection } from "@/components/actions/ObjectActionsSection";
 import { ThemedButton } from "@/components/ui/themed-button";
+import { useAuth } from "@/contexts/AuthContext";
+import { ActionColor } from "@/hooks/useActions";
 
 export default function ObjectRecordsList() {
   const { objectTypeId } = useParams<{ objectTypeId: string }>();
@@ -26,6 +28,7 @@ export default function ObjectRecordsList() {
   const { visibleFields, updateVisibleFields } = useUserFieldSettings(objectTypeId);
   const [selectedRecords, setSelectedRecords] = useState<string[]>([]);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const { favoriteColor } = useAuth();
   
   // System fields definition
   const systemFields: EnhancedObjectField[] = [
@@ -160,7 +163,10 @@ export default function ObjectRecordsList() {
                 Delete Selected ({selectedRecords.length})
               </ThemedButton>
             )}
-            <ThemedButton asChild>
+            <ThemedButton 
+              variant={(favoriteColor as ActionColor) || "default"}
+              asChild
+            >
               <Link to={`/objects/${objectTypeId}/new`}>
                 <Plus className="mr-1.5 h-4 w-4" />
                 New {objectType.name}
