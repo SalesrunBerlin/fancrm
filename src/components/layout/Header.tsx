@@ -52,9 +52,9 @@ export function Header({ className }: HeaderProps) {
             <ArrowLeft className="h-5 w-5" />
           </Button>
         )}
-
-        <GlobalActionsNav />
       </div>
+      
+      <GlobalActionsNav />
       
       <div className="flex-1 flex justify-end items-center">
         <Button 

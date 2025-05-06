@@ -85,7 +85,7 @@ export function GlobalActionsNav() {
   const secondRow = globalActions.length > 4 ? globalActions.slice(4) : [];
 
   return (
-    <div className="hidden md:block ml-2">
+    <div className="ml-4">
       <div className="flex flex-col gap-1 max-w-[240px]">
         <div className="flex gap-1">
           {firstRow.map((action) => (
