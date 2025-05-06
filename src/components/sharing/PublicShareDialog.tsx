@@ -15,7 +15,7 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { usePublicRecordShares } from "@/hooks/usePublicRecordShares";
-import { ObjectField } from "@/hooks/useObjectTypes";
+import { ObjectField } from "@/types";
 import { useObjectFields } from "@/hooks/useObjectFields";
 import { useObjectRelationships } from "@/hooks/useObjectRelationships";
 

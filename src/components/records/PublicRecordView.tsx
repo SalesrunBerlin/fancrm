@@ -1,6 +1,6 @@
 
 import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { AlertCircle, ChevronLeft, AlertTriangle, Loader2, Save, Eye, Edit, ExternalLink } from "lucide-react";
@@ -17,10 +17,17 @@ import { supabase } from "@/integrations/supabase/client";
 import { Label } from "@/components/ui/label";
 import { getAlertVariantClass } from "@/patches/FixAlertVariants";
 import { Separator } from "@/components/ui/separator";
+import { ObjectField, ObjectRecord } from "@/types";
 
 interface PublicRecordViewProps {
   token: string;
   recordId: string;
+}
+
+interface PublicRecordData extends Omit<ObjectRecord, 'field_values'> {
+  displayName?: string;
+  objectName?: string;
+  fieldValues: { [key: string]: any };
 }
 
 export default function PublicRecordView({ token, recordId }: PublicRecordViewProps) {
@@ -54,7 +61,7 @@ export default function PublicRecordView({ token, recordId }: PublicRecordViewPr
 
   if (error || !record) {
     return (
-      <Alert className={getAlertVariantClass("destructive")} className="max-w-lg mx-auto my-8">
+      <Alert className={`${getAlertVariantClass("destructive")} max-w-lg mx-auto my-8`}>
         <AlertCircle className="h-4 w-4" />
         <AlertDescription>
           {error?.message || "This record is not available or access has been revoked."}
@@ -112,7 +119,7 @@ export default function PublicRecordView({ token, recordId }: PublicRecordViewPr
     }
   };
 
-  const recordName = record.displayName || `${record.objectName} Record`;
+  const recordName = record.displayName || "Record";
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-5xl">
@@ -173,13 +180,15 @@ export default function PublicRecordView({ token, recordId }: PublicRecordViewPr
         
         <div className="mt-4">
           <h1 className="text-2xl font-bold">{recordName}</h1>
-          <p className="text-muted-foreground">
-            {record.objectName}
-          </p>
+          {record.objectName && (
+            <p className="text-muted-foreground">
+              {record.objectName}
+            </p>
+          )}
         </div>
       </header>
 
-      <Alert className={getAlertVariantClass("default")} className="mb-6">
+      <Alert className={`${getAlertVariantClass("default")} mb-6`}>
         <AlertTriangle className="h-4 w-4" />
         <AlertDescription>
           You're viewing a publicly shared record. {allowEdit ? "You can edit this record." : "This record is read-only."}
@@ -204,7 +213,7 @@ export default function PublicRecordView({ token, recordId }: PublicRecordViewPr
               </CardHeader>
               <CardContent>
                 <RecordDetailForm
-                  record={record}
+                  record={record as any}
                   fields={fields}
                   onFieldChange={handleFieldChange}
                   editedValues={editedValues}
@@ -233,7 +242,7 @@ export default function PublicRecordView({ token, recordId }: PublicRecordViewPr
           </CardHeader>
           <CardContent>
             <RecordDetailForm
-              record={record}
+              record={record as any}
               fields={fields}
               onFieldChange={handleFieldChange}
               editedValues={editedValues}
@@ -252,6 +261,11 @@ interface RelatedRecordsTabProps {
   relatedObjectTypeId: string;
   relationshipId: string;
   objectTypeName: string;
+}
+
+interface RelatedRecord {
+  id: string;
+  field_values?: { [key: string]: any };
 }
 
 function RelatedRecordsTab({
@@ -278,7 +292,7 @@ function RelatedRecordsTab({
 
   if (error) {
     return (
-      <Alert className={getAlertVariantClass("destructive")} className="mb-4">
+      <Alert className={`${getAlertVariantClass("destructive")} mb-4`}>
         <AlertCircle className="h-4 w-4" />
         <AlertDescription>
           Failed to load related {objectTypeName} records.
@@ -300,17 +314,17 @@ function RelatedRecordsTab({
       <h3 className="text-lg font-medium">Related {objectTypeName} ({relatedRecords.length})</h3>
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {relatedRecords.map((record) => {
+        {relatedRecords.map((record: any) => {
           // Find a good display value for the record card
           let displayName = record.id;
-          if (record.fieldValues) {
+          if (record.field_values) {
             // Try to find a reasonable display field
             const nameField = 
-              record.fieldValues.name || 
-              record.fieldValues.title || 
-              record.fieldValues.subject ||
-              record.fieldValues.first_name && record.fieldValues.last_name 
-                ? `${record.fieldValues.first_name} ${record.fieldValues.last_name}`
+              record.field_values.name || 
+              record.field_values.title || 
+              record.field_values.subject ||
+              record.field_values.first_name && record.field_values.last_name 
+                ? `${record.field_values.first_name} ${record.field_values.last_name}`
                 : null;
                 
             if (nameField) displayName = nameField;
@@ -323,7 +337,7 @@ function RelatedRecordsTab({
               </CardHeader>
               <CardContent className="p-4 pt-0">
                 <div className="space-y-2">
-                  {Object.entries(record.fieldValues || {}).slice(0, 3).map(([field, value]) => (
+                  {Object.entries(record.field_values || {}).slice(0, 3).map(([field, value]) => (
                     <div key={field} className="grid grid-cols-3 gap-1">
                       <div className="text-sm text-muted-foreground">{field}:</div>
                       <div className="text-sm col-span-2 truncate">{value || "-"}</div>
