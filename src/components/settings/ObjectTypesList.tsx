@@ -14,9 +14,12 @@ import { ObjectTypeForm } from "./ObjectTypeForm";
 import { Badge } from "@/components/ui/badge";
 import { ObjectType } from "@/hooks/useObjectTypes";
 import { ThemedButton } from "@/components/ui/themed-button";
+import { useAuth } from "@/contexts/AuthContext";
+import { ActionColor } from "@/hooks/useActions";
 
 export function ObjectTypesList() {
   const { objectTypes, isLoading } = useObjectTypes();
+  const { favoriteColor } = useAuth();
 
   const getIconComponent = (iconName: string | null) => {
     switch(iconName) {
@@ -45,7 +48,7 @@ export function ObjectTypesList() {
         <div className="flex space-x-2">
           <Dialog>
             <DialogTrigger asChild>
-              <ThemedButton>
+              <ThemedButton variant={(favoriteColor as ActionColor) || "default"}>
                 <Plus className="mr-2 h-4 w-4" />
                 Create Object
               </ThemedButton>
@@ -102,7 +105,7 @@ export function ObjectTypesList() {
             </p>
             <Dialog>
               <DialogTrigger asChild>
-                <ThemedButton>
+                <ThemedButton variant={(favoriteColor as ActionColor) || "default"}>
                   <Plus className="mr-2 h-4 w-4" />
                   Create Object
                 </ThemedButton>

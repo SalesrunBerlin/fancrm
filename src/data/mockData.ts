@@ -9,7 +9,9 @@ export const mockContacts: ContactType[] = [
     email: "emma.johnson@example.com",
     phone: "+1 (555) 123-4567",
     accountName: "Bella Salon",
-    tags: ["Client", "VIP"]
+    tags: ["Client", "VIP"],
+    name: "Emma Johnson", // Add name property
+    createdAt: "2023-01-01" // Add createdAt property
   },
   {
     id: "c2",
@@ -18,7 +20,9 @@ export const mockContacts: ContactType[] = [
     email: "olivia.smith@example.com",
     phone: "+1 (555) 234-5678",
     accountName: "Glow Spa",
-    tags: ["Client"]
+    tags: ["Client"],
+    name: "Olivia Smith",
+    createdAt: "2023-01-02"
   },
   {
     id: "c3",
@@ -26,7 +30,9 @@ export const mockContacts: ContactType[] = [
     lastName: "Williams",
     email: "james.williams@example.com",
     phone: "+1 (555) 345-6789",
-    tags: ["Prospect", "New Lead"]
+    tags: ["Prospect", "New Lead"],
+    name: "James Williams",
+    createdAt: "2023-01-03"
   },
   {
     id: "c4",
@@ -35,7 +41,9 @@ export const mockContacts: ContactType[] = [
     email: "sophia.brown@example.com",
     phone: "+1 (555) 456-7890",
     accountName: "Pure Beauty",
-    tags: ["Client", "Referral"]
+    tags: ["Client", "Referral"],
+    name: "Sophia Brown",
+    createdAt: "2023-01-04"
   },
   {
     id: "c5",
@@ -43,7 +51,9 @@ export const mockContacts: ContactType[] = [
     lastName: "Miller",
     email: "noah.miller@example.com",
     phone: "+1 (555) 567-8901",
-    tags: ["Prospect"]
+    tags: ["Prospect"],
+    name: "Noah Miller",
+    createdAt: "2023-01-05"
   },
   {
     id: "c6",
@@ -52,7 +62,9 @@ export const mockContacts: ContactType[] = [
     email: "mia.davis@example.com",
     phone: "+1 (555) 678-9012",
     accountName: "Serene Wellness",
-    tags: ["Client"]
+    tags: ["Client"],
+    name: "Mia Davis",
+    createdAt: "2023-01-06"
   },
   {
     id: "c7",
@@ -60,7 +72,9 @@ export const mockContacts: ContactType[] = [
     lastName: "Wilson",
     email: "liam.wilson@example.com",
     phone: "+1 (555) 789-0123",
-    tags: ["Prospect", "Hot Lead"]
+    tags: ["Prospect", "Hot Lead"],
+    name: "Liam Wilson",
+    createdAt: "2023-01-07"
   },
   {
     id: "c8",
@@ -69,7 +83,9 @@ export const mockContacts: ContactType[] = [
     email: "charlotte.anderson@example.com",
     phone: "+1 (555) 890-1234",
     accountName: "Radiance Studio",
-    tags: ["Client"]
+    tags: ["Client"],
+    name: "Charlotte Anderson",
+    createdAt: "2023-01-08"
   },
   {
     id: "c9",
@@ -77,7 +93,9 @@ export const mockContacts: ContactType[] = [
     lastName: "Thomas",
     email: "elijah.thomas@example.com",
     phone: "+1 (555) 901-2345",
-    tags: ["Prospect"]
+    tags: ["Prospect"],
+    name: "Elijah Thomas",
+    createdAt: "2023-01-09"
   },
   {
     id: "c10",
@@ -86,7 +104,9 @@ export const mockContacts: ContactType[] = [
     email: "amelia.jackson@example.com",
     phone: "+1 (555) 012-3456",
     accountName: "Bella Salon",
-    tags: ["Client", "VIP"]
+    tags: ["Client", "VIP"],
+    name: "Amelia Jackson",
+    createdAt: "2023-01-10"
   }
 ];
 
@@ -99,7 +119,6 @@ export const mockAccounts: AccountType[] = [
     industry: "Beauty",
     employees: 15,
     createdAt: "2023-01-01",
-    updatedAt: "2023-01-01",
     ownerId: "user-1",
     contactCount: 3,
     tags: ["Active", "VIP"]
@@ -112,7 +131,6 @@ export const mockAccounts: AccountType[] = [
     industry: "Beauty",
     employees: 10,
     createdAt: "2023-01-02",
-    updatedAt: "2023-01-02",
     ownerId: "user-1",
     contactCount: 2,
     tags: ["Active"]
@@ -125,7 +143,6 @@ export const mockAccounts: AccountType[] = [
     industry: "Beauty",
     employees: 8,
     createdAt: "2023-01-03",
-    updatedAt: "2023-01-03",
     ownerId: "user-1",
     contactCount: 1,
     tags: ["Active", "New"]
@@ -138,7 +155,6 @@ export const mockAccounts: AccountType[] = [
     industry: "Wellness",
     employees: 12,
     createdAt: "2023-01-04",
-    updatedAt: "2023-01-04",
     ownerId: "user-1",
     contactCount: 1,
     tags: ["Active"]
@@ -151,7 +167,6 @@ export const mockAccounts: AccountType[] = [
     industry: "Beauty",
     employees: 6,
     createdAt: "2023-01-05",
-    updatedAt: "2023-01-05",
     ownerId: "user-1",
     contactCount: 1,
     tags: ["Active"]
@@ -164,7 +179,6 @@ export const mockAccounts: AccountType[] = [
     industry: "Beauty",
     employees: 4,
     createdAt: "2023-01-06",
-    updatedAt: "2023-01-06",
     ownerId: "user-1",
     contactCount: 0,
     tags: ["Prospect"]
@@ -177,7 +191,6 @@ export const mockAccounts: AccountType[] = [
     industry: "Wellness",
     employees: 7,
     createdAt: "2023-01-07",
-    updatedAt: "2023-01-07",
     ownerId: "user-1",
     contactCount: 0,
     tags: ["Prospect", "New Lead"]
@@ -190,7 +203,6 @@ export const mockAccounts: AccountType[] = [
     industry: "Beauty",
     employees: 9,
     createdAt: "2023-01-08",
-    updatedAt: "2023-01-08",
     ownerId: "user-1",
     contactCount: 0,
     tags: ["Prospect"]
@@ -206,7 +218,7 @@ export const mockDeals: DealType[] = [
     status: "Closed Won",
     probability: 100,
     contactId: "c1",
-    accountId: "a1",
+    account: "a1", // Changed accountId to account
     accountName: "Bella Salon",
     closeDate: "2023-03-15"
   },
@@ -218,7 +230,7 @@ export const mockDeals: DealType[] = [
     status: "Negotiation",
     probability: 70,
     contactId: "c2",
-    accountId: "a2",
+    account: "a2", // Changed accountId to account
     accountName: "Glow Spa",
     closeDate: "2023-05-20"
   },
@@ -230,7 +242,7 @@ export const mockDeals: DealType[] = [
     status: "Proposal",
     probability: 60,
     contactId: "c3",
-    accountId: "a3",
+    account: "a3", // Changed accountId to account
     accountName: "Pure Beauty",
     closeDate: "2023-06-10"
   },
@@ -242,7 +254,7 @@ export const mockDeals: DealType[] = [
     status: "Qualification",
     probability: 40,
     contactId: "c4",
-    accountId: "a4",
+    account: "a4", // Changed accountId to account
     accountName: "Serene Wellness",
     closeDate: "2023-06-30"
   },
@@ -254,7 +266,7 @@ export const mockDeals: DealType[] = [
     status: "Prospect",
     probability: 20,
     contactId: "c5",
-    accountId: "a5",
+    account: "a5", // Changed accountId to account
     accountName: "Radiance Studio",
     closeDate: "2023-07-10"
   },
@@ -266,7 +278,7 @@ export const mockDeals: DealType[] = [
     status: "Closed Lost",
     probability: 0,
     contactId: "c6",
-    accountId: "a6",
+    account: "a6", // Changed accountId to account
     accountName: "Harmony Nails",
     closeDate: "2023-02-28"
   },
@@ -278,7 +290,7 @@ export const mockDeals: DealType[] = [
     status: "Qualification",
     probability: 45,
     contactId: "c1",
-    accountId: "a1",
+    account: "a1", // Changed accountId to account
     accountName: "Bella Salon",
     closeDate: "2023-07-15"
   },
@@ -290,7 +302,7 @@ export const mockDeals: DealType[] = [
     status: "Proposal",
     probability: 65,
     contactId: "c2",
-    accountId: "a2",
+    account: "a2", // Changed accountId to account
     accountName: "Glow Spa",
     closeDate: "2023-08-01"
   },
@@ -302,7 +314,7 @@ export const mockDeals: DealType[] = [
     status: "Negotiation",
     probability: 75,
     contactId: "c3",
-    accountId: "a3",
+    account: "a3", // Changed accountId to account
     accountName: "Pure Beauty",
     closeDate: "2023-09-15"
   },
@@ -314,7 +326,7 @@ export const mockDeals: DealType[] = [
     status: "Closed Won",
     probability: 100,
     contactId: "c4",
-    accountId: "a4",
+    account: "a4", // Changed accountId to account
     accountName: "Serene Wellness",
     closeDate: "2023-04-10"
   }

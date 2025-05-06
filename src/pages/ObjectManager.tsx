@@ -22,11 +22,12 @@ import {
 import { isArchived } from "@/patches/ObjectTypePatches";
 import { useAuth } from "@/contexts/AuthContext";
 import { ThemedButton } from "@/components/ui/themed-button";
+import { ActionColor } from "@/hooks/useActions";
 
 export default function ObjectManager() {
   // Fetch all objects including archived ones
   const { objectTypes: allObjectTypes, isLoading, deleteObjectType, publishedObjects } = useObjectTypes();
-  const { user } = useAuth();
+  const { user, favoriteColor } = useAuth();
   const [activeTab, setActiveTab] = useState("all");
   const [objectToDelete, setObjectToDelete] = useState<ObjectType | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -141,7 +142,10 @@ export default function ObjectManager() {
         title="Object Manager"
         description="Manage all your custom and standard objects"
         actions={
-          <ThemedButton asChild>
+          <ThemedButton 
+            variant={(favoriteColor as ActionColor) || "default"}
+            asChild
+          >
             <Link to="/settings/object-manager/new">
               <Plus className="mr-2 h-4 w-4" />
               Create Object
@@ -247,7 +251,10 @@ export default function ObjectManager() {
                   <p className="text-muted-foreground mb-4">
                     No object types found. Create your first custom object to get started.
                   </p>
-                  <ThemedButton asChild>
+                  <ThemedButton 
+                    variant={(favoriteColor as ActionColor) || "default"}
+                    asChild
+                  >
                     <Link to="/settings/object-manager/new">
                       <Plus className="mr-2 h-4 w-4" />
                       Create Object
