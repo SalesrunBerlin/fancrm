@@ -14,6 +14,9 @@ serve(async (req) => {
   }
 
   try {
+    // Log the request details to help debugging
+    console.log("Request received for get-user-emails function");
+    
     // Create a Supabase client with the service role key (which has admin privileges)
     const supabaseClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
@@ -27,6 +30,7 @@ serve(async (req) => {
     const authHeader = req.headers.get("Authorization");
     
     if (!authHeader) {
+      console.error("Missing authorization header");
       return new Response(
         JSON.stringify({ error: "Missing authorization header" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -35,6 +39,7 @@ serve(async (req) => {
 
     // Get the user from the auth header
     const token = authHeader.replace("Bearer ", "");
+    console.log("Verifying token");
     const { data: { user }, error: userError } = await supabaseClient.auth.getUser(token);
     
     if (userError || !user) {
@@ -45,6 +50,8 @@ serve(async (req) => {
       );
     }
 
+    console.log("User verified, checking SuperAdmin role");
+    
     // Check if the user is a SuperAdmin by querying the profiles table
     const { data: profileData, error: profileError } = await supabaseClient
       .from("profiles")
@@ -52,35 +59,55 @@ serve(async (req) => {
       .eq("id", user.id)
       .single();
 
-    if (profileError || !profileData || profileData.role !== "SuperAdmin") {
-      console.error("User not SuperAdmin:", profileError || "Role is not SuperAdmin");
+    if (profileError) {
+      console.error("Error fetching profile:", profileError);
+      return new Response(
+        JSON.stringify({ error: "Error fetching user profile" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log("Profile data:", profileData);
+
+    if (!profileData || profileData.role !== "SuperAdmin") {
+      console.error("User not SuperAdmin:", user.id, profileData?.role);
       return new Response(
         JSON.stringify({ error: "Only SuperAdmin users can access this function" }),
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Call the get_user_emails function we created
-    const { data, error } = await supabaseClient.rpc("get_user_emails");
+    console.log("SuperAdmin verified, fetching emails");
 
-    if (error) {
-      console.error("Error fetching emails:", error);
+    // Try to call the get_user_emails function
+    try {
+      const { data, error } = await supabaseClient.rpc("get_user_emails");
+
+      if (error) {
+        console.error("Error fetching emails from RPC:", error);
+        return new Response(
+          JSON.stringify({ error: error.message }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      console.log("Successfully fetched emails, count:", data?.length || 0);
+      
       return new Response(
-        JSON.stringify({ error: error.message }),
+        JSON.stringify(data || []),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    } catch (rpcError) {
+      console.error("Unexpected RPC error:", rpcError);
+      return new Response(
+        JSON.stringify({ error: "Failed to fetch user emails", details: rpcError.message }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
-
-    console.log("Successfully fetched emails, count:", data?.length || 0);
-    
-    return new Response(
-      JSON.stringify(data || []),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
   } catch (error) {
     console.error("Unexpected error:", error);
     return new Response(
-      JSON.stringify({ error: "An unexpected error occurred" }),
+      JSON.stringify({ error: "An unexpected error occurred", details: error.message }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }

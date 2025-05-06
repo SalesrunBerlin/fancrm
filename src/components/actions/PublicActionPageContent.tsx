@@ -74,7 +74,7 @@ export function PublicActionPageContent({ action }: PublicActionPageContentProps
   if (success) {
     return (
       <div className="space-y-4">
-        <Alert className={getAlertVariantClass("success")}>
+        <Alert className={getAlertVariantClass("default")}>
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
             Thank you! Your submission has been received.
@@ -90,7 +90,6 @@ export function PublicActionPageContent({ action }: PublicActionPageContentProps
       <div className="space-y-4">
         <CreateRecordForm 
           objectTypeId={action.target_object_id} 
-          onSubmit={handleSubmit} 
           isSubmitting={submitting}
         />
       </div>

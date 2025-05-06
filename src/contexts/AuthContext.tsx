@@ -39,6 +39,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Fetch the user's role and color preference from the profiles table
   const fetchUserProfile = async (userId: string) => {
     try {
+      console.log("Fetching user profile for:", userId);
       const { data, error } = await supabase
         .from('profiles')
         .select('role, favorite_color')
@@ -78,12 +79,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         // Handle auth state changes
+        console.log("Auth state changed:", event);
         setSession(session);
         setUser(session?.user ?? null);
         
         // Fetch role and color if user is logged in
         if (session?.user) {
           const role = await fetchUserProfile(session.user.id);
+          console.log("User role set to:", role);
           setUserRole(role);
         } else {
           setUserRole(null);
@@ -103,12 +106,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Then check for existing session
     supabase.auth.getSession().then(async ({ data: { session } }) => {
+      console.log("Getting existing session:", session ? "found" : "not found");
       setSession(session);
       setUser(session?.user ?? null);
       
       // Fetch role and color if user is logged in
       if (session?.user) {
         const role = await fetchUserProfile(session.user.id);
+        console.log("User role set to:", role);
         setUserRole(role);
       }
       
