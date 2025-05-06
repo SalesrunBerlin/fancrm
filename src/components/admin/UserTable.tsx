@@ -75,12 +75,12 @@ export function UserTable({ users }: UserTableProps) {
                       </span>
                     </div>
                   </TableCell>
-                  <TableCell>{user.email}</TableCell>
+                  <TableCell>{user.email || user.id.substring(0, 8) + '@example.com'}</TableCell>
                   <TableCell>{user.profile?.screen_name || user.id.substring(0, 8)}</TableCell>
                   <TableCell>{user.profile?.role || 'user'}</TableCell>
                   <TableCell>{new Date(user.created_at).toLocaleDateString()}</TableCell>
-                  <TableCell>{user.stats?.objectCount}</TableCell>
-                  <TableCell>{user.stats?.recordCount}</TableCell>
+                  <TableCell>{user.stats?.objectCount || 0}</TableCell>
+                  <TableCell>{user.stats?.recordCount || 0}</TableCell>
                   <TableCell>
                     <ThemedButton size="sm" variant="outline" asChild>
                       <Link to={`/admin/users/${user.id}`}>

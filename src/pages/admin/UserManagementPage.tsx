@@ -35,53 +35,75 @@ export default function UserManagementPage() {
   const navigate = useNavigate();
   const [users, setUsers] = useState<UserSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const { userEmails, isLoading: isLoadingEmails } = useUserEmails();
+  const { userEmails, isLoading: isLoadingEmails, error: emailError } = useUserEmails();
 
   useEffect(() => {
     // Redirect if not a Super Admin
     if (!isSuperAdmin) {
       navigate("/dashboard");
+      return;
     }
-  }, [isSuperAdmin, navigate]);
+
+    // If there's an email error, show it
+    if (emailError) {
+      console.error("Email loading error:", emailError);
+      toast.error(`Error loading emails: ${emailError}`);
+    }
+  }, [isSuperAdmin, navigate, emailError]);
 
   useEffect(() => {
     const fetchUsers = async () => {
       try {
         setIsLoading(true);
+        console.log("Starting user data fetch process");
         
         // Fetch profiles which have user data
         const { data: profilesData, error: profilesError } = await supabase
           .from('profiles')
           .select('id, first_name, last_name, role, screen_name, created_at');
         
-        if (profilesError) throw profilesError;
+        if (profilesError) {
+          console.error("Error fetching profiles:", profilesError);
+          throw profilesError;
+        }
         
         if (!profilesData) {
+          console.log("No profile data returned");
           setUsers([]);
           return;
         }
+
+        console.log(`Fetched ${profilesData.length} profiles`);
+        
+        // Log the email data for debugging
+        console.log("User emails data:", userEmails);
         
         // Enrich each profile with object counts
         const enrichedUsers = await Promise.all(
           profilesData.map(async (profile) => {
             // Find real email from our userEmails data
             const userEmailEntry = userEmails.find(ue => ue.id === profile.id);
+            
+            // Log the email match attempt
+            console.log(`Looking for email for user ${profile.id}: `, 
+                          userEmailEntry ? `Found: ${userEmailEntry.email}` : "Not found");
+            
             const email = userEmailEntry?.email || `user-${profile.id.substring(0, 8)}@example.com`;
             
             // Get object counts
-            const { data: objectsData, error: objectsError } = await supabase
+            const { data: objectsData } = await supabase
               .from('object_types')
               .select('id')
               .eq('owner_id', profile.id);
             
             // Get field counts
-            const { data: fieldsData, error: fieldsError } = await supabase
+            const { data: fieldsData } = await supabase
               .from('object_fields')
               .select('id')
               .eq('owner_id', profile.id);
             
             // Get record counts
-            const { data: recordsData, error: recordsError } = await supabase
+            const { data: recordsData } = await supabase
               .from('object_records')
               .select('id')
               .eq('owner_id', profile.id);
@@ -105,6 +127,7 @@ export default function UserManagementPage() {
           })
         );
         
+        console.log(`Processed ${enrichedUsers.length} users with emails`);
         setUsers(enrichedUsers);
       } catch (error) {
         console.error('Error fetching users:', error);
@@ -114,8 +137,9 @@ export default function UserManagementPage() {
       }
     };
 
-    // Only fetch users when we have emails data
+    // Only fetch users when we have emails data and not loading
     if (!isLoadingEmails) {
+      console.log("Email data loaded, fetching users");
       fetchUsers();
     }
   }, [userEmails, isLoadingEmails]);
@@ -144,7 +168,7 @@ export default function UserManagementPage() {
         <TabsContent value="users">
           <Card>
             <CardHeader>
-              <CardTitle>Registered Users</CardTitle>
+              <CardTitle>Registered Users ({users.length})</CardTitle>
             </CardHeader>
             <CardContent>
               <UserTable users={users} />

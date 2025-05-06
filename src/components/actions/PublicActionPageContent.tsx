@@ -7,7 +7,6 @@ import { CreateRecordForm } from "@/components/actions/CreateRecordForm";
 import { Action } from "@/hooks/useActions";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { useNavigate } from "react-router-dom";
 
 interface PublicActionPageContentProps {
   action: Action;
@@ -16,7 +15,6 @@ interface PublicActionPageContentProps {
 export function PublicActionPageContent({ action }: PublicActionPageContentProps) {
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
-  const navigate = useNavigate();
 
   const handleSubmit = async (formData: any) => {
     try {
@@ -90,7 +88,7 @@ export function PublicActionPageContent({ action }: PublicActionPageContentProps
       <div className="space-y-4">
         <CreateRecordForm 
           objectTypeId={action.target_object_id} 
-          isSubmitting={submitting}
+          onSubmit={handleSubmit}
         />
       </div>
     );

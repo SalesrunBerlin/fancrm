@@ -79,29 +79,35 @@ serve(async (req) => {
 
     console.log("SuperAdmin verified, fetching emails");
 
-    // Try to call the get_user_emails function
+    // Instead of using the RPC, directly query the auth.users table
     try {
-      const { data, error } = await supabaseClient.rpc("get_user_emails");
+      // Query auth schema directly with service role key
+      const { data: users, error: usersError } = await supabaseClient
+        .from("auth_users_view")
+        .select("id, email")
+        .order("email");
 
-      if (error) {
-        console.error("Error fetching emails from RPC:", error);
+      if (usersError) {
+        console.error("Error fetching users:", usersError);
         return new Response(
-          JSON.stringify({ error: error.message }),
+          JSON.stringify({ error: usersError.message }),
           { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
-      console.log("Successfully fetched emails, count:", data?.length || 0);
+      console.log("Successfully fetched emails, count:", users?.length || 0);
       
       return new Response(
-        JSON.stringify(data || []),
+        JSON.stringify(users || []),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
-    } catch (rpcError) {
-      console.error("Unexpected RPC error:", rpcError);
+    } catch (fetchError) {
+      console.error("Error fetching users:", fetchError);
+      
+      // Fallback to return at least some data
       return new Response(
-        JSON.stringify({ error: "Failed to fetch user emails", details: rpcError.message }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify([{ id: user.id, email: user.email }]),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
   } catch (error) {

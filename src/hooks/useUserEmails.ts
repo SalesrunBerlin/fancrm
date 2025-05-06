@@ -58,8 +58,20 @@ export function useUserEmails() {
           throw new Error(response.error.message || "Failed to fetch user emails");
         }
 
-        console.log("Emails received:", response.data?.length || 0);
-        setUserEmails(response.data || []);
+        console.log("Emails received:", response.data?.length || 0, response.data);
+        
+        // Ensure data is in the correct format
+        if (Array.isArray(response.data)) {
+          const formattedData = response.data.map(item => ({
+            id: item.id,
+            email: item.email
+          }));
+          setUserEmails(formattedData);
+        } else {
+          console.error("Invalid response format:", response.data);
+          throw new Error("Invalid response format from server");
+        }
+        
         setError(null);
       } catch (err: any) {
         console.error("Error fetching user emails:", err);
@@ -70,7 +82,9 @@ export function useUserEmails() {
         if (import.meta.env.DEV) {
           console.log("Using fallback email data for development");
           const fallbackEmails = [
-            { id: user.id, email: user.email || 'admin@example.com' }
+            { id: user.id, email: user.email || 'admin@example.com' },
+            { id: "00000000-0000-0000-0000-000000000001", email: 'user1@example.com' },
+            { id: "00000000-0000-0000-0000-000000000002", email: 'user2@example.com' }
           ];
           setUserEmails(fallbackEmails);
         }
