@@ -1,4 +1,3 @@
-
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { Toaster } from "sonner"; 
 import { Layout } from "@/components/layout/Layout";
@@ -43,6 +42,8 @@ import UserManagementPage from "./pages/admin/UserManagementPage";
 import UserDetailPage from "./pages/admin/UserDetailPage";
 import PublicActionPage from "./pages/PublicActionPage";
 import PublicRecordPage from "./pages/PublicRecordPage";
+import ReportsPage from "./pages/ReportsPage";
+import ReportViewPage from "./pages/ReportViewPage";
 
 // Create a client
 const queryClient = new QueryClient({
@@ -91,6 +92,11 @@ function App() {
               <Route path="/objects/:objectTypeId/new" element={<CreateRecordPage />} />
               <Route path="/objects/:objectTypeId/:recordId" element={<ObjectRecordDetail />} />
               <Route path="/objects/:objectTypeId/:recordId/edit" element={<EditRecordPage />} />
+              
+              {/* Report routes */}
+              <Route path="/reports" element={<ReportsPage />} />
+              <Route path="/reports/:reportId" element={<ReportViewPage />} />
+              
               {/* Actions routes */}
               <Route path="/actions" element={<ActionsPage />} />
               <Route path="/actions/new" element={<ActionCreatePage />} />
