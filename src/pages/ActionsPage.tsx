@@ -3,8 +3,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Plus, Loader2, Settings, MoreHorizontal, Play, Edit, Trash2, Circle } from "lucide-react";
+import { Plus, Loader2, MoreHorizontal, Play, Edit, Trash2, Circle } from "lucide-react";
 import { useActions, Action, ActionColor } from "@/hooks/useActions";
 import { formatDistanceToNow } from "date-fns";
 import { DeleteDialog } from "@/components/common/DeleteDialog";
@@ -16,6 +15,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { ThemedButton } from "@/components/ui/themed-button";
 
 // Helper function to get the correct color class based on ActionColor
 const getColorClass = (color: ActionColor): string => {
@@ -124,12 +125,12 @@ export default function ActionsPage() {
         title="Actions"
         description="Define and manage actions for your objects"
         actions={
-          <Button asChild>
+          <ThemedButton asChild>
             <Link to="/actions/new">
               <Plus className="mr-2 h-4 w-4" />
               Create Action
             </Link>
-          </Button>
+          </ThemedButton>
         }
         backTo="/settings"
       />
@@ -172,13 +173,13 @@ export default function ActionsPage() {
                   </div>
                   <div className="flex items-center gap-2">
                     {action.action_type === 'new_record' && (
-                      <Button 
+                      <ThemedButton 
                         size="sm" 
                         onClick={() => navigate(`/actions/execute/${action.id}`)}
                         variant={action.color}
                       >
                         <Play className="h-4 w-4 mr-1" /> Execute
-                      </Button>
+                      </ThemedButton>
                     )}
                     
                     <DropdownMenu>
@@ -211,12 +212,12 @@ export default function ActionsPage() {
               <p className="text-muted-foreground mb-4">
                 No actions found. Create your first action to get started.
               </p>
-              <Button asChild>
+              <ThemedButton asChild>
                 <Link to="/actions/new">
                   <Plus className="mr-2 h-4 w-4" />
                   Create Action
                 </Link>
-              </Button>
+              </ThemedButton>
             </div>
           )}
         </CardContent>
