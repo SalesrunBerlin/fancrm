@@ -1,6 +1,7 @@
+
 import { useState, useEffect } from "react";
 
-export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T) => void] {
+export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T | ((val: T) => T)) => void] {
   // Get from local storage then
   // parse stored json or return initialValue
   const readValue = (): T => {
@@ -11,6 +12,7 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T)
 
     try {
       const item = window.localStorage.getItem(key);
+      console.log(`Reading from localStorage[${key}]:`, item ? JSON.parse(item) : "not found");
       return item ? (JSON.parse(item) as T) : initialValue;
     } catch (error) {
       console.warn(`Error reading localStorage key "${key}":`, error);
@@ -23,7 +25,7 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T)
 
   // Return a wrapped version of useState's setter function that
   // persists the new value to localStorage.
-  const setValue = (value: T) => {
+  const setValue = (value: T | ((val: T) => T)) => {
     try {
       // Allow value to be a function so we have the same API as useState
       const valueToStore =
@@ -34,6 +36,7 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T)
       
       // Save to local storage
       if (typeof window !== "undefined") {
+        console.log(`Writing to localStorage[${key}]:`, valueToStore);
         window.localStorage.setItem(key, JSON.stringify(valueToStore));
       }
     } catch (error) {

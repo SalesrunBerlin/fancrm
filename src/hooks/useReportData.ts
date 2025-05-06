@@ -9,6 +9,15 @@ import { useObjectRelationships } from "@/hooks/useObjectRelationships";
 export function useReportData(report: ReportDefinition) {
   const { objectTypes } = useObjectTypes();
   
+  // Safety check for report with no objects
+  if (!report?.objectIds || report.objectIds.length === 0) {
+    return {
+      data: { columns: [], rows: [], totalCount: 0 },
+      isLoading: false,
+      error: new Error("No objects selected for this report"),
+    };
+  }
+  
   // Fetch records for each object in the report - safely handle undefined objectIds
   const objectDataQueries = (report.objectIds || []).map(objectTypeId => {
     const { records, isLoading, error } = useObjectRecords(
@@ -43,19 +52,24 @@ export function useReportData(report: ReportDefinition) {
   const result = useQuery({
     queryKey: ["report-data", report.id, report.objectIds, report.filters, report.selectedFields],
     queryFn: async () => {
+      console.log("Processing report data for:", report.name);
+      
       // Check if data is still loading
       if (objectDataQueries.some(q => q.isLoading)) {
+        console.log("Some object data is still loading");
         return { columns: [], rows: [], totalCount: 0 };
       }
       
       // Check for any errors
       const errors = objectDataQueries.filter(q => q.error);
       if (errors.length > 0) {
+        console.error("Error fetching data:", errors[0].error);
         throw new Error(`Error fetching data: ${errors[0].error}`);
       }
       
       // Safety check for no objects
       if (!report.objectIds || report.objectIds.length === 0) {
+        console.warn("No object IDs in report");
         return { columns: [], rows: [], totalCount: 0 };
       }
       
@@ -70,8 +84,11 @@ export function useReportData(report: ReportDefinition) {
         .filter(f => f.isVisible)
         .sort((a, b) => a.order - b.order);
       
+      console.log("Visible fields:", visibleFields);
+      
       // Safety check for no visible fields
       if (visibleFields.length === 0) {
+        console.warn("No visible fields in report");
         return { columns: [], rows: [], totalCount: 0 };
       }
       
@@ -87,14 +104,24 @@ export function useReportData(report: ReportDefinition) {
         };
       });
       
+      console.log("Column definitions:", columns);
+      
       // For single-object reports, just return the data
       if (report.objectIds.length === 1) {
         const primaryObjectData = objectDataQueries[0];
         
         // Handle case where records might be undefined
         if (!primaryObjectData || !primaryObjectData.records) {
-          return { columns: columns.map(c => c.key), rows: [], totalCount: 0 };
+          console.warn("No records found for primary object");
+          return { 
+            columns: columns.map(c => c.key), 
+            columnDefs: columns,
+            rows: [], 
+            totalCount: 0 
+          };
         }
+        
+        console.log(`Found ${primaryObjectData.records.length} records for primary object`);
         
         // Format rows based on selected fields
         const rows = primaryObjectData.records.map(record => {
@@ -130,7 +157,7 @@ export function useReportData(report: ReportDefinition) {
         totalCount: 0
       };
     },
-    enabled: report && report.objectIds && report.objectIds.length > 0 && !objectDataQueries.some(q => q.isLoading),
+    enabled: !!report && !!report.objectIds && report.objectIds.length > 0 && !objectDataQueries.some(q => q.isLoading),
   });
   
   return {

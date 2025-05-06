@@ -1,5 +1,10 @@
 import { ContactType, AccountType, DealType } from "@/types";
 
+// Use a type assertion to properly type the mock accounts that include owner_id
+interface ExtendedAccountType extends AccountType {
+  owner_id?: string;
+}
+
 export const mockContacts: ContactType[] = [
   {
     id: "c1",
@@ -109,7 +114,7 @@ export const mockContacts: ContactType[] = [
   }
 ];
 
-export const mockAccounts: AccountType[] = [
+export const mockAccounts: ExtendedAccountType[] = [
   {
     id: "a1",
     name: "Bella Salon",

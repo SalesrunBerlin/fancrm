@@ -23,8 +23,16 @@ export function useReports() {
     null
   );
   
+  // Log state for debugging
+  useEffect(() => {
+    console.log("Reports from localStorage:", reports);
+  }, [reports]);
+  
   const getReportById = (reportId: string) => {
-    return reports.find(r => r.id === reportId) || null;
+    console.log(`Looking for report with ID: ${reportId}`, reports);
+    const report = reports.find(r => r.id === reportId);
+    console.log(`Found report:`, report);
+    return report || null;
   };
   
   const createReport = (name: string, objectTypeId: string, description?: string): ReportDefinition => {
@@ -39,8 +47,8 @@ export function useReports() {
       updated_at: new Date().toISOString()
     };
     
-    setReports((prev: ReportDefinition[]) => {
-      const updatedReports: ReportDefinition[] = [newReport, ...prev];
+    setReports(prev => {
+      const updatedReports = [newReport, ...prev];
       return updatedReports;
     });
     
@@ -52,8 +60,8 @@ export function useReports() {
   };
   
   const updateReport = (reportId: string, updates: Partial<Omit<ReportDefinition, "id" | "created_at">>) => {
-    setReports((prev: ReportDefinition[]) => {
-      const updatedReports: ReportDefinition[] = prev.map(report => 
+    setReports(prev => {
+      const updatedReports = prev.map(report => 
         report.id === reportId 
           ? { 
               ...report, 
@@ -73,8 +81,8 @@ export function useReports() {
   const deleteReport = (reportId: string) => {
     const reportToDelete = getReportById(reportId);
     if (reportToDelete) {
-      setReports((prev: ReportDefinition[]) => {
-        const updatedReports: ReportDefinition[] = prev.filter(report => report.id !== reportId);
+      setReports(prev => {
+        const updatedReports = prev.filter(report => report.id !== reportId);
         return updatedReports;
       });
       
@@ -99,8 +107,8 @@ export function useReports() {
         updated_at: new Date().toISOString()
       };
       
-      setReports((prev: ReportDefinition[]) => {
-        const updatedReports: ReportDefinition[] = [newReport, ...prev];
+      setReports(prev => {
+        const updatedReports = [newReport, ...prev];
         return updatedReports;
       });
       
@@ -114,6 +122,7 @@ export function useReports() {
   };
   
   const updateLastViewedReport = (reportId: string) => {
+    console.log(`Setting last viewed report: ${reportId}`);
     setLastViewedReport(reportId);
   };
   
