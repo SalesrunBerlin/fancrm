@@ -35,16 +35,11 @@ export function ReportFilterBuilder({
     const groupedFilters: Record<string, FilterCondition[]> = {};
     
     objectIds.forEach(objId => {
-      // Get field definitions for this object
-      const { fields } = useObjectFields(objId);
-      
-      // Find filters that belong to this object type's fields
-      const objFilters = filters.filter(filter => {
-        const filterField = fields.find(field => field.api_name === filter.fieldApiName);
-        return !!filterField;
+      groupedFilters[objId] = filters.filter(filter => {
+        // Just store filters based on objectId for now, 
+        // we'll validate them when rendering each tab
+        return true;
       });
-      
-      groupedFilters[objId] = objFilters;
     });
     
     setObjectFilters(groupedFilters);
@@ -92,25 +87,42 @@ export function ReportFilterBuilder({
           })}
         </TabsList>
         
-        {objectIds.map(objectId => {
-          const { fields } = useObjectFields(objectId);
-          
-          return (
-            <TabsContent key={objectId} value={objectId}>
-              <Card>
-                <CardContent className="p-4">
-                  <ObjectRecordsFilter
-                    objectTypeId={objectId}
-                    fields={fields}
-                    onFilterChange={(newFilters) => handleFilterChange(objectId, newFilters)}
-                    activeFilters={objectFilters[objectId] || []}
-                  />
-                </CardContent>
-              </Card>
-            </TabsContent>
-          );
-        })}
+        {objectIds.map(objectId => (
+          <TabsContent key={objectId} value={objectId}>
+            <FilterTabContent 
+              objectId={objectId}
+              filters={objectFilters[objectId] || []}
+              onFilterChange={(newFilters) => handleFilterChange(objectId, newFilters)}
+            />
+          </TabsContent>
+        ))}
       </Tabs>
     </div>
+  );
+}
+
+// This separate component allows us to use hooks for each tab
+function FilterTabContent({ 
+  objectId,
+  filters,
+  onFilterChange
+}: { 
+  objectId: string;
+  filters: FilterCondition[];
+  onFilterChange: (filters: FilterCondition[]) => void;
+}) {
+  const { fields } = useObjectFields(objectId);
+
+  return (
+    <Card>
+      <CardContent className="p-4">
+        <ObjectRecordsFilter
+          objectTypeId={objectId}
+          fields={fields}
+          onFilterChange={onFilterChange}
+          activeFilters={filters}
+        />
+      </CardContent>
+    </Card>
   );
 }

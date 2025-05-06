@@ -39,8 +39,8 @@ export function useReports() {
       updated_at: new Date().toISOString()
     };
     
-    setReports((prev) => {
-      const updatedReports = [newReport, ...prev];
+    setReports((prev: ReportDefinition[]) => {
+      const updatedReports: ReportDefinition[] = [newReport, ...prev];
       return updatedReports;
     });
     
@@ -52,8 +52,8 @@ export function useReports() {
   };
   
   const updateReport = (reportId: string, updates: Partial<Omit<ReportDefinition, "id" | "created_at">>) => {
-    setReports((prev) => {
-      const updatedReports = prev.map(report => 
+    setReports((prev: ReportDefinition[]) => {
+      const updatedReports: ReportDefinition[] = prev.map(report => 
         report.id === reportId 
           ? { 
               ...report, 
@@ -73,8 +73,8 @@ export function useReports() {
   const deleteReport = (reportId: string) => {
     const reportToDelete = getReportById(reportId);
     if (reportToDelete) {
-      setReports((prev) => {
-        const updatedReports = prev.filter(report => report.id !== reportId);
+      setReports((prev: ReportDefinition[]) => {
+        const updatedReports: ReportDefinition[] = prev.filter(report => report.id !== reportId);
         return updatedReports;
       });
       
@@ -99,8 +99,8 @@ export function useReports() {
         updated_at: new Date().toISOString()
       };
       
-      setReports((prev) => {
-        const updatedReports = [newReport, ...prev];
+      setReports((prev: ReportDefinition[]) => {
+        const updatedReports: ReportDefinition[] = [newReport, ...prev];
         return updatedReports;
       });
       
