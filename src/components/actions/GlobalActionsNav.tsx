@@ -91,7 +91,7 @@ export function GlobalActionsNav() {
   }
 
   return (
-    <div className="ml-4">
+    <div>
       <TooltipProvider>
         <Tooltip>
           <DropdownMenu>
@@ -104,7 +104,7 @@ export function GlobalActionsNav() {
                   aria-label="Actions"
                   useUserColor={true}
                 >
-                  <Play className="h-5 w-5 font-bold" />
+                  <Play className="h-5 w-5" fill="currentColor" />
                 </ThemedButton>
               </TooltipTrigger>
             </DropdownMenuTrigger>

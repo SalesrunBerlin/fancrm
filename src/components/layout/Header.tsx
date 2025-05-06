@@ -38,7 +38,8 @@ export function Header({ className }: HeaderProps) {
       "sticky top-0 z-30 flex h-14 items-center w-full bg-background border-b px-4",
       className
     )}>
-      <div className="flex items-center gap-2">
+      {/* Left section - Navigation toggle and back button */}
+      <div className="flex items-center">
         <NavigationToggle />
         
         {isDetailPage && (
@@ -54,8 +55,12 @@ export function Header({ className }: HeaderProps) {
         )}
       </div>
       
-      <GlobalActionsNav />
+      {/* Center section - Global actions nav */}
+      <div className="flex-1 flex justify-center items-center">
+        <GlobalActionsNav />
+      </div>
       
+      {/* Right section - Search and user profile */}
       <div className="flex-1 flex justify-end items-center">
         <Button 
           variant="outline" 
