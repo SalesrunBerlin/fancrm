@@ -1,22 +1,21 @@
 
-import { useCallback, useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
-import { ReportDefinition, ReportField } from "@/types/report";
-import { FilterCondition } from "@/hooks/useObjectRecords";
+import { ReportDefinition } from "@/types/report";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-
-// Default report field selection
-const getDefaultFields = (objectTypeId: string): ReportField[] => {
-  return [{
-    objectTypeId,
-    fieldApiName: "created_at",
-    displayName: "Created Date",
-    isVisible: true,
-    order: 0
-  }];
-};
+import { 
+  migrateLocalReportsToDatabase,
+  formatDatabaseReports
+} from "@/utils/reportMigrationUtils";
+import {
+  fetchUserReports,
+  createDatabaseReport,
+  updateDatabaseReport,
+  deleteDatabaseReport,
+  updateLastViewedReport,
+  duplicateDatabaseReport
+} from "@/services/reportService";
 
 export function useReports() {
   // Get user authentication info
@@ -34,7 +33,7 @@ export function useReports() {
   
   // Fetch reports from Supabase when user auth changes
   useEffect(() => {
-    const fetchReports = async () => {
+    const loadReports = async () => {
       if (!userId) {
         setReports([]);
         setIsLoading(false);
@@ -44,31 +43,22 @@ export function useReports() {
       try {
         setIsLoading(true);
         
-        const { data, error } = await supabase
-          .from("reports")
-          .select("*")
-          .order("updated_at", { ascending: false });
-          
-        if (error) throw error;
+        const { data, error: fetchError } = await fetchUserReports(userId);
         
-        // Transform from database format to app format
-        const formattedReports: ReportDefinition[] = data.map(item => ({
-          id: item.id,
-          name: item.name,
-          description: item.description || "",
-          objectIds: item.object_ids,
-          selectedFields: item.selected_fields,
-          filters: item.filters || [],
-          created_at: item.created_at,
-          updated_at: item.updated_at
-        }));
+        if (fetchError) throw fetchError;
         
-        console.log("[useReports] Fetched reports from database:", formattedReports);
-        setReports(formattedReports);
+        console.log("[useReports] Fetched reports from database:", data);
+        setReports(data);
         
-        // Check for last viewed report
-        if (item.last_viewed_at) {
-          setLastViewedReport(item.id);
+        // Find the most recently viewed report
+        const mostRecentlyViewed = data.reduce((most, report) => {
+          if (!most || !most.last_viewed_at) return report;
+          if (!report.last_viewed_at) return most;
+          return new Date(report.last_viewed_at) > new Date(most.last_viewed_at) ? report : most;
+        }, null as (ReportDefinition & { last_viewed_at?: string }) | null);
+        
+        if (mostRecentlyViewed?.id) {
+          setLastViewedReport(mostRecentlyViewed.id);
         }
       } catch (err) {
         console.error("[useReports] Error fetching reports:", err);
@@ -79,61 +69,21 @@ export function useReports() {
       }
     };
     
-    // Migrate local reports to database if needed
-    const migrateLocalReports = async () => {
-      if (!userId || !Array.isArray(localReports) || localReports.length === 0) {
-        return;
-      }
-      
-      console.log("[useReports] Migrating local reports to database:", localReports);
-      
-      try {
-        // First check if user already has reports in the database
-        const { data } = await supabase
-          .from("reports")
-          .select("id")
-          .limit(1);
-          
-        if (data && data.length > 0) {
-          // User already has reports, no need to migrate
-          console.log("[useReports] User already has reports in database, skipping migration");
+    // Handle migrating local reports to database
+    const handleMigration = async () => {
+      if (userId && Array.isArray(localReports) && localReports.length > 0) {
+        const migrationSuccessful = await migrateLocalReportsToDatabase(userId, localReports);
+        if (migrationSuccessful) {
           // Clear local storage since we're now using the database
           setLocalReports([]);
-          return;
+          // Reload reports from the database
+          loadReports();
         }
-        
-        // Prepare reports for insertion with user_id
-        const reportsToInsert = localReports.map(report => ({
-          id: report.id,
-          name: report.name,
-          description: report.description || "",
-          user_id: userId,
-          object_ids: report.objectIds,
-          selected_fields: report.selectedFields,
-          filters: report.filters || [],
-          created_at: report.created_at,
-          updated_at: report.updated_at
-        }));
-        
-        const { error } = await supabase
-          .from("reports")
-          .insert(reportsToInsert);
-          
-        if (error) throw error;
-        
-        console.log("[useReports] Successfully migrated local reports to database");
-        toast.success("Your reports have been successfully migrated to the cloud");
-        
-        // Clear local storage since we're now using the database
-        setLocalReports([]);
-      } catch (err) {
-        console.error("[useReports] Error migrating reports:", err);
-        toast.error("Failed to migrate your reports to the cloud");
       }
     };
     
-    fetchReports();
-    migrateLocalReports();
+    loadReports();
+    handleMigration();
     
   }, [userId, localReports, setLocalReports]);
   
@@ -152,40 +102,16 @@ export function useReports() {
     return report || null;
   }, [reports]);
   
-  // Create a new report in the database
-  const createReport = useCallback(async (name: string, objectTypeId: string, description?: string): Promise<ReportDefinition | null> => {
+  // Create a new report
+  const createReport = useCallback(async (name: string, objectTypeId: string, description?: string) => {
     if (!userId) {
       toast.error("You must be logged in to create reports");
       return null;
     }
     
-    const newReport: ReportDefinition = {
-      id: crypto.randomUUID(),
-      name,
-      description: description || "",
-      objectIds: [objectTypeId],
-      selectedFields: getDefaultFields(objectTypeId),
-      filters: [],
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    };
+    const newReport = await createDatabaseReport(userId, name, objectTypeId, description);
     
-    try {
-      // Insert into database
-      const { error } = await supabase
-        .from("reports")
-        .insert({
-          id: newReport.id,
-          name: newReport.name,
-          description: newReport.description,
-          user_id: userId,
-          object_ids: newReport.objectIds,
-          selected_fields: newReport.selectedFields,
-          filters: newReport.filters
-        });
-        
-      if (error) throw error;
-      
+    if (newReport) {
       console.log("[useReports] Created new report:", newReport);
       
       // Update local state
@@ -194,13 +120,9 @@ export function useReports() {
       toast.success("Report created", {
         description: `"${name}" has been created successfully`
       });
-      
-      return newReport;
-    } catch (err) {
-      console.error("[useReports] Error creating report:", err);
-      toast.error("Failed to create report");
-      return null;
     }
+    
+    return newReport;
   }, [userId]);
   
   // Update an existing report
@@ -220,22 +142,9 @@ export function useReports() {
         return;
       }
       
-      // Prepare data for database update
-      const dbUpdates: any = {};
-      if (updates.name) dbUpdates.name = updates.name;
-      if (updates.description !== undefined) dbUpdates.description = updates.description;
-      if (updates.objectIds) dbUpdates.object_ids = updates.objectIds;
-      if (updates.selectedFields) dbUpdates.selected_fields = updates.selectedFields;
-      if (updates.filters) dbUpdates.filters = updates.filters;
+      const { success, error: updateError } = await updateDatabaseReport(userId, reportId, updates);
       
-      // Update in database
-      const { error } = await supabase
-        .from("reports")
-        .update(dbUpdates)
-        .eq("id", reportId)
-        .eq("user_id", userId);
-        
-      if (error) throw error;
+      if (!success) throw updateError;
       
       // Update local state
       setReports(prev => 
@@ -273,14 +182,9 @@ export function useReports() {
         return;
       }
       
-      // Delete from database
-      const { error } = await supabase
-        .from("reports")
-        .delete()
-        .eq("id", reportId)
-        .eq("user_id", userId);
-        
-      if (error) throw error;
+      const { success, error: deleteError } = await deleteDatabaseReport(userId, reportId);
+      
+      if (!success) throw deleteError;
       
       // Update local state
       setReports(prev => prev.filter(report => report.id !== reportId));
@@ -312,28 +216,13 @@ export function useReports() {
         return null;
       }
       
-      const newReport: ReportDefinition = {
-        ...reportToCopy,
-        id: crypto.randomUUID(),
-        name: `${reportToCopy.name} (Copy)`,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      };
+      const { report: newReport, error: dupError } = await duplicateDatabaseReport(
+        userId, 
+        reportId, 
+        reportToCopy
+      );
       
-      // Insert into database
-      const { error } = await supabase
-        .from("reports")
-        .insert({
-          id: newReport.id,
-          name: newReport.name,
-          description: newReport.description,
-          user_id: userId,
-          object_ids: newReport.objectIds,
-          selected_fields: newReport.selectedFields,
-          filters: newReport.filters
-        });
-        
-      if (error) throw error;
+      if (!newReport) throw dupError;
       
       // Update local state
       setReports(prev => [newReport, ...prev]);
@@ -351,29 +240,17 @@ export function useReports() {
   }, [userId, getReportById]);
   
   // Track which report was last viewed
-  const updateLastViewedReport = useCallback(async (reportId: string) => {
+  const updateReportLastViewed = useCallback(async (reportId: string) => {
     if (!userId || !reportId) {
       console.warn("[useReports] No userId or reportId provided for tracking");
       return;
     }
     
-    try {
+    const { success } = await updateLastViewedReport(userId, reportId);
+    
+    if (success) {
       console.log(`[useReports] Setting last viewed report: ${reportId}`);
-      
-      // Update in database
-      const { error } = await supabase
-        .from("reports")
-        .update({ last_viewed_at: new Date().toISOString() })
-        .eq("id", reportId)
-        .eq("user_id", userId);
-        
-      if (error) throw error;
-      
-      // Update local state
       setLastViewedReport(reportId);
-    } catch (err) {
-      console.error("[useReports] Error updating last viewed report:", err);
-      // No need to show this error to the user as it's not critical
     }
   }, [userId]);
   
@@ -387,6 +264,6 @@ export function useReports() {
     updateReport,
     deleteReport,
     duplicateReport,
-    updateLastViewedReport
+    updateLastViewedReport: updateReportLastViewed
   };
 }
