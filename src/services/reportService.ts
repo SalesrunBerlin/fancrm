@@ -51,8 +51,8 @@ export const createDatabaseReport = async (
     description: description || "",
     user_id: userId,
     object_ids: [objectTypeId],
-    selected_fields: getDefaultFields(objectTypeId),
-    filters: [],
+    selected_fields: JSON.stringify(getDefaultFields(objectTypeId)),
+    filters: JSON.stringify([]),
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
   };
@@ -69,8 +69,8 @@ export const createDatabaseReport = async (
       name: newReport.name,
       description: newReport.description,
       objectIds: newReport.object_ids,
-      selectedFields: newReport.selected_fields,
-      filters: newReport.filters,
+      selectedFields: getDefaultFields(objectTypeId),
+      filters: [],
       created_at: newReport.created_at,
       updated_at: newReport.updated_at
     };
@@ -98,8 +98,8 @@ export const updateDatabaseReport = async (
     if (updates.name) dbUpdates.name = updates.name;
     if (updates.description !== undefined) dbUpdates.description = updates.description;
     if (updates.objectIds) dbUpdates.object_ids = updates.objectIds;
-    if (updates.selectedFields) dbUpdates.selected_fields = updates.selectedFields;
-    if (updates.filters) dbUpdates.filters = updates.filters;
+    if (updates.selectedFields) dbUpdates.selected_fields = JSON.stringify(updates.selectedFields);
+    if (updates.filters) dbUpdates.filters = JSON.stringify(updates.filters);
     
     const { error } = await supabase
       .from("reports")
@@ -205,11 +205,11 @@ export const duplicateDatabaseReport = async (
     const newReport = {
       id: crypto.randomUUID(),
       name: `${originalReport.name} (Copy)`,
-      description: originalReport.description,
+      description: originalReport.description || "",
       user_id: userId,
       object_ids: originalReport.objectIds,
-      selected_fields: originalReport.selectedFields,
-      filters: originalReport.filters,
+      selected_fields: JSON.stringify(originalReport.selectedFields),
+      filters: JSON.stringify(originalReport.filters || []),
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     };
@@ -224,10 +224,10 @@ export const duplicateDatabaseReport = async (
       report: {
         id: newReport.id,
         name: newReport.name,
-        description: newReport.description || "",
+        description: newReport.description,
         objectIds: newReport.object_ids,
-        selectedFields: newReport.selected_fields,
-        filters: newReport.filters,
+        selectedFields: originalReport.selectedFields,
+        filters: originalReport.filters || [],
         created_at: newReport.created_at,
         updated_at: newReport.updated_at
       },

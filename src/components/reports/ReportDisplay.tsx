@@ -73,6 +73,15 @@ export function ReportDisplay({ report }: ReportDisplayProps) {
   const hasColumnDefs = Array.isArray(columnDefs) && columnDefs.length > 0;
   const hasColumns = Array.isArray(columns) && columns.length > 0;
   
+  // If we have neither column definitions nor columns, show a message
+  if (!hasColumnDefs && !hasColumns) {
+    return (
+      <Card className="p-6 text-center">
+        <p className="text-muted-foreground">No columns defined for this report</p>
+      </Card>
+    );
+  }
+  
   return (
     <Card>
       <CardContent className="p-0 overflow-auto">

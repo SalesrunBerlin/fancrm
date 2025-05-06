@@ -29,12 +29,12 @@ export function useReportData(report: ReportDefinition) {
   
   // Memoize objectIds to prevent unnecessary re-fetching
   // Ensure we have proper dependency arrays that can never be undefined
-  const objectIds = useMemo(() => (report.objectIds || []), [report?.id || 'unknown']);
+  const objectIds = useMemo(() => report.objectIds || [], [report?.id || 'unknown']);
   
   // Fixed JSON.stringify to handle potential undefined values
-  const filters = useMemo(() => (report.filters || []), [report?.id || 'unknown', JSON.stringify(report.filters || [])]);
+  const filters = useMemo(() => report.filters || [], [report?.id || 'unknown', JSON.stringify(report.filters || [])]);
   
-  const selectedFields = useMemo(() => (report.selectedFields || []), [report?.id || 'unknown', JSON.stringify(report.selectedFields || [])]);
+  const selectedFields = useMemo(() => report.selectedFields || [], [report?.id || 'unknown', JSON.stringify(report.selectedFields || [])]);
   
   // Fetch records for each object in the report with memoization
   // Ensure we pass empty arrays as fallbacks for all dependencies

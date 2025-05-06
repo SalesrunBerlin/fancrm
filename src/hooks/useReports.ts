@@ -52,8 +52,9 @@ export function useReports() {
         
         // Find the most recently viewed report
         const mostRecentlyViewed = data.reduce((most, report) => {
-          if (!most || !most.last_viewed_at) return report;
+          if (!most) return report;
           if (!report.last_viewed_at) return most;
+          if (!most.last_viewed_at) return report;
           return new Date(report.last_viewed_at) > new Date(most.last_viewed_at) ? report : most;
         }, null as (ReportDefinition & { last_viewed_at?: string }) | null);
         
@@ -264,6 +265,6 @@ export function useReports() {
     updateReport,
     deleteReport,
     duplicateReport,
-    updateLastViewedReport: updateReportLastViewed
+    updateReportLastViewed
   };
 }

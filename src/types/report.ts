@@ -18,6 +18,7 @@ export interface ReportDefinition {
   filters: FilterCondition[];
   created_at: string;
   updated_at: string;
+  last_viewed_at?: string;
 }
 
 export interface ReportData {
