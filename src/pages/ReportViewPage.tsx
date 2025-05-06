@@ -13,11 +13,15 @@ import { toast } from "sonner";
 export default function ReportViewPage() {
   const { reportId } = useParams<{ reportId: string }>();
   const navigate = useNavigate();
-  const { getReportById, updateLastViewedReport } = useReports();
+  const { getReportById, updateLastViewedReport, reports } = useReports();
   const [isEditing, setIsEditing] = useState(false);
   const [report, setReport] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  
+  // Add debug logging
+  console.log("Current Route ReportId:", reportId);
+  console.log("All available reports:", reports);
   
   // Load report data
   useEffect(() => {
@@ -50,7 +54,7 @@ export default function ReportViewPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [reportId, getReportById, updateLastViewedReport]);
+  }, [reportId, getReportById, updateLastViewedReport, reports]);
   
   if (isLoading) {
     return (

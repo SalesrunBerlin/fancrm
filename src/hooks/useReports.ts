@@ -18,9 +18,9 @@ const getDefaultFields = (objectTypeId: string): ReportField[] => {
 
 export function useReports() {
   // Use storage key with a version to enable future migrations if needed
-  const [reports, setReports] = useLocalStorage<ReportDefinition[]>("reports-v1", []);
+  const [reports, setReports] = useLocalStorage<ReportDefinition[]>("reports-v2", []);
   const [lastViewedReport, setLastViewedReport] = useLocalStorage<string | null>(
-    "last-viewed-report-v1", 
+    "last-viewed-report-v2", 
     null
   );
   
@@ -30,6 +30,9 @@ export function useReports() {
       console.warn("[useReports] Reports is not an array, resetting to []");
       setReports([]);
     }
+    
+    // Add debug info
+    console.log("[useReports] Current reports in storage:", reports);
   }, [reports, setReports]);
   
   // Log state for debugging
@@ -40,13 +43,20 @@ export function useReports() {
   
   // Get a report by its ID
   const getReportById = useCallback((reportId: string) => {
+    if (!reportId) {
+      console.warn("[useReports] No reportId provided");
+      return null;
+    }
+
     if (!Array.isArray(reports)) {
       console.warn("[useReports] Reports data is corrupted, not an array");
       return null;
     }
     
     console.log(`[useReports] Looking for report with ID: ${reportId}`, reports);
-    const report = reports.find(r => r && r.id === reportId);
+    
+    // Ensure we're doing a case-insensitive comparison
+    const report = reports.find(r => r && r.id && r.id.toLowerCase() === reportId.toLowerCase());
     console.log(`[useReports] Found report:`, report);
     return report || null;
   }, [reports]);
@@ -83,6 +93,11 @@ export function useReports() {
   
   // Update an existing report
   const updateReport = useCallback((reportId: string, updates: Partial<Omit<ReportDefinition, "id" | "created_at">>) => {
+    if (!reportId) {
+      console.error("[useReports] No reportId provided for update");
+      return;
+    }
+
     setReports(prev => {
       // Safety check for previous state
       const validPrev = Array.isArray(prev) ? prev : [];
@@ -139,6 +154,11 @@ export function useReports() {
   
   // Duplicate a report
   const duplicateReport = useCallback((reportId: string) => {
+    if (!reportId) {
+      console.error("[useReports] No reportId provided for duplication");
+      return null;
+    }
+
     const reportToCopy = getReportById(reportId);
     if (reportToCopy) {
       const newReport: ReportDefinition = {
@@ -170,6 +190,11 @@ export function useReports() {
   
   // Track which report was last viewed
   const updateLastViewedReport = useCallback((reportId: string) => {
+    if (!reportId) {
+      console.warn("[useReports] No reportId provided for tracking");
+      return;
+    }
+    
     console.log(`[useReports] Setting last viewed report: ${reportId}`);
     setLastViewedReport(reportId);
   }, [setLastViewedReport]);

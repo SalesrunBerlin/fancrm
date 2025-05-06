@@ -32,7 +32,7 @@ export function ReportDisplay({ report }: ReportDisplayProps) {
           </div>
           <h3 className="text-xl font-medium">Error loading report data</h3>
           <p className="text-muted-foreground text-center">
-            {error.message || "An error occurred while loading the report data"}
+            {error instanceof Error ? error.message : "An error occurred while loading the report data"}
           </p>
         </div>
       </Card>
@@ -48,7 +48,10 @@ export function ReportDisplay({ report }: ReportDisplayProps) {
   }
 
   // Safely check if columnDefs exists and has length before using it
-  const hasColumnDefs = data.columnDefs && Array.isArray(data.columnDefs) && data.columnDefs.length > 0;
+  const columnDefs = data.columnDefs || [];
+  const columns = data.columns || [];
+  const hasColumnDefs = Array.isArray(columnDefs) && columnDefs.length > 0;
+  const hasColumns = Array.isArray(columns) && columns.length > 0;
   
   return (
     <Card>
@@ -58,13 +61,13 @@ export function ReportDisplay({ report }: ReportDisplayProps) {
             <TableRow>
               {hasColumnDefs ? 
                 // Use columnDefs if available
-                data.columnDefs.map((column, index) => (
+                columnDefs.map((column, index) => (
                   <TableHead key={index}>{column.header}</TableHead>
                 ))
                 : 
                 // Fall back to simple columns array
-                data.columns && Array.isArray(data.columns) ? 
-                  data.columns.map((column, index) => (
+                hasColumns ? 
+                  columns.map((column, index) => (
                     <TableHead key={index}>{column}</TableHead>
                   )) : 
                   <TableHead>No columns defined</TableHead>
@@ -76,15 +79,15 @@ export function ReportDisplay({ report }: ReportDisplayProps) {
               <TableRow key={rowIndex}>
                 {hasColumnDefs ? 
                   // Use columnDefs for structured data
-                  data.columnDefs.map((column, colIndex) => (
+                  columnDefs.map((column, colIndex) => (
                     <TableCell key={colIndex}>
                       {formatCellValue(row[column.key])}
                     </TableCell>
                   ))
                   : 
                   // Fall back to columns array
-                  data.columns && Array.isArray(data.columns) ? 
-                    data.columns.map((column, colIndex) => (
+                  hasColumns ? 
+                    columns.map((column, colIndex) => (
                       <TableCell key={colIndex}>
                         {formatCellValue(row[column])}
                       </TableCell>
@@ -118,5 +121,5 @@ function formatCellValue(value: any): React.ReactNode {
     return JSON.stringify(value);
   }
   
-  return value.toString();
+  return String(value);
 }

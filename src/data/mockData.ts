@@ -3,6 +3,8 @@ import { ContactType, AccountType, DealType } from "@/types";
 // Use a type assertion to properly type the mock accounts that include owner_id
 interface ExtendedAccountType extends AccountType {
   owner_id?: string;
+  contactCount?: number; // Hinzugefügt, um TypeScript-Fehler zu beheben
+  tags?: string[];       // Hinzugefügt, um TypeScript-Fehler zu beheben
 }
 
 export const mockContacts: ContactType[] = [

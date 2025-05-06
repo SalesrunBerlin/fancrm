@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -22,8 +22,12 @@ export function SavedReportsList({ reports, onEdit }: SavedReportsListProps) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [reportToDelete, setReportToDelete] = useState<string | null>(null);
   
-  // Safety check to ensure reports is an array
+  // Safety check to ensure reports is an array and logging
   const safeReports = Array.isArray(reports) ? reports : [];
+  
+  useEffect(() => {
+    console.log("SavedReportsList received reports:", reports);
+  }, [reports]);
   
   const handleViewReport = (reportId: string) => {
     console.log("Viewing report:", reportId);
@@ -54,7 +58,13 @@ export function SavedReportsList({ reports, onEdit }: SavedReportsListProps) {
   };
   
   if (safeReports.length === 0) {
-    return null;
+    return (
+      <Card className="p-8 text-center">
+        <div className="flex flex-col items-center gap-4">
+          <p className="text-muted-foreground">Keine Berichte gefunden. Erstellen Sie Ihren ersten Bericht.</p>
+        </div>
+      </Card>
+    );
   }
   
   return (
