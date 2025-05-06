@@ -2,14 +2,15 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { usePublicRelatedRecords } from "@/hooks/usePublicRecord";
-import { DataTable } from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { getAlertVariantClass } from "@/patches/FixAlertVariants";
 import { ObjectRecord } from "@/types/ObjectFieldTypes";
 import { useObjectFields } from "@/hooks/useObjectFields";
-import { Pagination } from "@/components/ui/pagination";
+import { Button } from "@/components/ui/button";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 interface RelatedRecordsTabProps {
   token: string;
@@ -91,17 +92,6 @@ export function RelatedRecordsTab({
     );
   }
 
-  // Create columns based on visible fields
-  const columns = [
-    ...(visibleFields?.map(field => ({
-      header: field.name,
-      accessorFn: (record: ObjectRecord) => {
-        const value = record.field_values?.[field.api_name];
-        return value !== undefined && value !== null ? String(value) : "";
-      }
-    })) || [])
-  ];
-
   // Paginate records
   const startIndex = (page - 1) * pageSize;
   const paginatedRecords = records.slice(startIndex, startIndex + pageSize);
@@ -120,22 +110,61 @@ export function RelatedRecordsTab({
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <DataTable
-          columns={columns}
-          data={paginatedRecords}
-          emptyState={
-            <p className="text-center text-muted-foreground py-8">
-              No related records found
-            </p>
-          }
-        />
+        <div className="rounded-md border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                {visibleFields?.map(field => (
+                  <TableHead key={field.id}>{field.name}</TableHead>
+                ))}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {paginatedRecords.length > 0 ? (
+                paginatedRecords.map((record: ObjectRecord) => (
+                  <TableRow key={record.id}>
+                    {visibleFields?.map(field => (
+                      <TableCell key={`${record.id}-${field.api_name}`}>
+                        {record.field_values?.[field.api_name] !== undefined && 
+                         record.field_values?.[field.api_name] !== null 
+                          ? String(record.field_values[field.api_name]) 
+                          : ""}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={visibleFields?.length || 1} className="text-center">
+                    No related records found
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
+        
         {totalPages > 1 && (
-          <div className="mt-4 flex justify-center">
-            <Pagination
-              currentPage={page}
-              totalPages={totalPages}
-              onPageChange={setPage}
-            />
+          <div className="mt-4 flex items-center justify-center gap-2">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setPage(prev => Math.max(prev - 1, 1))}
+              disabled={page === 1}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <span className="text-sm">
+              Page {page} of {totalPages}
+            </span>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setPage(prev => Math.min(prev + 1, totalPages))}
+              disabled={page === totalPages}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
           </div>
         )}
       </CardContent>

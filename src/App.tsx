@@ -66,6 +66,7 @@ function App() {
             <Route path="/public-action/:token" element={<PublicActionPage />} />
             <Route path="/public-record/:token/:recordId" element={<PublicRecordPage />} />
             
+            {/* Protected routes */}
             <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
               <Route path="/" element={<Dashboard />} />
               <Route path="/dashboard" element={<Dashboard />} />

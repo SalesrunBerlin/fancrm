@@ -1597,6 +1597,24 @@ export type Database = {
           event_message: string
         }[]
       }
+      get_public_related_records: {
+        Args: {
+          p_record_id: string
+          p_related_object_type_id: string
+          p_relationship_id: string
+        }
+        Returns: {
+          id: string
+          record_id: string
+          object_type_id: string
+          created_at: string
+          updated_at: string
+          owner_id: string
+          created_by: string
+          last_modified_by: string
+          field_values: Json
+        }[]
+      }
       get_public_visible_fields: {
         Args: { p_token: string; p_record_id: string }
         Returns: {

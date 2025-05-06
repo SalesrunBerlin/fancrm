@@ -6,6 +6,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { getAlertVariantClass } from "@/patches/FixAlertVariants";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function PublicRecordPage() {
   const { token, recordId } = useParams<{ token: string; recordId: string }>();
@@ -13,26 +14,39 @@ export default function PublicRecordPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Validate token format first to avoid unnecessary checks
-    if (token && recordId) {
-      // Simple token validation (just ensures basic format)
-      const isTokenFormatValid = token.length >= 10;
-      
-      if (isTokenFormatValid) {
-        setIsTokenValid(true);
-      } else {
+    const validateToken = async () => {
+      if (!token || !recordId) {
         setIsTokenValid(false);
+        setIsLoading(false);
+        return;
       }
-    } else {
-      setIsTokenValid(false);
-    }
-    
-    // Simulate loading to allow smooth transition
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 300);
-    
-    return () => clearTimeout(timer);
+
+      try {
+        // Check if this record is publicly accessible with this token
+        const { data, error } = await supabase
+          .from("public_record_shares")
+          .select("id")
+          .eq("token", token)
+          .eq("record_id", recordId)
+          .eq("is_active", true)
+          .single();
+
+        if (error || !data) {
+          console.error("Token validation error:", error);
+          setIsTokenValid(false);
+        } else {
+          setIsTokenValid(true);
+        }
+      } catch (err) {
+        console.error("Error validating token:", err);
+        setIsTokenValid(false);
+      } finally {
+        // Short delay to prevent flashing
+        setTimeout(() => setIsLoading(false), 300);
+      }
+    };
+
+    validateToken();
   }, [token, recordId]);
 
   if (isLoading) {
