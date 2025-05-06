@@ -13,6 +13,23 @@ interface ReportDisplayProps {
 export function ReportDisplay({ report }: ReportDisplayProps) {
   console.log("Rendering ReportDisplay with report:", report);
   
+  // Ensure report is valid before proceeding
+  if (!report || !report.id) {
+    return (
+      <Card className="p-6 text-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="p-4 bg-amber-100 rounded-full">
+            <AlertCircle className="h-8 w-8 text-amber-600" />
+          </div>
+          <h3 className="text-xl font-medium">Invalid Report</h3>
+          <p className="text-muted-foreground">
+            The report definition is missing or invalid.
+          </p>
+        </div>
+      </Card>
+    );
+  }
+  
   const { data, isLoading, error } = useReportData(report);
   
   if (isLoading) {

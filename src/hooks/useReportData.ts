@@ -28,15 +28,20 @@ export function useReportData(report: ReportDefinition) {
   }
   
   // Memoize objectIds to prevent unnecessary re-fetching
-  const objectIds = useMemo(() => report.objectIds || [], [report.id]);
-  const filters = useMemo(() => report.filters || [], [report.id, JSON.stringify(report.filters)]);
-  const selectedFields = useMemo(() => report.selectedFields || [], [report.id, JSON.stringify(report.selectedFields)]);
+  // Ensure we have proper dependency arrays that can never be undefined
+  const objectIds = useMemo(() => (report.objectIds || []), [report?.id || 'unknown']);
+  
+  // Fixed JSON.stringify to handle potential undefined values
+  const filters = useMemo(() => (report.filters || []), [report?.id || 'unknown', JSON.stringify(report.filters || [])]);
+  
+  const selectedFields = useMemo(() => (report.selectedFields || []), [report?.id || 'unknown', JSON.stringify(report.selectedFields || [])]);
   
   // Fetch records for each object in the report with memoization
-  const objectDataQueries = useMemo(() => objectIds.map(objectTypeId => {
+  // Ensure we pass empty arrays as fallbacks for all dependencies
+  const objectDataQueries = useMemo(() => (objectIds || []).map(objectTypeId => {
     // Filter by fields in this object
-    const objectFilters = filters.filter(f => 
-      selectedFields
+    const objectFilters = (filters || []).filter(f => 
+      (selectedFields || [])
         .filter(sf => sf.objectTypeId === objectTypeId)
         .some(sf => sf.fieldApiName === f.fieldApiName)
     );
@@ -56,19 +61,19 @@ export function useReportData(report: ReportDefinition) {
       isLoading,
       error
     };
-  }), [objectIds, JSON.stringify(filters), JSON.stringify(selectedFields)]);
+  }), [objectIds.join(','), JSON.stringify(filters), JSON.stringify(selectedFields)]);
   
   // Fetch relationships with memoization
-  const relationshipsQueries = useMemo(() => objectIds.map(objectTypeId => {
+  const relationshipsQueries = useMemo(() => (objectIds || []).map(objectTypeId => {
     const { relationships } = useObjectRelationships(objectTypeId);
     return { objectTypeId, relationships: relationships || [] };
-  }), [objectIds]);
+  }), [objectIds.join(',')]);
   
   // Process and join data
   const result = useQuery({
-    queryKey: ["report-data", report.id, objectIds, JSON.stringify(filters), JSON.stringify(selectedFields)],
+    queryKey: ["report-data", report?.id || 'unknown', objectIds.join(','), JSON.stringify(filters || []), JSON.stringify(selectedFields || [])],
     queryFn: async (): Promise<ReportQueryResult> => {
-      console.log("Processing report data for:", report.name, "ID:", report.id);
+      console.log("Processing report data for:", report?.name, "ID:", report?.id);
       
       // Check if data is still loading
       if (objectDataQueries.some(q => q.isLoading)) {
@@ -91,12 +96,14 @@ export function useReportData(report: ReportDefinition) {
       
       // Get object names for better display
       const objectNames = objectTypes?.reduce((acc, obj) => {
-        acc[obj.id] = obj.name;
+        if (obj && obj.id) {
+          acc[obj.id] = obj.name;
+        }
         return acc;
       }, {} as Record<string, string>) || {};
       
       // Prepare columns based on selected fields
-      const visibleFields = selectedFields
+      const visibleFields = (selectedFields || [])
         .filter(f => f.isVisible)
         .sort((a, b) => a.order - b.order);
       
@@ -150,6 +157,7 @@ export function useReportData(report: ReportDefinition) {
             if (["id", "created_at", "updated_at", "record_id"].includes(field.fieldApiName)) {
               row[key] = record[field.fieldApiName as keyof typeof record];
             } else {
+              // Safely access field_values which might be undefined
               row[key] = record.field_values?.[field.fieldApiName];
             }
           });
@@ -173,7 +181,7 @@ export function useReportData(report: ReportDefinition) {
         totalCount: 0
       };
     },
-    enabled: !!report && !!objectIds.length && !objectDataQueries.some(q => q.isLoading),
+    enabled: !!report && !!(objectIds && objectIds.length) && !objectDataQueries.some(q => q.isLoading),
     staleTime: 30000, // Cache data for 30 seconds to prevent constant refetching
     refetchOnWindowFocus: false, // Don't refetch when window regains focus
   });
