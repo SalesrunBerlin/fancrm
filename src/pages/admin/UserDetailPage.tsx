@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { PageHeader } from "@/components/ui/page-header";
@@ -5,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { UserRoleSelector } from "@/components/admin/UserRoleSelector";
 import { LoginHistoryTable } from "@/components/admin/LoginHistoryTable";
 import { UserObjectsList } from "@/components/admin/UserObjectsList";
-import { ArrowLeft, Loader2, AlertCircle } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { UserSummary } from "./UserManagementPage";
@@ -13,22 +14,6 @@ import { toast } from "sonner";
 import { ThemedButton } from "@/components/ui/themed-button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useUserEmails } from "@/hooks/useUserEmails";
-
-interface ObjectField {
-  id: string;
-  name: string;
-  api_name: string;
-  data_type: string;
-  is_required: boolean;
-}
-
-interface UserObject {
-  id: string;
-  name: string;
-  api_name: string;
-  fields: ObjectField[];
-  recordCount: number;
-}
 
 export default function UserDetailPage() {
   const { userId } = useParams();

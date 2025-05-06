@@ -1,114 +1,156 @@
-import { useState } from "react";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Label } from "@/components/ui/label";
+import React, { useState } from 'react';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { Check, ChevronsUpDown, Copy, PlusCircle, Trash2 } from 'lucide-react';
+import { Badge } from "@/components/ui/badge"
+import { ScrollArea } from "@/components/ui/scroll-area"
 
-interface DuplicateRecordsResolverProps {
+export interface DuplicateRecordsResolverProps {
   duplicates: any[];
-  onResolved: (resolutions: { [key: string]: string }) => void;
-  onCancel: () => void;
+  fields?: any[]; // Add this field to fix the type error
+  matchingFields: string[];
+  columnMappings: any[];
+  importData: any;
+  onSetAction: (rowIndex: number, action: "create" | "ignore" | "update") => void;
+  onIgnoreAll: () => void;
+  onCreateAll: () => void;
+  onUpdateAll: () => void;
+  onMergeAll: () => void;
+  onRecheck: () => Promise<void>;
 }
 
-export function DuplicateRecordsResolver({ duplicates, onResolved, onCancel }: DuplicateRecordsResolverProps) {
-  const [resolutions, setResolutions] = useState<{ [key: string]: string }>({});
+export const DuplicateRecordsResolver: React.FC<DuplicateRecordsResolverProps> = ({
+  duplicates,
+  fields,
+  matchingFields,
+  columnMappings,
+  importData,
+  onSetAction,
+  onIgnoreAll,
+  onCreateAll,
+  onUpdateAll,
+  onMergeAll,
+  onRecheck,
+}) => {
+  const [selectedActions, setSelectedActions] = useState<("create" | "ignore" | "update")[]>(
+    Array(duplicates.length).fill("create")
+  );
 
-  const handleResolutionChange = (recordType: string, index: number, value: string) => {
-    setResolutions(prev => ({ ...prev, [`${recordType}-${index}`]: value }));
-  };
-
-  const handleResolve = () => {
-    onResolved(resolutions);
-  };
-
-  const renderDuplicateRows = (recordType: string, recordDuplicates: any[]) => {
-    
-    return (
-      <div className="space-y-4 mt-4">
-        {recordDuplicates.map((duplicate: any, index: number) => (
-          <div key={index} className="border rounded-md p-4 bg-background">
-            <h4 className="font-medium mb-2">Duplicate Record #{index + 1}</h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-              <div>
-                <h5 className="text-sm font-medium text-muted-foreground mb-2">New Record</h5>
-                <dl className="space-y-1">
-                  {Object.entries(duplicate.newRecord).map(([key, value]) => (
-                    <div key={key} className="grid grid-cols-2">
-                      <dt className="text-sm font-medium">{key}:</dt>
-                      <dd className="text-sm">{String(value)}</dd>
-                    </div>
-                  ))}
-                </dl>
-              </div>
-              <div>
-                <h5 className="text-sm font-medium text-muted-foreground mb-2">Existing Record</h5>
-                <dl className="space-y-1">
-                  {Object.entries(duplicate.existingRecord).map(([key, value]) => (
-                    <div key={key} className="grid grid-cols-2">
-                      <dt className="text-sm font-medium">{key}:</dt>
-                      <dd className="text-sm">{String(value)}</dd>
-                    </div>
-                  ))}
-                </dl>
-              </div>
-            </div>
-            
-            <div className="flex flex-col space-y-2">
-              <span className="text-sm font-medium">Resolution Strategy:</span>
-              <RadioGroup
-                value={resolutions[`${recordType}-${index}`] || "skip"}
-                onValueChange={(value) => handleResolutionChange(recordType, index, value)}
-              >
-                <div className="flex flex-col space-y-1">
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="skip" id={`skip-${recordType}-${index}`} />
-                    <Label htmlFor={`skip-${recordType}-${index}`}>Skip (Don't import)</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="create" id={`create-${recordType}-${index}`} />
-                    <Label htmlFor={`create-${recordType}-${index}`}>Create New Record</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="update" id={`update-${recordType}-${index}`} />
-                    <Label htmlFor={`update-${recordType}-${index}`}>Update Existing Record</Label>
-                  </div>
-                </div>
-              </RadioGroup>
-            </div>
-          </div>
-        ))}
-      </div>
-    );
+  const handleActionChange = (index: number, action: "create" | "ignore" | "update") => {
+    const newActions = [...selectedActions];
+    newActions[index] = action;
+    setSelectedActions(newActions);
+    onSetAction(index, action);
   };
 
   return (
-    <div className="space-y-6">
-      <h3 className="text-lg font-medium">Resolve Duplicate Records</h3>
-      <p className="text-sm text-muted-foreground">
-        For each set of potential duplicate records, choose a resolution strategy.
-      </p>
+    <div className="w-full">
+      {duplicates.length > 0 ? (
+        <>
+          <div className="mb-4">
+            <p className="text-sm text-muted-foreground">
+              We found {duplicates.length} records that might be duplicates. Please select an action for each record.
+            </p>
+          </div>
 
-      {Object.entries(duplicates).map(([recordType, recordDuplicates]) => (
-        <div key={recordType} className="space-y-2">
-          <h4 className="text-md font-semibold">{recordType}</h4>
-          {renderDuplicateRows(recordType, recordDuplicates as any[])}
-        </div>
-      ))}
+          <ScrollArea>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[150px]">Action</TableHead>
+                  {matchingFields.map((field) => (
+                    <TableHead key={field}>{field}</TableHead>
+                  ))}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {duplicates.map((duplicate, index) => {
+                  const importRow = importData[duplicate.rowIndex];
+                  return (
+                    <TableRow key={index}>
+                      <TableCell>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="outline" size="sm" className="w-full justify-start">
+                              {selectedActions[index] === "create" && "Create New"}
+                              {selectedActions[index] === "ignore" && "Ignore"}
+                              {selectedActions[index] === "update" && "Update Existing"}
+                              <ChevronsUpDown className="ml-auto h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Select Action</DropdownMenuLabel>
+                            <DropdownMenuItem onClick={() => handleActionChange(index, "create")}>
+                              <Check
+                                className={`mr-2 h-4 w-4 ${selectedActions[index] === "create" ? "opacity-100" : "opacity-0"
+                                  }`}
+                              />
+                              Create New
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleActionChange(index, "ignore")}>
+                              <Check
+                                className={`mr-2 h-4 w-4 ${selectedActions[index] === "ignore" ? "opacity-100" : "opacity-0"
+                                  }`}
+                              />
+                              Ignore
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleActionChange(index, "update")}>
+                              <Check
+                                className={`mr-2 h-4 w-4 ${selectedActions[index] === "update" ? "opacity-100" : "opacity-0"
+                                  }`}
+                              />
+                              Update Existing
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                      {matchingFields.map((field) => {
+                        const mappedColumn = columnMappings.find((mapping) => mapping.target === field)?.source;
+                        const cellValue = mappedColumn ? importRow[mappedColumn] : '';
 
-      <div className="flex justify-end space-x-2">
-        <button
-          type="button"
-          className="px-4 py-2 text-sm font-medium rounded-md bg-muted hover:bg-muted-foreground hover:text-muted text-foreground"
-          onClick={onCancel}
-        >
-          Cancel
-        </button>
-        <button
-          type="button"
-          className="px-4 py-2 text-sm font-medium rounded-md bg-primary text-primary-foreground hover:bg-primary-foreground hover:text-primary"
-          onClick={handleResolve}
-        >
-          Resolve Duplicates
-        </button>
-      </div>
+                        return (
+                          <TableCell key={`${index}-${field}`}>
+                            {cellValue}
+                          </TableCell>
+                        );
+                      })}
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </ScrollArea>
+
+          <div className="mt-4 flex justify-end space-x-2">
+            <Button variant="ghost" size="sm" onClick={onIgnoreAll}>
+              Ignore All
+            </Button>
+            <Button variant="ghost" size="sm" onClick={onCreateAll}>
+              Create All
+            </Button>
+            <Button variant="ghost" size="sm" onClick={onUpdateAll}>
+              Update All
+            </Button>
+          </div>
+        </>
+      ) : (
+        <div className="text-center py-4">No duplicates found.</div>
+      )}
     </div>
   );
-}
+};

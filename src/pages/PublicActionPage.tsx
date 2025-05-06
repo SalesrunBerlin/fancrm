@@ -9,7 +9,6 @@ import { getAlertVariantClass } from "@/patches/FixAlertVariants";
 import { useActions, Action } from "@/hooks/useActions";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
 import { supabase } from "@/integrations/supabase/client";
-import { PublicRecordForm } from "@/components/actions/PublicRecordForm";
 import { PublicActionPageContent } from "@/components/actions/PublicActionPageContent";
 
 export default function PublicActionPage() {

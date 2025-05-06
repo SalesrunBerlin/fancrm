@@ -42,7 +42,7 @@ export function useUserEmails() {
           throw new Error(response.error.message || "Failed to fetch user emails");
         }
 
-        setUserEmails(response.data.data || []);
+        setUserEmails(response.data || []);
         setError(null);
       } catch (err: any) {
         console.error("Error fetching user emails:", err);

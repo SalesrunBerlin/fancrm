@@ -1,108 +1,108 @@
-import { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, AlertCircle } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import { getAlertVariantClass } from "@/patches/FixAlertVariants";
-import { CreateRecordForm } from "./CreateRecordForm";
 
-interface PublicActionData {
-  id: string;
-  name: string;
-  description: string;
-  target_object_id: string;
-  action_type: string;
-  is_public: boolean;
-  owner_id: string;
-  created_at: string;
-  updated_at: string;
+import { useState } from "react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
+import { getAlertVariantClass } from "@/patches/FixAlertVariants";
+import { CreateRecordForm } from "@/components/actions/CreateRecordForm";
+import { Action } from "@/hooks/useActions";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
+
+interface PublicActionPageContentProps {
+  action: Action;
 }
 
-export function PublicActionPageContent() {
-  const { actionId } = useParams<{ actionId: string }>();
-  const [action, setAction] = useState<PublicActionData | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+export function PublicActionPageContent({ action }: PublicActionPageContentProps) {
+  const [submitting, setSubmitting] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const navigate = useNavigate();
 
-  useEffect(() => {
-    const fetchPublicAction = async () => {
-      if (!actionId) return;
-
-      try {
-        setIsLoading(true);
-        const { data, error } = await supabase
-          .from("actions")
-          .select("*")
-          .eq("id", actionId)
-          .eq("is_public", true)
-          .single();
-
-        if (error) throw error;
-
-        if (!data) {
-          setError("Action not found or is not public.");
-          return;
-        }
-
-        setAction(data);
-      } catch (err: any) {
-        console.error("Error fetching public action:", err);
-        setError(err.message || "Failed to load action");
-      } finally {
-        setIsLoading(false);
+  const handleSubmit = async (formData: any) => {
+    try {
+      setSubmitting(true);
+      
+      // Insert record
+      const { data: recordData, error: recordError } = await supabase
+        .from('object_records')
+        .insert({
+          object_type_id: action.target_object_id,
+          owner_id: action.owner_id,
+        })
+        .select()
+        .single();
+      
+      if (recordError) {
+        toast.error("Failed to create record");
+        throw recordError;
       }
-    };
 
-    fetchPublicAction();
-  }, [actionId]);
+      // Insert field values
+      const fieldValues = Object.entries(formData).map(([field_api_name, value]) => ({
+        record_id: recordData.id,
+        field_api_name,
+        value: String(value)
+      }));
+      
+      // Insert values
+      const { error: valuesError } = await supabase
+        .from('object_field_values')
+        .insert(fieldValues);
+      
+      if (valuesError) {
+        toast.error("Failed to save field values");
+        throw valuesError;
+      }
+      
+      // Success
+      setSuccess(true);
+      toast.success("Record created successfully");
+      
+      // Reset form after 5 seconds
+      setTimeout(() => {
+        setSuccess(false);
+      }, 5000);
+      
+    } catch (error) {
+      console.error("Error submitting public form:", error);
+      toast.error("Failed to submit form");
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
-  if (isLoading) {
+  if (success) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin" />
+      <div className="space-y-4">
+        <Alert className={getAlertVariantClass("success")}>
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            Thank you! Your submission has been received.
+          </AlertDescription>
+        </Alert>
       </div>
     );
   }
 
-  if (error) {
+  // Specifically for new_record action type
+  if (action.action_type === "new_record") {
     return (
-      <Alert className={getAlertVariantClass("destructive")}>
-        <AlertCircle className="h-4 w-4" />
-        <AlertDescription>{error}</AlertDescription>
-      </Alert>
-    );
-  }
-
-  if (!action) {
-    return (
-      <Alert className={getAlertVariantClass("destructive")}>
-        <AlertCircle className="h-4 w-4" />
-        <AlertDescription>
-          The action you are looking for might have been deleted or is not public.
-        </AlertDescription>
-      </Alert>
+      <div className="space-y-4">
+        <CreateRecordForm 
+          objectTypeId={action.target_object_id} 
+          onSubmit={handleSubmit} 
+          isSubmitting={submitting}
+        />
+      </div>
     );
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{action.name}</CardTitle>
-        <CardDescription>{action.description}</CardDescription>
-      </CardHeader>
-      <CardContent>
-        {action.action_type === "new_record" ? (
-          <CreateRecordForm objectTypeId={action.target_object_id} actionId={action.id} />
-        ) : (
-          <Alert className={getAlertVariantClass("warning")}>
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              This public action is not configured to create new records.
-            </AlertDescription>
-          </Alert>
-        )}
-      </CardContent>
-    </Card>
+    <Alert className={getAlertVariantClass("destructive")}>
+      <AlertCircle className="h-4 w-4" />
+      <AlertDescription>
+        This action type is not supported for public forms.
+      </AlertDescription>
+    </Alert>
   );
 }

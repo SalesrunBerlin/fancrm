@@ -1,15 +1,15 @@
-
-import React, { useState, useEffect, useRef, useCallback } from "react";
-import { useParams, useNavigate, useSearchParams } from "react-router-dom";
-import { PageHeader } from "@/components/ui/page-header";
-import { useObjectTypes } from "@/hooks/useObjectTypes";
-import { useRecordFields } from "@/hooks/useRecordFields";
+import { useState, useEffect, useCallback } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import { useDropzone } from "react-dropzone";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Loader2, AlertCircle, CheckCircle, ArrowLeft, Plus, AlertTriangle } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
-import { useImportRecords } from "@/hooks/useImportRecords";
-import { useImportStorage } from "@/hooks/useImportStorage";
+import { toast } from "sonner";
+import { useObjectTypes } from "@/hooks/useObjectTypes";
+import { Loader2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { DuplicateRecordsResolver } from "@/components/import/DuplicateRecordsResolver";
 import {
   Table,
   TableBody,
@@ -18,948 +18,411 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ObjectField } from "@/hooks/useObjectTypes";
-import { BatchFieldCreation } from "@/components/import/BatchFieldCreation";
-import { DuplicateRecordsResolver } from "@/components/import/DuplicateRecordsResolver";
-import { PreviewImportData } from "@/components/import/PreviewImportData";
-import { toast } from "sonner";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
+import { Link } from "react-router-dom";
+import { cn } from "@/lib/utils";
 
-// Map intensity values between different naming conventions
-const mapIntensity = (intensity: "low" | "medium" | "high"): "lenient" | "moderate" | "strict" => {
-  const map: Record<string, "lenient" | "moderate" | "strict"> = {
-    "low": "lenient",
-    "medium": "moderate",
-    "high": "strict"
-  };
-  return map[intensity];
-};
-
-// Map intensity values in reverse direction
-const mapReverseIntensity = (intensity: "lenient" | "moderate" | "strict"): "low" | "medium" | "high" => {
-  const map: Record<string, "low" | "medium" | "high"> = {
-    "lenient": "low",
-    "moderate": "medium",
-    "strict": "high"
-  };
-  return map[intensity];
-};
-
-interface FieldToCreate {
-  columnName: string;
-  columnIndex: number;
-  defaultType: string;
+interface ColumnMapping {
+  header: string;
+  fieldApiName: string | null;
+  action: "create" | "ignore" | "update" | "merge" | null;
 }
 
 export default function ImportRecordsPage() {
   const { objectTypeId } = useParams<{ objectTypeId: string }>();
+  const { objectTypes, isLoading: isLoadingObjectTypes } = useObjectTypes();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const [pastedText, setPastedText] = useState("");
-  const [step, setStep] = useState<"paste" | "mapping" | "duplicate-check" | "preview" | "batch-field-creation" | "importing">("paste");
-  const [activeTab, setActiveTab] = useState<"paste" | "example">("paste");
-  const [unmappedColumns, setUnmappedColumns] = useState<string[]>([]);
-  const [columnData, setColumnData] = useState<{ [columnName: string]: string[] }>({});
-  const [selectedRows, setSelectedRows] = useState<number[]>([]);
-  const [fieldsToCreate, setFieldsToCreate] = useState<FieldToCreate[]>([]);
-  
-  // State flags to prevent race conditions and infinite render loops
-  const [isRestoringState, setIsRestoringState] = useState(false);
-  const [isApplyingUrlParams, setIsApplyingUrlParams] = useState(false);
-  const [isUpdatingMappings, setIsUpdatingMappings] = useState(false);
-  const [isProcessingAction, setIsProcessingAction] = useState(false);
-  
-  const isInitialMount = useRef(true);
-  const mappingUpdateTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const stateUpdateLock = useRef(false);
-  const selectUpdateCounter = useRef(0);
-  
-  const { objectTypes } = useObjectTypes();
-  const { fields, isLoading: isLoadingFields } = useRecordFields(objectTypeId);
-  const objectType = objectTypes?.find(type => type.id === objectTypeId);
 
-  // Get import storage to persist state across navigation
-  const { 
-    storedData, 
-    storeImportData, 
-    clearImportData: clearStoredImportData,
-    updateProcessingState,
-    updateColumnMapping: updateStorageColumnMapping
-  } = useImportStorage(objectTypeId!);
+  const [csvData, setCsvData] = useState<string[][]>([]);
+  const [headers, setHeaders] = useState<string[]>([]);
+  const [columnMappings, setColumnMappings] = useState<ColumnMapping[]>([]);
+  const [keyFieldNames, setKeyFieldNames] = useState<string[]>([]);
+  const [importData, setImportData] = useState<any[]>([]);
+  const [duplicates, setDuplicates] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [duplicateAction, setDuplicateAction] = useState<"create" | "ignore" | "update" | "merge">("create");
+  const [selectedDuplicateAction, setSelectedDuplicateAction] = useState<{ [rowIndex: number]: "create" | "ignore" | "update" | "merge" }>({});
+  const [allDuplicatesAction, setAllDuplicatesAction] = useState<"create" | "ignore" | "update" | "merge" | null>(null);
+  const [isImporting, setIsImporting] = useState(false);
+  const [isDuplicateCheckComplete, setIsDuplicateCheckComplete] = useState(false);
 
-  const { 
-    importData, 
-    columnMappings: hookColumnMappings, 
-    isImporting,
-    duplicates,
-    matchingFields,
-    isDuplicateCheckCompleted,
-    duplicateCheckIntensity: rawIntensity,
-    parseImportText, 
-    updateColumnMapping, 
-    importRecords,
-    clearImportData,
-    checkForDuplicates,
-    updateMatchingFields,
-    updateDuplicateAction,
-    updateDuplicateCheckIntensity: rawUpdateIntensity
-  } = useImportRecords(objectTypeId!, fields || []);
+  const objectType = objectTypes?.find((ot) => ot.id === objectTypeId);
 
-  // Safe update function with debouncing to prevent race conditions
-  const safeUpdateStorage = useCallback((data: any) => {
-    if (stateUpdateLock.current) return;
-    
-    if (mappingUpdateTimeout.current) {
-      clearTimeout(mappingUpdateTimeout.current);
-    }
-    
-    mappingUpdateTimeout.current = setTimeout(() => {
-      storeImportData(data);
-      console.log("Storage updated with debounce");
-    }, 500);
-  }, [storeImportData]);
-  
-  // Modified: Only clear import data on initial page load if we're not returning from field creation
   useEffect(() => {
-    // Check if we're in the middle of a field creation workflow
-    const isReturningFromFieldCreation = searchParams.get('newFieldId') && searchParams.get('columnName');
-    
-    // Only clear data on initial mount if we're not returning from field creation
-    if (isInitialMount.current && objectTypeId && !isReturningFromFieldCreation && !storedData?.processingNewField) {
-      clearStoredImportData();
-      clearImportData();
-      console.log("Import data cleared on new import session");
-      isInitialMount.current = false;
-    } else if (isInitialMount.current) {
-      // Just mark initial mount as done without clearing if we're returning from field creation
-      console.log("Preserving import data for field creation workflow");
-      isInitialMount.current = false;
+    if (!objectType) {
+      toast.error("Object type not found");
+      navigate("/dashboard");
     }
-  }, [objectTypeId, clearStoredImportData, clearImportData, searchParams, storedData]);
-  
-  // Check for URL parameters - with improved safety
-  useEffect(() => {
-    const newFieldId = searchParams.get('newFieldId');
-    const columnName = searchParams.get('columnName');
+  }, [objectType, navigate]);
 
-    if (newFieldId && columnName && fields) {
-      // Find the index of the column that matches the column name
-      const columnIndex = hookColumnMappings.findIndex(
-        mapping => mapping.sourceColumnName === columnName
-      );
+  const onDrop = useCallback(async (acceptedFiles: File[]) => {
+    setIsAnalyzing(true);
+    const file = acceptedFiles[0];
+    const reader = new FileReader();
 
-      if (columnIndex >= 0) {
-        // Update the column mapping with the new field ID
-        const field = fields.find(f => f.id === newFieldId);
-        if (field) {
-          updateColumnMapping(columnIndex, field.id);
-          updateStorageColumnMapping(columnIndex, field.id);
-        }
-      }
+    reader.onload = async (e: any) => {
+      const text = e.target.result;
+      const parsedData = parseCSV(text);
+      setCsvData(parsedData);
+      setHeaders(parsedData[0]);
 
-      // Remove the URL parameters to avoid infinite loops
-      const newSearchParams = new URLSearchParams(searchParams.toString());
-      newSearchParams.delete('newFieldId');
-      newSearchParams.delete('columnName');
-      navigate(`${window.location.pathname}?${newSearchParams.toString()}`, { replace: true });
-    } else if (storedData && storedData.columnMappings && fields && !isApplyingUrlParams) {
-      setIsApplyingUrlParams(true);
-      stateUpdateLock.current = true;
-
-      // Restore column mappings from stored data
-      storedData.columnMappings.forEach((mapping, index) => {
-        if (mapping.targetField?.id) {
-          const field = fields.find(f => f.id === mapping.targetField?.id);
-          if (field) {
-            updateColumnMapping(index, field.id);
-          }
-        }
-      });
-
-      setTimeout(() => {
-        setIsApplyingUrlParams(false);
-        stateUpdateLock.current = false;
-      }, 500);
-    }
-  }, [searchParams, fields, navigate, objectTypeId, updateStorageColumnMapping, storedData, updateProcessingState, updateColumnMapping]);
-
-  // NEW: Selective state restoration effect - only restore when returning from field creation
-  useEffect(() => {
-    // Only restore state if we have stored data and it indicates we're processing a new field
-    if (!objectTypeId || !fields || fields.length === 0) return;
-    
-    // Check if we have URL parameters indicating we're returning from field creation
-    const isReturningFromFieldCreation = searchParams.get('newFieldId') && searchParams.get('columnName');
-    
-    // Restore state if either the stored data shows we're in field creation process
-    // or we have URL params indicating we've returned from field creation
-    if (storedData && fields && !isRestoringState && !isProcessingAction &&
-        (storedData.processingNewField || isReturningFromFieldCreation)) {
-      
-      setIsRestoringState(true);
-      setIsProcessingAction(true);
-      stateUpdateLock.current = true;
-      
-      console.log("Restoring import state for field creation workflow");
-      
-      // Restore import data
-      if (storedData.rawText) {
-        parseImportText(storedData.rawText);
-      }
-      
-      // Restore step - always return to mapping step after field creation
-      setStep(storedData.step || "mapping");
-      
-      // Restore pastedText
-      setPastedText(storedData.rawText || "");
-      
-      // After a delay to ensure importData is parsed
-      setTimeout(() => {
-        if (storedData.columnMappings && storedData.columnMappings.length > 0) {
-          // Only restore mappings that aren't affected by the newly created field
-          storedData.columnMappings.forEach((mapping, index) => {
-            if (mapping.targetField?.id) {
-              const field = fields.find(f => f.id === mapping.targetField?.id);
-              if (field) {
-                updateColumnMapping(index, field.id);
-              }
-            }
-          });
-        }
-        
-        // Release locks after restoration is complete
-        setTimeout(() => {
-          setIsRestoringState(false);
-          setIsProcessingAction(false);
-          stateUpdateLock.current = false;
-          
-          // Reset the processing new field flag after state is restored
-          if (storedData.processingNewField) {
-            updateProcessingState(false);
-          }
-        }, 500);
-      }, 500);
-    }
-  }, [storedData, fields, parseImportText, isProcessingAction, objectTypeId, updateColumnMapping, updateProcessingState, searchParams, storedData?.processingNewField]);
-
-  // Store current state whenever important values change - with improved safety
-  useEffect(() => {
-    if (isInitialMount.current) {
-      isInitialMount.current = false;
-      return;
-    }
-    
-    if (importData && !isRestoringState && !isApplyingUrlParams && !isProcessingAction && !stateUpdateLock.current) {
-      safeUpdateStorage({
-        rawText: pastedText,
-        headers: importData.headers,
-        rows: importData.rows,
-        columnMappings: hookColumnMappings,
-        step: step,
-        processingNewField: false
-      });
-    }
-  }, [
-    importData, 
-    hookColumnMappings, 
-    step, 
-    pastedText, 
-    safeUpdateStorage, 
-    isRestoringState, 
-    isApplyingUrlParams,
-    isProcessingAction
-  ]);
-
-  // Cleanup timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (mappingUpdateTimeout.current) {
-        clearTimeout(mappingUpdateTimeout.current);
-      }
-      stateUpdateLock.current = false;
+      // Initialize column mappings
+      const initialMappings = parsedData[0].map((header) => ({
+        header: header,
+        fieldApiName: null,
+        action: null,
+      }));
+      setColumnMappings(initialMappings);
+      setIsAnalyzing(false);
     };
+
+    reader.readAsText(file);
   }, []);
 
-  // For use in the component without conversion
-  const columnMappings = hookColumnMappings;
-  const duplicateCheckIntensity = mapIntensity(rawIntensity);
-  
-  const updateDuplicateCheckIntensity = useCallback((intensity: "lenient" | "moderate" | "strict") => {
-    rawUpdateIntensity(mapReverseIntensity(intensity));
-  }, [rawUpdateIntensity]);
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop, accept: {
+    'text/csv': ['.csv'],
+    'text/plain': ['.txt'],
+    'application/vnd.ms-excel': ['.xls'],
+  } })
 
-  // Process the fields that need to be created when continuing - with improved safety
-  useEffect(() => {
-    if (!objectTypeId || !fields || fields.length === 0) return;
-    
-    if (hookColumnMappings.length > 0 && fields && !isRestoringState && 
-        !isApplyingUrlParams && !isUpdatingMappings && !isProcessingAction) {
-      // Identify unmapped columns and prepare them for potential field creation
-      const unmapped = hookColumnMappings
-        .filter(mapping => !mapping.targetField)
-        .map(mapping => ({
-          columnName: mapping.sourceColumnName,
-          columnIndex: mapping.sourceColumnIndex,
-          defaultType: guessDataTypeForColumn(mapping.sourceColumnIndex) // Enhanced data type detection
-        }));
-      
-      setFieldsToCreate(unmapped);
-      setUnmappedColumns(unmapped.map(item => item.columnName));
-      
-      // Show notification if there are unmapped columns
-      setShowUnmappedAlert(unmapped.length > 0);
-      
-      // Collect sample data for each column to help with field type suggestions
-      if (importData) {
-        const data: { [columnName: string]: string[] } = {};
-        
-        hookColumnMappings.forEach(mapping => {
-          const values = importData.rows
-            .map(row => row[mapping.sourceColumnIndex])
-            .filter(val => val !== null && val !== undefined && val.trim() !== '');
-          
-          data[mapping.sourceColumnName] = values;
-        });
-        
-        setColumnData(data);
-      }
-    }
-  }, [hookColumnMappings, fields, importData, isRestoringState, isApplyingUrlParams, isUpdatingMappings, isProcessingAction, objectTypeId]);
-
-  // Enhanced function to guess data type based on column content
-  const guessDataTypeForColumn = (columnIndex: number): string => {
-    if (!importData) return "text";
-    
-    // Get the column name
-    const columnName = hookColumnMappings[columnIndex]?.sourceColumnName || "";
-    const lowercaseColumnName = columnName.toLowerCase();
-    
-    // Get sample data from the column (up to 20 rows)
-    const sampleValues = importData.rows
-      .slice(0, 20)
-      .map(row => row[columnIndex])
-      .filter(val => val !== null && val !== undefined && val.trim() !== '');
-    
-    // First check name patterns
-    if (lowercaseColumnName.includes('email')) return 'email';
-    if (lowercaseColumnName.includes('phone')) return 'phone';
-    if (lowercaseColumnName.includes('date')) return 'date';
-    if (lowercaseColumnName.includes('url') || lowercaseColumnName.includes('website')) return 'url';
-    if (lowercaseColumnName.includes('description') || lowercaseColumnName.includes('note')) return 'textarea';
-    
-    // Check data patterns
-    if (sampleValues.length > 0) {
-      // Check if all values are numbers
-      if (sampleValues.every(val => !isNaN(Number(val)) && val.trim() !== '')) {
-        return 'number';
-      }
-      
-      // Check if it looks like an email pattern
-      if (sampleValues.some(val => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val))) {
-        return 'email';
-      }
-      
-      // Check if it looks like a URL pattern
-      if (sampleValues.some(val => /^https?:\/\//.test(val))) {
-        return 'url';
-      }
-      
-      // Check if it could be a picklist (few unique values compared to total)
-      if (sampleValues.length >= 5) {
-        const uniqueValues = new Set(sampleValues);
-        if (uniqueValues.size <= Math.min(10, sampleValues.length * 0.5)) {
-          return 'picklist';
-        }
-      }
-    }
-    
-    // Default to text
-    return 'text';
+  const parseCSV = (text: string): string[][] => {
+    const lines = text.split("\n");
+    return lines.map((line) => {
+      const values = line.split(",").map((value) => value.trim());
+      return values;
+    });
   };
 
-  const handleCheckForDuplicates = async (): Promise<boolean> => {
-    // Don't proceed if we're in the middle of an operation
-    if (isProcessingAction) return false;
-    
-    setIsProcessingAction(true);
-    toast.info("Checking for duplicates...");
-    
+  const handleColumnMappingChange = (index: number, fieldApiName: string | null) => {
+    const newMappings = [...columnMappings];
+    newMappings[index] = { ...newMappings[index], fieldApiName };
+    setColumnMappings(newMappings);
+  };
+
+  const handleKeyFieldChange = (fieldName: string, checked: boolean) => {
+    if (checked) {
+      setKeyFieldNames([...keyFieldNames, fieldName]);
+    } else {
+      setKeyFieldNames(keyFieldNames.filter((name) => name !== fieldName));
+    }
+  };
+
+  const analyzeData = async () => {
+    setIsLoading(true);
     try {
-      // Check if there are unmapped columns that need field creation
-      if (fieldsToCreate.length > 0) {
-        setStep("batch-field-creation");
-        setIsProcessingAction(false);
-        return false; // Don't proceed to duplicate check yet
-      }
-      
-      // Reset selected matching fields if none are selected
-      if (matchingFields.length === 0 && fields) {
-        // Find potential matching fields - prioritize text and email fields
-        const potentialMatchFields = fields.filter(f => 
-          ["text", "email"].includes(f.data_type)
-        ).slice(0, 2); // Take up to 2 fields for initial matching
-        
-        if (potentialMatchFields.length > 0) {
-          const fieldApiNames = potentialMatchFields.map(field => field.api_name);
-          toast.info(`Selected ${potentialMatchFields.map(f => f.name).join(", ")} as default fields for duplicate checking`);
-          updateMatchingFields(fieldApiNames);
-        }
-      }
-      
-      // Run duplicate check
-      const hasDuplicates = await checkForDuplicates();
-      
-      // Move to appropriate step based on result
-      if (hasDuplicates) {
-        setStep("duplicate-check");
-        toast.info(`Found ${duplicates.length} potential duplicate records`);
-      } else {
-        setStep("preview");
-        toast.info('No duplicate records found');
-      }
-      return hasDuplicates;
+      const data = csvData.slice(1).map((row) => {
+        const obj: { [key: string]: string } = {};
+        row.forEach((value, index) => {
+          const fieldApiName = columnMappings[index].fieldApiName;
+          if (fieldApiName) {
+            obj[fieldApiName] = value;
+          }
+        });
+        return obj;
+      });
+      setImportData(data);
+
+      // Find duplicates
+      const duplicateRows = await findDuplicateRecords(data, keyFieldNames);
+      setDuplicates(duplicateRows);
+      setIsDuplicateCheckComplete(true);
     } catch (error) {
-      toast.error('Failed to check for duplicates');
-      console.error(error);
-      return false;
+      console.error("Error analyzing data:", error);
+      toast.error("Error analyzing data");
     } finally {
-      setIsProcessingAction(false);
+      setIsLoading(false);
     }
   };
 
-  const handlePreviewContinue = () => {
-    if (isProcessingAction) return;
-    setIsProcessingAction(true);
-    
-    setStep("importing");
-    importSelectedRecords();
-  };
-
-  const handleRecheckDuplicates = async () => {
-    // Don't proceed if we're in the middle of an operation
-    if (isProcessingAction) return;
-    
-    setIsProcessingAction(true);
-    
-    // Run duplicate check again with updated settings
-    toast.promise(
-      checkForDuplicates(),
-      {
-        loading: 'Rechecking with new settings...',
-        success: (hasDuplicates) => {
-          if (hasDuplicates) {
-            setIsProcessingAction(false);
-            return `Found ${duplicates.length} potential duplicate records with new settings`;
-          } else {
-            setStep("preview");
-            setIsProcessingAction(false);
-            return 'No duplicate records found with new settings';
-          }
-        },
-        error: (err) => {
-          setIsProcessingAction(false);
-          return 'Failed to recheck for duplicates';
-        }
-      }
-    );
-  };
-
-  const importSelectedRecords = async () => {
-    // Make sure we have rows selected, defaulting to all rows if none selected
-    if (selectedRows.length === 0 && importData) {
-      setSelectedRows(Array.from({ length: importData.rows.length }, (_, i) => i));
+  const findDuplicateRecords = async (data: any[], keyFields: string[]) => {
+    if (!keyFields || keyFields.length === 0) {
+      toast.error("Please select at least one key field for duplicate checking.");
+      return [];
     }
-    
-    toast.promise(
-      importRecords(selectedRows.length > 0 ? selectedRows : Array.from({ length: importData?.rows.length || 0 }, (_, i) => i)),
-      {
-        loading: 'Importing records...',
-        success: (result) => {
-          if (result) {
-            // Clear stored import data when import is complete
-            clearStoredImportData();
-            navigate(`/objects/${objectTypeId}`);
-            setIsProcessingAction(false);
-            return `Successfully imported ${result.success} records`;
-          }
-          setIsProcessingAction(false);
-          return 'Import completed';
-        },
-        error: (err) => {
-          setIsProcessingAction(false);
-          return 'Failed to import records';
-        }
+
+    const duplicates: any[] = [];
+    for (let i = 0; i < data.length; i++) {
+      const record = data[i];
+      const query = { object_type_id: objectTypeId, field_values: {} };
+
+      // Build the query for matching key fields
+      keyFields.forEach(field => {
+        query.field_values[field] = record[field];
+      });
+
+      // Check if a record with the same key fields already exists
+      const { data: existingRecords, error } = await supabase
+        .from('object_records')
+        .select('id, field_values')
+        .eq('object_type_id', objectTypeId)
+        .contains('field_values', query.field_values);
+
+      if (error) {
+        console.error("Error checking for duplicates:", error);
+        toast.error("Error checking for duplicates");
+        continue;
       }
-    );
-  };
 
-  const getMappedCount = () => {
-    return hookColumnMappings.filter(m => m.targetField !== null).length;
-  };
-
-  const getExampleData = () => {
-    // Create example data based on fields
-    if (!fields || fields.length === 0) return "Loading...";
-    
-    const exampleFields = fields.slice(0, 3);
-    const headers = exampleFields.map(f => f.name).join("\t");
-    const rows = [
-      exampleFields.map(f => `[${f.name} value]`).join("\t"),
-      exampleFields.map(f => `[${f.name} value]`).join("\t")
-    ];
-    
-    return `${headers}\n${rows.join("\n")}`;
-  };
-
-  // Handle creating new fields in batch
-  const handleCreateBatchFields = () => {
-    if (isProcessingAction) return;
-    setIsProcessingAction(true);
-    
-    if (unmappedColumns.length > 0) {
-      setStep("batch-field-creation");
-      
-      // Update stored data to preserve state during field creation
-      if (importData) {
-        storeImportData({
-          rawText: pastedText,
-          headers: importData.headers,
-          rows: importData.rows,
-          columnMappings: hookColumnMappings,
-          step: "batch-field-creation",
-          processingNewField: true
+      if (existingRecords && existingRecords.length > 0) {
+        duplicates.push({
+          rowIndex: i,
+          record: record,
+          existingRecords: existingRecords
         });
       }
     }
-    
-    setIsProcessingAction(false);
+    return duplicates;
   };
 
-  const handleBatchFieldCreationComplete = (createdFields: { columnName: string; fieldId: string }[]) => {
-    // Don't proceed if we're in the middle of an operation
-    if (isProcessingAction) return;
-    
-    setIsProcessingAction(true);
-    setIsUpdatingMappings(true);
-    
-    // Block any other updates while we're processing batch field creation
-    stateUpdateLock.current = true;
-    
-    // Show creation success message
-    toast.success(`${createdFields.length} fields created successfully!`);
-    
-    // Update mappings for each created field
-    const updatePromises = createdFields.map(({ columnName, fieldId }, index) => {
-      return new Promise<void>(resolve => {
-        setTimeout(() => {
-          const columnIndex = hookColumnMappings.findIndex(
-            mapping => mapping.sourceColumnName === columnName
-          );
-          
-          if (columnIndex >= 0) {
-            updateColumnMapping(columnIndex, fieldId);
-            // Also update storage
-            updateStorageColumnMapping(columnIndex, fieldId);
+  const handleSetDuplicateAction = (rowIndex: number, action: "create" | "ignore" | "update" | "merge") => {
+    setSelectedDuplicateAction({ ...selectedDuplicateAction, [rowIndex]: action });
+  };
+
+  const handleIgnoreAllDuplicates = () => {
+    setAllDuplicatesAction("ignore");
+  };
+
+  const handleCreateAllDuplicates = () => {
+    setAllDuplicatesAction("create");
+  };
+
+  const handleUpdateAllDuplicates = () => {
+    setAllDuplicatesAction("update");
+  };
+
+  const handleMergeAllDuplicates = () => {
+    setAllDuplicatesAction("merge");
+  };
+
+  const recheckDuplicates = async () => {
+    setIsLoading(true);
+    try {
+      const duplicateRows = await findDuplicateRecords(importData, keyFieldNames);
+      setDuplicates(duplicateRows);
+    } catch (error) {
+      console.error("Error rechecking duplicates:", error);
+      toast.error("Error rechecking duplicates");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const importRecords = async () => {
+    setIsImporting(true);
+    try {
+      for (let i = 0; i < importData.length; i++) {
+        const record = importData[i];
+        const duplicate = duplicates.find(d => d.rowIndex === i);
+        const selectedAction = selectedDuplicateAction[i] || allDuplicatesAction || "create";
+
+        if (duplicate) {
+          if (selectedAction === "ignore") {
+            continue; // Skip this record
           }
-          resolve();
-        }, index * 100); // Stagger updates to prevent race conditions
-      });
-    });
-    
-    // Process all updates before proceeding
-    Promise.all(updatePromises).then(() => {
-      // Clear unmapped alert after successful field creation
-      setShowUnmappedAlert(false);
-      
-      // Proceed to mapping step after creating all fields
-      setStep("mapping");
-      
-      // Reset fields to create list since they've been processed
-      setFieldsToCreate([]);
-      
-      // Allow other updates after a delay
-      setTimeout(() => {
-        stateUpdateLock.current = false;
-        setIsUpdatingMappings(false);
-        setIsProcessingAction(false);
-      }, 500);
-    });
-  };
 
-  const handleBatchFieldCreationCancel = () => {
-    if (isProcessingAction) return;
-    
-    setStep("mapping");
-  };
+          if (selectedAction === "update") {
+            // Update existing record
+            const existingRecord = duplicate.existingRecords[0]; // Assuming only one existing record
+            await updateRecord(existingRecord.id, record);
+            continue;
+          }
 
-  const handleDuplicateResolutionContinue = () => {
-    if (isProcessingAction) return;
-    
-    // Move to preview step after duplicate resolution
-    setStep("preview");
-  };
+          if (selectedAction === "merge") {
+            // Merge data into existing record
+            const existingRecord = duplicate.existingRecords[0]; // Assuming only one existing record
+            const mergedData = { ...existingRecord.field_values, ...record };
+            await updateRecord(existingRecord.id, mergedData);
+            continue;
+          }
+        }
 
-  // Modified handleCreateNewField function to properly set the processing flag
-  const handleCreateNewField = (columnIndex: number) => {
-    // Don't proceed if we're in the middle of an operation
-    if (isProcessingAction) return;
-    
-    setIsProcessingAction(true);
-    
-    // Store the current state before navigating
-    if (importData) {
-      // Set the flag that we're about to create a new field
-      const updatedStoredData = {
-        rawText: pastedText,
-        headers: importData.headers,
-        rows: importData.rows,
-        columnMappings: hookColumnMappings,
-        step: step, // Preserve the current step instead of hardcoding
-        processingNewField: true
-      };
-      
-      // Update storage with processing flag set to true
-      storeImportData(updatedStoredData);
-      console.log("Setting processingNewField flag before navigating to field creation");
-    }
-    
-    const columnName = hookColumnMappings[columnIndex]?.sourceColumnName || "";
-    // Navigate to the field creation page, passing the column name as a URL parameter
-    navigate(`/objects/${objectTypeId}/import/create-field/${encodeURIComponent(columnName)}`);
-  };
+        // Create new record if no duplicate or action is "create"
+        await createRecord(record);
+      }
 
-  // Row selection handlers for preview
-  const handleSelectRow = (rowIndex: number, selected: boolean) => {
-    if (selected) {
-      setSelectedRows(prev => [...prev, rowIndex]);
-    } else {
-      setSelectedRows(prev => prev.filter(idx => idx !== rowIndex));
+      toast.success("Records imported successfully!");
+      navigate(`/objects/${objectTypeId}`);
+    } catch (error) {
+      console.error("Error importing records:", error);
+      toast.error("Error importing records");
+    } finally {
+      setIsImporting(false);
     }
   };
 
-  const handleSelectAll = (selected: boolean) => {
-    if (selected && importData) {
-      setSelectedRows(Array.from({ length: importData.rows.length }, (_, i) => i));
-    } else {
-      setSelectedRows([]);
+  const createRecord = async (record: any) => {
+    const { data: recordData, error: recordError } = await supabase
+      .from('object_records')
+      .insert({
+        object_type_id: objectTypeId,
+        owner_id: objectType?.owner_id,
+        field_values: record
+      })
+      .select()
+      .single();
+
+    if (recordError) {
+      throw recordError;
     }
   };
 
-  // Handle clearing import data (both in state and storage)
-  const handleClearImportData = () => {
-    // Don't proceed if we're in the middle of an operation
-    if (isProcessingAction) return;
-    
-    setIsProcessingAction(true);
-    
-    clearImportData();
-    clearStoredImportData();
-    setStep("paste");
-    setPastedText("");
-    
-    setIsProcessingAction(false);
-  };
+  const updateRecord = async (recordId: string, record: any) => {
+    const { data: updatedRecord, error: updateError } = await supabase
+      .from('object_records')
+      .update({
+        field_values: record
+      })
+      .eq('id', recordId)
+      .select()
+      .single();
 
-  // Generate unique stable key for select components
-  const getSelectKey = (mapping: any) => {
-    const targetId = mapping.targetField?.id || 'none';
-    const counter = selectUpdateCounter.current;
-    return `select-${mapping.sourceColumnName}-${targetId}-${counter}`;
-  };
-
-  // Handle select change
-  const handleFieldSelect = (value: string, index: number) => {
-    if (isProcessingAction || isUpdatingMappings) return;
-    
-    setIsProcessingAction(true);
-    
-    if (value === "create_new") {
-      handleCreateNewField(index);
-      return;
+    if (updateError) {
+      throw updateError;
     }
-    
-    const fieldId = value === "none" ? null : value;
-    updateColumnMapping(index, fieldId);
-    // Also update in storage to keep them in sync
-    updateStorageColumnMapping(index, fieldId);
-    
-    // Increment counter to force new keys on next render
-    selectUpdateCounter.current += 1;
-    
-    setTimeout(() => {
-      setIsProcessingAction(false);
-    }, 300);
   };
 
-  // Add a prominent notification state for unmapped columns
-  const [showUnmappedAlert, setShowUnmappedAlert] = useState(false);
-
-  if (!objectType || isLoadingFields) {
+  if (isLoadingObjectTypes) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin" />
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
 
-  // Extract duplicate row indices from the duplicates array
-  const duplicateRowIndices = duplicates.map(duplicate => duplicate.importRowIndex);
-
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title={`Import ${objectType.name}`}
-        description={`Import data into ${objectType.name} from a spreadsheet`}
-        actions={
-          <Button variant="outline" onClick={() => navigate(`/objects/${objectTypeId}`)}>
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to {objectType.name}
-          </Button>
-        }
-      />
-
+    <div className="container mx-auto py-8">
       <Card>
-        <CardContent className="pt-6">
-          {step === "paste" && (
-            <div className="space-y-4">
-              <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
-                <TabsList>
-                  <TabsTrigger value="paste">Paste Data</TabsTrigger>
-                  <TabsTrigger value="example">Example Format</TabsTrigger>
-                </TabsList>
-                <TabsContent value="paste" className="space-y-4">
-                  <Alert>
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription>
-                      Copy data from Excel or Google Sheets and paste it below. 
-                      The first row should contain column headers.
-                    </AlertDescription>
-                  </Alert>
-                  <Textarea 
-                    placeholder="Paste your data here..." 
-                    className="h-[200px] font-mono"
-                    value={pastedText} 
-                    onChange={(e) => setPastedText(e.target.value)}
-                  />
-                  <div className="flex justify-end">
-                    <Button 
-                      onClick={() => {
-                        if (pastedText.trim() && !isProcessingAction) {
-                          setIsProcessingAction(true);
-                          parseImportText(pastedText);
-                          setStep("mapping");
-                          setIsProcessingAction(false);
-                        }
-                      }} 
-                      disabled={!pastedText.trim() || isProcessingAction}
-                    >
-                      Continue
-                    </Button>
-                  </div>
-                </TabsContent>
-                <TabsContent value="example">
-                  <Alert>
-                    <AlertDescription>
-                      Your data should be in a format similar to this example (tab or comma separated):
-                    </AlertDescription>
-                  </Alert>
-                  <div className="bg-muted p-4 rounded-md font-mono text-sm mt-2 whitespace-pre overflow-x-auto">
-                    {getExampleData()}
-                  </div>
-                </TabsContent>
-              </Tabs>
-            </div>
-          )}
-
-          {step === "mapping" && importData && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <p className="text-sm text-muted-foreground">
-                  {getMappedCount()} of {hookColumnMappings.length} columns mapped
-                </p>
-                
-                {/* Enhanced batch field creation button */}
-                {unmappedColumns.length > 0 && (
-                  <Button 
-                    variant="default" 
-                    onClick={handleCreateBatchFields}
-                    disabled={isProcessingAction || isRestoringState || isUpdatingMappings}
-                    className="bg-primary"
-                  >
-                    <Plus className="mr-2 h-4 w-4" />
-                    Create {unmappedColumns.length} Missing Fields
-                  </Button>
-                )}
-              </div>
-
-              {/* Enhanced unmapped columns alert */}
-              {showUnmappedAlert && (
-                <Alert className="py-3">
-                  <AlertTriangle className="h-5 w-5" />
-                  <div className="ml-2">
-                    <AlertDescription className="font-medium">
-                      {unmappedColumns.length} columns need to be mapped
-                    </AlertDescription>
-                    <p className="text-sm mt-1">
-                      Create all missing fields at once by clicking "Create Missing Fields" 
-                      or map them manually to existing fields.
-                    </p>
-                  </div>
-                </Alert>
+        <CardHeader>
+          <CardTitle>Import Records for {objectType?.name}</CardTitle>
+          <CardDescription>Upload a CSV file to import records into this object type.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {!csvData.length ? (
+            <div {...getRootProps()} className={cn("border-2 border-dashed rounded-md p-8 flex flex-col items-center justify-center", isDragActive ? "border-primary" : "border-muted-foreground")}>
+              <input {...getInputProps()} />
+              {isAnalyzing ? (
+                <div className="flex items-center justify-center">
+                  <Loader2 className="h-6 w-6 animate-spin text-primary mr-2" />
+                  Analyzing file...
+                </div>
+              ) : (
+                <>
+                  <p>Drag 'n' drop some files here, or click to select files</p>
+                  <Button variant="outline" size="sm" className="mt-4">Select files</Button>
+                </>
               )}
-
-              <div className="border rounded-md overflow-hidden">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Column from data</TableHead>
-                      <TableHead>Field mapping</TableHead>
-                      <TableHead>Preview (first 3 rows)</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {hookColumnMappings.map((mapping, index) => (
-                      <TableRow key={`row-${mapping.sourceColumnName}-${index}-${selectUpdateCounter.current}`}>
-                        <TableCell className="font-medium">
-                          <div className="flex items-center gap-2">
-                            {mapping.sourceColumnName}
-                            {mapping.targetField ? (
-                              <CheckCircle className="h-4 w-4 text-green-500" />
-                            ) : (
-                              <AlertCircle className="h-4 w-4 text-red-500" />
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Select
-                            key={getSelectKey(mapping)}
-                            value={mapping.targetField?.id || "none"}
-                            onValueChange={(value) => handleFieldSelect(value, index)}
-                            disabled={isProcessingAction || isUpdatingMappings || isRestoringState || isApplyingUrlParams}
-                          >
-                            <SelectTrigger className="w-full">
-                              <SelectValue placeholder="Select a field" />
-                            </SelectTrigger>
-                            <SelectContent className="z-50 bg-background">
-                              <SelectItem value="none">-- Not mapped --</SelectItem>
-                              <SelectItem value="create_new" className="font-medium text-primary">
-                                <div className="flex items-center">
-                                  <Plus className="mr-2 h-4 w-4" />
-                                  Create New Field
-                                </div>
-                              </SelectItem>
-                              <SelectItem value="divider" disabled>
-                                ───────────────────
-                              </SelectItem>
-                              {fields?.map((field) => (
-                                <SelectItem key={field.id} value={field.id}>
-                                  {field.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </TableCell>
-                        <TableCell>
-                          <div className="max-h-20 overflow-y-auto">
-                            {importData.rows.slice(0, 3).map((row, rowIndex) => (
-                              <div key={`preview-${index}-${rowIndex}`} className="text-sm py-0.5">
-                                {row[mapping.sourceColumnIndex] || <span className="text-muted-foreground italic">Empty</span>}
-                              </div>
-                            ))}
-                            {importData.rows.length > 3 && (
-                              <Badge className="mt-1">+{importData.rows.length - 3} more rows</Badge>
-                            )}
-                          </div>
-                        </TableCell>
+            </div>
+          ) : (
+            <>
+              <div className="mb-4">
+                <h3 className="text-lg font-semibold mb-2">Column Mappings</h3>
+                <p className="text-sm text-muted-foreground">Map each column in your CSV to a field in the object type.</p>
+                <ScrollArea className="h-[400px] w-full rounded-md border p-4">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-[200px]">CSV Header</TableHead>
+                        <TableHead>Field Mapping</TableHead>
+                        <TableHead className="w-[150px]">Key Field</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {headers.map((header, index) => (
+                        <TableRow key={index}>
+                          <TableCell className="font-medium">{header}</TableCell>
+                          <TableCell>
+                            <Input
+                              type="select"
+                              value={columnMappings[index].fieldApiName || ""}
+                              onChange={(e) => handleColumnMappingChange(index, e.target.value === "" ? null : e.target.value)}
+                              asChild
+                            >
+                              <select className="w-full">
+                                <option value="">Select Field</option>
+                                {objectType?.fields?.map((field) => (
+                                  <option key={field.id} value={field.api_name}>
+                                    {field.name} ({field.api_name})
+                                  </option>
+                                ))}
+                              </select>
+                            </Input>
+                          </TableCell>
+                          <TableCell>
+                            <Checkbox
+                              id={`key-field-${index}`}
+                              checked={keyFieldNames.includes(header)}
+                              onCheckedChange={(checked) => handleKeyFieldChange(header, !!checked)}
+                            />
+                            <Label htmlFor={`key-field-${index}`} className="sr-only">
+                              Key Field
+                            </Label>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </ScrollArea>
               </div>
 
-              <div className="flex justify-between items-center">
-                <p className="text-sm text-muted-foreground">
-                  {importData.rows.length} records will be imported
-                </p>
-              </div>
-
-              <div className="flex justify-end gap-2">
-                <Button 
-                  variant="outline" 
-                  onClick={handleClearImportData}
-                  disabled={isProcessingAction}
-                >
-                  Back
-                </Button>
-                <Button 
-                  onClick={handleCheckForDuplicates} 
-                  disabled={getMappedCount() === 0 || isProcessingAction || isUpdatingMappings || isRestoringState || isApplyingUrlParams}
-                >
-                  {isProcessingAction ? (
+              <Button onClick={analyzeData} disabled={isLoading}>
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Analyzing...
+                  </>
+                ) : (
+                  "Analyze Data"
+                )}
+              </Button>
+              
+              {importData.length > 0 && isDuplicateCheckComplete && (
+                <>
+                  {duplicates.length > 0 ? (
                     <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Processing...
+                      <h3 className="text-lg font-semibold mt-4">Duplicate Records Found</h3>
+                      <p className="text-sm text-muted-foreground">Resolve duplicate records before importing.</p>
+                      
+                      <DuplicateRecordsResolver
+                        duplicates={duplicates}
+                        fields={objectType?.fields}
+                        columnMappings={columnMappings}
+                        matchingFields={keyFieldNames}
+                        importData={importData}
+                        onSetAction={handleSetDuplicateAction}
+                        onIgnoreAll={handleIgnoreAllDuplicates}
+                        onCreateAll={handleCreateAllDuplicates}
+                        onUpdateAll={handleUpdateAllDuplicates}
+                        onMergeAll={handleMergeAllDuplicates}
+                        onRecheck={recheckDuplicates}
+                      />
                     </>
-                  ) : "Continue"}
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {step === "duplicate-check" && duplicates.length > 0 && importData && (
-            <DuplicateRecordsResolver 
-              duplicates={duplicates}
-              fields={fields || []}
-              matchingFields={matchingFields}
-              columnMappings={columnMappings}
-              importData={importData}
-              onSetAction={updateDuplicateAction}
-              onUpdateMatchingFields={updateMatchingFields}
-              onUpdateDuplicateCheckIntensity={updateDuplicateCheckIntensity}
-              duplicateCheckIntensity={duplicateCheckIntensity}
-              onContinue={handleDuplicateResolutionContinue}
-              onBack={() => setStep("mapping")}
-              onRecheck={handleRecheckDuplicates}
-            />
-          )}
-
-          {step === "preview" && importData && (
-            <PreviewImportData 
-              importData={importData}
-              columnMappings={columnMappings}
-              selectedRows={selectedRows}
-              duplicateRows={duplicateRowIndices}
-              onSelectRow={handleSelectRow}
-              onSelectAll={handleSelectAll}
-              onContinue={handlePreviewContinue}
-              onBack={() => setStep(duplicates.length > 0 ? "duplicate-check" : "mapping")}
-            />
-          )}
-
-          {step === "batch-field-creation" && unmappedColumns.length > 0 && (
-            <BatchFieldCreation
-              objectTypeId={objectTypeId!}
-              columnNames={unmappedColumns}
-              columnData={columnData}
-              onComplete={handleBatchFieldCreationComplete}
-              onCancel={handleBatchFieldCreationCancel}
-            />
-          )}
-
-          {step === "importing" && (
-            <div className="flex flex-col items-center justify-center py-8">
-              <Loader2 className="h-8 w-8 animate-spin mb-4" />
-              <p>Importing your records...</p>
-            </div>
+                  ) : (
+                    <div className="mt-4">
+                      <Badge variant="outline">No duplicate records found.</Badge>
+                    </div>
+                  )}
+                  
+                  <Button
+                    variant="primary"
+                    onClick={importRecords}
+                    disabled={isImporting}
+                    className="mt-4"
+                  >
+                    {isImporting ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Importing...
+                      </>
+                    ) : (
+                      "Import Records"
+                    )}
+                  </Button>
+                </>
+              )}
+            </>
           )}
         </CardContent>
       </Card>

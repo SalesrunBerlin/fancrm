@@ -38,6 +38,7 @@ serve(async (req) => {
     const { data: { user }, error: userError } = await supabaseClient.auth.getUser(token);
     
     if (userError || !user) {
+      console.error("Invalid token or unauthorized:", userError);
       return new Response(
         JSON.stringify({ error: "Invalid token or unauthorized" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -52,6 +53,7 @@ serve(async (req) => {
       .single();
 
     if (profileError || !profileData || profileData.role !== "SuperAdmin") {
+      console.error("User not SuperAdmin:", profileError || "Role is not SuperAdmin");
       return new Response(
         JSON.stringify({ error: "Only SuperAdmin users can access this function" }),
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -69,8 +71,10 @@ serve(async (req) => {
       );
     }
 
+    console.log("Successfully fetched emails, count:", data?.length || 0);
+    
     return new Response(
-      JSON.stringify({ data }),
+      JSON.stringify(data || []),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
