@@ -46,10 +46,9 @@ export function ReportDisplay({ report }: ReportDisplayProps) {
       </Card>
     );
   }
-  
-  // Ensure we properly handle the case with or without columnDefs
-  const hasColumnDefs = data.columnDefs && data.columnDefs.length > 0;
-  const columns = hasColumnDefs ? data.columnDefs : data.columns;
+
+  // Safely check if columnDefs exists and has length before using it
+  const hasColumnDefs = data.columnDefs && Array.isArray(data.columnDefs) && data.columnDefs.length > 0;
   
   return (
     <Card>
@@ -64,9 +63,11 @@ export function ReportDisplay({ report }: ReportDisplayProps) {
                 ))
                 : 
                 // Fall back to simple columns array
-                data.columns?.map((column, index) => (
-                  <TableHead key={index}>{column}</TableHead>
-                ))
+                data.columns && Array.isArray(data.columns) ? 
+                  data.columns.map((column, index) => (
+                    <TableHead key={index}>{column}</TableHead>
+                  )) : 
+                  <TableHead>No columns defined</TableHead>
               }
             </TableRow>
           </TableHeader>
@@ -82,11 +83,13 @@ export function ReportDisplay({ report }: ReportDisplayProps) {
                   ))
                   : 
                   // Fall back to columns array
-                  data.columns?.map((column, colIndex) => (
-                    <TableCell key={colIndex}>
-                      {formatCellValue(row[column])}
-                    </TableCell>
-                  ))
+                  data.columns && Array.isArray(data.columns) ? 
+                    data.columns.map((column, colIndex) => (
+                      <TableCell key={colIndex}>
+                        {formatCellValue(row[column])}
+                      </TableCell>
+                    )) :
+                    <TableCell>No data</TableCell>
                 }
               </TableRow>
             ))}

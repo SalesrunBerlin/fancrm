@@ -22,6 +22,7 @@ export interface ReportDefinition {
 
 export interface ReportData {
   columns: string[];
+  columnDefs?: { key: string; header: string; objectName: string; }[];
   rows: Record<string, any>[];
   totalCount: number;
 }

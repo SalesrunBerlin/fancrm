@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
 import { useObjectFields } from "@/hooks/useObjectFields";
@@ -22,24 +22,26 @@ export function ReportFilterBuilder({
   const [activeTab, setActiveTab] = useState<string | null>(null);
   const [objectFilters, setObjectFilters] = useState<Record<string, FilterCondition[]>>({});
   
-  // Memoize object IDs and filters to prevent unnecessary rerenders
-  const memoizedObjectIds = useMemo(() => objectIds, [objectIds.join(',')]);
-  const memoizedFilters = useMemo(() => filters, [JSON.stringify(filters)]);
+  // Stable reference for objectIds
+  const stableObjectIds = useMemo(() => objectIds, [objectIds.join(',')]);
+  
+  // Stable reference for filters
+  const stableFilters = useMemo(() => filters, [JSON.stringify(filters)]);
   
   // Initialize active tab if needed
   useEffect(() => {
-    if (memoizedObjectIds.length > 0 && (!activeTab || !memoizedObjectIds.includes(activeTab))) {
-      setActiveTab(memoizedObjectIds[0]);
+    if (stableObjectIds.length > 0 && (!activeTab || !stableObjectIds.includes(activeTab))) {
+      setActiveTab(stableObjectIds[0]);
     }
-  }, [memoizedObjectIds, activeTab]);
+  }, [stableObjectIds, activeTab]);
   
   // Initialize filters by object - only when inputs change
   useEffect(() => {
     // Group existing filters by object
     const groupedFilters: Record<string, FilterCondition[]> = {};
     
-    memoizedObjectIds.forEach(objId => {
-      groupedFilters[objId] = memoizedFilters.filter(filter => {
+    stableObjectIds.forEach(objId => {
+      groupedFilters[objId] = stableFilters.filter(filter => {
         // Just store filters based on objectId for now, 
         // we'll validate them when rendering each tab
         return true;
@@ -47,22 +49,24 @@ export function ReportFilterBuilder({
     });
     
     setObjectFilters(groupedFilters);
-  }, [memoizedObjectIds, memoizedFilters]);
+  }, [stableObjectIds, stableFilters]);
   
   // Handle filter changes for a specific object
-  const handleFilterChange = (objectTypeId: string, newFilters: FilterCondition[]) => {
+  const handleFilterChange = useCallback((objectTypeId: string, newFilters: FilterCondition[]) => {
     // Update filters for this object
-    const updatedObjectFilters = {
-      ...objectFilters,
-      [objectTypeId]: newFilters
-    };
-    
-    setObjectFilters(updatedObjectFilters);
-    
-    // Combine all filters and update parent
-    const allFilters = Object.values(updatedObjectFilters).flat();
-    onChange(allFilters);
-  };
+    setObjectFilters(prevFilters => {
+      const updatedObjectFilters = {
+        ...prevFilters,
+        [objectTypeId]: newFilters
+      };
+      
+      // Combine all filters and update parent
+      const allFilters = Object.values(updatedObjectFilters).flat();
+      onChange(allFilters);
+      
+      return updatedObjectFilters;
+    });
+  }, [onChange]);
   
   if (objectIds.length === 0) {
     return (
@@ -78,7 +82,7 @@ export function ReportFilterBuilder({
       
       <Tabs value={activeTab || ""} onValueChange={setActiveTab}>
         <TabsList className="mb-4">
-          {memoizedObjectIds.map(objectId => {
+          {stableObjectIds.map(objectId => {
             const objectType = objectTypes?.find(obj => obj.id === objectId);
             const filterCount = objectFilters[objectId]?.length || 0;
             
@@ -91,7 +95,7 @@ export function ReportFilterBuilder({
           })}
         </TabsList>
         
-        {memoizedObjectIds.map(objectId => (
+        {stableObjectIds.map(objectId => (
           <TabsContent key={objectId} value={objectId}>
             {activeTab === objectId && (
               <FilterTabContent 
@@ -121,7 +125,7 @@ function FilterTabContent({
   const { fields } = useObjectFields(objectId);
 
   // Memoize filters to prevent unnecessary rerenders
-  const memoizedFilters = useMemo(() => filters, [JSON.stringify(filters)]);
+  const stableFilters = useMemo(() => filters, [JSON.stringify(filters)]);
 
   return (
     <Card>
@@ -130,7 +134,7 @@ function FilterTabContent({
           objectTypeId={objectId}
           fields={fields}
           onFilterChange={onFilterChange}
-          activeFilters={memoizedFilters}
+          activeFilters={stableFilters}
         />
       </CardContent>
     </Card>

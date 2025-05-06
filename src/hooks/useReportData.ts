@@ -7,13 +7,21 @@ import { useObjectRecords } from "@/hooks/useObjectRecords";
 import { useObjectRelationships } from "@/hooks/useObjectRelationships";
 import { useMemo } from "react";
 
+// Define a more specific return type for the query result
+interface ReportQueryResult {
+  columns: string[];
+  columnDefs?: { key: string; header: string; objectName: string; }[];
+  rows: Record<string, any>[];
+  totalCount: number;
+}
+
 export function useReportData(report: ReportDefinition) {
   const { objectTypes } = useObjectTypes();
   
   // Safety check for report with no objects
   if (!report?.objectIds || report.objectIds.length === 0) {
     return {
-      data: { columns: [], rows: [], totalCount: 0 },
+      data: { columns: [], rows: [], columnDefs: [], totalCount: 0 } as ReportQueryResult,
       isLoading: false,
       error: new Error("No objects selected for this report"),
     };
@@ -59,13 +67,13 @@ export function useReportData(report: ReportDefinition) {
   // Process and join data
   const result = useQuery({
     queryKey: ["report-data", report.id, objectIds, JSON.stringify(filters), JSON.stringify(selectedFields)],
-    queryFn: async () => {
+    queryFn: async (): Promise<ReportQueryResult> => {
       console.log("Processing report data for:", report.name, "ID:", report.id);
       
       // Check if data is still loading
       if (objectDataQueries.some(q => q.isLoading)) {
         console.log("Some object data is still loading");
-        return { columns: [], rows: [], totalCount: 0 };
+        return { columns: [], columnDefs: [], rows: [], totalCount: 0 };
       }
       
       // Check for any errors
@@ -78,7 +86,7 @@ export function useReportData(report: ReportDefinition) {
       // Safety check for no objects
       if (!objectIds.length) {
         console.warn("No object IDs in report");
-        return { columns: [], rows: [], totalCount: 0 };
+        return { columns: [], columnDefs: [], rows: [], totalCount: 0 };
       }
       
       // Get object names for better display
@@ -97,10 +105,10 @@ export function useReportData(report: ReportDefinition) {
       // Safety check for no visible fields
       if (visibleFields.length === 0) {
         console.warn("No visible fields in report");
-        return { columns: [], rows: [], totalCount: 0 };
+        return { columns: [], columnDefs: [], rows: [], totalCount: 0 };
       }
       
-      const columns = visibleFields.map(field => {
+      const columnDefs = visibleFields.map(field => {
         // Find field details for proper display name
         const objectData = objectDataQueries.find(q => q.objectTypeId === field.objectTypeId);
         const fieldDef = objectData?.fields.find(f => f.api_name === field.fieldApiName);
@@ -112,7 +120,7 @@ export function useReportData(report: ReportDefinition) {
         };
       });
       
-      console.log("Column definitions:", columns);
+      console.log("Column definitions:", columnDefs);
       
       // For single-object reports, just return the data
       if (objectIds.length === 1) {
@@ -122,8 +130,8 @@ export function useReportData(report: ReportDefinition) {
         if (!primaryObjectData || !primaryObjectData.records) {
           console.warn("No records found for primary object");
           return { 
-            columns: columns.map(c => c.key), 
-            columnDefs: columns,
+            columns: columnDefs.map(c => c.key), 
+            columnDefs: columnDefs,
             rows: [], 
             totalCount: 0 
           };
@@ -150,8 +158,8 @@ export function useReportData(report: ReportDefinition) {
         });
         
         return {
-          columns: columns.map(c => c.key),
-          columnDefs: columns,
+          columns: columnDefs.map(c => c.key),
+          columnDefs: columnDefs,
           rows,
           totalCount: rows.length
         };
@@ -159,8 +167,8 @@ export function useReportData(report: ReportDefinition) {
       
       // For multi-object reports - safety implementation
       return {
-        columns: columns.map(c => c.key),
-        columnDefs: columns,
+        columns: columnDefs.map(c => c.key),
+        columnDefs: columnDefs,
         rows: [],
         totalCount: 0
       };

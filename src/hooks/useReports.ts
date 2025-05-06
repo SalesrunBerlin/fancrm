@@ -1,5 +1,5 @@
 
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useEffect } from "react";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { ReportDefinition, ReportField } from "@/types/report";
 import { FilterCondition } from "@/hooks/useObjectRecords";
@@ -24,6 +24,14 @@ export function useReports() {
     null
   );
   
+  // Safety check to ensure reports is always an array
+  useEffect(() => {
+    if (!Array.isArray(reports)) {
+      console.warn("[useReports] Reports is not an array, resetting to []");
+      setReports([]);
+    }
+  }, [reports, setReports]);
+  
   // Log state for debugging
   useMemo(() => {
     console.log("[useReports] Saved reports:", reports);
@@ -32,8 +40,13 @@ export function useReports() {
   
   // Get a report by its ID
   const getReportById = useCallback((reportId: string) => {
+    if (!Array.isArray(reports)) {
+      console.warn("[useReports] Reports data is corrupted, not an array");
+      return null;
+    }
+    
     console.log(`[useReports] Looking for report with ID: ${reportId}`, reports);
-    const report = reports.find(r => r.id === reportId);
+    const report = reports.find(r => r && r.id === reportId);
     console.log(`[useReports] Found report:`, report);
     return report || null;
   }, [reports]);
@@ -52,8 +65,11 @@ export function useReports() {
     };
     
     setReports(prev => {
+      // Safety check for previous state
+      const validPrev = Array.isArray(prev) ? prev : [];
+      
       console.log("[useReports] Creating new report:", newReport);
-      const updatedReports = [newReport, ...prev];
+      const updatedReports = [newReport, ...validPrev];
       console.log("[useReports] Updated reports list:", updatedReports);
       return updatedReports;
     });
@@ -68,9 +84,19 @@ export function useReports() {
   // Update an existing report
   const updateReport = useCallback((reportId: string, updates: Partial<Omit<ReportDefinition, "id" | "created_at">>) => {
     setReports(prev => {
+      // Safety check for previous state
+      const validPrev = Array.isArray(prev) ? prev : [];
+      
       console.log(`[useReports] Updating report ${reportId} with:`, updates);
-      const updatedReports = prev.map(report => 
-        report.id === reportId 
+      const reportExists = validPrev.some(report => report && report.id === reportId);
+      
+      if (!reportExists) {
+        console.error(`[useReports] Cannot update report - report with ID ${reportId} not found`);
+        return validPrev;
+      }
+      
+      const updatedReports = validPrev.map(report => 
+        report && report.id === reportId 
           ? { 
               ...report, 
               ...updates, 
@@ -92,8 +118,11 @@ export function useReports() {
     const reportToDelete = getReportById(reportId);
     if (reportToDelete) {
       setReports(prev => {
+        // Safety check for previous state
+        const validPrev = Array.isArray(prev) ? prev : [];
+        
         console.log(`[useReports] Deleting report ${reportId}`);
-        const updatedReports = prev.filter(report => report.id !== reportId);
+        const updatedReports = validPrev.filter(report => report && report.id !== reportId);
         console.log("[useReports] Updated reports list:", updatedReports);
         return updatedReports;
       });
@@ -121,8 +150,11 @@ export function useReports() {
       };
       
       setReports(prev => {
+        // Safety check for previous state
+        const validPrev = Array.isArray(prev) ? prev : [];
+        
         console.log("[useReports] Duplicating report:", newReport);
-        const updatedReports = [newReport, ...prev];
+        const updatedReports = [newReport, ...validPrev];
         console.log("[useReports] Updated reports list:", updatedReports);
         return updatedReports;
       });
@@ -143,7 +175,7 @@ export function useReports() {
   }, [setLastViewedReport]);
   
   return {
-    reports,
+    reports: Array.isArray(reports) ? reports : [],
     lastViewedReport,
     getReportById,
     createReport,

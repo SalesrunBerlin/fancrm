@@ -17,31 +17,38 @@ export default function ReportViewPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [report, setReport] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   
   // Load report data
   useEffect(() => {
-    if (reportId) {
-      console.log(`Loading report with ID: ${reportId}`);
-      try {
-        const loadedReport = getReportById(reportId);
+    if (!reportId) {
+      setIsLoading(false);
+      setLoadError("No report ID provided");
+      return;
+    }
+    
+    console.log(`Loading report with ID: ${reportId}`);
+    try {
+      const loadedReport = getReportById(reportId);
+      
+      if (loadedReport) {
+        console.log("Found report:", loadedReport);
+        setReport(loadedReport);
         
-        if (loadedReport) {
-          console.log("Found report:", loadedReport);
-          setReport(loadedReport);
-          
-          // Track that this report was viewed
-          updateLastViewedReport(reportId);
-          toast.success(`Report "${loadedReport.name}" loaded successfully`);
-        } else {
-          console.error("Report not found:", reportId);
-          toast.error(`Report with ID ${reportId} not found`);
-        }
-      } catch (error) {
-        console.error("Error loading report:", error);
-        toast.error("Failed to load report");
-      } finally {
-        setIsLoading(false);
+        // Track that this report was viewed
+        updateLastViewedReport(reportId);
+        toast.success(`Report "${loadedReport.name}" loaded successfully`);
+      } else {
+        console.error("Report not found:", reportId);
+        setLoadError(`Report with ID ${reportId} not found`);
+        toast.error(`Report with ID ${reportId} not found`);
       }
+    } catch (error: any) {
+      console.error("Error loading report:", error);
+      setLoadError(error?.message || "Failed to load report");
+      toast.error("Failed to load report");
+    } finally {
+      setIsLoading(false);
     }
   }, [reportId, getReportById, updateLastViewedReport]);
   
@@ -53,7 +60,7 @@ export default function ReportViewPage() {
     );
   }
   
-  if (!report) {
+  if (loadError || !report) {
     return (
       <div className="p-8 text-center">
         <div className="flex flex-col items-center gap-4">
@@ -62,7 +69,7 @@ export default function ReportViewPage() {
           </div>
           <h2 className="text-2xl font-bold">Report nicht gefunden</h2>
           <p className="text-muted-foreground mt-2">
-            Der gesuchte Bericht existiert nicht oder wurde gelöscht.
+            {loadError || "Der gesuchte Bericht existiert nicht oder wurde gelöscht."}
           </p>
           <Button onClick={() => navigate("/reports")} className="mt-4">
             <ArrowLeft className="h-4 w-4 mr-2" />
@@ -87,7 +94,13 @@ export default function ReportViewPage() {
     // Reload the report after editing to get latest changes
     if (reportId) {
       const refreshedReport = getReportById(reportId);
-      setReport(refreshedReport);
+      if (refreshedReport) {
+        setReport(refreshedReport);
+      } else {
+        // If the report was deleted during editing
+        setLoadError("Report no longer exists");
+        toast.error("Report no longer exists");
+      }
     }
   };
   
