@@ -13,8 +13,9 @@ interface ReportDisplayProps {
 export function ReportDisplay({ report }: ReportDisplayProps) {
   console.log("Rendering ReportDisplay with report:", report);
   
-  // Ensure report is valid before proceeding
+  // Validate report before proceeding
   if (!report || !report.id) {
+    console.error("Invalid report definition:", report);
     return (
       <Card className="p-6 text-center">
         <div className="flex flex-col items-center gap-4">
@@ -29,8 +30,45 @@ export function ReportDisplay({ report }: ReportDisplayProps) {
       </Card>
     );
   }
+
+  // Check if report has the necessary properties
+  if (!Array.isArray(report.objectIds) || report.objectIds.length === 0) {
+    console.error("Report has no object IDs:", report);
+    return (
+      <Card className="p-6 text-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="p-4 bg-amber-100 rounded-full">
+            <AlertCircle className="h-8 w-8 text-amber-600" />
+          </div>
+          <h3 className="text-xl font-medium">Incomplete Report</h3>
+          <p className="text-muted-foreground">
+            This report doesn't have any objects selected. Please edit the report to select objects.
+          </p>
+        </div>
+      </Card>
+    );
+  }
+
+  if (!Array.isArray(report.selectedFields) || report.selectedFields.length === 0) {
+    console.error("Report has no selected fields:", report);
+    return (
+      <Card className="p-6 text-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="p-4 bg-amber-100 rounded-full">
+            <AlertCircle className="h-8 w-8 text-amber-600" />
+          </div>
+          <h3 className="text-xl font-medium">Incomplete Report</h3>
+          <p className="text-muted-foreground">
+            This report doesn't have any fields selected. Please edit the report to select fields to display.
+          </p>
+        </div>
+      </Card>
+    );
+  }
   
   const { data, isLoading, error } = useReportData(report);
+  
+  console.log("Report data result:", { data, isLoading, error });
   
   if (isLoading) {
     return (
@@ -44,6 +82,7 @@ export function ReportDisplay({ report }: ReportDisplayProps) {
   }
   
   if (error) {
+    console.error("Error in ReportDisplay:", error);
     return (
       <Card className="p-6">
         <div className="flex flex-col items-center gap-4">
@@ -72,6 +111,26 @@ export function ReportDisplay({ report }: ReportDisplayProps) {
   const columns = data.columns || [];
   const hasColumnDefs = Array.isArray(columnDefs) && columnDefs.length > 0;
   const hasColumns = Array.isArray(columns) && columns.length > 0;
+  
+  // Log columns for debugging
+  console.log("Table columns:", hasColumnDefs ? columnDefs : columns);
+  console.log("Table rows sample:", data.rows.slice(0, 2));
+  
+  if (!hasColumnDefs && !hasColumns) {
+    return (
+      <Card className="p-6 text-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="p-4 bg-amber-100 rounded-full">
+            <AlertCircle className="h-8 w-8 text-amber-600" />
+          </div>
+          <h3 className="text-xl font-medium">Report Format Error</h3>
+          <p className="text-muted-foreground">
+            The report data is missing column definitions. Please edit the report.
+          </p>
+        </div>
+      </Card>
+    );
+  }
   
   return (
     <Card>

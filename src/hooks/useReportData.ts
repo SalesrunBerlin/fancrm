@@ -18,6 +18,23 @@ interface ReportQueryResult {
 export function useReportData(report: ReportDefinition) {
   const { objectTypes } = useObjectTypes();
   
+  // Add validation for report to prevent errors
+  const isValidReport = useMemo(() => {
+    if (!report) return false;
+    if (!report.objectIds || !Array.isArray(report.objectIds) || report.objectIds.length === 0) return false;
+    if (!report.selectedFields || !Array.isArray(report.selectedFields) || report.selectedFields.length === 0) return false;
+    return true;
+  }, [report]);
+  
+  if (!isValidReport) {
+    console.error("Invalid report structure:", report);
+    return {
+      data: undefined,
+      isLoading: false,
+      error: new Error("Invalid report definition"),
+    };
+  }
+  
   // Safety check for report with no objects
   if (!report?.objectIds || report.objectIds.length === 0) {
     return {
@@ -31,10 +48,18 @@ export function useReportData(report: ReportDefinition) {
   // Ensure we have proper dependency arrays that can never be undefined
   const objectIds = useMemo(() => (report.objectIds || []), [report?.id || 'unknown']);
   
-  // Fixed JSON.stringify to handle potential undefined values
-  const filters = useMemo(() => (report.filters || []), [report?.id || 'unknown', JSON.stringify(report.filters || [])]);
+  // Use proper JSON stringification with null handling for dependencies
+  const filters = useMemo(() => {
+    const filterList = report.filters || [];
+    console.log("Report filters:", filterList);
+    return filterList;
+  }, [report?.id || 'unknown']);
   
-  const selectedFields = useMemo(() => (report.selectedFields || []), [report?.id || 'unknown', JSON.stringify(report.selectedFields || [])]);
+  const selectedFields = useMemo(() => {
+    const fieldsList = report.selectedFields || [];
+    console.log("Report selected fields:", fieldsList);
+    return fieldsList;
+  }, [report?.id || 'unknown']);
   
   // Fetch records for each object in the report with memoization
   // Ensure we pass empty arrays as fallbacks for all dependencies
@@ -61,7 +86,7 @@ export function useReportData(report: ReportDefinition) {
       isLoading,
       error
     };
-  }), [objectIds.join(','), JSON.stringify(filters), JSON.stringify(selectedFields)]);
+  }), [objectIds.join(','), JSON.stringify(filters || []), JSON.stringify(selectedFields || [])]);
   
   // Fetch relationships with memoization
   const relationshipsQueries = useMemo(() => (objectIds || []).map(objectTypeId => {
@@ -78,7 +103,7 @@ export function useReportData(report: ReportDefinition) {
       // Check if data is still loading
       if (objectDataQueries.some(q => q.isLoading)) {
         console.log("Some object data is still loading");
-        return { columns: [], columnDefs: [], rows: [], totalCount: 0 };
+        throw new Error("Data still loading");
       }
       
       // Check for any errors
@@ -91,7 +116,7 @@ export function useReportData(report: ReportDefinition) {
       // Safety check for no objects
       if (!objectIds.length) {
         console.warn("No object IDs in report");
-        return { columns: [], columnDefs: [], rows: [], totalCount: 0 };
+        throw new Error("No objects selected for this report");
       }
       
       // Get object names for better display
@@ -112,7 +137,7 @@ export function useReportData(report: ReportDefinition) {
       // Safety check for no visible fields
       if (visibleFields.length === 0) {
         console.warn("No visible fields in report");
-        return { columns: [], columnDefs: [], rows: [], totalCount: 0 };
+        throw new Error("No visible fields selected for this report");
       }
       
       const columnDefs = visibleFields.map(field => {
@@ -174,6 +199,7 @@ export function useReportData(report: ReportDefinition) {
       }
       
       // For multi-object reports - safety implementation
+      console.warn("Multi-object reports not fully implemented yet");
       return {
         columns: columnDefs.map(c => c.key),
         columnDefs: columnDefs,
@@ -181,9 +207,10 @@ export function useReportData(report: ReportDefinition) {
         totalCount: 0
       };
     },
-    enabled: !!report && !!(objectIds && objectIds.length) && !objectDataQueries.some(q => q.isLoading),
+    enabled: isValidReport && !objectDataQueries.some(q => q.isLoading),
     staleTime: 30000, // Cache data for 30 seconds to prevent constant refetching
     refetchOnWindowFocus: false, // Don't refetch when window regains focus
+    retry: 2, // Retry failed requests to handle edge cases
   });
   
   return {

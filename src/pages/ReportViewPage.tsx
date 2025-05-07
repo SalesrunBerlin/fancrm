@@ -19,7 +19,7 @@ export default function ReportViewPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   
-  // Add debug logging
+  // Add more detailed debug logging
   console.log("Current Route ReportId:", reportId);
   console.log("All available reports:", reports);
   
@@ -32,15 +32,37 @@ export default function ReportViewPage() {
     }
     
     console.log(`Loading report with ID: ${reportId}`);
+    setIsLoading(true);
+    setLoadError(null);
+    
     try {
       const loadedReport = getReportById(reportId);
       
       if (loadedReport) {
         console.log("Found report:", loadedReport);
+        
+        // Validate report structure before setting it
+        if (!loadedReport.objectIds || !Array.isArray(loadedReport.objectIds) || loadedReport.objectIds.length === 0) {
+          console.warn("Report has no object IDs:", loadedReport);
+          setLoadError("Report definition is incomplete (missing object IDs)");
+          setIsLoading(false);
+          return;
+        }
+        
+        if (!loadedReport.selectedFields || !Array.isArray(loadedReport.selectedFields) || loadedReport.selectedFields.length === 0) {
+          console.warn("Report has no selected fields:", loadedReport);
+          setLoadError("Report definition is incomplete (missing selected fields)");
+          setIsLoading(false);
+          return;
+        }
+        
+        // All validation passed, set the report
         setReport(loadedReport);
         
-        // Track that this report was viewed
+        // Track that this report was viewed (after successful validation)
         updateLastViewedReport(reportId);
+        
+        // Only show success toast after validation is complete
         toast.success(`Report "${loadedReport.name}" loaded successfully`);
       } else {
         console.error("Report not found:", reportId);
