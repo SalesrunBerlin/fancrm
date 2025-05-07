@@ -8,6 +8,7 @@ import { CommandSearch } from "@/components/search/CommandSearch";
 import { NavigationToggle } from "./NavigationToggle";
 import { useLocation, useNavigate } from "react-router-dom";
 import { GlobalActionsNav } from "@/components/actions/GlobalActionsNav";
+import { ApplicationSwitcher } from "@/components/applications/ApplicationSwitcher";
 
 interface HeaderProps extends React.HTMLAttributes<HTMLElement> {}
 
@@ -55,8 +56,9 @@ export function Header({ className }: HeaderProps) {
         )}
       </div>
       
-      {/* Center section - Global actions nav */}
-      <div className="flex-1 flex justify-center items-center">
+      {/* Center section - Application switcher and Global actions nav */}
+      <div className="flex-1 flex justify-center items-center gap-4">
+        <ApplicationSwitcher size="sm" showIcon={false} />
         <GlobalActionsNav />
       </div>
       

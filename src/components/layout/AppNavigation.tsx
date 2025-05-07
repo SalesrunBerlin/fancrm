@@ -1,14 +1,22 @@
+
 import { useNavigate, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Settings, LayoutDashboard, AppWindow, FileText, List, Play, BarChart3 } from "lucide-react";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
+import { useCurrentApplicationData } from "@/hooks/useCurrentApplicationData";
 
 export function AppNavigation() {
   const navigate = useNavigate();
   const location = useLocation();
   const { objectTypes } = useObjectTypes();
+  const { currentAppId, appObjects } = useCurrentApplicationData();
+  
+  // Filter to show only objects in the current application
+  const navigationObjects = currentAppId && appObjects?.length 
+    ? appObjects.filter(obj => obj.show_in_navigation && !obj.is_archived)
+    : objectTypes?.filter(obj => obj.show_in_navigation && !obj.is_archived) || [];
 
   const isActive = (path: string) => {
     return location.pathname === path;
@@ -78,25 +86,23 @@ export function AppNavigation() {
           </div>
         </div>
 
-        {objectTypes && objectTypes.length > 0 && (
+        {navigationObjects && navigationObjects.length > 0 && (
           <div className="px-4 py-2">
             <h2 className="mb-2 px-2 text-lg font-semibold tracking-tight">
               Custom Objects
             </h2>
             <div className="space-y-1">
-              {objectTypes
-                .filter(type => type.show_in_navigation && !type.is_archived)
-                .map(type => (
-                  <Button
-                    key={type.id}
-                    variant={isActive(`/objects/${type.id}`) ? "secondary" : "ghost"}
-                    className="w-full justify-start"
-                    onClick={() => navigate(`/objects/${type.id}`)}
-                  >
-                    <span className="mr-2">{type.icon || "📋"}</span>
-                    {type.name}
-                  </Button>
-                ))}
+              {navigationObjects.map(type => (
+                <Button
+                  key={type.id}
+                  variant={isActive(`/objects/${type.id}`) ? "secondary" : "ghost"}
+                  className="w-full justify-start"
+                  onClick={() => navigate(`/objects/${type.id}`)}
+                >
+                  <span className="mr-2">{type.icon || "📋"}</span>
+                  {type.name}
+                </Button>
+              ))}
             </div>
           </div>
         )}
