@@ -1,248 +1,240 @@
 
-import { useState, useEffect } from "react";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useAuth } from "@/contexts/AuthContext";
-import { useNavigate } from "react-router-dom";
-import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
-import { ThemedButton } from "@/components/ui/themed-button";
+import { useState, useEffect } from 'react';
+import { Navigate, useNavigate, useParams } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { useAuth } from '@/contexts/AuthContext';
+import { Loader2 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
-export default function Auth() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [registrationSuccess, setRegistrationSuccess] = useState(false);
-  const [workspaceData, setWorkspaceData] = useState<any>(null);
+const Auth = () => {
+  const { user, signIn, signUp, isLoading } = useAuth();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [isSigningIn, setIsSigningIn] = useState(false);
+  const [isSigningUp, setIsSigningUp] = useState(false);
+  const [activeTab, setActiveTab] = useState<'signin' | 'signup'>('signin');
+  const [workspace, setWorkspace] = useState<any | null>(null);
+  const [isLoadingWorkspace, setIsLoadingWorkspace] = useState(false);
+  
   const navigate = useNavigate();
-  const { user, login, signup } = useAuth();
   const { workspaceId } = useParams<{ workspaceId?: string }>();
+
+  useEffect(() => {
+    // If we have a workspaceId, fetch the workspace details
+    const fetchWorkspace = async () => {
+      if (!workspaceId) return;
+      
+      try {
+        setIsLoadingWorkspace(true);
+        const { data, error } = await supabase
+          .from('workspaces')
+          .select('*')
+          .eq('id', workspaceId)
+          .single();
+          
+        if (error) throw error;
+        setWorkspace(data);
+      } catch (error) {
+        console.error('Error fetching workspace:', error);
+        setError('Der Workspace wurde nicht gefunden.');
+      } finally {
+        setIsLoadingWorkspace(false);
+      }
+    };
+    
+    fetchWorkspace();
+  }, [workspaceId]);
   
   // Redirect if already logged in
-  useEffect(() => {
-    if (user) {
-      navigate("/dashboard");
-    }
-  }, [user, navigate]);
-
-  // Fetch workspace data if workspaceId is provided
-  useEffect(() => {
-    const fetchWorkspaceData = async () => {
-      if (workspaceId) {
-        try {
-          const { data, error } = await supabase
-            .from('workspaces')
-            .select('name, welcome_message, primary_color')
-            .eq('id', workspaceId)
-            .single();
-          
-          if (error) throw error;
-          
-          setWorkspaceData(data);
-          // Apply the workspace's primary color
-          document.documentElement.style.setProperty('--primary', data.primary_color);
-        } catch (error) {
-          console.error("Error fetching workspace data:", error);
-          toast.error("Workspace nicht gefunden");
-        }
-      }
-    };
-    
-    fetchWorkspaceData();
-    
-    // Reset the color when component unmounts
-    return () => {
-      document.documentElement.style.removeProperty('--primary');
-    };
-  }, [workspaceId]);
-
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    
-    try {
-      const { error } = await login(email, password);
-      if (!error) {
-        navigate("/dashboard");
-      }
-      // Error is shown via toast in login method
-    } catch (error) {
-      // Fallback error handling
-      console.error("Unhandled login error:", error);
-      toast.error("An unexpected error occurred. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSignup = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    
-    try {
-      // Improved error handling
-      if (password.length < 6) {
-        toast.error("Das Passwort muss mindestens 6 Zeichen lang sein.");
-        setLoading(false);
-        return;
-      }
-      
-      const { success, error } = await signup(email, password);
-      
-      if (success) {
-        // Show success message
-        setRegistrationSuccess(true);
-        toast.success("Registrierung erfolgreich. Bitte überprüfen Sie Ihre E-Mail zur Bestätigung.");
-      } else if (error) {
-        // Handle specific errors with more user-friendly messages
-        if (error.includes("User already registered")) {
-          toast.error("Diese E-Mail-Adresse ist bereits registriert. Bitte melden Sie sich an.");
-        } else {
-          toast.error(error);
-        }
-      }
-    } catch (error: any) {
-      // This is a fallback error handler
-      console.error("Unhandled signup error:", error);
-      toast.error("Es ist ein unerwarteter Fehler aufgetreten. Bitte versuchen Sie es später erneut.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (user) {
-    return null; // Don't render anything if we're redirecting
+  if (user && !isLoading) {
+    return <Navigate to="/dashboard" />;
   }
 
+  const handleSignIn = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setIsSigningIn(true);
+
+    try {
+      const { error } = await signIn({ email, password });
+      if (error) throw error;
+      navigate('/dashboard');
+    } catch (error: any) {
+      console.error('Error signing in:', error);
+      setError('Anmeldung fehlgeschlagen. Bitte überprüfen Sie Ihre Zugangsdaten.');
+    } finally {
+      setIsSigningIn(false);
+    }
+  };
+
+  const handleSignUp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setIsSigningUp(true);
+
+    try {
+      const { error, data } = await signUp({ email, password });
+      if (error) throw error;
+
+      if (data) {
+        setActiveTab('signin');
+        setError('Bitte bestätigen Sie Ihre E-Mail-Adresse. Anschließend können Sie sich anmelden.');
+      }
+    } catch (error: any) {
+      console.error('Error signing up:', error);
+      setError('Registrierung fehlgeschlagen. Bitte versuchen Sie es erneut.');
+    } finally {
+      setIsSigningUp(false);
+    }
+  };
+
+  const getWelcomeMessage = () => {
+    if (workspace) {
+      return workspace.welcome_message || 'Willkommen! Bitte geben Sie Ihre Zugangsdaten ein, um auf den Workspace zuzugreifen.';
+    }
+    return 'Willkommen! Bitte melden Sie sich an, um fortzufahren.';
+  };
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50 p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1 text-center">
-          <CardTitle className="text-2xl font-bold">
-            {workspaceData ? workspaceData.name : "CRMbeauty"}
-          </CardTitle>
-          <CardDescription>
-            {workspaceData ? workspaceData.welcome_message : "Melden Sie sich an, um Ihr Konto zu verwalten"}
-          </CardDescription>
-        </CardHeader>
-        <Tabs defaultValue="login" className="w-full">
-          {!workspaceId && (
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="login">Anmelden</TabsTrigger>
-              <TabsTrigger value="signup">Registrieren</TabsTrigger>
-            </TabsList>
-          )}
-          <TabsContent value="login">
-            <form onSubmit={handleLogin}>
-              <CardContent className="space-y-4 pt-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email">E-Mail</Label>
-                  <Input 
-                    id="email" 
-                    type="email" 
-                    placeholder="name@beispiel.de" 
+    <div className="min-h-screen flex items-center justify-center p-4" style={{
+      backgroundColor: workspace?.primary_color ? `${workspace.primary_color}15` : undefined,
+    }}>
+      <div className="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-lg w-full max-w-md">
+        {isLoadingWorkspace ? (
+          <div className="flex justify-center py-8">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+        ) : (
+          <>
+            <div className="text-center mb-8">
+              <h1 className="text-2xl font-bold mb-2">
+                {workspace ? workspace.name : 'Anmeldung'}
+              </h1>
+              <p className="text-gray-600 dark:text-gray-400">
+                {getWelcomeMessage()}
+              </p>
+            </div>
+
+            {error && (
+              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 p-3 rounded-md mb-4 text-sm">
+                {error}
+              </div>
+            )}
+
+            <div className="flex border-b mb-4">
+              <button
+                className={`flex-1 py-2 font-medium ${
+                  activeTab === 'signin'
+                    ? 'border-b-2 border-primary text-primary'
+                    : 'text-gray-500 dark:text-gray-400'
+                }`}
+                onClick={() => setActiveTab('signin')}
+              >
+                Anmelden
+              </button>
+              {!workspaceId && (
+                <button
+                  className={`flex-1 py-2 font-medium ${
+                    activeTab === 'signup'
+                      ? 'border-b-2 border-primary text-primary'
+                      : 'text-gray-500 dark:text-gray-400'
+                  }`}
+                  onClick={() => setActiveTab('signup')}
+                >
+                  Registrieren
+                </button>
+              )}
+            </div>
+
+            {activeTab === 'signin' ? (
+              <form onSubmit={handleSignIn} className="space-y-4">
+                <div>
+                  <label htmlFor="email" className="block text-sm font-medium mb-1">
+                    E-Mail
+                  </label>
+                  <Input
+                    id="email"
+                    type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
+                    placeholder="name@example.com"
                     required
-                    disabled={loading}
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="password">Passwort</Label>
-                  <Input 
-                    id="password" 
-                    type="password" 
+                <div>
+                  <label htmlFor="password" className="block text-sm font-medium mb-1">
+                    Passwort
+                  </label>
+                  <Input
+                    id="password"
+                    type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
                     required
-                    disabled={loading}
                   />
                 </div>
-              </CardContent>
-              <CardFooter>
-                <ThemedButton type="submit" className="w-full" disabled={loading}>
-                  {loading ? (
+                <Button type="submit" disabled={isSigningIn} className="w-full" style={{
+                  backgroundColor: workspace?.primary_color,
+                }}>
+                  {isSigningIn ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Anmeldung...
+                      Anmelden...
                     </>
-                  ) : "Anmelden"}
-                </ThemedButton>
-              </CardFooter>
-            </form>
-          </TabsContent>
-          {!workspaceId && (
-            <TabsContent value="signup">
-              {registrationSuccess ? (
-                <CardContent className="pt-6">
-                  <div className="text-center space-y-4">
-                    <div className="rounded-full bg-green-100 w-12 h-12 mx-auto flex items-center justify-center">
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6 text-green-600">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                    </div>
-                    <h3 className="text-lg font-medium">Registrierung erfolgreich!</h3>
-                    <p className="text-muted-foreground">
-                      Bitte überprüfen Sie Ihr E-Mail-Postfach, um Ihr Konto zu bestätigen.
-                    </p>
-                    <ThemedButton 
-                      variant="outline" 
-                      className="mt-4" 
-                      onClick={() => setRegistrationSuccess(false)}
-                    >
-                      Zurück zur Registrierung
-                    </ThemedButton>
-                  </div>
-                </CardContent>
-              ) : (
-                <form onSubmit={handleSignup}>
-                  <CardContent className="space-y-4 pt-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="signup-email">E-Mail</Label>
-                      <Input 
-                        id="signup-email" 
-                        type="email" 
-                        placeholder="name@beispiel.de" 
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        required
-                        disabled={loading}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="signup-password">Passwort</Label>
-                      <Input 
-                        id="signup-password" 
-                        type="password" 
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        required
-                        disabled={loading}
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        Passwort muss mindestens 6 Zeichen lang sein.
-                      </p>
-                    </div>
-                  </CardContent>
-                  <CardFooter>
-                    <ThemedButton type="submit" className="w-full" disabled={loading}>
-                      {loading ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Registrierung...
-                        </>
-                      ) : "Registrieren"}
-                    </ThemedButton>
-                  </CardFooter>
-                </form>
-              )}
-            </TabsContent>
-          )}
-        </Tabs>
-      </Card>
+                  ) : (
+                    'Anmelden'
+                  )}
+                </Button>
+              </form>
+            ) : (
+              <form onSubmit={handleSignUp} className="space-y-4">
+                <div>
+                  <label htmlFor="email-signup" className="block text-sm font-medium mb-1">
+                    E-Mail
+                  </label>
+                  <Input
+                    id="email-signup"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="name@example.com"
+                    required
+                  />
+                </div>
+                <div>
+                  <label htmlFor="password-signup" className="block text-sm font-medium mb-1">
+                    Passwort
+                  </label>
+                  <Input
+                    id="password-signup"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    required
+                    minLength={6}
+                  />
+                </div>
+                <Button type="submit" disabled={isSigningUp} className="w-full">
+                  {isSigningUp ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Registrieren...
+                    </>
+                  ) : (
+                    'Registrieren'
+                  )}
+                </Button>
+              </form>
+            )}
+          </>
+        )}
+      </div>
     </div>
   );
-}
+};
+
+export default Auth;

@@ -1,176 +1,224 @@
 
-import React, { useState } from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
+import React, { useState, useEffect } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
-import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
-import { useForm } from 'react-hook-form';
 import { Loader2 } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { toast } from 'sonner';
 
 interface CreateUserDialogProps {
   open: boolean;
   onClose: () => void;
   onUserCreated: () => void;
-  workspaceId?: string;
 }
 
-interface FormValues {
-  email: string;
-  password: string;
-  firstName: string;
-  lastName: string;
-  metadataAccess: boolean;
-  dataAccess: boolean;
-}
-
-export function CreateUserDialog({ 
-  open, 
-  onClose, 
-  onUserCreated,
-  workspaceId
-}: CreateUserDialogProps) {
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const { register, handleSubmit, formState: { errors }, reset } = useForm<FormValues>({
-    defaultValues: {
-      email: '',
-      password: 'StandardPasswort!123', // Standardpasswort
-      firstName: '',
-      lastName: '',
-      metadataAccess: true,
-      dataAccess: false
-    }
+export function CreateUserDialog({ open, onClose, onUserCreated }: CreateUserDialogProps) {
+  const [formData, setFormData] = useState({
+    email: '',
+    password: '',
+    first_name: '',
+    last_name: '',
+    metadata_access: true,
+    data_access: false,
   });
+  const [isLoading, setIsLoading] = useState(false);
+  const [workspaces, setWorkspaces] = useState<any[]>([]);
+  const [selectedWorkspace, setSelectedWorkspace] = useState<string>('');
+  
+  useEffect(() => {
+    const fetchWorkspaces = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('workspaces')
+          .select('id, name');
+          
+        if (error) throw error;
+        setWorkspaces(data || []);
+        if (data && data.length > 0) {
+          setSelectedWorkspace(data[0].id);
+        }
+      } catch (error) {
+        console.error('Error fetching workspaces:', error);
+      }
+    };
+    
+    if (open) {
+      fetchWorkspaces();
+      // Generate a random password
+      const randomPassword = Math.random().toString(36).slice(-8);
+      setFormData(prev => ({ ...prev, password: randomPassword }));
+    }
+  }, [open]);
+  
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+  
+  const handleSwitchChange = (name: string, checked: boolean) => {
+    setFormData(prev => ({ ...prev, [name]: checked }));
+  };
+  
+  const handleWorkspaceChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setSelectedWorkspace(e.target.value);
+  };
 
-  const onSubmit = async (data: FormValues) => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
     try {
-      setIsSubmitting(true);
+      setIsLoading(true);
       
-      // Call Supabase function to create user
-      const { data: userData, error } = await supabase.functions.invoke('admin-create-user', {
+      const { data, error } = await supabase.functions.invoke('admin-create-user', {
         body: {
-          email: data.email,
-          password: data.password,
-          first_name: data.firstName,
-          last_name: data.lastName,
-          workspace_id: workspaceId,
-          metadata_access: data.metadataAccess,
-          data_access: data.dataAccess
+          email: formData.email,
+          password: formData.password,
+          first_name: formData.first_name,
+          last_name: formData.last_name,
+          workspace_id: selectedWorkspace,
+          metadata_access: formData.metadata_access,
+          data_access: formData.data_access
         }
       });
       
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
       
-      toast.success(`Benutzer ${data.email} wurde erfolgreich erstellt`);
-      reset();
+      toast.success("Benutzer wurde erfolgreich erstellt", {
+        description: `Email: ${formData.email} mit Passwort: ${formData.password}`
+      });
+      
       onUserCreated();
       onClose();
+      
     } catch (error: any) {
-      console.error('Fehler beim Erstellen des Benutzers:', error);
-      toast.error(error.message || 'Fehler beim Erstellen des Benutzers');
+      console.error('Error creating user:', error);
+      toast.error("Fehler beim Erstellen des Benutzers", {
+        description: error.message || "Bitte versuchen Sie es erneut"
+      });
     } finally {
-      setIsSubmitting(false);
+      setIsLoading(false);
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
+    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Neuen Benutzer erstellen</DialogTitle>
-          <DialogDescription>
-            Erstellen Sie einen neuen Benutzer für die Plattform. Das Standardpasswort wird dem Benutzer zugewiesen.
-          </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit(onSubmit)}>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="email" className="text-right">
-                E-Mail
-              </Label>
+        
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="email">Email</Label>
+            <Input
+              id="email"
+              name="email"
+              type="email"
+              value={formData.email}
+              onChange={handleChange}
+              required
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="password">Passwort</Label>
+            <div className="flex gap-2">
               <Input
-                id="email"
-                className="col-span-3"
-                {...register('email', { 
-                  required: 'E-Mail ist erforderlich',
-                  pattern: {
-                    value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                    message: 'Ungültige E-Mail-Adresse'
-                  }
-                })}
+                id="password"
+                name="password"
+                type="text"
+                value={formData.password}
+                onChange={handleChange}
+                required
+                className="flex-1"
               />
-              {errors.email && (
-                <p className="col-span-3 col-start-2 text-sm text-red-500">
-                  {errors.email.message}
-                </p>
-              )}
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="firstName" className="text-right">
-                Vorname
-              </Label>
-              <Input
-                id="firstName"
-                className="col-span-3"
-                {...register('firstName')}
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="lastName" className="text-right">
-                Nachname
-              </Label>
-              <Input
-                id="lastName"
-                className="col-span-3"
-                {...register('lastName')}
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <div className="col-start-2 col-span-3 flex items-center space-x-2">
-                <Checkbox 
-                  id="metadataAccess" 
-                  {...register('metadataAccess')} 
-                  defaultChecked 
-                />
-                <Label htmlFor="metadataAccess">Metadatenzugriff erlauben</Label>
-              </div>
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <div className="col-start-2 col-span-3 flex items-center space-x-2">
-                <Checkbox 
-                  id="dataAccess" 
-                  {...register('dataAccess')} 
-                />
-                <Label htmlFor="dataAccess">Datenzugriff erlauben</Label>
-              </div>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  const randomPassword = Math.random().toString(36).slice(-8);
+                  setFormData(prev => ({ ...prev, password: randomPassword }));
+                }}
+              >
+                Generieren
+              </Button>
             </div>
           </div>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
+          
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="first_name">Vorname</Label>
+              <Input
+                id="first_name"
+                name="first_name"
+                value={formData.first_name}
+                onChange={handleChange}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="last_name">Nachname</Label>
+              <Input
+                id="last_name"
+                name="last_name"
+                value={formData.last_name}
+                onChange={handleChange}
+              />
+            </div>
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="workspace">Workspace</Label>
+            <select 
+              id="workspace"
+              className="w-full p-2 border rounded-md"
+              value={selectedWorkspace}
+              onChange={handleWorkspaceChange}
+            >
+              {workspaces.map(workspace => (
+                <option key={workspace.id} value={workspace.id}>
+                  {workspace.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          
+          <div className="flex items-center space-x-2">
+            <Switch
+              id="metadata_access"
+              checked={formData.metadata_access}
+              onCheckedChange={(checked) => handleSwitchChange('metadata_access', checked)}
+            />
+            <Label htmlFor="metadata_access">Metadaten-Zugriff (Objekte und Felder)</Label>
+          </div>
+          
+          <div className="flex items-center space-x-2">
+            <Switch
+              id="data_access"
+              checked={formData.data_access}
+              onCheckedChange={(checked) => handleSwitchChange('data_access', checked)}
+            />
+            <Label htmlFor="data_access">Datenzugriff (Datensätze)</Label>
+          </div>
+          
+          <div className="flex justify-end space-x-2 pt-4">
+            <Button type="button" variant="outline" onClick={onClose}>
               Abbrechen
             </Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? (
+            <Button type="submit" disabled={isLoading}>
+              {isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Wird erstellt...
+                  Erstellen...
                 </>
               ) : (
                 'Benutzer erstellen'
               )}
             </Button>
-          </DialogFooter>
+          </div>
         </form>
       </DialogContent>
     </Dialog>

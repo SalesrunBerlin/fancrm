@@ -8,12 +8,12 @@ import { useToast } from '@/hooks/use-toast';
 import { useObjectFields } from '@/hooks/useObjectFields';
 import { useRecordDetail } from '@/hooks/useRecordDetail';
 import { useRecordFields } from '@/hooks/useRecordFields';
-import { ObjectRecord } from '@/integrations/supabase/types';
+import { ObjectField } from '@/types/ObjectFieldTypes';
 
 interface RecordDetailFormProps {
   objectTypeId: string;
   recordId: string;
-  onSave?: (record: ObjectRecord) => void;
+  onSave?: (record: any) => void;
   onCancel?: () => void;
   isEditMode?: boolean;
 }
@@ -26,7 +26,7 @@ export function RecordDetailForm({
   isEditMode = false
 }: RecordDetailFormProps) {
   const { toast } = useToast();
-  const { objectFields, isLoading: isLoadingFields } = useObjectFields(objectTypeId);
+  const { fields, isLoading: isLoadingFields } = useObjectFields(objectTypeId);
   const { record, isLoading: isLoadingRecord, updateRecord } = useRecordDetail(objectTypeId, recordId);
   const [isSaving, setIsSaving] = useState(false);
   const methods = useForm();
@@ -55,7 +55,6 @@ export function RecordDetailForm({
       await updateRecord(data);
       
       toast({
-        title: "Record updated",
         description: "The record has been successfully updated.",
       });
       
@@ -66,7 +65,6 @@ export function RecordDetailForm({
       console.error('Error updating record:', error);
       toast({
         variant: "destructive",
-        title: "Error",
         description: "Failed to update the record. Please try again.",
       });
     } finally {
@@ -85,11 +83,10 @@ export function RecordDetailForm({
 
   return (
     <form onSubmit={methods.handleSubmit(onSubmit)} className="space-y-4 p-4">
-      {objectFields && objectFields.map((field) => (
+      {fields && fields.map((field) => (
         <RecordField
           key={field.id}
           field={field}
-          value={record?.field_values?.[field.api_name]}
           control={methods.control}
           register={methods.register}
           setValue={methods.setValue}

@@ -1,4 +1,3 @@
-
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { Toaster } from "sonner"; 
 import { Layout } from "@/components/layout/Layout";
@@ -48,6 +47,7 @@ import ReportViewPage from "./pages/ReportViewPage";
 import IconUploadPage from "./pages/IconUploadPage";
 import IconEditPage from "./pages/IconEditPage";
 import IconEditorPage from "./pages/IconEditorPage";
+import AdminWorkspacePage from "./pages/admin/AdminWorkspacePage";
 
 // Create a client
 const queryClient = new QueryClient({

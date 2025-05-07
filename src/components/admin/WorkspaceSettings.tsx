@@ -52,7 +52,6 @@ export function WorkspaceSettings({ workspaceId }: WorkspaceSettingsProps) {
     } catch (error) {
       console.error('Error fetching workspace data:', error);
       toast({
-        title: 'Fehler',
         description: 'Workspace-Daten konnten nicht geladen werden',
         variant: 'destructive',
       });
@@ -78,20 +77,18 @@ export function WorkspaceSettings({ workspaceId }: WorkspaceSettingsProps) {
           description: formData.description,
           welcome_message: formData.welcome_message,
           primary_color: formData.primary_color,
-          updated_at: new Date(),
+          updated_at: new Date().toISOString(),
         })
         .eq('id', workspaceId);
 
       if (error) throw error;
       
       toast({
-        title: 'Gespeichert',
         description: 'Workspace-Einstellungen wurden aktualisiert',
       });
     } catch (error) {
       console.error('Error updating workspace:', error);
       toast({
-        title: 'Fehler',
         description: 'Workspace-Einstellungen konnten nicht aktualisiert werden',
         variant: 'destructive',
       });

@@ -1,12 +1,29 @@
-
-import { useState } from "react";
+import {
+  ColumnDef,
+  flexRender,
+  getCoreRowModel,
+  useReactTable,
+} from "@tanstack/react-table";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Input } from "@/components/ui/input";
-import { UserSummary } from "@/pages/admin/UserManagementPage";
 import { ThemedButton } from "@/components/ui/themed-button";
-import { Eye, Search, UserPlus } from "lucide-react";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { UserSummary } from "@/pages/admin/UserManagementPage";
 
 interface UserTableProps {
   users: UserSummary[];
@@ -14,92 +31,78 @@ interface UserTableProps {
 }
 
 export function UserTable({ users, onCreateUser }: UserTableProps) {
-  const [searchTerm, setSearchTerm] = useState("");
-  
-  const filteredUsers = users.filter(user => 
-    user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (user.profile?.first_name?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
-    (user.profile?.last_name?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
-    (user.profile?.screen_name?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
-    (user.profile?.email?.toLowerCase() || "").includes(searchTerm.toLowerCase())
-  );
+  const columns: ColumnDef<UserSummary>[] = [
+    {
+      accessorKey: "profile.screen_name",
+      header: "Benutzername",
+    },
+    {
+      accessorKey: "email",
+      header: "Email",
+    },
+    {
+      accessorKey: "profile.role",
+      header: "Rolle",
+    },
+    {
+      accessorKey: "created_at",
+      header: "Registriert",
+      cell: ({ row }) => {
+        const date = new Date(row.getValue("created_at") as string);
+        return date.toLocaleDateString();
+      },
+    },
+    {
+      id: "actions",
+      cell: ({ row }) => (
+        <ThemedButton asChild>
+          <Link to={`/admin/users/${row.original.id}`}>Details</Link>
+        </ThemedButton>
+      ),
+    },
+  ];
 
-  const getInitials = (firstName?: string, lastName?: string): string => {
-    if (!firstName && !lastName) return "U";
-    return `${firstName?.[0] || ""}${lastName?.[0] || ""}`.toUpperCase();
-  };
+  const table = useReactTable({
+    data: users,
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+  });
 
   return (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <div className="relative w-64">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Suche nach Benutzern..."
-            className="pl-8"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
-        
-        <ThemedButton onClick={onCreateUser}>
-          <UserPlus className="h-4 w-4 mr-2" />
-          Benutzer erstellen
-        </ThemedButton>
+    <div className="w-full">
+      <div className="pb-4">
+        <Button onClick={onCreateUser}>Benutzer erstellen</Button>
       </div>
-      
       <div className="rounded-md border">
         <Table>
           <TableHeader>
-            <TableRow>
-              <TableHead>Benutzer</TableHead>
-              <TableHead>E-Mail</TableHead>
-              <TableHead>Anzeigename</TableHead>
-              <TableHead>Rolle</TableHead>
-              <TableHead>Registriert</TableHead>
-              <TableHead>Objekte</TableHead>
-              <TableHead>Datensätze</TableHead>
-              <TableHead>Aktionen</TableHead>
-            </TableRow>
+            {table.getHeaderGroups().map((headerGroup) => (
+              <TableRow key={headerGroup.id}>
+                {headerGroup.headers.map((header) => {
+                  return (
+                    <TableHead key={header.id}>
+                      {header.isPlaceholder
+                        ? null
+                        : flexRender(
+                            header.column.columnDef.header,
+                            header.getContext()
+                          )}
+                    </TableHead>
+                  );
+                })}
+              </TableRow>
+            ))}
           </TableHeader>
           <TableBody>
-            {filteredUsers.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={8} className="text-center py-4 text-muted-foreground">
-                  Keine Benutzer gefunden, die Ihrer Suche entsprechen
-                </TableCell>
+            {table.getRowModel().rows.map((row) => (
+              <TableRow key={row.id}>
+                {row.getVisibleCells().map((cell) => (
+                  <TableCell key={cell.id}>
+                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                  </TableCell>
+                ))}
               </TableRow>
-            ) : (
-              filteredUsers.map((user) => (
-                <TableRow key={user.id}>
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <Avatar className="h-8 w-8">
-                        <AvatarFallback>
-                          {getInitials(user.profile?.first_name, user.profile?.last_name)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <span>
-                        {user.profile?.first_name || ''} {user.profile?.last_name || ''}
-                      </span>
-                    </div>
-                  </TableCell>
-                  <TableCell>{user.profile?.email || user.email || user.id.substring(0, 8) + '@example.com'}</TableCell>
-                  <TableCell>{user.profile?.screen_name || user.id.substring(0, 8)}</TableCell>
-                  <TableCell>{user.profile?.role || 'user'}</TableCell>
-                  <TableCell>{new Date(user.created_at).toLocaleDateString()}</TableCell>
-                  <TableCell>{user.stats?.objectCount || 0}</TableCell>
-                  <TableCell>{user.stats?.recordCount || 0}</TableCell>
-                  <TableCell>
-                    <ThemedButton size="sm" variant="outline" asChild>
-                      <Link to={`/admin/users/${user.id}`}>
-                        <Eye className="h-4 w-4 mr-1" /> Ansehen
-                      </Link>
-                    </ThemedButton>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
+            ))}
           </TableBody>
         </Table>
       </div>
