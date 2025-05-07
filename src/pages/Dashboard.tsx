@@ -1,5 +1,5 @@
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Box, Building, Briefcase, Calendar, AppWindow, User } from "lucide-react";
@@ -87,35 +87,25 @@ export default function Dashboard() {
 
           {filteredObjects?.filter(type => type.is_active).map((objectType) => (
             <Card key={objectType.id} className="flex flex-col">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardHeader className="pb-2">
                 <CardTitle className="flex items-center gap-2">
                   {getIconComponent(objectType.icon)}
-                  {objectType.name}
+                  <div className="flex items-center">
+                    {objectType.name} (<ObjectRecordCount objectTypeId={objectType.id} />)
+                  </div>
                 </CardTitle>
               </CardHeader>
-              <CardContent className="flex-1">
-                <div className="grid grid-cols-2 h-full">
-                  {/* Left side: Record count and view all link */}
-                  <div className="flex flex-col">
-                    <Link 
-                      to={`/objects/${objectType.id}`}
-                      className="block"
-                    >
-                      <p className="text-2xl font-semibold">
-                        <ObjectRecordCount objectTypeId={objectType.id} />
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        View all records
-                      </p>
-                    </Link>
-                  </div>
-                  
-                  {/* Right side: Action buttons */}
-                  <div className="flex items-center justify-end">
-                    <DashboardObjectActions objectTypeId={objectType.id} />
-                  </div>
-                </div>
+              <CardContent className="py-2">
+                <Link 
+                  to={`/objects/${objectType.id}`}
+                  className="text-sm text-blue-600 hover:text-blue-800 transition-colors"
+                >
+                  View all records
+                </Link>
               </CardContent>
+              <CardFooter className="pt-2 mt-auto">
+                <DashboardObjectActions objectTypeId={objectType.id} />
+              </CardFooter>
             </Card>
           ))}
         </div>
@@ -129,10 +119,10 @@ function ObjectRecordCount({ objectTypeId }: { objectTypeId: string }) {
   const { records, isLoading } = useObjectRecords(objectTypeId);
   
   if (isLoading) {
-    return <Skeleton className="h-6 w-12" />;
+    return <Skeleton className="h-4 w-6 inline-block" />;
   }
   
-  return <>{records?.length || 0} Records</>;
+  return <>{records?.length || 0}</>;
 }
 
 // Component to display action buttons for an object type
@@ -144,8 +134,8 @@ function DashboardObjectActions({ objectTypeId }: { objectTypeId: string }) {
     const loadActions = async () => {
       try {
         const objectActions = await getActionsByObjectId(objectTypeId);
-        // Limit to 4 actions max
-        setActions(objectActions.slice(0, 4));
+        // Limit to 5 actions max now
+        setActions(objectActions.slice(0, 5));
       } catch (error) {
         console.error("Error loading actions for dashboard:", error);
       }
@@ -160,9 +150,9 @@ function DashboardObjectActions({ objectTypeId }: { objectTypeId: string }) {
     return null;
   }
   
-  // Display actions in a grid layout with proper vertical alignment
+  // Display actions in a single horizontal row
   return (
-    <div className="grid grid-cols-2 gap-2 w-full h-full items-center">
+    <div className="flex flex-row gap-2 w-full justify-start">
       {actions.map((action) => (
         <ExpandableActionButton
           key={action.id}
@@ -177,3 +167,4 @@ function DashboardObjectActions({ objectTypeId }: { objectTypeId: string }) {
     </div>
   );
 }
+
