@@ -1,6 +1,5 @@
-
 import { useEffect, useRef, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { fabric } from "fabric";
 import { v4 as uuidv4 } from "uuid";
 import { supabase } from "@/integrations/supabase/client";
@@ -12,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowLeft, Save, Loader2, ChevronRight, ChevronLeft, Polygon, PaintBucket, Image } from "lucide-react";
+import { ArrowLeft, Save, Loader2, ChevronRight, ChevronLeft, Pentagon, PaintBucket, Image } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -654,7 +653,7 @@ export default function IconEditorPage() {
             </div>
             <div>
               <h3 className="text-sm font-medium flex items-center">
-                <Polygon className="w-4 h-4 mr-2" />
+                <Pentagon className="w-4 h-4 mr-2" />
                 2. Polygon-Auswahl
               </h3>
               <p className="text-sm text-muted-foreground mt-1">
