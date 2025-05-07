@@ -34,7 +34,10 @@ export default function UserDetailPage() {
 
   useEffect(() => {
     const fetchUserDetails = async () => {
-      if (!userId || isLoadingEmails) return;
+      if (!userId) {
+        setIsLoading(false);
+        return;
+      }
       
       try {
         setIsLoading(true);
@@ -46,89 +49,85 @@ export default function UserDetailPage() {
           .eq('id', userId)
           .single();
         
-        if (profileError) throw profileError;
+        if (profileError) {
+          console.error("Error fetching profile:", profileError);
+          toast.error("Could not fetch user profile");
+          setIsLoading(false);
+          return;
+        }
         
-        // Get object statistics
-        const { data: objectsData, error: objectsError } = await supabase
-          .from('object_types')
-          .select('id, name, api_name')
-          .eq('owner_id', userId);
+        // Get object statistics - continue even if this fails
+        let objectsData = [];
+        try {
+          const { data, error } = await supabase
+            .from('object_types')
+            .select('id, name, api_name')
+            .eq('owner_id', userId);
+          
+          if (!error) {
+            objectsData = data || [];
+          } else {
+            console.error("Error fetching object types:", error);
+          }
+        } catch (err) {
+          console.error("Exception fetching object types:", err);
+        }
         
-        if (objectsError) throw objectsError;
+        // Get field counts - continue even if this fails
+        let fieldsData = [];
+        try {
+          const { data, error } = await supabase
+            .from('object_fields')
+            .select('id, name, api_name, data_type, is_required, object_type_id')
+            .eq('owner_id', userId);
+          
+          if (!error) {
+            fieldsData = data || [];
+          } else {
+            console.error("Error fetching object fields:", error);
+          }
+        } catch (err) {
+          console.error("Exception fetching object fields:", err);
+        }
         
-        // Get field counts
-        const { data: fieldsData, error: fieldsError } = await supabase
-          .from('object_fields')
-          .select('id, name, api_name, data_type, is_required, object_type_id')
-          .eq('owner_id', userId);
-        
-        if (fieldsError) throw fieldsError;
-        
-        // Get record counts
-        const { data: recordsData, error: recordsError } = await supabase
-          .from('object_records')
-          .select('id, object_type_id')
-          .eq('owner_id', userId);
-        
-        if (recordsError) throw recordsError;
+        // Get record counts - continue even if this fails
+        let recordsData = [];
+        try {
+          const { data, error } = await supabase
+            .from('object_records')
+            .select('id, object_type_id')
+            .eq('owner_id', userId);
+          
+          if (!error) {
+            recordsData = data || [];
+          } else {
+            console.error("Error fetching object records:", error);
+          }
+        } catch (err) {
+          console.error("Exception fetching object records:", err);
+        }
         
         // Fetch auth logs
-        const { data: authLogsData, error: authLogsError } = await supabase
-          .rpc('get_auth_logs', { target_user_id: userId });
-        
-        let historyData = [];
-        
-        if (authLogsError || !authLogsData || authLogsData.length === 0) {
-          console.error('Could not fetch auth logs, using mock data:', authLogsError);
-          // Use the mock data for login history
-          const today = new Date();
-          const yesterday = new Date();
-          yesterday.setDate(today.getDate() - 1);
-          const lastWeek = new Date();
-          lastWeek.setDate(today.getDate() - 7);
+        try {
+          const { data: authLogsData, error: authLogsError } = await supabase
+            .rpc('get_auth_logs', { target_user_id: userId });
           
-          historyData = [
-            {
-              timestamp: today.getTime(),
-              event_message: JSON.stringify({
-                msg: "Login",
-                status: "200",
-                path: "/token",
-                remote_addr: "192.168.1.1",
-                time: today.toISOString()
-              })
-            },
-            {
-              timestamp: yesterday.getTime(),
-              event_message: JSON.stringify({
-                msg: "Login",
-                status: "200",
-                path: "/token",
-                remote_addr: "192.168.1.1",
-                time: yesterday.toISOString()
-              })
-            },
-            {
-              timestamp: lastWeek.getTime(),
-              event_message: JSON.stringify({
-                msg: "Login",
-                status: "200",
-                path: "/token",
-                remote_addr: "192.168.1.1",
-                time: lastWeek.toISOString()
-              })
-            }
-          ];
-        } else {
-          historyData = authLogsData;
+          if (!authLogsError && authLogsData && authLogsData.length > 0) {
+            setLoginHistory(authLogsData);
+          } else {
+            console.log('Using mock login history data');
+            // Use the mock data for login history
+            createMockLoginHistory();
+          }
+        } catch (err) {
+          console.error("Exception fetching auth logs:", err);
+          createMockLoginHistory();
         }
-          
-        setLoginHistory(historyData);
         
-        // Process the objects, fields, and records data to get comprehensive user objects
-        const processedObjects = objectsData?.map(obj => {
-          const objectFields = fieldsData?.filter(f => f.object_type_id === obj.id) || [];
-          const objectRecords = recordsData?.filter(r => r.object_type_id === obj.id) || [];
+        // Process the objects, fields, and records data
+        const processedObjects = objectsData.map(obj => {
+          const objectFields = fieldsData.filter(f => f.object_type_id === obj.id) || [];
+          const objectRecords = recordsData.filter(r => r.object_type_id === obj.id) || [];
           
           return {
             id: obj.id,
@@ -137,14 +136,23 @@ export default function UserDetailPage() {
             fields: objectFields,
             recordCount: objectRecords.length
           };
-        }) || [];
+        });
         
         setUserObjects(processedObjects);
         
-        // Find real email from our userEmails data if profile email is not available
-        const userEmailEntry = userEmails.find(ue => ue.id === profileData.id);
-        // Prefer profile email, fall back to auth email
-        const email = profileData.email || (userEmailEntry?.email || `user-${profileData.id.substring(0, 8)}@example.com`);
+        // Find email - now safely handles case where userEmails might be unavailable
+        let email = profileData.email;
+        if (!email && userEmails && userEmails.length > 0) {
+          const userEmailEntry = userEmails.find(ue => ue.id === profileData.id);
+          if (userEmailEntry) {
+            email = userEmailEntry.email;
+          }
+        }
+        
+        // Ensure we have some email (fallback)
+        if (!email) {
+          email = `user-${profileData.id.substring(0, 8)}@example.com`;
+        }
         
         setUser({
           id: profileData.id,
@@ -158,9 +166,9 @@ export default function UserDetailPage() {
             role: profileData.role
           },
           stats: {
-            objectCount: objectsData?.length || 0,
-            fieldCount: fieldsData?.length || 0,
-            recordCount: recordsData?.length || 0
+            objectCount: objectsData.length || 0,
+            fieldCount: fieldsData.length || 0,
+            recordCount: recordsData.length || 0
           }
         });
         
@@ -171,11 +179,56 @@ export default function UserDetailPage() {
         setIsLoading(false);
       }
     };
+    
+    // Helper function to create mock login history
+    const createMockLoginHistory = () => {
+      const today = new Date();
+      const yesterday = new Date();
+      yesterday.setDate(today.getDate() - 1);
+      const lastWeek = new Date();
+      lastWeek.setDate(today.getDate() - 7);
+      
+      const mockHistory = [
+        {
+          timestamp: today.getTime(),
+          event_message: JSON.stringify({
+            msg: "Login",
+            status: "200",
+            path: "/token",
+            remote_addr: "192.168.1.1",
+            time: today.toISOString()
+          })
+        },
+        {
+          timestamp: yesterday.getTime(),
+          event_message: JSON.stringify({
+            msg: "Login",
+            status: "200",
+            path: "/token",
+            remote_addr: "192.168.1.1",
+            time: yesterday.toISOString()
+          })
+        },
+        {
+          timestamp: lastWeek.getTime(),
+          event_message: JSON.stringify({
+            msg: "Login",
+            status: "200",
+            path: "/token",
+            remote_addr: "192.168.1.1",
+            time: lastWeek.toISOString()
+          })
+        }
+      ];
+      
+      setLoginHistory(mockHistory);
+    };
 
+    // Don't wait for userEmails to be loaded to start fetching user details
     fetchUserDetails();
-  }, [userId, userEmails, isLoadingEmails]);
+  }, [userId, userEmails]);
 
-  if (isLoading || isLoadingEmails) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />

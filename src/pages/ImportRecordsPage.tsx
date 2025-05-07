@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
@@ -206,16 +205,20 @@ export default function ImportRecordsPage() {
     let recordsToImport = records;
     if (duplicates.length > 0) {
       if (duplicateHandling === "skip") {
-        const duplicateIndices = new Set(duplicates.map(d => d.rowIndex));
+        // Fix: Convert to a Set of numbers before using 'has' method
+        const duplicateIndices = new Set<number>();
+        duplicates.forEach(d => duplicateIndices.add(d.rowIndex));
+        
         recordsToImport = records.filter((_, index) => !duplicateIndices.has(index));
       } else if (duplicateHandling === "select") {
         const selectedIndices = Object.entries(selectedDuplicates)
           .filter(([_, selected]) => selected)
           .map(([index]) => parseInt(index));
           
-        const duplicateIndices = duplicates
+        const duplicateIndices = new Set<number>();
+        duplicates
           .filter((_, index) => !selectedIndices.includes(index))
-          .map(d => d.rowIndex);
+          .forEach(d => duplicateIndices.add(d.rowIndex));
           
         recordsToImport = records.filter((_, index) => !duplicateIndices.has(index));
       }

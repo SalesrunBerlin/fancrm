@@ -415,7 +415,15 @@ export type Database = {
           street?: string | null
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "contacts_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "auth_users_view"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       field_display_configs: {
         Row: {
@@ -500,6 +508,13 @@ export type Database = {
             columns: ["field_id"]
             isOneToOne: false
             referencedRelation: "object_fields"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "field_picklist_values_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "auth_users_view"
             referencedColumns: ["id"]
           },
         ]
@@ -775,6 +790,13 @@ export type Database = {
             referencedRelation: "object_types"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "object_fields_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "auth_users_view"
+            referencedColumns: ["id"]
+          },
         ]
       }
       object_records: {
@@ -810,10 +832,31 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "object_records_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "auth_users_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "object_records_last_modified_by_fkey"
+            columns: ["last_modified_by"]
+            isOneToOne: false
+            referencedRelation: "auth_users_view"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "object_records_object_type_id_fkey"
             columns: ["object_type_id"]
             isOneToOne: false
             referencedRelation: "object_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "object_records_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "auth_users_view"
             referencedColumns: ["id"]
           },
         ]
@@ -855,6 +898,13 @@ export type Database = {
             columns: ["from_object_id"]
             isOneToOne: false
             referencedRelation: "object_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "object_relationships_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "auth_users_view"
             referencedColumns: ["id"]
           },
           {
@@ -923,6 +973,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "object_types_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "auth_users_view"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "object_types_source_object_id_fkey"
             columns: ["source_object_id"]
             isOneToOne: false
@@ -971,7 +1028,15 @@ export type Database = {
           screen_name?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_id_fkey"
+            columns: ["id"]
+            isOneToOne: true
+            referencedRelation: "auth_users_view"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       public_action_tokens: {
         Row: {
@@ -1010,6 +1075,13 @@ export type Database = {
             columns: ["action_id"]
             isOneToOne: false
             referencedRelation: "actions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "public_action_tokens_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "auth_users_view"
             referencedColumns: ["id"]
           },
         ]
@@ -1156,6 +1228,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "public_record_shares_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "auth_users_view"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "public_record_shares_object_type_id_fkey"
             columns: ["object_type_id"]
@@ -1394,7 +1473,15 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "reports_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "auth_users_view"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       sharing_collections: {
         Row: {
@@ -1448,7 +1535,15 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "user_color_preferences_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "auth_users_view"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_field_mappings: {
         Row: {
@@ -1493,16 +1588,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "user_field_mappings_source_user_id_fkey"
+            columns: ["source_user_id"]
+            isOneToOne: false
+            referencedRelation: "auth_users_view"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "user_field_mappings_target_object_id_fkey"
             columns: ["target_object_id"]
             isOneToOne: false
             referencedRelation: "object_types"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "user_field_mappings_target_user_id_fkey"
+            columns: ["target_user_id"]
+            isOneToOne: false
+            referencedRelation: "auth_users_view"
+            referencedColumns: ["id"]
+          },
         ]
       }
     }
     Views: {
+      auth_users_view: {
+        Row: {
+          email: string | null
+          id: string | null
+        }
+        Insert: {
+          email?: string | null
+          id?: string | null
+        }
+        Update: {
+          email?: string | null
+          id?: string | null
+        }
+        Relationships: []
+      }
       collection_access: {
         Row: {
           collection_id: string | null

@@ -22,8 +22,9 @@ export function LoginHistoryTable({ loginHistory }: LoginHistoryTableProps) {
         success: !data.error,
       };
     } catch (e) {
+      // Handle case where the message is not valid JSON
       return {
-        event: 'Unknown Event',
+        event: typeof message === 'string' ? message.substring(0, 20) : 'Unknown Event',
         status: '-',
         path: '-',
         ipAddress: '-',
@@ -35,17 +36,28 @@ export function LoginHistoryTable({ loginHistory }: LoginHistoryTableProps) {
 
   const formatDate = (timestamp: number | string) => {
     if (!timestamp) return '-';
-    const date = new Date(typeof timestamp === 'number' ? timestamp : parseInt(timestamp as string));
     
-    // Format the date as DD.MM.YYYY, HH:MM:SS (with proper zero padding)
-    const day = String(date.getDate()).padStart(2, '0');
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const year = date.getFullYear();
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
-    const seconds = String(date.getSeconds()).padStart(2, '0');
-    
-    return `${day}.${month}.${year}, ${hours}:${minutes}:${seconds}`;
+    try {
+      const date = new Date(typeof timestamp === 'number' ? timestamp : parseInt(timestamp as string));
+      
+      // Check if date is valid
+      if (isNaN(date.getTime())) {
+        return String(timestamp).substring(0, 20); // Return part of the original string if not a valid date
+      }
+      
+      // Format the date as DD.MM.YYYY, HH:MM:SS (with proper zero padding)
+      const day = String(date.getDate()).padStart(2, '0');
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const year = date.getFullYear();
+      const hours = String(date.getHours()).padStart(2, '0');
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      const seconds = String(date.getSeconds()).padStart(2, '0');
+      
+      return `${day}.${month}.${year}, ${hours}:${minutes}:${seconds}`;
+    } catch (e) {
+      console.error("Error formatting date:", e);
+      return String(timestamp).substring(0, 20); // Return part of the original string on error
+    }
   };
 
   return (

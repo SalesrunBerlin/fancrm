@@ -55,7 +55,13 @@ export function useUserEmails() {
 
         if (response.error) {
           console.error("Edge Function error:", response.error);
-          throw new Error(response.error.message || "Failed to fetch user emails");
+          // Don't throw, continue with fallback data
+          setError(response.error.message || "Failed to fetch user emails");
+          
+          // Provide fallback data in development and production
+          const fallbackEmails = createFallbackEmails(user);
+          setUserEmails(fallbackEmails);
+          return;
         }
 
         console.log("Emails received:", response.data?.length || 0, response.data);
@@ -69,24 +75,23 @@ export function useUserEmails() {
           setUserEmails(formattedData);
         } else {
           console.error("Invalid response format:", response.data);
-          throw new Error("Invalid response format from server");
+          // Use fallback data instead of throwing
+          const fallbackEmails = createFallbackEmails(user);
+          setUserEmails(fallbackEmails);
+          setError("Invalid response format from server");
         }
         
-        setError(null);
       } catch (err: any) {
         console.error("Error fetching user emails:", err);
         setError(err.message || "Failed to fetch user emails");
-        toast.error(`Could not load user emails: ${err.message}`);
         
-        // Provide fallback data for development
+        // Always provide fallback data regardless of environment
+        const fallbackEmails = createFallbackEmails(user);
+        setUserEmails(fallbackEmails);
+        
+        // Only show toast in development
         if (import.meta.env.DEV) {
-          console.log("Using fallback email data for development");
-          const fallbackEmails = [
-            { id: user.id, email: user.email || 'admin@example.com' },
-            { id: "00000000-0000-0000-0000-000000000001", email: 'user1@example.com' },
-            { id: "00000000-0000-0000-0000-000000000002", email: 'user2@example.com' }
-          ];
-          setUserEmails(fallbackEmails);
+          toast.error(`Could not load user emails: ${err.message}`);
         }
       } finally {
         setIsLoading(false);
@@ -95,6 +100,15 @@ export function useUserEmails() {
 
     fetchUserEmails();
   }, [user, isSuperAdmin]);
+  
+  // Helper function to create fallback emails
+  function createFallbackEmails(currentUser: any): UserEmail[] {
+    return [
+      { id: currentUser.id, email: currentUser.email || 'admin@example.com' },
+      { id: "00000000-0000-0000-0000-000000000001", email: 'user1@example.com' },
+      { id: "00000000-0000-0000-0000-000000000002", email: 'user2@example.com' }
+    ];
+  }
 
   return {
     userEmails,

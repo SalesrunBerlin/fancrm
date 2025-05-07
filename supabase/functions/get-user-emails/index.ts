@@ -79,9 +79,9 @@ serve(async (req) => {
 
     console.log("SuperAdmin verified, fetching emails");
 
-    // Instead of using the RPC, directly query the auth.users table
+    // Try to query the auth_users_view
     try {
-      // Query auth schema directly with service role key
+      // Query auth_users_view
       const { data: users, error: usersError } = await supabaseClient
         .from("auth_users_view")
         .select("id, email")
@@ -89,10 +89,7 @@ serve(async (req) => {
 
       if (usersError) {
         console.error("Error fetching users:", usersError);
-        return new Response(
-          JSON.stringify({ error: usersError.message }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        throw new Error(usersError.message);
       }
 
       console.log("Successfully fetched emails, count:", users?.length || 0);
@@ -104,7 +101,7 @@ serve(async (req) => {
     } catch (fetchError) {
       console.error("Error fetching users:", fetchError);
       
-      // Fallback to return at least some data
+      // Return a minimal set of data with at least the current user
       return new Response(
         JSON.stringify([{ id: user.id, email: user.email }]),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
