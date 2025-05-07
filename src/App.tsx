@@ -129,43 +129,15 @@ function App() {
                 <Route path="/settings/icons/edit/:iconId" element={<IconEditPage />} />
                 
                 {/* Admin routes - accessible to Admin and SuperAdmin users */}
-                <Route path="/admin/workspace" element={
-                  <AdminRoute>
-                    <WorkspaceManagementPage />
-                  </AdminRoute>
-                } />
+                <Route path="/admin/workspace" element={<AdminRoute><WorkspaceManagementPage /></AdminRoute>} />
                 
                 {/* Admin routes - only accessible to SuperAdmin users */}
-                <Route path="/admin" element={
-                  <SuperAdminRoute>
-                    <AdminDashboard />
-                  </SuperAdminRoute>
-                } />
-                <Route path="/admin/help-content" element={
-                  <SuperAdminRoute>
-                    <HelpContentEditor />
-                  </SuperAdminRoute>
-                } />
-                <Route path="/admin/help-tabs" element={
-                  <SuperAdminRoute>
-                    <HelpTabsManager />
-                  </SuperAdminRoute>
-                } />
-                <Route path="/admin/help-content/:tabId" element={
-                  <SuperAdminRoute>
-                    <HelpTabContentEditor />
-                  </SuperAdminRoute>
-                } />
-                <Route path="/admin/users" element={
-                  <SuperAdminRoute>
-                    <UserManagementPage />
-                  </SuperAdminRoute>
-                } />
-                <Route path="/admin/users/:userId" element={
-                  <SuperAdminRoute>
-                    <UserDetailPage />
-                  </SuperAdminRoute>
-                } />
+                <Route path="/admin" element={<SuperAdminRoute><AdminDashboard /></SuperAdminRoute>} />
+                <Route path="/admin/help-content" element={<SuperAdminRoute><HelpContentEditor /></SuperAdminRoute>} />
+                <Route path="/admin/help-tabs" element={<SuperAdminRoute><HelpTabsManager /></SuperAdminRoute>} />
+                <Route path="/admin/help-content/:tabId" element={<SuperAdminRoute><HelpTabContentEditor /></SuperAdminRoute>} />
+                <Route path="/admin/users" element={<SuperAdminRoute><UserManagementPage /></SuperAdminRoute>} />
+                <Route path="/admin/users/:userId" element={<SuperAdminRoute><UserDetailPage /></SuperAdminRoute>} />
               </Route>
             </Routes>
             <Toaster richColors position="top-right" />

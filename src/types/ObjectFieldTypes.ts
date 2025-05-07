@@ -78,18 +78,3 @@ export function convertToObjectField(field: ObjectFieldWithJson): any {
 export function convertToObjectFields(fields: ObjectFieldWithJson[]): any[] {
   return fields.map(convertToObjectField);
 }
-
-// Helper function to normalize field values access
-export function getFieldValues(record: ObjectRecord): { [key: string]: any } | undefined {
-  return record.field_values || record.fieldValues;
-}
-
-// Helper function to set field values
-export function setFieldValues(record: ObjectRecord, values: { [key: string]: any }): ObjectRecord {
-  // Set both for backward compatibility
-  return {
-    ...record,
-    field_values: values,
-    fieldValues: values
-  };
-}
