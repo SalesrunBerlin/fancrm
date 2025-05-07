@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { useApplications, Application } from "@/hooks/useApplications";
+import { useApplications } from "@/hooks/useApplications";
 import { Button } from "@/components/ui/button";
 import { AppWindow, Loader2 } from "lucide-react";
 import { toast } from "sonner";
