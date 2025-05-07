@@ -38,11 +38,12 @@ export function AppSidebar() {
   const { applicationObjects, isLoading: isLoadingObjects } = useApplicationObjects(defaultApplicationId || undefined);
   const isAuthPage = pathname.startsWith("/auth");
   
-  // Close sidebar on route change
+  // Only close sidebar on mobile when route changes
   useEffect(() => {
-    setOpenMobile(false);
-    setOpen(false);
-  }, [pathname, setOpenMobile, setOpen]);
+    if (window.innerWidth < 768) {
+      setOpenMobile(false);
+    }
+  }, [pathname, setOpenMobile]);
 
   // Find the default application
   useEffect(() => {
@@ -61,10 +62,11 @@ export function AppSidebar() {
   // Show all assigned objects, regardless of their active status
   const assignedObjects = applicationObjects || [];
 
-  // Handler to close sidebar when clicking on any navigation item
+  // Handler to close sidebar only on mobile view
   const handleNavClick = () => {
-    setOpenMobile(false);
-    setOpen(false); // Also close the desktop sidebar
+    if (window.innerWidth < 768) {
+      setOpenMobile(false);
+    }
   };
 
   return (

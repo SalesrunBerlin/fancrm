@@ -25,10 +25,14 @@ export default function ProfilePage() {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
+  const [screenName, setScreenName] = useState("");
   const [saving, setSaving] = useState(false);
   
   // User initials for avatar
   const getInitials = () => {
+    if (screenName) {
+      return screenName.charAt(0).toUpperCase();
+    }
     if (firstName && lastName) {
       return `${firstName[0]}${lastName[0]}`.toUpperCase();
     }
@@ -51,7 +55,7 @@ export default function ProfilePage() {
         try {
           const { data, error } = await supabase
             .from('profiles')
-            .select('first_name, last_name, email')
+            .select('first_name, last_name, email, screen_name')
             .eq('id', user.id)
             .single();
             
@@ -63,6 +67,7 @@ export default function ProfilePage() {
           if (data) {
             setFirstName(data.first_name || "");
             setLastName(data.last_name || "");
+            setScreenName(data.screen_name || "");
             // If profile has an email, use it, otherwise keep the one from auth
             if (data.email) {
               setEmail(data.email);
@@ -93,7 +98,7 @@ export default function ProfilePage() {
         .update({
           first_name: firstName,
           last_name: lastName,
-          email: email,
+          screen_name: screenName,
         })
         .eq('id', user.id);
         
@@ -137,11 +142,11 @@ export default function ProfilePage() {
           <CardContent className="space-y-4">
             <div className="flex items-center space-x-4">
               <Avatar className="h-12 w-12">
-                <AvatarImage src="/avatar.png" alt={email || "User"} />
+                <AvatarImage src="/avatar.png" alt={screenName || email || "User"} />
                 <AvatarFallback>{getInitials()}</AvatarFallback>
               </Avatar>
               <div>
-                <p className="text-sm font-medium leading-none">{email}</p>
+                <p className="text-sm font-medium leading-none">{screenName || email}</p>
                 {isSuperAdmin && (
                   <p className="text-xs text-muted-foreground">Super Admin</p>
                 )}
@@ -172,13 +177,25 @@ export default function ProfilePage() {
                   </div>
                 </div>
                 <div>
+                  <Label htmlFor="screen-name">Anzeigename</Label>
+                  <Input
+                    id="screen-name"
+                    type="text"
+                    placeholder="Geben Sie Ihren Anzeigenamen ein"
+                    value={screenName}
+                    onChange={(e) => setScreenName(e.target.value)}
+                  />
+                </div>
+                <div>
                   <Label htmlFor="email">E-Mail-Adresse</Label>
                   <Input
                     id="email"
                     type="email"
                     placeholder="name@beispiel.de"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    readOnly
+                    disabled
+                    className="bg-gray-100"
                   />
                 </div>
               </div>
