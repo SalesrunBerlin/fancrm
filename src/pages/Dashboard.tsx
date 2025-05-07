@@ -160,9 +160,9 @@ function DashboardObjectActions({ objectTypeId }: { objectTypeId: string }) {
     return null;
   }
   
-  // Display actions in a vertical column, aligned to the right
+  // Display actions in a grid layout with proper vertical alignment
   return (
-    <div className="grid grid-cols-2 gap-2 w-full">
+    <div className="grid grid-cols-2 gap-2 w-full h-full items-center">
       {actions.map((action) => (
         <ExpandableActionButton
           key={action.id}
