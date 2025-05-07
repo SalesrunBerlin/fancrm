@@ -17,6 +17,7 @@ interface AuthContextType {
   logout: () => Promise<void>;
   signup: (email: string, password: string, metadata?: any) => Promise<{ error: any, success: boolean }>;
   // Additional properties
+  isAdmin: boolean;
   isSuperAdmin: boolean;
   favoriteColor: string;
   setFavoriteColor: (color: string) => void;
@@ -36,6 +37,7 @@ const AuthContext = createContext<AuthContextType>({
   logout: async () => {},
   signup: async () => ({ error: null, success: false }),
   // Additional properties
+  isAdmin: false,
   isSuperAdmin: false,
   favoriteColor: 'default',
   setFavoriteColor: () => {},
@@ -48,6 +50,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [favoriteColor, setFavoriteColor] = useState('default');
   const [userRole, setUserRole] = useState<string | undefined>(undefined);
@@ -62,6 +65,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (session?.user) {
         checkUserRole(session.user.id);
       } else {
+        setIsAdmin(false);
         setIsSuperAdmin(false);
         setUserRole(undefined);
       }
@@ -107,13 +111,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUserRole(role);
       
       // Check for super admin role with case-insensitive comparison
-      const isAdmin = role && 
+      const isSuperAdminRole = role && 
         (role.toLowerCase() === 'super_admin' || 
          role.toLowerCase() === 'superadmin' || 
          role.toLowerCase() === 'admin');
       
-      setIsSuperAdmin(isAdmin);
-      console.log('Is user super admin?', isAdmin, 'Role:', role);
+      // Check for admin role
+      const isAdminRole = role && 
+        (role.toLowerCase() === 'admin' ||
+         role.toLowerCase() === 'superadmin' ||
+         role.toLowerCase() === 'super_admin');
+      
+      setIsSuperAdmin(isSuperAdminRole);
+      setIsAdmin(isAdminRole);
+      console.log('Is user super admin?', isSuperAdminRole, 'Is admin?', isAdminRole, 'Role:', role);
 
       // Also fetch user's color preference
       const { data: colorData } = await supabase
@@ -128,6 +139,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (error) {
       console.error('Error checking user role:', error);
       setIsSuperAdmin(false);
+      setIsAdmin(false);
       setUserRole('user');
     }
   };
@@ -246,6 +258,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     logout,
     signup,
     // Additional properties
+    isAdmin,
     isSuperAdmin,
     favoriteColor,
     setFavoriteColor: updateFavoriteColor,

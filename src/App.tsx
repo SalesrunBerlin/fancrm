@@ -116,6 +116,7 @@ function App() {
               <Route path="/admin/help-content/:tabId" element={<SuperAdminRoute><HelpTabContentEditor /></SuperAdminRoute>} />
               <Route path="/admin/users" element={<SuperAdminRoute><UserManagementPage /></SuperAdminRoute>} />
               <Route path="/admin/users/:userId" element={<SuperAdminRoute><UserDetailPage /></SuperAdminRoute>} />
+              <Route path="/admin/workspace" element={<SuperAdminRoute><UserManagementPage /></SuperAdminRoute>} />
               
               {/* Icon routes */}
               <Route path="/settings/icons/upload" element={<IconUploadPage />} />
