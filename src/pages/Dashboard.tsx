@@ -93,21 +93,27 @@ export default function Dashboard() {
                   {objectType.name}
                 </CardTitle>
               </CardHeader>
-              <CardContent className="flex-1 flex flex-col">
-                <Link 
-                  to={`/objects/${objectType.id}`}
-                  className="block mb-4"
-                >
-                  <p className="text-2xl font-semibold">
-                    <ObjectRecordCount objectTypeId={objectType.id} />
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    View all records
-                  </p>
-                </Link>
-                
-                <div className="mt-auto">
-                  <DashboardObjectActions objectTypeId={objectType.id} />
+              <CardContent className="flex-1">
+                <div className="grid grid-cols-2 h-full">
+                  {/* Left side: Record count and view all link */}
+                  <div className="flex flex-col">
+                    <Link 
+                      to={`/objects/${objectType.id}`}
+                      className="block"
+                    >
+                      <p className="text-2xl font-semibold">
+                        <ObjectRecordCount objectTypeId={objectType.id} />
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        View all records
+                      </p>
+                    </Link>
+                  </div>
+                  
+                  {/* Right side: Action buttons */}
+                  <div className="flex items-center justify-end">
+                    <DashboardObjectActions objectTypeId={objectType.id} />
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -129,7 +135,7 @@ function ObjectRecordCount({ objectTypeId }: { objectTypeId: string }) {
   return <>{records?.length || 0} Records</>;
 }
 
-// Component to display action buttons for an object type, distributed evenly on the right
+// Component to display action buttons for an object type
 function DashboardObjectActions({ objectTypeId }: { objectTypeId: string }) {
   const { getActionsByObjectId } = useActions();
   const [actions, setActions] = useState<any[]>([]);
@@ -154,9 +160,9 @@ function DashboardObjectActions({ objectTypeId }: { objectTypeId: string }) {
     return null;
   }
   
-  // Display actions in a grid layout, evenly distributed
+  // Display actions in a vertical column, aligned to the right
   return (
-    <div className="grid grid-cols-2 gap-2">
+    <div className="grid grid-cols-2 gap-2 w-full">
       {actions.map((action) => (
         <ExpandableActionButton
           key={action.id}
