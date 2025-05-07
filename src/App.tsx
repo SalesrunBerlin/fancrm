@@ -1,4 +1,3 @@
-
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { Toaster } from "sonner"; 
 import { Layout } from "@/components/layout/Layout";
@@ -14,7 +13,6 @@ import ObjectTypeDetail from "@/pages/ObjectTypeDetail";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { SuperAdminRoute } from "@/components/auth/SuperAdminRoute";
-import { AdminRoute } from "@/components/auth/AdminRoute";
 import ObjectFieldEditPage from "@/pages/ObjectFieldEditPage";
 import CreateRecordPage from "@/pages/CreateRecordPage";
 import EditRecordPage from "@/pages/EditRecordPage";
@@ -49,7 +47,7 @@ import ReportViewPage from "./pages/ReportViewPage";
 import IconUploadPage from "./pages/IconUploadPage";
 import IconEditPage from "./pages/IconEditPage";
 import IconEditorPage from "./pages/IconEditorPage";
-import WorkspaceManagementPage from "./pages/admin/WorkspaceManagementPage";
+import AdminRoute from "./components/auth/AdminRoute";
 import RegisterPage from "./pages/RegisterPage";
 import { UserAccessProvider } from "./contexts/UserAccessContext";
 import { MetadataAccessRoute } from "./components/auth/MetadataAccessRoute";
@@ -129,43 +127,15 @@ function App() {
                 <Route path="/settings/icons/edit/:iconId" element={<IconEditPage />} />
                 
                 {/* Admin routes - accessible to Admin and SuperAdmin users */}
-                <Route path="/admin/workspace" element={
-                  <AdminRoute>
-                    <WorkspaceManagementPage />
-                  </AdminRoute>
-                } />
+                <Route path="/admin/workspace" element={<AdminRoute><WorkspaceManagementPage /></AdminRoute>} />
                 
                 {/* Admin routes - only accessible to SuperAdmin users */}
-                <Route path="/admin" element={
-                  <SuperAdminRoute>
-                    <AdminDashboard />
-                  </SuperAdminRoute>
-                } />
-                <Route path="/admin/help-content" element={
-                  <SuperAdminRoute>
-                    <HelpContentEditor />
-                  </SuperAdminRoute>
-                } />
-                <Route path="/admin/help-tabs" element={
-                  <SuperAdminRoute>
-                    <HelpTabsManager />
-                  </SuperAdminRoute>
-                } />
-                <Route path="/admin/help-content/:tabId" element={
-                  <SuperAdminRoute>
-                    <HelpTabContentEditor />
-                  </SuperAdminRoute>
-                } />
-                <Route path="/admin/users" element={
-                  <SuperAdminRoute>
-                    <UserManagementPage />
-                  </SuperAdminRoute>
-                } />
-                <Route path="/admin/users/:userId" element={
-                  <SuperAdminRoute>
-                    <UserDetailPage />
-                  </SuperAdminRoute>
-                } />
+                <Route path="/admin" element={<SuperAdminRoute><AdminDashboard /></SuperAdminRoute>} />
+                <Route path="/admin/help-content" element={<SuperAdminRoute><HelpContentEditor /></SuperAdminRoute>} />
+                <Route path="/admin/help-tabs" element={<SuperAdminRoute><HelpTabsManager /></SuperAdminRoute>} />
+                <Route path="/admin/help-content/:tabId" element={<SuperAdminRoute><HelpTabContentEditor /></SuperAdminRoute>} />
+                <Route path="/admin/users" element={<SuperAdminRoute><UserManagementPage /></SuperAdminRoute>} />
+                <Route path="/admin/users/:userId" element={<SuperAdminRoute><UserDetailPage /></SuperAdminRoute>} />
               </Route>
             </Routes>
             <Toaster richColors position="top-right" />

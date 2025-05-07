@@ -1,3 +1,4 @@
+
 import { ObjectField } from "@/hooks/useObjectTypes";
 import { ObjectRecord } from "@/hooks/useObjectRecords";
 import { Input } from "@/components/ui/input";
@@ -21,9 +22,6 @@ interface RecordDetailFormProps {
   isEditing?: boolean;
   maxHeight?: string;
   objectTypeId?: string;
-  onSave?: (values: Record<string, any>) => void;
-  readonly?: boolean;
-  showCard?: boolean;
 }
 
 export function RecordDetailForm({ 
@@ -33,10 +31,7 @@ export function RecordDetailForm({
   editedValues, 
   isEditing = false,
   maxHeight,
-  objectTypeId,
-  onSave,
-  readonly = false,
-  showCard = true 
+  objectTypeId
 }: RecordDetailFormProps) {
   const getFieldValue = (fieldApiName: string) => {
     // First check in editedValues
@@ -237,21 +232,6 @@ export function RecordDetailForm({
       ))}
     </div>
   );
-
-  useEffect(() => {
-    if (record && fields.length > 0) {
-      // Handle both field_values and fieldValues properties for compatibility
-      const recordValues = record.field_values || record.fieldValues || {};
-      let initialValues: Record<string, any> = {};
-      
-      for (const field of fields) {
-        const value = getFieldValue(field.api_name);
-        initialValues[field.api_name] = value;
-      }
-      
-      onFieldChange("", initialValues);
-    }
-  }, [record, fields]);
 
   return maxHeight ? (
     <ScrollArea className="w-full" style={{ maxHeight }}>

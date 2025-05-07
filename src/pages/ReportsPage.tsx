@@ -1,52 +1,81 @@
 
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState } from "react";
 import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
+import { Plus, FileText } from "lucide-react";
 import { SavedReportsList } from "@/components/reports/SavedReportsList";
 import { ReportBuilder } from "@/components/reports/ReportBuilder";
-import { useAuth } from "@/contexts/AuthContext";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus } from "lucide-react";
+import { Card } from "@/components/ui/card";
 import { useReports } from "@/hooks/useReports";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function ReportsPage() {
-  const navigate = useNavigate();
-  const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState("saved");
-  const { reports, isLoading } = useReports();
-
-  // If new report is created, switch to it
-  const handleReportCreated = (reportId: string) => {
-    navigate(`/reports/${reportId}`);
+  const [isCreating, setIsCreating] = useState(false);
+  const [editingReportId, setEditingReportId] = useState<string | null>(null);
+  const { reports, isLoading, error } = useReports();
+  const { session } = useAuth();
+  
+  const handleCreateNew = () => {
+    setIsCreating(true);
+    setEditingReportId(null);
+  };
+  
+  const handleEditReport = (reportId: string) => {
+    setEditingReportId(reportId);
+    setIsCreating(true);
+  };
+  
+  const handleCloseBuilder = () => {
+    setIsCreating(false);
+    setEditingReportId(null);
   };
 
   return (
     <div className="space-y-6">
       <PageHeader 
         title="Reports" 
-        description="View and create reports"
+        description="Create and view custom reports across your data"
         actions={
-          <Button onClick={() => setActiveTab("create")}>
-            <Plus className="mr-2 h-4 w-4" /> Create Report
-          </Button>
+          !isCreating && session?.user && (
+            <Button onClick={handleCreateNew}>
+              <Plus className="h-4 w-4 mr-2" />
+              Create Report
+            </Button>
+          )
         }
       />
-
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="saved">Saved Reports</TabsTrigger>
-          <TabsTrigger value="create">Create Report</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="saved" className="space-y-4">
-          <SavedReportsList />
-        </TabsContent>
-        
-        <TabsContent value="create" className="space-y-4">
-          <ReportBuilder onReportCreated={handleReportCreated} />
-        </TabsContent>
-      </Tabs>
+      
+      {isCreating ? (
+        <ReportBuilder 
+          reportId={editingReportId} 
+          onClose={handleCloseBuilder} 
+        />
+      ) : (
+        <div className="space-y-6">
+          {error ? (
+            <Card className="p-8 text-center">
+              <div className="flex flex-col items-center justify-center space-y-4">
+                <div className="p-4 rounded-full bg-red-100">
+                  <FileText className="h-12 w-12 text-red-500" />
+                </div>
+                <h3 className="text-xl font-medium">Error loading reports</h3>
+                <p className="text-muted-foreground">
+                  {error instanceof Error ? error.message : "An unexpected error occurred while loading your reports"}
+                </p>
+                <Button variant="outline" onClick={() => window.location.reload()} className="mt-4">
+                  Retry
+                </Button>
+              </div>
+            </Card>
+          ) : (
+            <SavedReportsList 
+              reports={reports} 
+              onEdit={handleEditReport}
+              isLoading={isLoading}
+            />
+          )}
+        </div>
+      )}
     </div>
   );
 }

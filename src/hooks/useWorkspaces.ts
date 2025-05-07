@@ -44,11 +44,8 @@ export function useWorkspaces() {
   });
 
   const createWorkspace = useMutation({
-    mutationFn: async (workspace: { name: string; description?: string; theme?: string; primary_color?: string }) => {
+    mutationFn: async (workspace: Partial<Workspace>) => {
       if (!user) throw new Error("User not authenticated");
-
-      // Make sure name is required
-      if (!workspace.name) throw new Error("Workspace name is required");
 
       const { data, error } = await supabase
         .from("workspaces")
@@ -72,7 +69,7 @@ export function useWorkspaces() {
     mutationFn: async ({ 
       id, 
       ...changes 
-    }: { id: string; name: string; [key: string]: any }) => {
+    }: { id: string; [key: string]: any }) => {
       if (!user) throw new Error("User not authenticated");
 
       const { data, error } = await supabase

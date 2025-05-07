@@ -19,13 +19,8 @@ export function AdminRoute({ children }: { children: React.ReactNode }) {
   }
 
   if (!isAdmin) {
-    console.log("User does not have admin access", { user });
     return <Navigate to="/dashboard" replace />;
   }
 
-  console.log("User has admin access", { user, isAdmin });
-  return <>{children || <Outlet />}</>;
+  return <>{children}</>;
 }
-
-// Export as default as well for compatibility with existing imports
-export default AdminRoute;
