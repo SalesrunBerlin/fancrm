@@ -8,6 +8,10 @@ import { ObjectActionsSection } from "@/components/actions/ObjectActionsSection"
 import { ApplicationSwitcher } from "@/components/applications/ApplicationSwitcher";
 import { useCurrentApplicationData } from "@/hooks/useCurrentApplicationData";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useState, useEffect } from "react";
+import { useObjectRecords } from "@/hooks/useObjectRecords";
+import { ExpandableActionButton } from "@/components/actions/ExpandableActionButton";
+import { useActions } from "@/hooks/useActions";
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -200,7 +204,3 @@ function DashboardObjectActions({ objectTypeId }: { objectTypeId: string }) {
     </div>
   );
 }
-
-import { useState, useEffect } from "react";
-import { useObjectRecords } from "@/hooks/useObjectRecords";
-import { ExpandableActionButton } from "@/components/actions/ExpandableActionButton";

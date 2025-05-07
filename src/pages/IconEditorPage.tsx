@@ -1,3 +1,4 @@
+
 import { useState, useRef } from "react";
 import { PageHeader } from "@/components/ui/page-header";
 import { Input } from "@/components/ui/input";
@@ -62,14 +63,14 @@ export default function IconEditorPage() {
     setUploading(true);
     try {
       const { data, error } = await supabase
-        .from("icons")
+        .from("user_custom_icons")
         .insert([
           {
             name: iconName,
             description: iconDescription,
             svg_content: svgContent,
             color: color,
-            owner_id: user.id,
+            user_id: user.id,
           },
         ])
         .select()
