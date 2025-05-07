@@ -62,11 +62,11 @@ export function AppSidebar() {
   // Show all assigned objects, regardless of their active status
   const assignedObjects = applicationObjects || [];
 
-  // Handler to close sidebar only on mobile view
+  // Handler to close sidebar on both mobile and desktop when clicking a navigation item
   const handleNavClick = () => {
-    if (window.innerWidth < 768) {
-      setOpenMobile(false);
-    }
+    // Close sidebar on both mobile and desktop
+    setOpenMobile(false);
+    setOpen(false);
   };
 
   return (
