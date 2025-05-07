@@ -88,24 +88,18 @@ export default function Dashboard() {
           {filteredObjects?.filter(type => type.is_active).map((objectType) => (
             <Card key={objectType.id} className="flex flex-col">
               <CardHeader className="pb-2">
-                <CardTitle className="flex items-center gap-2">
-                  {getIconComponent(objectType.icon)}
-                  <div className="flex items-center">
-                    {objectType.name} (<ObjectRecordCount objectTypeId={objectType.id} />)
-                  </div>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="py-2">
-                <Link 
-                  to={`/objects/${objectType.id}`}
-                  className="text-sm text-blue-600 hover:text-blue-800 transition-colors"
-                >
-                  View all records
+                <Link to={`/objects/${objectType.id}`}>
+                  <CardTitle className="flex items-center gap-2">
+                    {getIconComponent(objectType.icon)}
+                    <div className="flex items-center">
+                      {objectType.name} (<ObjectRecordCount objectTypeId={objectType.id} />)
+                    </div>
+                  </CardTitle>
                 </Link>
-              </CardContent>
-              <CardFooter className="pt-2 mt-auto">
+              </CardHeader>
+              <CardContent className="pt-3">
                 <DashboardObjectActions objectTypeId={objectType.id} />
-              </CardFooter>
+              </CardContent>
             </Card>
           ))}
         </div>
@@ -150,9 +144,9 @@ function DashboardObjectActions({ objectTypeId }: { objectTypeId: string }) {
     return null;
   }
   
-  // Display actions in a single horizontal row
+  // Display actions in a single horizontal row, spread across the full width
   return (
-    <div className="flex flex-row gap-2 w-full justify-start">
+    <div className="flex flex-row justify-between w-full gap-2">
       {actions.map((action) => (
         <ExpandableActionButton
           key={action.id}
@@ -167,4 +161,3 @@ function DashboardObjectActions({ objectTypeId }: { objectTypeId: string }) {
     </div>
   );
 }
-
