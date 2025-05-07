@@ -6,18 +6,30 @@ import { useTheme } from '@/hooks/useTheme';
 export const useColorPreference = () => {
   const { favoriteColor, setFavoriteColor } = useAuth();
   const { theme } = useTheme();
+  const [loading, setLoading] = useState(false);
   
   const saveUserColorPreference = async (color: string) => {
-    if (setFavoriteColor) {
-      await setFavoriteColor(color);
-      return true;
+    try {
+      setLoading(true);
+      if (setFavoriteColor) {
+        await setFavoriteColor(color);
+        return true;
+      }
+      return false;
+    } finally {
+      setLoading(false);
     }
-    return false;
+  };
+  
+  const updateColorPreference = async (color: string) => {
+    return await saveUserColorPreference(color);
   };
   
   return {
     favoriteColor: favoriteColor || 'default',
     theme,
     saveUserColorPreference,
+    updateColorPreference,
+    loading
   };
 };

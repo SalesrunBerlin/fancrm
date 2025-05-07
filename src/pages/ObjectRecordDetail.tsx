@@ -1,4 +1,4 @@
-// src/pages/ObjectRecordDetail.tsx
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -94,8 +94,8 @@ export default function ObjectRecordDetail() {
           <Card>
             <CardContent className="p-0">
               <RecordDetailForm
-                objectTypeId={objectTypeId}
-                recordId={recordId}
+                objectTypeId={objectTypeId || ""}
+                recordId={recordId || ""}
                 isEditMode={isEditing}
                 onSave={handleSaveRecord}
                 onCancel={() => setIsEditing(false)}

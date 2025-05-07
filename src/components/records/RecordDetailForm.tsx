@@ -15,6 +15,11 @@ interface RecordDetailFormProps {
   onSave?: (record: any) => void;
   onCancel?: () => void;
   isEditMode?: boolean;
+  record?: any;
+  fields?: ObjectField[];
+  onFieldChange?: (fieldName: string, value: any) => void;
+  editedValues?: Record<string, any>;
+  isEditing?: boolean;
 }
 
 export function RecordDetailForm({
@@ -22,12 +27,28 @@ export function RecordDetailForm({
   recordId,
   onSave,
   onCancel,
-  isEditMode = false
+  isEditMode = false,
+  record: providedRecord,
+  fields: providedFields,
+  onFieldChange,
+  editedValues = {},
+  isEditing
 }: RecordDetailFormProps) {
-  const { fields, isLoading: isLoadingFields } = useObjectFields(objectTypeId);
-  const { record, isLoading: isLoadingRecord } = useRecordDetail(objectTypeId, recordId);
+  const shouldFetchData = !providedRecord || !providedFields;
+  const { fields: fetchedFields, isLoading: isLoadingFields } = useObjectFields(
+    shouldFetchData ? objectTypeId : undefined
+  );
+  const { record: fetchedRecord, isLoading: isLoadingRecord } = useRecordDetail(
+    shouldFetchData ? objectTypeId : undefined,
+    shouldFetchData ? recordId : undefined
+  );
+  
   const [isSaving, setIsSaving] = useState(false);
   const methods = useForm();
+  
+  const fields = providedFields || fetchedFields || [];
+  const record = providedRecord || fetchedRecord;
+  const isLoading = shouldFetchData && (isLoadingFields || isLoadingRecord);
   
   useEffect(() => {
     // Reset form when record data is loaded
@@ -71,7 +92,7 @@ export function RecordDetailForm({
   };
 
   // Show loading state while fetching data
-  if (isLoadingFields || isLoadingRecord) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center p-8">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -79,20 +100,26 @@ export function RecordDetailForm({
     );
   }
 
+  // Determine if we're in edit mode based on either prop
+  const actualEditMode = isEditMode || isEditing || false;
+
   return (
     <form onSubmit={methods.handleSubmit(onSubmit)} className="space-y-4 p-4">
       {fields && fields.map((field) => (
         <RecordField
           key={field.id}
           field={field}
-          value={record?.field_values?.[field.api_name]}
-          onChange={(value) => methods.setValue(field.api_name, value)}
+          value={editedValues?.[field.api_name] !== undefined 
+            ? editedValues[field.api_name] 
+            : record?.field_values?.[field.api_name]}
+          onChange={onFieldChange || ((value) => methods.setValue(field.api_name, value))}
           register={methods.register}
-          readOnly={!isEditMode}
+          readOnly={!actualEditMode}
+          form={methods}
         />
       ))}
       
-      {isEditMode && (
+      {actualEditMode && (
         <div className="flex justify-end space-x-2 pt-4">
           {onCancel && (
             <Button type="button" variant="outline" onClick={onCancel}>

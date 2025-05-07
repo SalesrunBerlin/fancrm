@@ -12,6 +12,7 @@ interface RecordFieldProps {
   onChange?: (value: any) => void;
   register?: any;
   readOnly?: boolean;
+  form?: ReturnType<typeof useForm>;
 }
 
 export function RecordField({ 
@@ -19,7 +20,8 @@ export function RecordField({
   value, 
   onChange,
   register,
-  readOnly = false 
+  readOnly = false,
+  form
 }: RecordFieldProps) {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (onChange) {

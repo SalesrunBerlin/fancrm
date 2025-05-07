@@ -1,3 +1,4 @@
+
 // Define our own Json type since it's not exported from database.ts
 export type Json = string | number | boolean | null | { [key: string]: Json } | Json[];
 
@@ -55,7 +56,7 @@ export interface ObjectRecord {
 }
 
 // Helper function to convert ObjectFieldWithJson to ObjectField
-export function convertToObjectField(field: ObjectFieldWithJson): any {
+export function convertToObjectField(field: ObjectFieldWithJson): ObjectField {
   // Convert Json types to string for compatibility
   return {
     ...field,
@@ -73,6 +74,6 @@ export function convertToObjectField(field: ObjectFieldWithJson): any {
 }
 
 // Helper function to convert an array of ObjectFieldWithJson to ObjectField[]
-export function convertToObjectFields(fields: ObjectFieldWithJson[]): any[] {
+export function convertToObjectFields(fields: ObjectFieldWithJson[]): ObjectField[] {
   return fields.map(convertToObjectField);
 }
