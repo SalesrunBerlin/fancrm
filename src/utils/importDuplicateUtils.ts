@@ -1,3 +1,4 @@
+
 /**
  * Utility functions for handling duplicate records during import
  */
@@ -12,11 +13,11 @@ import { DuplicateRecord } from "@/types"; // Import the unified DuplicateRecord
 export async function findDuplicateRecords(
   objectTypeId: string,
   importData: { headers: string[], rows: string[][] },
-  columnMappings: ColumnMapping[],
-  matchingFields: string[],
-  duplicateCheckIntensity: 'low' | 'medium' | 'high'
+  columnMappings: Record<string, string>,
+  matchingFieldApiNames: string[],
+  duplicateCheckIntensity: 'low' | 'medium' | 'high' = 'medium'
 ): Promise<DuplicateRecord[]> {
-  if (!importData || matchingFields.length === 0) {
+  if (!importData || matchingFieldApiNames.length === 0) {
     return [];
   }
 
@@ -39,14 +40,14 @@ export async function findDuplicateRecords(
         .eq('object_type_id', objectTypeId);
       
       // Add field conditions based on matching fields
-      for (const fieldApiName of matchingFields) {
-        // Find column mapping for this field
-        const mapping = columnMappings.find(m => 
-          m.targetField?.api_name === fieldApiName
+      for (const fieldApiName of matchingFieldApiNames) {
+        // Find column index for this field
+        const columnIndex = importData.headers.findIndex(header => 
+          columnMappings[header] === fieldApiName
         );
         
-        if (mapping) {
-          const value = row[mapping.sourceColumnIndex];
+        if (columnIndex >= 0) {
+          const value = row[columnIndex];
           if (value) {
             // Add to query
             query = query.or(`and(object_field_values.field_api_name.eq.${fieldApiName},object_field_values.value.eq.${value})`);
@@ -83,15 +84,15 @@ export async function findDuplicateRecords(
           
           // Count matching fields
           let matchCount = 0;
-          let totalFields = matchingFields.length;
+          let totalFields = matchingFieldApiNames.length;
           
-          for (const fieldApiName of matchingFields) {
-            const mapping = columnMappings.find(m => 
-              m.targetField?.api_name === fieldApiName
+          for (const fieldApiName of matchingFieldApiNames) {
+            const columnIndex = importData.headers.findIndex(header => 
+              columnMappings[header] === fieldApiName
             );
             
-            if (mapping) {
-              const importValue = row[mapping.sourceColumnIndex];
+            if (columnIndex >= 0) {
+              const importValue = row[columnIndex];
               const existingValue = recordData[fieldApiName];
               
               if (importValue && existingValue && 
@@ -106,24 +107,26 @@ export async function findDuplicateRecords(
           if (score >= threshold) {
             // Create a record for the row
             const importRecord: Record<string, string> = {};
-            columnMappings.forEach(mapping => {
-              if (mapping.targetField) {
-                importRecord[mapping.targetField.api_name] = row[mapping.sourceColumnIndex] || '';
+            importData.headers.forEach((header, idx) => {
+              if (columnMappings[header]) {
+                importRecord[columnMappings[header]] = row[idx] || '';
               }
             });
             
             foundDuplicates.push({
               id: recordId,
+              rowIndex, // For backward compatibility
               importRowIndex: rowIndex,
               existingRecord: {
                 id: recordId,
                 ...recordData
               },
-              matchingFields: matchingFields,
               matchScore: score,
               fields: recordData,
               action: 'skip',
-              record: importRecord
+              record: importRecord,
+              matchType: 'field_match',
+              sourceRecord: importRecord
             });
           }
         }
@@ -136,3 +139,17 @@ export async function findDuplicateRecords(
     throw error;
   }
 }
+
+// For backward compatibility with any code that might be using the old function name
+export const findDuplicates = (
+  csvData: string[][],
+  headers: string[],
+  mappings: Record<string, string>,
+  records: any[],
+  fields: any[]
+): DuplicateRecord[] => {
+  // This is just a placeholder that returns an empty array
+  // Since the new implementation is async and this was likely used synchronously
+  console.warn("findDuplicates is deprecated, use findDuplicateRecords instead");
+  return [];
+};

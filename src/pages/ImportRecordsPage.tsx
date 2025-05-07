@@ -18,7 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Progress } from "@/components/ui/progress";
 import { useImportRecords } from "@/hooks/useImportRecords";
-import { findDuplicates, DuplicateRecord } from "@/utils/importDuplicateUtils";
+import { findDuplicateRecords, DuplicateRecord } from "@/utils/importDuplicateUtils";
 import { Separator } from "@/components/ui/separator";
 import { useObjectRecords } from "@/hooks/useObjectRecords";
 import { FieldType } from "@/types/object";
@@ -26,7 +26,7 @@ import { FieldType } from "@/types/object";
 export default function ImportRecordsPage() {
   const { objectTypeId } = useParams<{ objectTypeId: string }>();
   const navigate = useNavigate();
-  const { objectTypes, getObjectTypeById } = useObjectTypes();
+  const { objectTypes } = useObjectTypes();
   const { fields } = useObjectFields(objectTypeId);
   const { records } = useObjectRecords(objectTypeId);
   const { importRecords, isImporting } = useImportRecords();
@@ -43,7 +43,7 @@ export default function ImportRecordsPage() {
   const [unmappedColumns, setUnmappedColumns] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
-  const objectType = getObjectTypeById(objectTypeId || "");
+  const objectType = objectTypes?.find(type => type.id === objectTypeId);
   
   useEffect(() => {
     if (headers.length > 0 && fields) {
@@ -148,22 +148,23 @@ export default function ImportRecordsPage() {
     if (!objectTypeId || !records) return;
     
     // Check for duplicates
-    const potentialDuplicates = findDuplicates(
-      csvData,
-      headers,
-      mappings,
-      records,
-      fields || []
-    );
-    
-    setDuplicates(potentialDuplicates);
-    
-    // Initialize selected duplicates (all selected by default)
-    const initialSelected: Record<string, boolean> = {};
-    potentialDuplicates.forEach(dup => {
-      initialSelected[dup.rowIndex.toString()] = true;
-    });
-    setSelectedDuplicates(initialSelected);
+    if (fields && records) {
+      const potentialDuplicates = await findDuplicateRecords(
+        objectTypeId,
+        { headers, rows: csvData },
+        mappings,
+        ["id"]  // Default to ID matching
+      );
+      
+      setDuplicates(potentialDuplicates);
+      
+      // Initialize selected duplicates (all selected by default)
+      const initialSelected: Record<string, boolean> = {};
+      potentialDuplicates.forEach(dup => {
+        initialSelected[dup.importRowIndex?.toString() || ""] = true;
+      });
+      setSelectedDuplicates(initialSelected);
+    }
     
     setActiveTab("review");
   };
@@ -185,7 +186,7 @@ export default function ImportRecordsPage() {
         // Skip rows that are duplicates if handling is set to "skip"
         if (duplicateHandling === "skip") {
           const isDuplicate = duplicates.some(d => 
-            d.rowIndex === rowIndex && selectedDuplicates[rowIndex.toString()]
+            d.importRowIndex === rowIndex && selectedDuplicates[rowIndex.toString()]
           );
           if (isDuplicate) return null;
         }
@@ -200,12 +201,12 @@ export default function ImportRecordsPage() {
             if (field) {
               let value = row[colIndex];
               
-              // Convert values based on field type
-              if (field.type === FieldType.NUMBER) {
+              // Convert values based on field data_type
+              if (field.data_type === "number") {
                 value = value ? parseFloat(value) : null;
-              } else if (field.type === FieldType.BOOLEAN) {
+              } else if (field.data_type === "boolean") {
                 value = value?.toLowerCase() === "true" || value === "1" || value?.toLowerCase() === "yes";
-              } else if (field.type === FieldType.DATE) {
+              } else if (field.data_type === "date") {
                 // Try to parse as date if not empty
                 value = value ? new Date(value).toISOString() : null;
               }
@@ -239,7 +240,7 @@ export default function ImportRecordsPage() {
   const handleToggleAllDuplicates = (checked: boolean) => {
     const newSelected: Record<string, boolean> = {};
     duplicates.forEach(dup => {
-      newSelected[dup.rowIndex.toString()] = checked;
+      newSelected[dup.importRowIndex?.toString() || ""] = checked;
     });
     setSelectedDuplicates(newSelected);
   };
@@ -507,16 +508,16 @@ export default function ImportRecordsPage() {
                         </TableHeader>
                         <TableBody>
                           {duplicates.map(duplicate => (
-                            <TableRow key={duplicate.rowIndex}>
+                            <TableRow key={duplicate.importRowIndex}>
                               <TableCell>
                                 <Checkbox 
-                                  checked={selectedDuplicates[duplicate.rowIndex.toString()]}
+                                  checked={selectedDuplicates[duplicate.importRowIndex.toString()]}
                                   onCheckedChange={(checked) => 
-                                    handleToggleDuplicate(duplicate.rowIndex, !!checked)
+                                    handleToggleDuplicate(duplicate.importRowIndex, !!checked)
                                   }
                                 />
                               </TableCell>
-                              <TableCell>{duplicate.rowIndex + 1}</TableCell>
+                              <TableCell>{duplicate.importRowIndex + 1}</TableCell>
                               <TableCell>
                                 <div className="space-y-1">
                                   {duplicate.matchingFields.map((field, i) => (
