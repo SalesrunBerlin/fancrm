@@ -1,3 +1,4 @@
+
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { Toaster } from "sonner"; 
 import { Layout } from "@/components/layout/Layout";
@@ -46,6 +47,7 @@ import ReportsPage from "./pages/ReportsPage";
 import ReportViewPage from "./pages/ReportViewPage";
 import IconUploadPage from "./pages/IconUploadPage";
 import IconEditPage from "./pages/IconEditPage";
+import IconEditorPage from "./pages/IconEditorPage";
 
 // Create a client
 const queryClient = new QueryClient({
@@ -117,6 +119,7 @@ function App() {
               
               {/* Icon routes */}
               <Route path="/settings/icons/upload" element={<IconUploadPage />} />
+              <Route path="/settings/icons/create" element={<IconEditorPage />} />
               <Route path="/settings/icons/edit/:iconId" element={<IconEditPage />} />
             </Route>
           </Routes>
