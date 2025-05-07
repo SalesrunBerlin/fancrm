@@ -1,3 +1,4 @@
+
 import { ObjectField } from "@/hooks/useObjectTypes";
 import { ObjectRecord } from "@/hooks/useObjectRecords";
 import { Input } from "@/components/ui/input";
@@ -33,14 +34,33 @@ export function RecordDetailForm({
   objectTypeId
 }: RecordDetailFormProps) {
   const getFieldValue = (fieldApiName: string) => {
+    // First check in editedValues
     if (fieldApiName in editedValues) {
       return editedValues[fieldApiName];
     }
-    return record.field_values?.[fieldApiName] || "";
+    
+    // Next check in record.fieldValues (new property name)
+    if (record.fieldValues && fieldApiName in record.fieldValues) {
+      return record.fieldValues[fieldApiName];
+    }
+    
+    // Fallback to record.field_values (legacy property name)
+    if (record.field_values && fieldApiName in record.field_values) {
+      return record.field_values[fieldApiName];
+    }
+    
+    // If nothing found, return empty string
+    return "";
   };
+
+  console.log("Record in RecordDetailForm:", record);
+  console.log("Fields in RecordDetailForm:", fields);
+  console.log("Edited values:", editedValues);
 
   const renderField = (field: ObjectField) => {
     const value = getFieldValue(field.api_name);
+    console.log(`Field: ${field.name}, API Name: ${field.api_name}, Value:`, value);
+    
     const { picklistValues } = useFieldPicklistValues(field.id);
     
     if (isEditing) {
@@ -164,7 +184,7 @@ export function RecordDetailForm({
         );
       } 
     
-      // Spezieller Fall für auto_number Felder
+      // Special case for auto_number fields
       if (field.data_type === 'auto_number') {
         return <p className="pt-1 font-medium">{value || "-"}</p>;
       }

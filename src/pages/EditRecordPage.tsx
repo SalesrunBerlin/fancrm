@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
@@ -28,11 +29,24 @@ export default function EditRecordPage() {
 
   useEffect(() => {
     if (record && !isLoadingRecord) {
+      console.log("Setting form values from record:", record);
       // Populate form with existing record data
       const defaultValues: RecordFormData = {};
-      Object.entries(record.fieldValues).forEach(([key, value]) => {
-        defaultValues[key] = value;
-      });
+      
+      // Make sure we're using the correct property - fieldValues instead of field_values
+      if (record.fieldValues) {
+        Object.entries(record.fieldValues).forEach(([key, value]) => {
+          defaultValues[key] = value;
+          console.log(`Setting field ${key} to value: ${value}`);
+        });
+      } else if (record.field_values) {
+        // Fallback to field_values if fieldValues isn't available
+        Object.entries(record.field_values).forEach(([key, value]) => {
+          defaultValues[key] = value;
+          console.log(`Setting field ${key} to value: ${value}`);
+        });
+      }
+      
       form.reset(defaultValues);
     }
   }, [record, isLoadingRecord, form]);
@@ -43,10 +57,10 @@ export default function EditRecordPage() {
     try {
       setIsSubmitting(true);
       
-      // Verarbeite Auto-Number Felder
+      // Process Auto-Number fields
       const autoNumberFields = fields.filter(field => field.data_type === 'auto_number');
       for (const field of autoNumberFields) {
-        // Wenn kein Wert vorhanden ist, generiere einen neuen
+        // If no value is present, generate a new one
         if (!data[field.api_name] || data[field.api_name] === 'undefined') {
           try {
             const autoNumberValue = await generateAutoNumber(field.id);

@@ -58,9 +58,11 @@ export function useRecordDetail(objectTypeId?: string, recordId?: string) {
         displayName = valuesObject[objectType.default_field_api_name] || null;
       }
 
+      // Return the record with both field_values (legacy) and fieldValues (new standardized name)
       return {
         ...recordData,
-        fieldValues: valuesObject,
+        field_values: valuesObject, // Keep for backward compatibility
+        fieldValues: valuesObject, // New standardized property name
         displayName,
         objectName: objectType?.name || 'Object'
       };
