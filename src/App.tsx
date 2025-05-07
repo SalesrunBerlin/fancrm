@@ -1,115 +1,126 @@
-
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
-import { AuthProvider } from "./contexts/AuthContext";
-import Auth from "./pages/Auth";
-import DashboardPage from "./pages/Dashboard";
-import SettingsPage from "./pages/Settings";
-import ObjectTypesPage from "./pages/ObjectManager";
-import ObjectTypeViewPage from "./pages/ObjectTypeDetail";
-import ObjectTypeEditPage from "./pages/ObjectTypeDetail";
-import ObjectRecordsPage from "./pages/ObjectRecordsList";
-import ObjectRecordViewPage from "./pages/ObjectRecordDetail";
-import ObjectRecordEditPage from "./pages/EditRecordPage";
-import ReportsPage from "./pages/ReportsPage";
-import ReportViewPage from "./pages/ReportViewPage";
-import ReportExamplePage from "./pages/ReportExamplePage";
-import { Layout } from "./components/layout/Layout";
-import { ProtectedRoute } from "./components/auth/ProtectedRoute";
-import { SuperAdminRoute } from "./components/auth/SuperAdminRoute";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { Toaster } from "sonner"; 
+import { Layout } from "@/components/layout/Layout";
+import { AuthProvider } from "@/contexts/AuthContext";
+import Auth from "@/pages/Auth";
+import Dashboard from "@/pages/Dashboard";
+import Settings from "@/pages/Settings";
+import ObjectManager from "@/pages/ObjectManager";
+import Structures from "@/pages/Structures";
+import ObjectRecordsList from "@/pages/ObjectRecordsList";
+import ObjectRecordDetail from "@/pages/ObjectRecordDetail";
+import ObjectTypeDetail from "@/pages/ObjectTypeDetail";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { SuperAdminRoute } from "@/components/auth/SuperAdminRoute";
+import ObjectFieldEditPage from "@/pages/ObjectFieldEditPage";
+import CreateRecordPage from "@/pages/CreateRecordPage";
+import EditRecordPage from "@/pages/EditRecordPage";
+import CreateObjectPage from "@/pages/CreateObjectPage";
+import ImportRecordsPage from "@/pages/ImportRecordsPage";
+import CreateFieldPage from "@/pages/CreateFieldPage";
+import ImportCreateFieldPage from "@/pages/ImportCreateFieldPage";
+import ObjectDeletePage from "@/pages/ObjectDeletePage";
+import ObjectArchivePage from "@/pages/ObjectArchivePage";
+import ObjectRestorePage from "@/pages/ObjectRestorePage";
+import ApplicationsPage from "@/pages/ApplicationsPage";
+import ApplicationDetailPage from "@/pages/ApplicationDetailPage";
+import ApplicationObjectsPage from "@/pages/ApplicationObjectsPage";
+import CreateObjectFromFieldValuesPage from "@/pages/CreateObjectFromFieldValuesPage";
+import ActionsPage from "./pages/ActionsPage";
+import ActionCreatePage from "./pages/ActionCreatePage";
+import ActionDetailPage from "./pages/ActionDetailPage";
+import ActionExecutePage from "./pages/ActionExecutePage";
+import MassActionPage from "./pages/MassActionPage";
+import ProfilePage from "./pages/ProfilePage";
+import HelpPage from "./pages/HelpPage";
 import AdminDashboard from "./pages/admin/AdminDashboard";
+import HelpContentEditor from "./pages/admin/HelpContentEditor";
+import HelpTabsManager from "./pages/admin/HelpTabsManager";
+import HelpTabContentEditor from "./pages/admin/HelpTabContentEditor";
 import UserManagementPage from "./pages/admin/UserManagementPage";
 import UserDetailPage from "./pages/admin/UserDetailPage";
-import HelpContentEditor from "./pages/admin/HelpContentEditor";
-import HelpPage from "./pages/HelpPage";
-import NotFound from "./pages/NotFound";
-import { Toaster } from "./components/ui/toaster";
+import PublicActionPage from "./pages/PublicActionPage";
+import PublicRecordPage from "./pages/PublicRecordPage";
+import ReportsPage from "./pages/ReportsPage";
+import ReportViewPage from "./pages/ReportViewPage";
 
-function AppRouter() {
+// Create a client
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
+
+function App() {
   return (
-    <AuthProvider>
+    <QueryClientProvider client={queryClient}>
       <Router>
-        <Routes>
-          {/* Auth routes - outside of layout */}
-          <Route path="/auth" element={<Auth />} />
-          <Route path="/login" element={<Navigate to="/auth" replace />} />
-          <Route path="/register" element={<Navigate to="/auth" replace />} />
-          <Route path="/forgot-password" element={<Navigate to="/auth" replace />} />
-          <Route path="/reset-password/:token" element={<Auth />} />
-          
-          {/* Default route - redirect to dashboard */}
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
-
-          {/* Protected routes - inside layout */}
-          <Route
-            element={
-              <ProtectedRoute>
-                <Layout />
-              </ProtectedRoute>
-            }
-          >
-            {/* Dashboard and settings */}
-            <Route path="/dashboard" element={<DashboardPage />} />
-            <Route path="/settings" element={<SettingsPage />} />
-            <Route path="/help" element={<HelpPage />} />
-            <Route path="/profile" element={<div>Profile Page (Coming Soon)</div>} />
+        <AuthProvider>
+          <Routes>
+            <Route path="/auth" element={<Auth />} />
             
-            {/* Object Types routes */}
-            <Route path="/objects" element={<ObjectTypesPage />} />
-            <Route path="/objects/:objectTypeId" element={<ObjectTypeViewPage />} />
-            <Route path="/objects/:objectTypeId/edit" element={<ObjectTypeEditPage />} />
+            {/* Public routes for accessing shared content */}
+            <Route path="/public-action/:token" element={<PublicActionPage />} />
+            <Route path="/public-record/:token/:recordId" element={<PublicRecordPage />} />
             
-            {/* Object Records routes */}
-            <Route path="/objects/:objectTypeId/records" element={<ObjectRecordsPage />} />
-            <Route path="/objects/:objectTypeId/records/:recordId" element={<ObjectRecordViewPage />} />
-            <Route path="/objects/:objectTypeId/records/:recordId/edit" element={<ObjectRecordEditPage />} />
-            
-            {/* Reports routes */}
-            <Route path="/reports" element={<ReportsPage />} />
-            <Route path="/reports/example" element={<ReportExamplePage />} />
-            <Route path="/reports/:reportId" element={<ReportViewPage />} />
-            
-            {/* Admin routes */}
-            <Route
-              path="/admin"
-              element={
-                <SuperAdminRoute>
-                  <AdminDashboard />
-                </SuperAdminRoute>
-              }
-            />
-            <Route
-              path="/admin/users"
-              element={
-                <SuperAdminRoute>
-                  <UserManagementPage />
-                </SuperAdminRoute>
-              }
-            />
-            <Route
-              path="/admin/users/:userId"
-              element={
-                <SuperAdminRoute>
-                  <UserDetailPage />
-                </SuperAdminRoute>
-              }
-            />
-            <Route
-              path="/admin/help"
-              element={
-                <SuperAdminRoute>
-                  <HelpContentEditor />
-                </SuperAdminRoute>
-              }
-            />
-            
-            {/* 404 route */}
-            <Route path="*" element={<NotFound />} />
-          </Route>
-        </Routes>
-        <Toaster />
+            {/* Protected routes */}
+            <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
+              <Route path="/" element={<Dashboard />} />
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/settings" element={<Settings />} />
+              <Route path="/profile" element={<ProfilePage />} />
+              <Route path="/help" element={<HelpPage />} />
+              <Route path="/settings/object-manager" element={<ObjectManager />} />
+              <Route path="/settings/object-manager/new" element={<CreateObjectPage />} />
+              <Route path="/settings/objects/:objectTypeId" element={<ObjectTypeDetail />} />
+              <Route path="/settings/objects/:objectTypeId/archive" element={<ObjectArchivePage />} />
+              <Route path="/settings/objects/:objectTypeId/restore" element={<ObjectRestorePage />} />
+              <Route path="/settings/objects/:objectTypeId/fields/new" element={<CreateFieldPage />} />
+              <Route path="/settings/objects/:objectTypeId/fields/:fieldId/edit" element={<ObjectFieldEditPage />} />
+              <Route path="/structures/*" element={<Structures />} />
+              <Route path="/applications" element={<ApplicationsPage />} />
+              <Route path="/applications/:applicationId" element={<ApplicationDetailPage />} />
+              <Route path="/applications/:applicationId/objects" element={<ApplicationObjectsPage />} />
+              <Route path="/objects/:objectTypeId" element={<ObjectRecordsList />} />
+              <Route path="/objects/:objectTypeId/import" element={<ImportRecordsPage />} />
+              <Route path="/objects/:objectTypeId/import/create-field/:columnName" element={<ImportCreateFieldPage />} />
+              <Route path="/objects/:objectTypeId/create-object-from-field/:fieldApiName/:fieldName" element={<CreateObjectFromFieldValuesPage />} />
+              <Route path="/objects/:objectTypeId/new" element={<CreateRecordPage />} />
+              <Route path="/objects/:objectTypeId/:recordId" element={<ObjectRecordDetail />} />
+              <Route path="/objects/:objectTypeId/:recordId/edit" element={<EditRecordPage />} />
+              
+              {/* Report routes */}
+              <Route path="/reports" element={<ReportsPage />} />
+              <Route path="/reports/:reportId" element={<ReportViewPage />} />
+              
+              {/* Actions routes */}
+              <Route path="/actions" element={<ActionsPage />} />
+              <Route path="/actions/new" element={<ActionCreatePage />} />
+              <Route path="/actions/:actionId" element={<ActionDetailPage />} />
+              <Route path="/actions/execute/:actionId" element={<ActionExecutePage />} />
+              <Route path="/actions/execute/:actionId/from/:sourceRecordId" element={<ActionExecutePage />} />
+              <Route path="/actions/mass/:actionId" element={<MassActionPage />} />
+              
+              {/* Admin routes - only accessible to SuperAdmin users */}
+              <Route element={<SuperAdminRoute><Layout /></SuperAdminRoute>}>
+                <Route path="/admin" element={<AdminDashboard />} />
+                <Route path="/admin/help-content" element={<HelpContentEditor />} />
+                <Route path="/admin/help-tabs" element={<HelpTabsManager />} />
+                <Route path="/admin/help-content/:tabId" element={<HelpTabContentEditor />} />
+                <Route path="/admin/users" element={<UserManagementPage />} />
+                <Route path="/admin/users/:userId" element={<UserDetailPage />} />
+              </Route>
+            </Route>
+          </Routes>
+          <Toaster richColors position="top-right" />
+        </AuthProvider>
       </Router>
-    </AuthProvider>
+    </QueryClientProvider>
   );
 }
 
-export default AppRouter;
+export default App;

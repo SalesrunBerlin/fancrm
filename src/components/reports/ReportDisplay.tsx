@@ -59,19 +59,10 @@ export function ReportDisplay({ report }: ReportDisplayProps) {
     );
   }
   
-  if (!data) {
+  if (!data || !data.rows || data.rows.length === 0) {
     return (
       <Card className="p-6 text-center">
         <p className="text-muted-foreground">No data found for this report</p>
-      </Card>
-    );
-  }
-  
-  // Safely check if there are any rows
-  if (!data.rows || data.rows.length === 0) {
-    return (
-      <Card className="p-6 text-center">
-        <p className="text-muted-foreground">No records match the criteria for this report</p>
       </Card>
     );
   }
@@ -81,15 +72,6 @@ export function ReportDisplay({ report }: ReportDisplayProps) {
   const columns = data.columns || [];
   const hasColumnDefs = Array.isArray(columnDefs) && columnDefs.length > 0;
   const hasColumns = Array.isArray(columns) && columns.length > 0;
-  
-  // If we have neither column definitions nor columns, show a message
-  if (!hasColumnDefs && !hasColumns) {
-    return (
-      <Card className="p-6 text-center">
-        <p className="text-muted-foreground">No columns defined for this report</p>
-      </Card>
-    );
-  }
   
   return (
     <Card>

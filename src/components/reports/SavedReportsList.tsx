@@ -1,132 +1,181 @@
 
-import React from "react";
-import { useNavigate } from "react-router-dom";
-import { useReports } from "@/hooks/useReports";
-import { 
-  Card, CardContent, CardDescription, 
-  CardFooter, CardHeader, CardTitle 
-} from "@/components/ui/card";
+import { useState, useEffect } from "react";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Calendar, Edit, Pencil, FileText, FilePlus2, Search } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
-import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { MoreVertical, Edit, Trash, Copy, Loader } from "lucide-react";
+import { ReportDefinition } from "@/types/report";
+import { useNavigate } from "react-router-dom";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { useReports } from "@/hooks/useReports";
+import { format } from "date-fns";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface SavedReportsListProps {
-  onEdit?: (reportId: string) => void;
+  reports: ReportDefinition[];
+  onEdit: (reportId: string) => void;
+  isLoading?: boolean;
 }
 
-export function SavedReportsList({ onEdit }: SavedReportsListProps) {
+export function SavedReportsList({ reports, onEdit, isLoading = false }: SavedReportsListProps) {
   const navigate = useNavigate();
-  const { reports, isLoading, updateReportLastViewed } = useReports();
-  const [search, setSearch] = React.useState("");
+  const { session } = useAuth();
+  const { deleteReport, duplicateReport, updateLastViewedReport } = useReports();
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [reportToDelete, setReportToDelete] = useState<string | null>(null);
   
-  const handleReportClick = (reportId: string) => {
-    // Update last viewed timestamp
-    updateReportLastViewed(reportId);
-    // Navigate to report view
+  // Safety check to ensure reports is an array and logging
+  const safeReports = Array.isArray(reports) ? reports : [];
+  
+  useEffect(() => {
+    console.log("SavedReportsList received reports:", reports);
+  }, [reports]);
+  
+  const handleViewReport = (reportId: string) => {
+    console.log("Viewing report:", reportId);
+    updateLastViewedReport(reportId);
     navigate(`/reports/${reportId}`);
   };
   
-  const handleCreateReport = () => {
-    navigate("/reports/new");
+  const handleDeleteClick = (reportId: string) => {
+    setReportToDelete(reportId);
+    setDeleteDialogOpen(true);
   };
-
-  const handleEditReport = (reportId: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (onEdit) {
-      onEdit(reportId);
-    } else {
-      navigate(`/reports/${reportId}/edit`);
+  
+  const confirmDelete = () => {
+    if (reportToDelete) {
+      deleteReport(reportToDelete);
+      setDeleteDialogOpen(false);
+      setReportToDelete(null);
     }
   };
   
-  const filteredReports = reports.filter(report => 
-    report.name.toLowerCase().includes(search.toLowerCase()) || 
-    (report.description && report.description.toLowerCase().includes(search.toLowerCase()))
-  );
+  const handleDuplicate = async (reportId: string) => {
+    const newReport = await duplicateReport(reportId);
+    if (newReport) {
+      console.log("Duplicated report:", newReport);
+      updateLastViewedReport(newReport.id);
+      navigate(`/reports/${newReport.id}`);
+    }
+  };
   
-  return (
-    <Card className="h-full flex flex-col">
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle>Saved Reports</CardTitle>
-          <Button onClick={handleCreateReport} size="sm">
-            <FilePlus2 className="mr-2 h-4 w-4" />
-            New Report
+  // Show loading state
+  if (isLoading) {
+    return (
+      <Card className="p-8 text-center">
+        <div className="flex flex-col items-center gap-4">
+          <Loader className="h-8 w-8 text-primary animate-spin" />
+          <p className="text-muted-foreground">Loading reports...</p>
+        </div>
+      </Card>
+    );
+  }
+  
+  // Show auth message if not logged in
+  if (!session?.user) {
+    return (
+      <Card className="p-8 text-center">
+        <div className="flex flex-col items-center gap-4">
+          <p className="text-muted-foreground">
+            You need to be logged in to view and manage your reports.
+          </p>
+          <Button onClick={() => navigate("/auth")}>
+            Log In
           </Button>
         </div>
-        <CardDescription>View, edit, and manage your saved reports</CardDescription>
-        <div className="relative">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            type="search"
-            placeholder="Search reports..."
-            className="pl-8"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
+      </Card>
+    );
+  }
+  
+  if (safeReports.length === 0) {
+    return (
+      <Card className="p-8 text-center">
+        <div className="flex flex-col items-center gap-4">
+          <p className="text-muted-foreground">Keine Berichte gefunden. Erstellen Sie Ihren ersten Bericht.</p>
         </div>
-      </CardHeader>
-      <CardContent className="flex-grow overflow-hidden p-0">
-        <ScrollArea className="h-full max-h-[400px] px-4">
-          {isLoading ? (
-            <div className="flex items-center justify-center p-6">
-              <p className="text-muted-foreground">Loading reports...</p>
-            </div>
-          ) : filteredReports.length === 0 ? (
-            <div className="flex flex-col items-center justify-center p-6 text-center">
-              <FileText className="h-12 w-12 text-muted-foreground mb-2" />
-              <p className="text-muted-foreground mb-4">
-                {search ? "No reports match your search" : "No reports have been created yet"}
-              </p>
-              <Button onClick={handleCreateReport} variant="outline">
-                Create your first report
-              </Button>
-            </div>
-          ) : (
-            <div className="space-y-2 p-4">
-              {filteredReports.map((report) => (
-                <Card key={report.id} className="overflow-hidden">
-                  <div 
-                    className="p-4 cursor-pointer hover:bg-muted transition-colors"
-                    onClick={() => handleReportClick(report.id)}
-                  >
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <h3 className="font-medium leading-none">{report.name}</h3>
-                        {report.description && (
-                          <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
-                            {report.description}
-                          </p>
-                        )}
-                      </div>
-                      <Button 
-                        variant="ghost" 
-                        size="icon"
-                        className="ml-2 h-8 w-8"
-                        onClick={(e) => handleEditReport(report.id, e)}
-                      >
-                        <span className="sr-only">Edit report</span>
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                    </div>
-                    <div className="flex items-center mt-2 text-xs text-muted-foreground">
-                      <Calendar className="mr-1 h-3 w-3" />
-                      <span>Updated {formatDistanceToNow(new Date(report.updated_at), { addSuffix: true })}</span>
-                    </div>
-                  </div>
-                </Card>
+      </Card>
+    );
+  }
+  
+  return (
+    <>
+      <Card>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Report Name</TableHead>
+                <TableHead>Description</TableHead>
+                <TableHead>Last Modified</TableHead>
+                <TableHead className="w-[100px]">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {safeReports.map(report => (
+                <TableRow key={report.id}>
+                  <TableCell>
+                    <Button variant="link" className="p-0 h-auto" onClick={() => handleViewReport(report.id)}>
+                      {report.name}
+                    </Button>
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {report.description || "—"}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {report.updated_at ? format(new Date(report.updated_at), 'MMM d, yyyy') : "—"}
+                  </TableCell>
+                  <TableCell>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <MoreVertical className="h-4 w-4" />
+                          <span className="sr-only">Actions</span>
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => onEdit(report.id)}>
+                          <Edit className="h-4 w-4 mr-2" />
+                          Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleDuplicate(report.id)}>
+                          <Copy className="h-4 w-4 mr-2" />
+                          Duplicate
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          onClick={() => handleDeleteClick(report.id)}
+                          className="text-destructive focus:text-destructive"
+                        >
+                          <Trash className="h-4 w-4 mr-2" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
               ))}
-            </div>
-          )}
-        </ScrollArea>
-      </CardContent>
-      <CardFooter className="border-t bg-muted/50 p-2">
-        <p className="text-xs text-muted-foreground">
-          {filteredReports.length} {filteredReports.length === 1 ? "report" : "reports"} available
-        </p>
-      </CardFooter>
-    </Card>
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+      
+      {/* Delete confirmation dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Report</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this report? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }

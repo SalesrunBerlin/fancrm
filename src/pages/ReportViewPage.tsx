@@ -1,115 +1,140 @@
 
-import React, { useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useReports } from "@/hooks/useReports";
 import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
-import { Edit, FileDown, FileCog } from "lucide-react";
+import { ArrowLeft, Download, Edit, AlertTriangle } from "lucide-react";
+import { useReports } from "@/hooks/useReports";
 import { ReportDisplay } from "@/components/reports/ReportDisplay";
-import { AlertCircle } from "lucide-react";
-import { Skeleton } from "@/components/ui/skeleton";
+import { useState, useEffect } from "react";
+import { ReportBuilder } from "@/components/reports/ReportBuilder";
+import { Card } from "@/components/ui/card";
+import { toast } from "sonner";
 
 export default function ReportViewPage() {
   const { reportId } = useParams<{ reportId: string }>();
   const navigate = useNavigate();
-  const { reports, isLoading, error, getReportById, updateReportLastViewed } = useReports();
+  const { getReportById, updateLastViewedReport, reports } = useReports();
+  const [isEditing, setIsEditing] = useState(false);
+  const [report, setReport] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   
+  // Add debug logging
+  console.log("Current Route ReportId:", reportId);
+  console.log("All available reports:", reports);
+  
+  // Load report data
   useEffect(() => {
-    if (reportId) {
-      console.log("Updating last viewed timestamp for report:", reportId);
-      // Update last viewed timestamp
-      updateReportLastViewed(reportId);
+    if (!reportId) {
+      setIsLoading(false);
+      setLoadError("No report ID provided");
+      return;
     }
-  }, [reportId, updateReportLastViewed]);
-  
-  // Ensure reportId exists before attempting to get the report
-  const report = reportId ? getReportById(reportId) : null;
-  
-  useEffect(() => {
-    if (reportId && !isLoading && !report) {
-      console.log("Report not found:", reportId);
+    
+    console.log(`Loading report with ID: ${reportId}`);
+    try {
+      const loadedReport = getReportById(reportId);
+      
+      if (loadedReport) {
+        console.log("Found report:", loadedReport);
+        setReport(loadedReport);
+        
+        // Track that this report was viewed
+        updateLastViewedReport(reportId);
+        toast.success(`Report "${loadedReport.name}" loaded successfully`);
+      } else {
+        console.error("Report not found:", reportId);
+        setLoadError(`Report with ID ${reportId} not found`);
+        toast.error(`Report with ID ${reportId} not found`);
+      }
+    } catch (error: any) {
+      console.error("Error loading report:", error);
+      setLoadError(error?.message || "Failed to load report");
+      toast.error("Failed to load report");
+    } finally {
+      setIsLoading(false);
     }
-  }, [reportId, report, isLoading]);
-  
-  const handleEditReport = () => {
-    navigate(`/reports/${reportId}/edit`);
-  };
-  
-  const handleExportReport = () => {
-    // TODO: Implement export functionality
-    console.log("Export report:", reportId);
-  };
+  }, [reportId, getReportById, updateLastViewedReport, reports]);
   
   if (isLoading) {
     return (
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <Skeleton className="h-10 w-64" />
-          <div className="flex gap-2">
-            <Skeleton className="h-10 w-24" />
-            <Skeleton className="h-10 w-24" />
+      <div className="p-8 text-center">
+        <p className="text-muted-foreground">Loading report...</p>
+      </div>
+    );
+  }
+  
+  if (loadError || !report) {
+    return (
+      <div className="p-8 text-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="p-4 bg-amber-100 rounded-full">
+            <AlertTriangle className="h-8 w-8 text-amber-600" />
           </div>
+          <h2 className="text-2xl font-bold">Report nicht gefunden</h2>
+          <p className="text-muted-foreground mt-2">
+            {loadError || "Der gesuchte Bericht existiert nicht oder wurde gelöscht."}
+          </p>
+          <Button onClick={() => navigate("/reports")} className="mt-4">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Zurück zur Berichtsliste
+          </Button>
         </div>
-        <Skeleton className="h-[400px] w-full" />
       </div>
     );
   }
   
-  if (error) {
-    return (
-      <div className="flex flex-col items-center justify-center py-12">
-        <div className="p-4 bg-red-100 rounded-full mb-4">
-          <AlertCircle className="h-8 w-8 text-red-600" />
-        </div>
-        <h1 className="text-xl font-medium mb-2">Error Loading Report</h1>
-        <p className="text-muted-foreground text-center max-w-md mb-6">
-          {error instanceof Error ? error.message : "An unknown error occurred"}
-        </p>
-        <Button onClick={() => navigate("/reports")}>
-          Return to Reports
-        </Button>
-      </div>
-    );
-  }
+  const handleExportCSV = () => {
+    // Implement export functionality
+    toast.info("Export CSV functionality will be implemented soon");
+  };
   
-  if (!report) {
-    return (
-      <div className="flex flex-col items-center justify-center py-12">
-        <div className="p-4 bg-amber-100 rounded-full mb-4">
-          <AlertCircle className="h-8 w-8 text-amber-600" />
-        </div>
-        <h1 className="text-xl font-medium mb-2">Report Not Found</h1>
-        <p className="text-muted-foreground text-center max-w-md mb-6">
-          The report you are looking for does not exist or has been deleted.
-        </p>
-        <Button onClick={() => navigate("/reports")}>
-          Return to Reports
-        </Button>
-      </div>
-    );
-  }
+  const handleEdit = () => {
+    setIsEditing(true);
+  };
+  
+  const handleCloseEdit = () => {
+    setIsEditing(false);
+    // Reload the report after editing to get latest changes
+    if (reportId) {
+      const refreshedReport = getReportById(reportId);
+      if (refreshedReport) {
+        setReport(refreshedReport);
+      } else {
+        // If the report was deleted during editing
+        setLoadError("Report no longer exists");
+        toast.error("Report no longer exists");
+      }
+    }
+  };
   
   return (
     <div className="space-y-6">
-      <PageHeader
-        title={report.name}
-        description={report.description || "Report details and data visualization"}
-        backTo="/reports"
-        actions={
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={handleExportReport}>
-              <FileDown className="mr-2 h-4 w-4" />
-              Export
-            </Button>
-            <Button onClick={handleEditReport}>
-              <Edit className="mr-2 h-4 w-4" />
-              Edit Report
-            </Button>
-          </div>
-        }
-      />
-      
-      <ReportDisplay report={report} />
+      {isEditing ? (
+        <ReportBuilder reportId={reportId} onClose={handleCloseEdit} />
+      ) : (
+        <>
+          <PageHeader
+            title={report.name}
+            description={report.description || "Custom report"}
+            backTo="/reports"
+            actions={
+              <>
+                <Button variant="outline" onClick={handleExportCSV}>
+                  <Download className="h-4 w-4 mr-2" />
+                  Export CSV
+                </Button>
+                <Button onClick={handleEdit}>
+                  <Edit className="h-4 w-4 mr-2" />
+                  Edit Report
+                </Button>
+              </>
+            }
+          />
+          
+          <ReportDisplay report={report} />
+        </>
+      )}
     </div>
   );
 }

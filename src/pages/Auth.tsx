@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,9 +5,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/contexts/AuthContext";
-import { useNavigate, Navigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import { ThemedButton } from "@/components/ui/themed-button";
 
 export default function Auth() {
   const [email, setEmail] = useState("");
@@ -16,26 +16,25 @@ export default function Auth() {
   const [loading, setLoading] = useState(false);
   const [registrationSuccess, setRegistrationSuccess] = useState(false);
   const navigate = useNavigate();
-  const { user, login, signup, session } = useAuth();
+  const { user, login, signup } = useAuth();
   
   // Redirect if already logged in
   useEffect(() => {
-    if (session) {
-      navigate("/");
+    if (user) {
+      navigate("/dashboard");
     }
-  }, [session, navigate]);
+  }, [user, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     
     try {
-      const { success, error } = await login(email, password);
-      if (success) {
-        navigate("/");
-      }
+      await login(email, password);
+      navigate("/dashboard");
     } catch (error) {
-      toast.error("Anmeldung fehlgeschlagen");
+      // Error is already handled in login method
+      // Just reset loading state
     } finally {
       setLoading(false);
     }
@@ -77,7 +76,7 @@ export default function Auth() {
   };
 
   if (user) {
-    return <Navigate to="/" />;
+    return null; // Don't render anything if we're redirecting
   }
 
   return (
@@ -122,14 +121,14 @@ export default function Auth() {
                 </div>
               </CardContent>
               <CardFooter>
-                <Button type="submit" className="w-full" disabled={loading}>
+                <ThemedButton type="submit" className="w-full" disabled={loading}>
                   {loading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       Anmeldung...
                     </>
                   ) : "Anmelden"}
-                </Button>
+                </ThemedButton>
               </CardFooter>
             </form>
           </TabsContent>
@@ -146,13 +145,13 @@ export default function Auth() {
                   <p className="text-muted-foreground">
                     Bitte überprüfen Sie Ihr E-Mail-Postfach, um Ihr Konto zu bestätigen.
                   </p>
-                  <Button 
+                  <ThemedButton 
                     variant="outline" 
                     className="mt-4" 
                     onClick={() => setRegistrationSuccess(false)}
                   >
                     Zurück zur Registrierung
-                  </Button>
+                  </ThemedButton>
                 </div>
               </CardContent>
             ) : (
@@ -186,14 +185,14 @@ export default function Auth() {
                   </div>
                 </CardContent>
                 <CardFooter>
-                  <Button type="submit" className="w-full" disabled={loading}>
+                  <ThemedButton type="submit" className="w-full" disabled={loading}>
                     {loading ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                         Registrierung...
                       </>
                     ) : "Registrieren"}
-                  </Button>
+                  </ThemedButton>
                 </CardFooter>
               </form>
             )}

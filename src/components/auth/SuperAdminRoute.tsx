@@ -1,11 +1,10 @@
 
-import { Navigate, useLocation } from "react-router-dom";
+import { Navigate, Outlet } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Loader2 } from "lucide-react";
 
 export function SuperAdminRoute({ children }: { children: React.ReactNode }) {
   const { user, isLoading, isSuperAdmin } = useAuth();
-  const location = useLocation();
 
   if (isLoading) {
     return (
@@ -16,11 +15,11 @@ export function SuperAdminRoute({ children }: { children: React.ReactNode }) {
   }
 
   if (!user) {
-    return <Navigate to="/auth" replace state={{ from: location }} />;
+    return <Navigate to="/auth" replace />;
   }
 
   if (!isSuperAdmin) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/dashboard" replace />;
   }
 
   return <>{children}</>;

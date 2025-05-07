@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -52,7 +53,7 @@ export function ReportBuilder({ reportId, onClose }: ReportBuilderProps) {
     }
   }, [reportId, getReportById, navigate]);
   
-  const handleSave = async () => {
+  const handleSave = () => {
     if (!name.trim()) {
       toast.error("Report name is required");
       return;
@@ -74,7 +75,7 @@ export function ReportBuilder({ reportId, onClose }: ReportBuilderProps) {
       if (reportId && originalReport) {
         // Update existing report
         console.log("Updating existing report:", reportId);
-        await updateReport(reportId, {
+        updateReport(reportId, {
           name,
           description,
           objectIds: selectedObjects,
@@ -86,14 +87,10 @@ export function ReportBuilder({ reportId, onClose }: ReportBuilderProps) {
       } else {
         // Create new report
         console.log("Creating new report with first object:", selectedObjects[0]);
-        const newReport = await createReport(name, selectedObjects[0], description);
-        
-        if (!newReport) {
-          throw new Error("Failed to create report");
-        }
+        const newReport = createReport(name, selectedObjects[0], description);
         
         // Update with complete data (all selected objects, fields, filters)
-        await updateReport(newReport.id, {
+        updateReport(newReport.id, {
           objectIds: selectedObjects,
           selectedFields,
           filters

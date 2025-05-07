@@ -13,13 +13,14 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { HelpCircle, LogOut, Settings, User, Shield } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { ThemedButton } from "@/components/ui/themed-button";
 
 export function UserProfileMenu() {
-  const { user, signOut, isSuperAdmin } = useAuth();
+  const { user, logout, isSuperAdmin } = useAuth();
   const navigate = useNavigate();
   
   const handleLogout = async () => {
-    await signOut();
+    await logout();
     navigate("/auth");
   };
 

@@ -18,15 +18,6 @@ interface ReportQueryResult {
 export function useReportData(report: ReportDefinition) {
   const { objectTypes } = useObjectTypes();
   
-  // Safety check for invalid report
-  if (!report) {
-    return {
-      data: { columns: [], rows: [], columnDefs: [], totalCount: 0 } as ReportQueryResult,
-      isLoading: false,
-      error: new Error("Invalid or undefined report"),
-    };
-  }
-  
   // Safety check for report with no objects
   if (!report?.objectIds || report.objectIds.length === 0) {
     return {
@@ -38,12 +29,12 @@ export function useReportData(report: ReportDefinition) {
   
   // Memoize objectIds to prevent unnecessary re-fetching
   // Ensure we have proper dependency arrays that can never be undefined
-  const objectIds = useMemo(() => report.objectIds || [], [report?.id || 'unknown']);
+  const objectIds = useMemo(() => (report.objectIds || []), [report?.id || 'unknown']);
   
   // Fixed JSON.stringify to handle potential undefined values
-  const filters = useMemo(() => report.filters || [], [report?.id || 'unknown']);
+  const filters = useMemo(() => (report.filters || []), [report?.id || 'unknown', JSON.stringify(report.filters || [])]);
   
-  const selectedFields = useMemo(() => report.selectedFields || [], [report?.id || 'unknown']);
+  const selectedFields = useMemo(() => (report.selectedFields || []), [report?.id || 'unknown', JSON.stringify(report.selectedFields || [])]);
   
   // Fetch records for each object in the report with memoization
   // Ensure we pass empty arrays as fallbacks for all dependencies
@@ -138,11 +129,6 @@ export function useReportData(report: ReportDefinition) {
       
       console.log("Column definitions:", columnDefs);
       
-      // Ensure we have valid column definitions before proceeding
-      if (!columnDefs.length) {
-        return { columns: [], columnDefs: [], rows: [], totalCount: 0 };
-      }
-      
       // For single-object reports, just return the data
       if (objectIds.length === 1) {
         const primaryObjectData = objectDataQueries[0];
@@ -195,7 +181,7 @@ export function useReportData(report: ReportDefinition) {
         totalCount: 0
       };
     },
-    enabled: !!report && !!(objectIds && objectIds.length > 0) && !objectDataQueries.some(q => q.isLoading),
+    enabled: !!report && !!(objectIds && objectIds.length) && !objectDataQueries.some(q => q.isLoading),
     staleTime: 30000, // Cache data for 30 seconds to prevent constant refetching
     refetchOnWindowFocus: false, // Don't refetch when window regains focus
   });

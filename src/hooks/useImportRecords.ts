@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -180,20 +181,6 @@ export function useImportRecords(objectTypeId: string, fields: any[]) {
     const sampleValues = getSampleValuesForColumn(importData, columnIndex);
     
     return guessDataType(columnName, sampleValues);
-  };
-
-  // In the converting function, we need to map the ColumnMapping array to a Record<string, string>
-  // This will fix the error about ColumnMapping[] not being assignable to Record<string, string>
-  export const convertColumnMappingsToRecord = (mappings: ColumnMapping[]): Record<string, string> => {
-    const result: Record<string, string> = {};
-    
-    mappings.forEach(mapping => {
-      if (mapping.sourceColumnName && mapping.targetField?.api_name) {
-        result[mapping.sourceColumnName] = mapping.targetField.api_name;
-      }
-    });
-    
-    return result;
   };
 
   return {
