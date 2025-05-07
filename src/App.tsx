@@ -1,3 +1,4 @@
+
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { Toaster } from "sonner"; 
 import { Layout } from "@/components/layout/Layout";
@@ -13,6 +14,7 @@ import ObjectTypeDetail from "@/pages/ObjectTypeDetail";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { SuperAdminRoute } from "@/components/auth/SuperAdminRoute";
+import { AdminRoute } from "@/components/auth/AdminRoute";
 import ObjectFieldEditPage from "@/pages/ObjectFieldEditPage";
 import CreateRecordPage from "@/pages/CreateRecordPage";
 import EditRecordPage from "@/pages/EditRecordPage";
@@ -47,7 +49,7 @@ import ReportViewPage from "./pages/ReportViewPage";
 import IconUploadPage from "./pages/IconUploadPage";
 import IconEditPage from "./pages/IconEditPage";
 import IconEditorPage from "./pages/IconEditorPage";
-import AdminRoute from "./components/auth/AdminRoute";
+import WorkspaceManagementPage from "./pages/admin/WorkspaceManagementPage";
 import RegisterPage from "./pages/RegisterPage";
 import { UserAccessProvider } from "./contexts/UserAccessContext";
 import { MetadataAccessRoute } from "./components/auth/MetadataAccessRoute";

@@ -24,3 +24,6 @@ export function AdminRoute({ children }: { children: React.ReactNode }) {
 
   return <>{children}</>;
 }
+
+// Export as default as well for compatibility with existing imports
+export default AdminRoute;

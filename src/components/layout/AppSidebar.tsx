@@ -1,6 +1,7 @@
+
 import { useState } from "react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
-import { useMobile } from "@/hooks/useMobile";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,7 +21,7 @@ import { useAuth } from "@/contexts/AuthContext";
 
 export function AppSidebar() {
   const [open, setOpen] = useState(true);
-  const isMobile = useMobile();
+  const isMobile = useIsMobile();
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const { applications, currentApplication } = useCurrentApplicationData();

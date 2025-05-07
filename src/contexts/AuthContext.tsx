@@ -1,189 +1,156 @@
-import { createContext, useContext, useState, useEffect } from "react";
-import {
-  Session,
-  User,
-  AuthChangeEvent,
-  Provider,
-} from "@supabase/supabase-js";
-import { supabase } from "@/integrations/supabase/client";
 
-interface AuthContextType {
+import React, { createContext, useContext, useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Session, User } from "@supabase/supabase-js";
+
+interface Profile {
+  id: string;
+  email?: string;
+  first_name?: string;
+  last_name?: string;
+  company?: string;
+  role?: string;
+  avatar_url?: string;
+  access_level?: string;
+  data_access?: boolean;
+  metadata_access?: boolean;
+  created_at?: string;
+  updated_at?: string;
+  favorite_color?: string;
+}
+
+export interface AuthContextType {
   user: User | null;
-  session: Session | null;
+  profile: Profile | null;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<{ error?: string }>;
-  signInWithOAuth: (provider: Provider) => Promise<void>;
-  signup: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
-  logout: () => Promise<void>;
-  refreshSession: () => Promise<void>;
   isAdmin: boolean;
   isSuperAdmin: boolean;
+  hasDataAccess: boolean;
+  hasMetadataAccess: boolean;
+  favoriteColor: string;
+  setFavoriteColor: (color: string) => void;
+  signOut: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
-  session: null,
+  profile: null,
   isLoading: true,
-  login: async () => ({ error: "Not implemented" }),
-  signInWithOAuth: async () => { },
-  signup: async () => ({ success: false, error: "Not implemented" }),
-  logout: async () => { },
-  refreshSession: async () => { },
   isAdmin: false,
   isSuperAdmin: false,
+  hasDataAccess: false,
+  hasMetadataAccess: false,
+  favoriteColor: "default",
+  setFavoriteColor: () => {},
+  signOut: async () => {},
 });
 
-export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+export const useAuth = () => useContext(AuthContext);
+
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [userRole, setUserRole] = useState<string>('user');
-
+  const [favoriteColor, setFavoriteColor] = useState<string>("default");
+  
   useEffect(() => {
-    // Setup auth state change listener first
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        setIsLoading(false);
-      }
-    );
-
-    // Then check for existing session
+    // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      
-      // If we have a user, fetch their profile to determine admin status
-      if (session?.user) {
-        fetchUserRole(session.user.id);
-      } else {
-        setIsLoading(false);
-      }
+      handleSessionChange(session);
+    });
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      handleSessionChange(session);
     });
 
     return () => {
       subscription.unsubscribe();
     };
   }, []);
-
-  // Function to fetch user role from profiles table
-  const fetchUserRole = async (userId: string) => {
+  
+  async function handleSessionChange(session: Session | null) {
+    setIsLoading(true);
+    
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', userId)
-        .single();
-      
-      if (error) {
-        console.error("Error fetching user role:", error);
-      } else if (data) {
-        setUserRole(data.role || 'user');
+      if (session?.user) {
+        setUser(session.user);
+        
+        // Fetch user profile
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single();
+        
+        if (profileError) {
+          console.error("Error fetching profile:", profileError);
+        } else {
+          setProfile(profileData);
+          
+          // Set favorite color from profile
+          if (profileData?.favorite_color) {
+            setFavoriteColor(profileData.favorite_color);
+          }
+        }
+      } else {
+        setUser(null);
+        setProfile(null);
       }
     } catch (error) {
-      console.error("Error in fetchUserRole:", error);
+      console.error("Auth error:", error);
     } finally {
       setIsLoading(false);
     }
+  }
+
+  // Handle signout
+  const signOut = async () => {
+    await supabase.auth.signOut();
+    setUser(null);
+    setProfile(null);
   };
 
-  const login = async (email: string, password: string) => {
-    try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+  // Update favorite color in state and database
+  const updateFavoriteColor = async (color: string) => {
+    setFavoriteColor(color);
+    
+    if (user) {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ favorite_color: color })
+        .eq('id', user.id);
+      
       if (error) {
-        console.error("Login error:", error.message);
-        return { error: error.message };
+        console.error("Error updating favorite color:", error);
       }
-      return {};
-    } catch (error: any) {
-      console.error("Login failed:", error.message);
-      return { error: error.message };
     }
   };
 
-  const signInWithOAuth = async (provider: Provider) => {
-    try {
-      const { error } = await supabase.auth.signInWithOAuth({ provider: provider });
-      if (error) {
-        console.error("OAuth error:", error.message);
-      }
-    } catch (error: any) {
-      console.error("OAuth failed:", error.message);
-    }
+  // Check if user is admin or superadmin
+  const isAdmin = profile?.access_level === 'admin' || profile?.access_level === 'superadmin';
+  const isSuperAdmin = profile?.access_level === 'superadmin';
+  
+  // Check access levels
+  const hasDataAccess = !!profile?.data_access;
+  const hasMetadataAccess = !!profile?.metadata_access;
+
+  const value: AuthContextType = {
+    user,
+    profile,
+    isLoading,
+    isAdmin,
+    isSuperAdmin,
+    hasDataAccess,
+    hasMetadataAccess,
+    favoriteColor,
+    setFavoriteColor: updateFavoriteColor,
+    signOut,
   };
-
-  const signup = async (email: string, password: string) => {
-    try {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-      });
-
-      if (error) {
-        console.error("Signup error:", error.message);
-        return { success: false, error: error.message };
-      }
-
-      console.log("Signup success. User:", data.user);
-      return { success: true };
-    } catch (error: any) {
-      console.error("Signup failed:", error.message);
-      return { success: false, error: error.message };
-    }
-  };
-
-  const logout = async () => {
-    try {
-      await supabase.auth.signOut();
-      setUser(null);
-      setSession(null);
-    } catch (error: any) {
-      console.error("Logout failed:", error.message);
-    }
-  };
-
-  const refreshSession = async () => {
-    try {
-      const { data, error } = await supabase.auth.refreshSession()
-
-      if (error) {
-        console.error('Session refresh error:', error);
-      } else {
-        setSession(data.session)
-      }
-    } catch (error) {
-      console.error("Session refresh failed:", error);
-    }
-  };
-
-  // Determine admin status based on user role
-  const isAdmin = userRole === 'admin' || userRole === 'superadmin';
-  const isSuperAdmin = userRole === 'superadmin';
-
+  
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        session,
-        isLoading,
-        login,
-        signInWithOAuth,
-        signup,
-        logout,
-        refreshSession,
-        isAdmin,
-        isSuperAdmin
-      }}
-    >
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );
-};
-
-export const useAuth = () => {
-  return useContext(AuthContext);
 };

@@ -51,7 +51,7 @@ export interface ObjectRecord {
   created_by: string | null;
   last_modified_by: string | null;
   field_values?: { [key: string]: any };
-  fieldValues?: { [key: string]: any };
+  fieldValues?: { [key: string]: any }; // Keep both field names for backward compatibility
   displayName?: string;
   objectName?: string;
 }
