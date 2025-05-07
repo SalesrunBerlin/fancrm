@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -106,9 +107,7 @@ export default function Dashboard() {
                 </Link>
                 
                 <div className="mt-auto">
-                  <div className="flex flex-wrap gap-2 mb-2">
-                    <DashboardObjectActions objectTypeId={objectType.id} />
-                  </div>
+                  <DashboardObjectActions objectTypeId={objectType.id} />
                 </div>
               </CardContent>
             </Card>
@@ -130,7 +129,7 @@ function ObjectRecordCount({ objectTypeId }: { objectTypeId: string }) {
   return <>{records?.length || 0} Records</>;
 }
 
-// Component to display up to 4 action buttons (2 per row) for an object type
+// Component to display action buttons for an object type, distributed evenly on the right
 function DashboardObjectActions({ objectTypeId }: { objectTypeId: string }) {
   const { getActionsByObjectId } = useActions();
   const [actions, setActions] = useState<any[]>([]);
@@ -155,47 +154,20 @@ function DashboardObjectActions({ objectTypeId }: { objectTypeId: string }) {
     return null;
   }
   
-  // Display actions in 2 rows of 2
-  const firstRow = actions.slice(0, 2);
-  const secondRow = actions.slice(2, 4);
-  
+  // Display actions in a grid layout, evenly distributed
   return (
-    <div className="w-full space-y-2">
-      {firstRow.length > 0 && (
-        <div className="flex gap-2">
-          {firstRow.map((action) => (
-            <div key={action.id} className="flex-1">
-              <ExpandableActionButton
-                key={action.id}
-                actionName={action.name}
-                color={action.color}
-                compact={true}
-                onExecute={() => {
-                  window.location.href = `/actions/execute/${action.id}`;
-                }}
-              />
-            </div>
-          ))}
-        </div>
-      )}
-      
-      {secondRow.length > 0 && (
-        <div className="flex gap-2">
-          {secondRow.map((action) => (
-            <div key={action.id} className="flex-1">
-              <ExpandableActionButton
-                key={action.id}
-                actionName={action.name}
-                color={action.color}
-                compact={true}
-                onExecute={() => {
-                  window.location.href = `/actions/execute/${action.id}`;
-                }}
-              />
-            </div>
-          ))}
-        </div>
-      )}
+    <div className="grid grid-cols-2 gap-2">
+      {actions.map((action) => (
+        <ExpandableActionButton
+          key={action.id}
+          actionName={action.name}
+          color={action.color}
+          compact={true}
+          onExecute={() => {
+            window.location.href = `/actions/execute/${action.id}`;
+          }}
+        />
+      ))}
     </div>
   );
 }
