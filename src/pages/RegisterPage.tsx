@@ -1,204 +1,223 @@
 
 import { useState, useEffect } from "react";
-import { useParams, Navigate, Link } from "react-router-dom";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { useForm } from "react-hook-form";
-import { useInvitationByToken } from "@/hooks/useWorkspaceInvitations";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 
-interface RegisterFormValues {
-  email: string;
-  password: string;
-  confirmPassword: string;
-}
-
 export default function RegisterPage() {
   const { token } = useParams<{ token: string }>();
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const { data: invitation, isLoading, error } = useInvitationByToken(token);
+  const navigate = useNavigate();
   const { user, signup } = useAuth();
-  
-  const { register, handleSubmit, watch, formState: { errors } } = useForm<RegisterFormValues>({
-    defaultValues: {
-      email: invitation?.email || ""
-    }
-  });
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [invitationData, setInvitationData] = useState<any>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  // Update email field when invitation data is loaded
+  // Check token validity and get invitation data
   useEffect(() => {
-    if (invitation?.email) {
-      register("email").onChange({
-        target: { value: invitation.email, name: "email" }
-      });
+    // If user is already logged in, redirect to dashboard
+    if (user) {
+      navigate("/dashboard");
+      return;
     }
-  }, [invitation, register]);
 
-  const onSubmit = async (data: RegisterFormValues) => {
+    const validateToken = async () => {
+      if (!token) {
+        setError("Invalid invitation link.");
+        setLoading(false);
+        return;
+      }
+
+      try {
+        // Fetch invitation data using the token
+        const { data, error } = await supabase
+          .from("workspace_invitations")
+          .select("*, workspaces:workspace_id(*)")
+          .eq("token", token)
+          .single();
+
+        if (error || !data) {
+          console.error("Error fetching invitation:", error);
+          setError("Invalid or expired invitation link.");
+        } else if (data.is_used) {
+          setError("This invitation has already been used.");
+        } else if (new Date(data.expires_at) < new Date()) {
+          setError("This invitation has expired.");
+        } else {
+          setInvitationData(data);
+          setEmail(data.email);
+        }
+      } catch (err) {
+        console.error("Error validating invitation:", err);
+        setError("An error occurred while validating your invitation.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    validateToken();
+  }, [token, user, navigate]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (password !== confirmPassword) {
+      toast.error("Passwords do not match.");
+      return;
+    }
+
+    if (password.length < 6) {
+      toast.error("Password must be at least 6 characters long.");
+      return;
+    }
+
+    setSubmitting(true);
+    
     try {
-      setIsSubmitting(true);
+      // Sign up the user
+      const { success, error } = await signup(email, password);
       
-      if (data.password !== data.confirmPassword) {
-        toast.error("Passwords do not match");
-        return;
+      if (!success) {
+        throw new Error(error || "Failed to register");
       }
-      
-      if (!token || !invitation) {
-        toast.error("Invalid or expired invitation");
-        return;
+
+      // Update the invitation to mark as used
+      const { error: updateError } = await supabase
+        .from("workspace_invitations")
+        .update({ is_used: true })
+        .eq("token", token);
+
+      if (updateError) {
+        console.error("Error updating invitation:", updateError);
       }
+
+      toast.success("Registration successful! You can now log in.");
+      navigate("/auth");
       
-      const { success, error } = await signup(data.email, data.password);
-      
-      if (success) {
-        toast.success("Registration successful! Please log in.");
-      } else if (error) {
-        toast.error(error);
-      }
-    } catch (error: any) {
-      toast.error(error.message || "Registration failed");
+    } catch (err: any) {
+      console.error("Registration error:", err);
+      toast.error(err.message || "Registration failed. Please try again.");
     } finally {
-      setIsSubmitting(false);
+      setSubmitting(false);
     }
   };
 
-  // If user is already logged in
-  if (user) {
-    return <Navigate to="/dashboard" replace />;
-  }
-
-  const primaryColor = invitation?.workspace?.primary_color || '#3b82f6';
-  const customStyles = {
-    "--primary-color": primaryColor,
-    "--primary-foreground-color": "#ffffff"
-  } as React.CSSProperties;
-
-  if (isLoading) {
+  if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50 p-4">
-        <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-          <p>Loading invitation...</p>
-        </div>
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
 
-  if (error || !invitation) {
+  if (error) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50 p-4">
+      <div className="flex min-h-screen items-center justify-center p-4">
         <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <CardTitle className="text-2xl font-bold">Invalid Invitation</CardTitle>
-            <CardDescription>
-              This invitation link is invalid or has expired.
-            </CardDescription>
+          <CardHeader>
+            <CardTitle>Invitation Error</CardTitle>
+            <CardDescription>There was a problem with your invitation link.</CardDescription>
           </CardHeader>
-          <CardFooter className="flex justify-center">
-            <Button asChild>
+          <CardContent>
+            <p className="text-destructive mb-4">{error}</p>
+            <Button asChild className="w-full">
               <Link to="/auth">Go to Login</Link>
             </Button>
-          </CardFooter>
+          </CardContent>
         </Card>
       </div>
     );
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50 p-4" style={customStyles}>
+    <div className="flex min-h-screen items-center justify-center p-4">
       <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1 text-center">
-          <CardTitle className="text-2xl font-bold">
-            {invitation.workspace?.name || "Register"}
-          </CardTitle>
+        <CardHeader className="space-y-1">
+          <CardTitle className="text-2xl">Complete Your Registration</CardTitle>
           <CardDescription>
-            {invitation.workspace?.welcome_message || "Create an account to join this workspace"}
+            You've been invited to join {invitationData?.workspaces?.name || "the workspace"}.
           </CardDescription>
         </CardHeader>
-        <form onSubmit={handleSubmit(onSubmit)}>
-          <CardContent className="space-y-4 pt-4">
+        <form onSubmit={handleSubmit}>
+          <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
-              <Input 
-                id="email" 
-                type="email" 
-                {...register("email", { 
-                  required: "Email is required",
-                  pattern: {
-                    value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                    message: "Invalid email address"
-                  }
-                })}
-                disabled={!!invitation.email}
+              <Input
+                id="email"
+                type="email"
+                value={email}
+                readOnly
+                className="bg-muted/50"
               />
-              {errors.email && (
-                <p className="text-sm text-red-500">{errors.email.message}</p>
-              )}
+              <p className="text-xs text-muted-foreground">This email is associated with your invitation.</p>
             </div>
-            
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="firstName">First Name</Label>
+                <Input
+                  id="firstName"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="lastName">Last Name</Label>
+                <Input
+                  id="lastName"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  required
+                />
+              </div>
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
-              <Input 
-                id="password" 
+              <Input
+                id="password"
                 type="password"
-                {...register("password", { 
-                  required: "Password is required",
-                  minLength: {
-                    value: 6,
-                    message: "Password must be at least 6 characters"
-                  }
-                })}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                minLength={6}
               />
-              {errors.password && (
-                <p className="text-sm text-red-500">{errors.password.message}</p>
-              )}
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="confirmPassword">Confirm Password</Label>
-              <Input 
-                id="confirmPassword" 
+              <Input
+                id="confirmPassword"
                 type="password"
-                {...register("confirmPassword", { 
-                  required: "Please confirm your password",
-                  validate: (val: string) => {
-                    if (watch("password") !== val) {
-                      return "Passwords do not match";
-                    }
-                  }
-                })}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
               />
-              {errors.confirmPassword && (
-                <p className="text-sm text-red-500">{errors.confirmPassword.message}</p>
-              )}
             </div>
           </CardContent>
           <CardFooter>
-            <Button 
-              type="submit" 
-              className="w-full" 
-              style={{backgroundColor: primaryColor}}
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? (
+            <Button type="submit" className="w-full" disabled={submitting}>
+              {submitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Registering...
                 </>
-              ) : "Register"}
+              ) : "Complete Registration"}
             </Button>
           </CardFooter>
         </form>
-        <div className="px-8 pb-6 text-center text-sm">
-          Already have an account?{" "}
-          <Link to="/auth" className="underline text-primary">
-            Sign in
-          </Link>
-        </div>
       </Card>
     </div>
   );

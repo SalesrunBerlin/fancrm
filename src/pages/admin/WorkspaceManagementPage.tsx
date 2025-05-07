@@ -1,69 +1,22 @@
 
-import { useState } from "react";
+import React from "react";
 import { PageHeader } from "@/components/ui/page-header";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
-import { useWorkspaces } from "@/hooks/useWorkspaces";
 import { useAuth } from "@/contexts/AuthContext";
-import { Loader2, PlusCircle } from "lucide-react";
-import { CreateUserForm } from "@/components/user-management/CreateUserForm";
-import { UsersList } from "@/components/user-management/UsersList";
-import { WorkspaceSettings } from "@/components/user-management/WorkspaceSettings";
-import { InviteUserForm } from "@/components/user-management/InviteUserForm";
-import { InvitationsList } from "@/components/user-management/InvitationsList";
+import { useWorkspaces } from "@/hooks/useWorkspaces";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Loader2, Plus, Settings, Users } from "lucide-react";
 
 export default function WorkspaceManagementPage() {
-  const { isSuperAdmin, isAdmin } = useAuth();
+  const { user } = useAuth();
   const { workspaces, isLoading } = useWorkspaces();
-  const [activeTab, setActiveTab] = useState("users");
-  
-  const workspace = workspaces?.[0]; // Admin users typically only have one workspace
-
-  if (!isAdmin && !isSuperAdmin) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <Card className="w-full max-w-md p-6">
-          <CardHeader className="text-center">
-            <CardTitle>Access Denied</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-center text-muted-foreground">
-              You don't have permission to access this page.
-              Only administrators can manage users and workspaces.
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
+      <div className="flex items-center justify-center h-screen">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
-  if (!workspace) {
-    return (
-      <div className="space-y-6">
-        <PageHeader 
-          title="Workspace Management"
-          description="Manage your workspace and users"
-        />
-        <Card className="w-full p-6">
-          <CardContent className="text-center space-y-4">
-            <p className="text-muted-foreground">
-              You don't have a workspace yet.
-            </p>
-            <Button>
-              <PlusCircle className="h-4 w-4 mr-2" />
-              Create Workspace
-            </Button>
-          </CardContent>
-        </Card>
       </div>
     );
   }
@@ -71,59 +24,86 @@ export default function WorkspaceManagementPage() {
   return (
     <div className="space-y-6">
       <PageHeader 
-        title="Workspace Management"
-        description="Manage your workspace, users, and permissions"
+        title="Workspace Management" 
+        description="Manage your workspace settings and users"
       />
       
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="mb-4">
-          <TabsTrigger value="users">Users</TabsTrigger>
-          <TabsTrigger value="invitations">Invitations</TabsTrigger>
-          <TabsTrigger value="settings">Workspace Settings</TabsTrigger>
-        </TabsList>
+      <div className="space-y-4">
+        {workspaces?.map(workspace => (
+          <Card key={workspace.id} className="overflow-hidden">
+            <CardHeader className="bg-muted/50 pb-4">
+              <CardTitle className="flex justify-between items-center">
+                <div>{workspace.name}</div>
+                <Button variant="outline" size="sm" className="gap-2">
+                  <Settings className="h-4 w-4" />
+                  Settings
+                </Button>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6">
+              <div className="space-y-4">
+                <div>
+                  <Label>Description</Label>
+                  <p className="text-muted-foreground text-sm mt-1">{workspace.description || "No description provided."}</p>
+                </div>
+                
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div>
+                    <Label htmlFor="theme">Theme</Label>
+                    <Input 
+                      id="theme" 
+                      value={workspace.theme || "default"} 
+                      readOnly 
+                      className="bg-muted/50 mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="color">Primary Color</Label>
+                    <div className="flex gap-2 items-center mt-1">
+                      <div 
+                        className="w-6 h-6 rounded border" 
+                        style={{ backgroundColor: workspace.primary_color || "#3b82f6" }}
+                      />
+                      <Input 
+                        id="color" 
+                        value={workspace.primary_color || "#3b82f6"} 
+                        readOnly 
+                        className="bg-muted/50"
+                      />
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="pt-4">
+                  <div className="flex justify-between items-center mb-4">
+                    <Label className="text-base">Workspace Users</Label>
+                    <Button size="sm" variant="outline" className="gap-2">
+                      <Plus className="h-4 w-4" />
+                      Invite User
+                    </Button>
+                  </div>
+                  
+                  <div className="bg-muted/30 rounded-md p-4 min-h-32 flex flex-col items-center justify-center">
+                    <Users className="h-10 w-10 text-muted-foreground/50 mb-2" />
+                    <p className="text-sm text-muted-foreground">No users added to this workspace yet.</p>
+                    <Button size="sm" variant="link" className="mt-2">
+                      Invite users
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
         
-        <TabsContent value="users" className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="md:col-span-2">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Users</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <UsersList workspaceId={workspace.id} />
-                </CardContent>
-              </Card>
-            </div>
-            <div>
-              <CreateUserForm workspaceId={workspace.id} />
-            </div>
-          </div>
-        </TabsContent>
-        
-        <TabsContent value="invitations" className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="md:col-span-2">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Active Invitations</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <InvitationsList workspaceId={workspace.id} />
-                </CardContent>
-              </Card>
-            </div>
-            <div>
-              <InviteUserForm workspaceId={workspace.id} />
-            </div>
-          </div>
-        </TabsContent>
-        
-        <TabsContent value="settings">
-          <div className="max-w-2xl">
-            <WorkspaceSettings workspace={workspace} />
-          </div>
-        </TabsContent>
-      </Tabs>
+        {!workspaces?.length && (
+          <Card className="p-6 flex flex-col items-center justify-center min-h-[200px]">
+            <Settings className="h-12 w-12 text-muted-foreground/50 mb-2" />
+            <p className="text-muted-foreground mb-4">No workspaces found.</p>
+            <Button>Create Workspace</Button>
+          </Card>
+        )}
+      </div>
     </div>
   );
 }
