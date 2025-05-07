@@ -1545,6 +1545,59 @@ export type Database = {
           },
         ]
       }
+      user_custom_icons: {
+        Row: {
+          color: string | null
+          created_at: string
+          description: string | null
+          height: number | null
+          id: string
+          name: string
+          original_file_path: string | null
+          processed_file_path: string | null
+          svg_content: string
+          updated_at: string
+          user_id: string
+          width: number | null
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          description?: string | null
+          height?: number | null
+          id?: string
+          name: string
+          original_file_path?: string | null
+          processed_file_path?: string | null
+          svg_content: string
+          updated_at?: string
+          user_id: string
+          width?: number | null
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          description?: string | null
+          height?: number | null
+          id?: string
+          name?: string
+          original_file_path?: string | null
+          processed_file_path?: string | null
+          svg_content?: string
+          updated_at?: string
+          user_id?: string
+          width?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_custom_icons_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "auth_users_view"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_field_mappings: {
         Row: {
           created_at: string

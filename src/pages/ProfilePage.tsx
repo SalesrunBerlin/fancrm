@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import {
   Card,
@@ -14,9 +15,11 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/contexts/AuthContext";
 import { useColorPreference } from "@/hooks/useColorPreference";
 import { toast } from "sonner";
-import { Loader2, Check } from "lucide-react";
+import { Loader2, Check, Plus, Pencil, Trash } from "lucide-react";
 import { ColorPicker } from "@/components/ui/color-picker";
 import { supabase } from "@/integrations/supabase/client";
+import { Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 
 export default function ProfilePage() {
   const { user, isSuperAdmin } = useAuth();
@@ -119,6 +122,27 @@ export default function ProfilePage() {
   const handleColorChange = async (color: string) => {
     await updateColorPreference(color);
   };
+
+  // Fetch user's custom icons
+  const { data: customIcons, isLoading: loadingIcons, refetch: refetchIcons } = useQuery({
+    queryKey: ["user-custom-icons"],
+    queryFn: async () => {
+      if (!user) return [];
+      
+      const { data, error } = await supabase
+        .from("user_custom_icons")
+        .select("*")
+        .order("created_at", { ascending: false });
+      
+      if (error) {
+        console.error("Error fetching custom icons:", error);
+        throw error;
+      }
+      
+      return data;
+    },
+    enabled: !!user,
+  });
 
   // If no user, or still loading auth state
   if (!user) {
@@ -242,6 +266,72 @@ export default function ProfilePage() {
                 </div>
               </div>
             </div>
+          </CardContent>
+        </Card>
+        
+        {/* Custom Icons Card */}
+        <Card className="lg:col-span-2">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle>Benutzerdefinierte Symbole</CardTitle>
+              <CardDescription>Verwalten Sie Ihre hochgeladenen und erstellten Symbole.</CardDescription>
+            </div>
+            <Button asChild>
+              <Link to="/settings/icons/upload">
+                <Plus className="h-4 w-4 mr-2" />
+                Symbol hochladen
+              </Link>
+            </Button>
+          </CardHeader>
+          <CardContent>
+            {loadingIcons ? (
+              <div className="flex justify-center py-8">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : customIcons && customIcons.length > 0 ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                {customIcons.map(icon => (
+                  <div key={icon.id} className="border rounded-md p-3 flex flex-col items-center">
+                    <div className="bg-gray-50 p-4 rounded-md w-full h-24 flex items-center justify-center mb-2">
+                      {/* Directly inject the SVG content with the specified color */}
+                      <div 
+                        className="w-16 h-16"
+                        dangerouslySetInnerHTML={{ 
+                          __html: icon.svg_content ? 
+                            icon.svg_content.replace(/fill="([^"]*)"/, `fill="${icon.color}"`) : 
+                            '<svg viewBox="0 0 64 64"><rect width="64" height="64" /></svg>' 
+                        }} 
+                      />
+                    </div>
+                    <p className="text-sm font-medium text-center truncate w-full" title={icon.name}>
+                      {icon.name}
+                    </p>
+                    <div className="flex space-x-2 mt-2">
+                      <Button variant="outline" size="icon" asChild>
+                        <Link to={`/settings/icons/edit/${icon.id}`}>
+                          <Pencil className="h-3 w-3" />
+                          <span className="sr-only">Bearbeiten</span>
+                        </Link>
+                      </Button>
+                      <Button variant="outline" size="icon" className="text-destructive hover:text-destructive">
+                        <Trash className="h-3 w-3" />
+                        <span className="sr-only">Löschen</span>
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 border rounded-md bg-gray-50">
+                <p className="text-muted-foreground mb-4">Sie haben noch keine benutzerdefinierten Symbole erstellt.</p>
+                <Button asChild>
+                  <Link to="/settings/icons/upload">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Erstellen Sie Ihr erstes Symbol
+                  </Link>
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
