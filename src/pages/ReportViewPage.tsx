@@ -4,7 +4,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useReports } from "@/hooks/useReports";
 import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
-import { Edit, FileDown, FileCog, Share } from "lucide-react";
+import { Edit, FileDown, FileCog } from "lucide-react";
 import { ReportDisplay } from "@/components/reports/ReportDisplay";
 import { AlertCircle } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -16,12 +16,20 @@ export default function ReportViewPage() {
   
   useEffect(() => {
     if (reportId) {
+      console.log("Updating last viewed timestamp for report:", reportId);
       // Update last viewed timestamp
       updateReportLastViewed(reportId);
     }
   }, [reportId, updateReportLastViewed]);
   
+  // Ensure reportId exists before attempting to get the report
   const report = reportId ? getReportById(reportId) : null;
+  
+  useEffect(() => {
+    if (reportId && !isLoading && !report) {
+      console.log("Report not found:", reportId);
+    }
+  }, [reportId, report, isLoading]);
   
   const handleEditReport = () => {
     navigate(`/reports/${reportId}/edit`);

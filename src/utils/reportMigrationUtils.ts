@@ -1,5 +1,6 @@
 
-import { ReportDefinition } from "@/types/report";
+import { ReportDefinition, ReportField } from "@/types/report";
+import { FilterCondition } from "@/hooks/useObjectRecords";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -36,17 +37,23 @@ export const migrateLocalReportsToDatabase = async (
       description: report.description || "",
       user_id: userId,
       object_ids: report.objectIds,
-      selected_fields: report.selectedFields,
-      filters: report.filters || [],
+      selected_fields: JSON.stringify(report.selectedFields),
+      filters: JSON.stringify(report.filters || []),
       created_at: report.created_at,
       updated_at: report.updated_at
     }));
     
-    const { error } = await supabase
-      .from("reports")
-      .insert(reportsToInsert);
-      
-    if (error) throw error;
+    // Insert each report individually to avoid batch issues
+    for (const reportData of reportsToInsert) {
+      const { error } = await supabase
+        .from("reports")
+        .insert(reportData);
+        
+      if (error) {
+        console.error("[migrateLocalReportsToDatabase] Error inserting report:", error);
+        throw error;
+      }
+    }
     
     console.log("[migrateLocalReportsToDatabase] Successfully migrated local reports to database");
     toast.success("Your reports have been successfully migrated to the cloud");
@@ -65,14 +72,37 @@ export const migrateLocalReportsToDatabase = async (
 export const formatDatabaseReports = (data: any[]): ReportDefinition[] => {
   if (!Array.isArray(data)) return [];
   
-  return data.map(item => ({
-    id: item.id,
-    name: item.name,
-    description: item.description || "",
-    objectIds: item.object_ids,
-    selectedFields: item.selected_fields,
-    filters: item.filters || [],
-    created_at: item.created_at,
-    updated_at: item.updated_at
-  }));
+  return data.map(item => {
+    // Parse fields that might be stored as strings but need to be objects
+    let selectedFields: ReportField[] = [];
+    let filters: FilterCondition[] = [];
+    
+    try {
+      if (typeof item.selected_fields === 'string') {
+        selectedFields = JSON.parse(item.selected_fields);
+      } else {
+        selectedFields = item.selected_fields || [];
+      }
+      
+      if (typeof item.filters === 'string') {
+        filters = JSON.parse(item.filters);
+      } else {
+        filters = item.filters || [];
+      }
+    } catch (err) {
+      console.error('Error parsing report data:', err);
+    }
+    
+    return {
+      id: item.id,
+      name: item.name,
+      description: item.description || "",
+      objectIds: item.object_ids || [],
+      selectedFields: selectedFields,
+      filters: filters,
+      created_at: item.created_at,
+      updated_at: item.updated_at,
+      last_viewed_at: item.last_viewed_at
+    };
+  });
 };

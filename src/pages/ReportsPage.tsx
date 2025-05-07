@@ -68,11 +68,7 @@ export default function ReportsPage() {
               </div>
             </Card>
           ) : (
-            <SavedReportsList 
-              reports={reports} 
-              onEdit={handleEditReport}
-              isLoading={isLoading}
-            />
+            <SavedReportsList />
           )}
         </div>
       )}

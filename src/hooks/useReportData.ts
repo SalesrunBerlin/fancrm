@@ -18,6 +18,15 @@ interface ReportQueryResult {
 export function useReportData(report: ReportDefinition) {
   const { objectTypes } = useObjectTypes();
   
+  // Safety check for invalid report
+  if (!report) {
+    return {
+      data: { columns: [], rows: [], columnDefs: [], totalCount: 0 } as ReportQueryResult,
+      isLoading: false,
+      error: new Error("Invalid or undefined report"),
+    };
+  }
+  
   // Safety check for report with no objects
   if (!report?.objectIds || report.objectIds.length === 0) {
     return {
@@ -128,6 +137,11 @@ export function useReportData(report: ReportDefinition) {
       });
       
       console.log("Column definitions:", columnDefs);
+      
+      // Ensure we have valid column definitions before proceeding
+      if (!columnDefs.length) {
+        return { columns: [], columnDefs: [], rows: [], totalCount: 0 };
+      }
       
       // For single-object reports, just return the data
       if (objectIds.length === 1) {

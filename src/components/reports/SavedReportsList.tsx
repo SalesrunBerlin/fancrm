@@ -7,7 +7,7 @@ import {
   CardFooter, CardHeader, CardTitle 
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Calendar, Clock, FileChart, FilePlus2, Search } from "lucide-react";
+import { Calendar, Clock, FileText, FilePlus2, Search } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -63,7 +63,7 @@ export function SavedReportsList() {
             </div>
           ) : filteredReports.length === 0 ? (
             <div className="flex flex-col items-center justify-center p-6 text-center">
-              <FileChart className="h-12 w-12 text-muted-foreground mb-2" />
+              <FileText className="h-12 w-12 text-muted-foreground mb-2" />
               <p className="text-muted-foreground mb-4">
                 {search ? "No reports match your search" : "No reports have been created yet"}
               </p>
