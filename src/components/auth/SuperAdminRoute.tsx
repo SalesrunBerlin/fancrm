@@ -19,7 +19,7 @@ export function SuperAdminRoute({ children }: { children: React.ReactNode }) {
   }
 
   if (!isSuperAdmin) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to="/" replace />;
   }
 
   return <>{children}</>;

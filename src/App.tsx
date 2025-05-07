@@ -1,3 +1,4 @@
+
 import { useEffect } from "react";
 import {
   BrowserRouter as Router,
@@ -8,18 +9,15 @@ import {
   useParams,
 } from "react-router-dom";
 import { useAuth } from "./contexts/AuthContext";
-import LoginPage from "./pages/LoginPage";
-import RegisterPage from "./pages/RegisterPage";
-import ForgotPasswordPage from "./pages/ForgotPasswordPage";
-import ResetPasswordPage from "./pages/ResetPasswordPage";
-import DashboardPage from "./pages/DashboardPage";
-import SettingsPage from "./pages/SettingsPage";
-import ObjectTypesPage from "./pages/ObjectTypesPage";
-import ObjectTypeViewPage from "./pages/ObjectTypeViewPage";
-import ObjectTypeEditPage from "./pages/ObjectTypeEditPage";
-import ObjectRecordsPage from "./pages/ObjectRecordsPage";
-import ObjectRecordViewPage from "./pages/ObjectRecordViewPage";
-import ObjectRecordEditPage from "./pages/ObjectRecordEditPage";
+import Auth from "./pages/Auth";
+import DashboardPage from "./pages/Dashboard";
+import SettingsPage from "./pages/Settings";
+import ObjectTypesPage from "./pages/ObjectManager";
+import ObjectTypeViewPage from "./pages/ObjectTypeDetail";
+import ObjectTypeEditPage from "./pages/ObjectTypeDetail";
+import ObjectRecordsPage from "./pages/ObjectRecordsList";
+import ObjectRecordViewPage from "./pages/ObjectRecordDetail";
+import ObjectRecordEditPage from "./pages/EditRecordPage";
 import ReportsPage from "./pages/ReportsPage";
 import ReportViewPage from "./pages/ReportViewPage";
 import ReportExamplePage from "./pages/ReportExamplePage";
@@ -35,11 +33,8 @@ function AppRouter() {
 function AppContent() {
   return (
     <Routes>
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/register" element={<RegisterPage />} />
-      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-      <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
-
+      <Route path="/auth" element={<Auth />} />
+      
       {/* Main app routes */}
       <Route
         path="/"
@@ -151,6 +146,12 @@ function AppContent() {
           </ProtectedRoute>
         }
       />
+      
+      {/* Redirect from login to auth */}
+      <Route path="/login" element={<Navigate to="/auth" replace />} />
+      <Route path="/register" element={<Navigate to="/auth" replace />} />
+      <Route path="/forgot-password" element={<Navigate to="/auth" replace />} />
+      <Route path="/reset-password/:token" element={<Auth />} />
     </Routes>
   );
 }
@@ -179,7 +180,7 @@ function ProtectedRoute({ children }: { children: JSX.Element }) {
   }
 
   if (!session) {
-    return <Navigate to="/login" replace state={{ from: location }} />;
+    return <Navigate to="/auth" replace state={{ from: location }} />;
   }
 
   return children;

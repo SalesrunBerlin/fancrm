@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -16,25 +17,26 @@ export default function Auth() {
   const [loading, setLoading] = useState(false);
   const [registrationSuccess, setRegistrationSuccess] = useState(false);
   const navigate = useNavigate();
-  const { user, login, signup } = useAuth();
+  const { user, login, signup, session } = useAuth();
   
   // Redirect if already logged in
   useEffect(() => {
-    if (user) {
-      navigate("/dashboard");
+    if (session) {
+      navigate("/");
     }
-  }, [user, navigate]);
+  }, [session, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     
     try {
-      await login(email, password);
-      navigate("/dashboard");
+      const { success, error } = await login(email, password);
+      if (success) {
+        navigate("/");
+      }
     } catch (error) {
-      // Error is already handled in login method
-      // Just reset loading state
+      toast.error("Anmeldung fehlgeschlagen");
     } finally {
       setLoading(false);
     }
@@ -76,7 +78,7 @@ export default function Auth() {
   };
 
   if (user) {
-    return null; // Don't render anything if we're redirecting
+    return <Navigate to="/" />;
   }
 
   return (
@@ -121,14 +123,14 @@ export default function Auth() {
                 </div>
               </CardContent>
               <CardFooter>
-                <ThemedButton type="submit" className="w-full" disabled={loading}>
+                <Button type="submit" className="w-full" disabled={loading}>
                   {loading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       Anmeldung...
                     </>
                   ) : "Anmelden"}
-                </ThemedButton>
+                </Button>
               </CardFooter>
             </form>
           </TabsContent>
@@ -145,13 +147,13 @@ export default function Auth() {
                   <p className="text-muted-foreground">
                     Bitte überprüfen Sie Ihr E-Mail-Postfach, um Ihr Konto zu bestätigen.
                   </p>
-                  <ThemedButton 
+                  <Button 
                     variant="outline" 
                     className="mt-4" 
                     onClick={() => setRegistrationSuccess(false)}
                   >
                     Zurück zur Registrierung
-                  </ThemedButton>
+                  </Button>
                 </div>
               </CardContent>
             ) : (
@@ -185,14 +187,14 @@ export default function Auth() {
                   </div>
                 </CardContent>
                 <CardFooter>
-                  <ThemedButton type="submit" className="w-full" disabled={loading}>
+                  <Button type="submit" className="w-full" disabled={loading}>
                     {loading ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                         Registrierung...
                       </>
                     ) : "Registrieren"}
-                  </ThemedButton>
+                  </Button>
                 </CardFooter>
               </form>
             )}
