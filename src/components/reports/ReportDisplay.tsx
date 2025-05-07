@@ -59,10 +59,19 @@ export function ReportDisplay({ report }: ReportDisplayProps) {
     );
   }
   
-  if (!data || !data.rows || data.rows.length === 0) {
+  if (!data) {
     return (
       <Card className="p-6 text-center">
         <p className="text-muted-foreground">No data found for this report</p>
+      </Card>
+    );
+  }
+  
+  // Safely check if there are any rows
+  if (!data.rows || data.rows.length === 0) {
+    return (
+      <Card className="p-6 text-center">
+        <p className="text-muted-foreground">No records match the criteria for this report</p>
       </Card>
     );
   }

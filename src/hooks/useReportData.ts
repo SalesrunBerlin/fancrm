@@ -41,9 +41,9 @@ export function useReportData(report: ReportDefinition) {
   const objectIds = useMemo(() => report.objectIds || [], [report?.id || 'unknown']);
   
   // Fixed JSON.stringify to handle potential undefined values
-  const filters = useMemo(() => report.filters || [], [report?.id || 'unknown', JSON.stringify(report.filters || [])]);
+  const filters = useMemo(() => report.filters || [], [report?.id || 'unknown']);
   
-  const selectedFields = useMemo(() => report.selectedFields || [], [report?.id || 'unknown', JSON.stringify(report.selectedFields || [])]);
+  const selectedFields = useMemo(() => report.selectedFields || [], [report?.id || 'unknown']);
   
   // Fetch records for each object in the report with memoization
   // Ensure we pass empty arrays as fallbacks for all dependencies
@@ -195,7 +195,7 @@ export function useReportData(report: ReportDefinition) {
         totalCount: 0
       };
     },
-    enabled: !!report && !!(objectIds && objectIds.length) && !objectDataQueries.some(q => q.isLoading),
+    enabled: !!report && !!(objectIds && objectIds.length > 0) && !objectDataQueries.some(q => q.isLoading),
     staleTime: 30000, // Cache data for 30 seconds to prevent constant refetching
     refetchOnWindowFocus: false, // Don't refetch when window regains focus
   });

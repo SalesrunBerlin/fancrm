@@ -1,33 +1,54 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
-import { Plus, FileText } from "lucide-react";
+import { Plus, FileText, BarChart } from "lucide-react";
 import { SavedReportsList } from "@/components/reports/SavedReportsList";
 import { ReportBuilder } from "@/components/reports/ReportBuilder";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { useReports } from "@/hooks/useReports";
 import { useAuth } from "@/contexts/AuthContext";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { Separator } from "@/components/ui/separator";
 
 export default function ReportsPage() {
-  const [isCreating, setIsCreating] = useState(false);
-  const [editingReportId, setEditingReportId] = useState<string | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const editReportId = searchParams.get('edit');
+  const createMode = searchParams.get('create') === 'true';
+  
+  const [isCreating, setIsCreating] = useState(createMode);
+  const [editingReportId, setEditingReportId] = useState<string | null>(editReportId);
   const { reports, isLoading, error } = useReports();
   const { session } = useAuth();
+  const navigate = useNavigate();
+  
+  // Handle URL params for editing or creating
+  useEffect(() => {
+    if (createMode) {
+      setIsCreating(true);
+      setEditingReportId(null);
+    } else if (editReportId) {
+      setIsCreating(true);
+      setEditingReportId(editReportId);
+    }
+  }, [createMode, editReportId]);
   
   const handleCreateNew = () => {
     setIsCreating(true);
     setEditingReportId(null);
+    setSearchParams({ create: 'true' });
   };
   
   const handleEditReport = (reportId: string) => {
     setEditingReportId(reportId);
     setIsCreating(true);
+    setSearchParams({ edit: reportId });
   };
   
   const handleCloseBuilder = () => {
     setIsCreating(false);
     setEditingReportId(null);
+    setSearchParams({});
   };
 
   return (
@@ -37,10 +58,18 @@ export default function ReportsPage() {
         description="Create and view custom reports across your data"
         actions={
           !isCreating && session?.user && (
-            <Button onClick={handleCreateNew}>
-              <Plus className="h-4 w-4 mr-2" />
-              Create Report
-            </Button>
+            <div className="flex gap-2">
+              <Button onClick={handleCreateNew}>
+                <Plus className="h-4 w-4 mr-2" />
+                Create Report
+              </Button>
+              <Button variant="outline" asChild>
+                <Link to="/reports/example">
+                  <BarChart className="h-4 w-4 mr-2" />
+                  Sample Report
+                </Link>
+              </Button>
+            </div>
           )
         }
       />
@@ -52,6 +81,33 @@ export default function ReportsPage() {
         />
       ) : (
         <div className="space-y-6">
+          {reports.length === 0 && !isLoading && !error && (
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex flex-col items-center justify-center py-8 text-center space-y-4">
+                  <div className="bg-primary/10 p-3 rounded-full">
+                    <FileText className="h-8 w-8 text-primary" />
+                  </div>
+                  <div className="space-y-2">
+                    <h3 className="text-xl font-medium">No reports yet</h3>
+                    <p className="text-muted-foreground max-w-sm mx-auto">
+                      Create custom reports to analyze your data or try our sample report to get started.
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap justify-center gap-3 pt-4">
+                    <Button onClick={handleCreateNew}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Create New Report
+                    </Button>
+                    <Button variant="outline" asChild>
+                      <Link to="/reports/example">Try Sample Report</Link>
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+          
           {error ? (
             <Card className="p-8 text-center">
               <div className="flex flex-col items-center justify-center space-y-4">
@@ -68,7 +124,9 @@ export default function ReportsPage() {
               </div>
             </Card>
           ) : (
-            <SavedReportsList />
+            <SavedReportsList 
+              onEdit={handleEditReport}
+            />
           )}
         </div>
       )}

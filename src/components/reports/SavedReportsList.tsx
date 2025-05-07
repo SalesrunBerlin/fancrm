@@ -7,12 +7,16 @@ import {
   CardFooter, CardHeader, CardTitle 
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Calendar, Clock, FileText, FilePlus2, Search } from "lucide-react";
+import { Calendar, Edit, Pencil, FileText, FilePlus2, Search } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
-export function SavedReportsList() {
+interface SavedReportsListProps {
+  onEdit?: (reportId: string) => void;
+}
+
+export function SavedReportsList({ onEdit }: SavedReportsListProps) {
   const navigate = useNavigate();
   const { reports, isLoading, updateReportLastViewed } = useReports();
   const [search, setSearch] = React.useState("");
@@ -26,6 +30,15 @@ export function SavedReportsList() {
   
   const handleCreateReport = () => {
     navigate("/reports/new");
+  };
+
+  const handleEditReport = (reportId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onEdit) {
+      onEdit(reportId);
+    } else {
+      navigate(`/reports/${reportId}/edit`);
+    }
   };
   
   const filteredReports = reports.filter(report => 
@@ -56,7 +69,7 @@ export function SavedReportsList() {
         </div>
       </CardHeader>
       <CardContent className="flex-grow overflow-hidden p-0">
-        <ScrollArea className="h-full max-h-[400px] pr-4">
+        <ScrollArea className="h-full max-h-[400px] px-4">
           {isLoading ? (
             <div className="flex items-center justify-center p-6">
               <p className="text-muted-foreground">Loading reports...</p>
@@ -92,13 +105,10 @@ export function SavedReportsList() {
                         variant="ghost" 
                         size="icon"
                         className="ml-2 h-8 w-8"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigate(`/reports/${report.id}/edit`);
-                        }}
+                        onClick={(e) => handleEditReport(report.id, e)}
                       >
                         <span className="sr-only">Edit report</span>
-                        <Clock className="h-4 w-4" />
+                        <Pencil className="h-4 w-4" />
                       </Button>
                     </div>
                     <div className="flex items-center mt-2 text-xs text-muted-foreground">
