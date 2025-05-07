@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowLeft, Save, Loader2, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Save, Loader2, AlertTriangle, Palette } from "lucide-react";
 
 export default function IconEditPage() {
   const { iconId } = useParams<{ iconId: string }>();
@@ -24,6 +24,7 @@ export default function IconEditPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [iconDataUrl, setIconDataUrl] = useState<string | null>(null);
   
   useEffect(() => {
     async function loadIcon() {
@@ -48,6 +49,16 @@ export default function IconEditPage() {
           setDescription(data.description || "");
           setColor(data.color || "#000000");
           setSvgContent(data.svg_content);
+          
+          // Erstellen eines Data URL für SVG
+          if (data.svg_content) {
+            const svgBlob = new Blob([data.svg_content], { type: 'image/svg+xml' });
+            const url = URL.createObjectURL(svgBlob);
+            setIconDataUrl(url);
+            
+            // URL bereinigen, wenn die Komponente unmountet wird
+            return () => URL.revokeObjectURL(url);
+          }
         } else {
           setError("Icon nicht gefunden");
         }
@@ -166,8 +177,11 @@ export default function IconEditPage() {
             </div>
             
             <div>
-              <Label htmlFor="icon-color">Farbe</Label>
-              <div className="flex gap-4 items-center">
+              <Label htmlFor="icon-color" className="flex items-center">
+                <Palette className="h-4 w-4 mr-2" />
+                Farbe
+              </Label>
+              <div className="flex gap-4 items-center mt-1">
                 <Input
                   id="icon-color"
                   type="color"
@@ -183,11 +197,30 @@ export default function IconEditPage() {
               <Label>Vorschau</Label>
               <div className="mt-2 border rounded-md p-6 bg-gray-50 flex items-center justify-center">
                 {coloredSvg ? (
-                  <div className="w-32 h-32 flex items-center justify-center">
-                    <div dangerouslySetInnerHTML={{ __html: coloredSvg }} />
+                  <div className="w-32 h-32 flex items-center justify-center relative">
+                    {/* Sichtbare SVG-Vorschau */}
+                    <div 
+                      dangerouslySetInnerHTML={{ __html: coloredSvg }} 
+                      className="w-full h-full"
+                    />
+                    
+                    {/* Fallback mit Data URL (für Browser, die keine inline SVGs unterstützen) */}
+                    {iconDataUrl && (
+                      <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100">
+                        <img 
+                          src={iconDataUrl} 
+                          alt={name} 
+                          className="max-w-full max-h-full"
+                          style={{ filter: `drop-shadow(0 0 2px ${color})` }}
+                        />
+                      </div>
+                    )}
                   </div>
                 ) : (
-                  <div className="text-muted-foreground">Keine Vorschau verfügbar</div>
+                  <div className="text-muted-foreground flex flex-col items-center gap-2">
+                    <AlertTriangle className="h-6 w-6" />
+                    <span>Keine Vorschau verfügbar</span>
+                  </div>
                 )}
               </div>
             </div>
