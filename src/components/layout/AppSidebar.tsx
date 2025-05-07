@@ -10,12 +10,13 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { LayoutDashboard, Box, BarChart3 } from "lucide-react";
+import { LayoutDashboard, Box, BarChart3, Settings, Archive, Users, HelpCircle } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
 import { useApplications } from "@/hooks/useApplications";
 import { useApplicationObjects } from "@/hooks/useApplicationObjects";
 import { useEffect, useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 
 const navigationItems = [
   {
@@ -37,6 +38,7 @@ export function AppSidebar() {
   const [defaultApplicationId, setDefaultApplicationId] = useState<string | null>(null);
   const { applicationObjects, isLoading: isLoadingObjects } = useApplicationObjects(defaultApplicationId || undefined);
   const isAuthPage = pathname.startsWith("/auth");
+  const { isSuperAdmin, isAdmin } = useAuth();
   
   // Only close sidebar on mobile when route changes
   useEffect(() => {
@@ -117,6 +119,82 @@ export function AppSidebar() {
             </SidebarGroupContent>
           </SidebarGroup>
         )}
+
+        <SidebarGroup>
+          <SidebarGroupLabel>Settings</SidebarGroupLabel>
+          <SidebarGroupContent className="space-y-0.5">
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
+                  isActive={pathname === "/settings"}
+                  tooltip="Settings"
+                >
+                  <Link to="/settings" onClick={handleNavClick}>
+                    <Settings className="h-4 w-4" />
+                    <span>Settings</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
+                  isActive={pathname === "/settings/object-manager"}
+                  tooltip="Object Manager"
+                >
+                  <Link to="/settings/object-manager" onClick={handleNavClick}>
+                    <Archive className="h-4 w-4" />
+                    <span>Object Manager</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
+                  isActive={pathname === "/help"}
+                  tooltip="Help"
+                >
+                  <Link to="/help" onClick={handleNavClick}>
+                    <HelpCircle className="h-4 w-4" />
+                    <span>Help</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              
+              {(isAdmin || isSuperAdmin) && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={pathname.startsWith("/admin")}
+                    tooltip="Admin"
+                  >
+                    <Link to="/admin" onClick={handleNavClick}>
+                      <Users className="h-4 w-4" />
+                      <span>Admin</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
+              
+              {(isAdmin || isSuperAdmin) && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={pathname === "/admin/workspace"}
+                    tooltip="Workspace Management"
+                  >
+                    <Link to="/admin/workspace" onClick={handleNavClick}>
+                      <Users className="h-4 w-4" />
+                      <span>Workspace</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
       </SidebarContent>
     </Sidebar>
   );

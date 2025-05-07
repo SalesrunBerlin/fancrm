@@ -18,6 +18,7 @@ interface AuthContextType {
   signup: (email: string, password: string, metadata?: any) => Promise<{ error: any, success: boolean }>;
   // Additional properties
   isSuperAdmin: boolean;
+  isAdmin: boolean;
   favoriteColor: string;
   setFavoriteColor: (color: string) => void;
   userRole?: string;
@@ -49,6 +50,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [favoriteColor, setFavoriteColor] = useState('default');
   const [userRole, setUserRole] = useState<string | undefined>(undefined);
 
@@ -107,13 +109,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUserRole(role);
       
       // Check for super admin role with case-insensitive comparison
-      const isAdmin = role && 
+      const superAdmin = role && 
         (role.toLowerCase() === 'super_admin' || 
          role.toLowerCase() === 'superadmin' || 
          role.toLowerCase() === 'admin');
+         
+      // Check for admin role with case-insensitive comparison
+      const admin = role &&
+        (role.toLowerCase() === 'admin');
       
-      setIsSuperAdmin(isAdmin);
-      console.log('Is user super admin?', isAdmin, 'Role:', role);
+      setIsSuperAdmin(superAdmin);
+      setIsAdmin(admin || superAdmin); // Admin is also true for super admins
+      console.log('Is user super admin?', superAdmin, 'Is admin?', admin, 'Role:', role);
 
       // Also fetch user's color preference
       const { data: colorData } = await supabase
@@ -128,6 +135,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (error) {
       console.error('Error checking user role:', error);
       setIsSuperAdmin(false);
+      setIsAdmin(false);
       setUserRole('user');
     }
   };
@@ -247,6 +255,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     signup,
     // Additional properties
     isSuperAdmin,
+    isAdmin,
     favoriteColor,
     setFavoriteColor: updateFavoriteColor,
     userRole,

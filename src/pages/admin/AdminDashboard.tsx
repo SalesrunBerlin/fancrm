@@ -2,7 +2,7 @@
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Settings, HelpCircle, Users, BookOpen } from "lucide-react";
+import { Settings, HelpCircle, Users, BookOpen, Briefcase } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -13,7 +13,7 @@ export default function AdminDashboard() {
     <div className="space-y-6">
       <PageHeader 
         title="Admin Dashboard" 
-        description={`Welcome to the admin area, ${user?.email}`}
+        description={`Willkommen im Administrationsbereich, ${user?.email}`}
       />
       
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -69,6 +69,25 @@ export default function AdminDashboard() {
             <CardContent>
               <p className="text-sm text-muted-foreground">
                 View and edit user details, assign roles and monitor user activity.
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
+        
+        <Link to="/admin/workspace">
+          <Card className="h-full hover:bg-accent/5 transition-colors">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Briefcase className="h-5 w-5" />
+                Workspace Management
+              </CardTitle>
+              <CardDescription>
+                Manage workspace settings and users
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                Configure workspace settings, add and manage users, customize login experience.
               </p>
             </CardContent>
           </Card>

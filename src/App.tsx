@@ -66,6 +66,7 @@ function App() {
         <AuthProvider>
           <Routes>
             <Route path="/auth" element={<Auth />} />
+            <Route path="/auth/:workspaceId" element={<Auth />} />
             
             {/* Public routes for accessing shared content */}
             <Route path="/public-action/:token" element={<PublicActionPage />} />
@@ -116,6 +117,7 @@ function App() {
               <Route path="/admin/help-content/:tabId" element={<SuperAdminRoute><HelpTabContentEditor /></SuperAdminRoute>} />
               <Route path="/admin/users" element={<SuperAdminRoute><UserManagementPage /></SuperAdminRoute>} />
               <Route path="/admin/users/:userId" element={<SuperAdminRoute><UserDetailPage /></SuperAdminRoute>} />
+              <Route path="/admin/workspace" element={<SuperAdminRoute><AdminWorkspacePage /></SuperAdminRoute>} />
               
               {/* Icon routes */}
               <Route path="/settings/icons/upload" element={<IconUploadPage />} />

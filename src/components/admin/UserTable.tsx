@@ -5,14 +5,15 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Input } from "@/components/ui/input";
 import { UserSummary } from "@/pages/admin/UserManagementPage";
 import { ThemedButton } from "@/components/ui/themed-button";
-import { Eye, Search } from "lucide-react";
+import { Eye, Search, UserPlus } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 interface UserTableProps {
   users: UserSummary[];
+  onCreateUser: () => void;
 }
 
-export function UserTable({ users }: UserTableProps) {
+export function UserTable({ users, onCreateUser }: UserTableProps) {
   const [searchTerm, setSearchTerm] = useState("");
   
   const filteredUsers = users.filter(user => 
@@ -30,14 +31,21 @@ export function UserTable({ users }: UserTableProps) {
 
   return (
     <div className="space-y-4">
-      <div className="relative">
-        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Suche nach Benutzern..."
-          className="pl-8"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
+      <div className="flex justify-between items-center">
+        <div className="relative w-64">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Suche nach Benutzern..."
+            className="pl-8"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+        
+        <ThemedButton onClick={onCreateUser}>
+          <UserPlus className="h-4 w-4 mr-2" />
+          Benutzer erstellen
+        </ThemedButton>
       </div>
       
       <div className="rounded-md border">

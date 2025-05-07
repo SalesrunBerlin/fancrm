@@ -990,50 +990,82 @@ export type Database = {
       }
       profiles: {
         Row: {
+          access_level: string | null
           avatar_url: string | null
           company: string | null
           created_at: string
+          created_by: string | null
+          data_access: boolean | null
           email: string | null
           favorite_color: string | null
           first_name: string | null
           id: string
+          is_active: boolean | null
           last_name: string | null
+          metadata_access: boolean | null
           role: string | null
           screen_name: string | null
           updated_at: string
+          workspace_id: string | null
         }
         Insert: {
+          access_level?: string | null
           avatar_url?: string | null
           company?: string | null
           created_at?: string
+          created_by?: string | null
+          data_access?: boolean | null
           email?: string | null
           favorite_color?: string | null
           first_name?: string | null
           id: string
+          is_active?: boolean | null
           last_name?: string | null
+          metadata_access?: boolean | null
           role?: string | null
           screen_name?: string | null
           updated_at?: string
+          workspace_id?: string | null
         }
         Update: {
+          access_level?: string | null
           avatar_url?: string | null
           company?: string | null
           created_at?: string
+          created_by?: string | null
+          data_access?: boolean | null
           email?: string | null
           favorite_color?: string | null
           first_name?: string | null
           id?: string
+          is_active?: boolean | null
           last_name?: string | null
+          metadata_access?: boolean | null
           role?: string | null
           screen_name?: string | null
           updated_at?: string
+          workspace_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "profiles_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "auth_users_view"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "profiles_id_fkey"
             columns: ["id"]
             isOneToOne: true
             referencedRelation: "auth_users_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
             referencedColumns: ["id"]
           },
         ]
@@ -1663,6 +1695,161 @@ export type Database = {
           },
         ]
       }
+      workspace_invitations: {
+        Row: {
+          created_at: string
+          created_by: string
+          data_access: boolean | null
+          email: string
+          expires_at: string
+          id: string
+          is_used: boolean | null
+          metadata_access: boolean | null
+          token: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          data_access?: boolean | null
+          email: string
+          expires_at: string
+          id?: string
+          is_used?: boolean | null
+          metadata_access?: boolean | null
+          token: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          data_access?: boolean | null
+          email?: string
+          expires_at?: string
+          id?: string
+          is_used?: boolean | null
+          metadata_access?: boolean | null
+          token?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workspace_invitations_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "auth_users_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workspace_invitations_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workspace_users: {
+        Row: {
+          can_create_actions: boolean | null
+          can_create_objects: boolean | null
+          can_manage_users: boolean | null
+          can_modify_objects: boolean | null
+          created_at: string
+          id: string
+          updated_at: string
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          can_create_actions?: boolean | null
+          can_create_objects?: boolean | null
+          can_manage_users?: boolean | null
+          can_modify_objects?: boolean | null
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          can_create_actions?: boolean | null
+          can_create_objects?: boolean | null
+          can_manage_users?: boolean | null
+          can_modify_objects?: boolean | null
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workspace_users_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "auth_users_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workspace_users_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workspaces: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          owner_id: string
+          primary_color: string | null
+          registration_enabled: boolean
+          theme: string | null
+          updated_at: string
+          welcome_message: string | null
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          owner_id: string
+          primary_color?: string | null
+          registration_enabled?: boolean
+          theme?: string | null
+          updated_at?: string
+          welcome_message?: string | null
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          owner_id?: string
+          primary_color?: string | null
+          registration_enabled?: boolean
+          theme?: string | null
+          updated_at?: string
+          welcome_message?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workspaces_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "auth_users_view"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       auth_users_view: {
@@ -1788,8 +1975,30 @@ export type Database = {
       }
     }
     Functions: {
+      admin_create_user: {
+        Args: {
+          email: string
+          password: string
+          first_name?: string
+          last_name?: string
+          workspace_id?: string
+          metadata_access?: boolean
+          data_access?: boolean
+        }
+        Returns: string
+      }
       clone_object_structure: {
         Args: { source_object_id: string; new_owner_id: string }
+        Returns: string
+      }
+      create_workspace_invitation: {
+        Args: {
+          workspace_id: string
+          email: string
+          metadata_access?: boolean
+          data_access?: boolean
+          expiry_days?: number
+        }
         Returns: string
       }
       delete_system_objects: {
@@ -1890,6 +2099,10 @@ export type Database = {
       sync_user_emails_to_profiles: {
         Args: Record<PropertyKey, never>
         Returns: undefined
+      }
+      user_is_admin_or_superadmin: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
       }
       user_is_collection_member: {
         Args: { collection_uuid: string }

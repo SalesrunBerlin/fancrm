@@ -16,8 +16,10 @@ export default function Auth() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [registrationSuccess, setRegistrationSuccess] = useState(false);
+  const [workspaceData, setWorkspaceData] = useState<any>(null);
   const navigate = useNavigate();
   const { user, login, signup } = useAuth();
+  const { workspaceId } = useParams<{ workspaceId?: string }>();
   
   // Redirect if already logged in
   useEffect(() => {
@@ -25,6 +27,37 @@ export default function Auth() {
       navigate("/dashboard");
     }
   }, [user, navigate]);
+
+  // Fetch workspace data if workspaceId is provided
+  useEffect(() => {
+    const fetchWorkspaceData = async () => {
+      if (workspaceId) {
+        try {
+          const { data, error } = await supabase
+            .from('workspaces')
+            .select('name, welcome_message, primary_color')
+            .eq('id', workspaceId)
+            .single();
+          
+          if (error) throw error;
+          
+          setWorkspaceData(data);
+          // Apply the workspace's primary color
+          document.documentElement.style.setProperty('--primary', data.primary_color);
+        } catch (error) {
+          console.error("Error fetching workspace data:", error);
+          toast.error("Workspace nicht gefunden");
+        }
+      }
+    };
+    
+    fetchWorkspaceData();
+    
+    // Reset the color when component unmounts
+    return () => {
+      document.documentElement.style.removeProperty('--primary');
+    };
+  }, [workspaceId]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -88,16 +121,20 @@ export default function Auth() {
     <div className="flex min-h-screen items-center justify-center bg-slate-50 p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1 text-center">
-          <CardTitle className="text-2xl font-bold">CRMbeauty</CardTitle>
+          <CardTitle className="text-2xl font-bold">
+            {workspaceData ? workspaceData.name : "CRMbeauty"}
+          </CardTitle>
           <CardDescription>
-            Melden Sie sich an, um Ihr Konto zu verwalten
+            {workspaceData ? workspaceData.welcome_message : "Melden Sie sich an, um Ihr Konto zu verwalten"}
           </CardDescription>
         </CardHeader>
         <Tabs defaultValue="login" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="login">Anmelden</TabsTrigger>
-            <TabsTrigger value="signup">Registrieren</TabsTrigger>
-          </TabsList>
+          {!workspaceId && (
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="login">Anmelden</TabsTrigger>
+              <TabsTrigger value="signup">Registrieren</TabsTrigger>
+            </TabsList>
+          )}
           <TabsContent value="login">
             <form onSubmit={handleLogin}>
               <CardContent className="space-y-4 pt-4">
@@ -137,71 +174,73 @@ export default function Auth() {
               </CardFooter>
             </form>
           </TabsContent>
-          <TabsContent value="signup">
-            {registrationSuccess ? (
-              <CardContent className="pt-6">
-                <div className="text-center space-y-4">
-                  <div className="rounded-full bg-green-100 w-12 h-12 mx-auto flex items-center justify-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6 text-green-600">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  </div>
-                  <h3 className="text-lg font-medium">Registrierung erfolgreich!</h3>
-                  <p className="text-muted-foreground">
-                    Bitte überprüfen Sie Ihr E-Mail-Postfach, um Ihr Konto zu bestätigen.
-                  </p>
-                  <ThemedButton 
-                    variant="outline" 
-                    className="mt-4" 
-                    onClick={() => setRegistrationSuccess(false)}
-                  >
-                    Zurück zur Registrierung
-                  </ThemedButton>
-                </div>
-              </CardContent>
-            ) : (
-              <form onSubmit={handleSignup}>
-                <CardContent className="space-y-4 pt-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-email">E-Mail</Label>
-                    <Input 
-                      id="signup-email" 
-                      type="email" 
-                      placeholder="name@beispiel.de" 
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      required
-                      disabled={loading}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-password">Passwort</Label>
-                    <Input 
-                      id="signup-password" 
-                      type="password" 
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
-                      disabled={loading}
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Passwort muss mindestens 6 Zeichen lang sein.
+          {!workspaceId && (
+            <TabsContent value="signup">
+              {registrationSuccess ? (
+                <CardContent className="pt-6">
+                  <div className="text-center space-y-4">
+                    <div className="rounded-full bg-green-100 w-12 h-12 mx-auto flex items-center justify-center">
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6 text-green-600">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                    <h3 className="text-lg font-medium">Registrierung erfolgreich!</h3>
+                    <p className="text-muted-foreground">
+                      Bitte überprüfen Sie Ihr E-Mail-Postfach, um Ihr Konto zu bestätigen.
                     </p>
+                    <ThemedButton 
+                      variant="outline" 
+                      className="mt-4" 
+                      onClick={() => setRegistrationSuccess(false)}
+                    >
+                      Zurück zur Registrierung
+                    </ThemedButton>
                   </div>
                 </CardContent>
-                <CardFooter>
-                  <ThemedButton type="submit" className="w-full" disabled={loading}>
-                    {loading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Registrierung...
-                      </>
-                    ) : "Registrieren"}
-                  </ThemedButton>
-                </CardFooter>
-              </form>
-            )}
-          </TabsContent>
+              ) : (
+                <form onSubmit={handleSignup}>
+                  <CardContent className="space-y-4 pt-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="signup-email">E-Mail</Label>
+                      <Input 
+                        id="signup-email" 
+                        type="email" 
+                        placeholder="name@beispiel.de" 
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        required
+                        disabled={loading}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="signup-password">Passwort</Label>
+                      <Input 
+                        id="signup-password" 
+                        type="password" 
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                        disabled={loading}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Passwort muss mindestens 6 Zeichen lang sein.
+                      </p>
+                    </div>
+                  </CardContent>
+                  <CardFooter>
+                    <ThemedButton type="submit" className="w-full" disabled={loading}>
+                      {loading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Registrierung...
+                        </>
+                      ) : "Registrieren"}
+                    </ThemedButton>
+                  </CardFooter>
+                </form>
+              )}
+            </TabsContent>
+          )}
         </Tabs>
       </Card>
     </div>
