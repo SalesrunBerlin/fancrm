@@ -1,7 +1,10 @@
 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { IconPreview } from "./IconPreview";
+import { IconVariantPreview } from "./IconVariantPreview";
+import { Button } from "@/components/ui/button";
+import { useState } from "react";
+import { Palette } from "lucide-react";
 
 interface ColorPickerProps {
   color: string;
@@ -10,6 +13,8 @@ interface ColorPickerProps {
 }
 
 export function ColorPicker({ color, setColor, processedSvgContent }: ColorPickerProps) {
+  const [showVariants, setShowVariants] = useState(false);
+
   return (
     <div className="space-y-6">
       <div>
@@ -29,13 +34,23 @@ export function ColorPicker({ color, setColor, processedSvgContent }: ColorPicke
         </div>
       </div>
       <div>
-        <Label>Vorschau</Label>
-        <div className="mt-2 border rounded-md p-6 bg-gray-50 flex items-center justify-center">
-          <IconPreview 
-            processedSvgContent={processedSvgContent}
-            color={color}
-          />
+        <div className="flex items-center justify-between mb-3">
+          <Label>Vorschau</Label>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => setShowVariants(!showVariants)}
+            className="text-xs"
+          >
+            <Palette className="w-4 h-4 mr-1" />
+            {showVariants ? 'Varianten ausblenden' : 'Farbvarianten anzeigen'}
+          </Button>
         </div>
+        <IconVariantPreview
+          processedSvgContent={processedSvgContent}
+          currentColor={color}
+          showVariants={showVariants}
+        />
       </div>
     </div>
   );

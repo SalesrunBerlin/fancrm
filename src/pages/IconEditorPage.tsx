@@ -92,6 +92,7 @@ export default function IconEditorPage() {
     const croppedDataUrl = offscreenCanvas.toDataURL();
     
     // Update the preview with the cropped image
+    // Fix: Use the setPreviewUrl from the useIconEditor hook
     setPreviewUrl(croppedDataUrl);
     setIsCropped(true);
     
