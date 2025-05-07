@@ -112,7 +112,7 @@ export function useReports() {
             user_id: userId,
             object_ids: report.objectIds,
             selected_fields: report.selectedFields as unknown as Record<string, any>[],
-            filters: report.filters || [],
+            filters: JSON.stringify(report.filters || []), // Convert FilterCondition[] to JSON string
           });
         }
         

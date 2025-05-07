@@ -19,7 +19,8 @@ export function UserTable({ users }: UserTableProps) {
     user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (user.profile?.first_name?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
     (user.profile?.last_name?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
-    (user.profile?.screen_name?.toLowerCase() || "").includes(searchTerm.toLowerCase())
+    (user.profile?.screen_name?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
+    (user.profile?.email?.toLowerCase() || "").includes(searchTerm.toLowerCase())
   );
 
   const getInitials = (firstName?: string, lastName?: string): string => {
@@ -32,7 +33,7 @@ export function UserTable({ users }: UserTableProps) {
       <div className="relative">
         <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
         <Input
-          placeholder="Search users..."
+          placeholder="Suche nach Benutzern..."
           className="pl-8"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
@@ -43,21 +44,21 @@ export function UserTable({ users }: UserTableProps) {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>User</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Screen Name</TableHead>
-              <TableHead>Role</TableHead>
-              <TableHead>Registered</TableHead>
-              <TableHead>Objects</TableHead>
-              <TableHead>Records</TableHead>
-              <TableHead>Actions</TableHead>
+              <TableHead>Benutzer</TableHead>
+              <TableHead>E-Mail</TableHead>
+              <TableHead>Anzeigename</TableHead>
+              <TableHead>Rolle</TableHead>
+              <TableHead>Registriert</TableHead>
+              <TableHead>Objekte</TableHead>
+              <TableHead>Datensätze</TableHead>
+              <TableHead>Aktionen</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredUsers.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={8} className="text-center py-4 text-muted-foreground">
-                  No users found matching your search
+                  Keine Benutzer gefunden, die Ihrer Suche entsprechen
                 </TableCell>
               </TableRow>
             ) : (
@@ -75,7 +76,7 @@ export function UserTable({ users }: UserTableProps) {
                       </span>
                     </div>
                   </TableCell>
-                  <TableCell>{user.email || user.id.substring(0, 8) + '@example.com'}</TableCell>
+                  <TableCell>{user.profile?.email || user.email || user.id.substring(0, 8) + '@example.com'}</TableCell>
                   <TableCell>{user.profile?.screen_name || user.id.substring(0, 8)}</TableCell>
                   <TableCell>{user.profile?.role || 'user'}</TableCell>
                   <TableCell>{new Date(user.created_at).toLocaleDateString()}</TableCell>
@@ -84,7 +85,7 @@ export function UserTable({ users }: UserTableProps) {
                   <TableCell>
                     <ThemedButton size="sm" variant="outline" asChild>
                       <Link to={`/admin/users/${user.id}`}>
-                        <Eye className="h-4 w-4 mr-1" /> View
+                        <Eye className="h-4 w-4 mr-1" /> Ansehen
                       </Link>
                     </ThemedButton>
                   </TableCell>

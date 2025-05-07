@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import {
   Card,
@@ -17,6 +16,7 @@ import { useColorPreference } from "@/hooks/useColorPreference";
 import { toast } from "sonner";
 import { Loader2, Check } from "lucide-react";
 import { ColorPicker } from "@/components/ui/color-picker";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function ProfilePage() {
   const { user, isSuperAdmin } = useAuth();
@@ -24,6 +24,7 @@ export default function ProfilePage() {
   
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
+  const [email, setEmail] = useState("");
   const [saving, setSaving] = useState(false);
   
   // User initials for avatar
@@ -40,8 +41,39 @@ export default function ProfilePage() {
   // Set initial form values from user data
   useEffect(() => {
     if (user) {
-      // This is just a placeholder - in a real app, you'd fetch profile data
-      // You might already have this data in user.user_metadata or you'd fetch it
+      // Set email from authenticated user
+      if (user.email) {
+        setEmail(user.email);
+      }
+      
+      // Fetch profile data from profiles table
+      const fetchProfileData = async () => {
+        try {
+          const { data, error } = await supabase
+            .from('profiles')
+            .select('first_name, last_name, email')
+            .eq('id', user.id)
+            .single();
+            
+          if (error) {
+            console.error("Error fetching profile:", error);
+            return;
+          }
+          
+          if (data) {
+            setFirstName(data.first_name || "");
+            setLastName(data.last_name || "");
+            // If profile has an email, use it, otherwise keep the one from auth
+            if (data.email) {
+              setEmail(data.email);
+            }
+          }
+        } catch (err) {
+          console.error("Error in profile fetch:", err);
+        }
+      };
+      
+      fetchProfileData();
     }
   }, [user]);
 
@@ -51,13 +83,28 @@ export default function ProfilePage() {
     setSaving(true);
     
     try {
-      // Save profile changes to your database
-      // Placeholder for profile update logic
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      toast.success("Profile updated successfully");
+      if (!user) {
+        throw new Error("No authenticated user");
+      }
+      
+      // Update profile in database
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          first_name: firstName,
+          last_name: lastName,
+          email: email,
+        })
+        .eq('id', user.id);
+        
+      if (error) {
+        throw error;
+      }
+      
+      toast.success("Profil erfolgreich aktualisiert");
     } catch (error: any) {
       console.error("Error updating profile:", error);
-      toast.error("Failed to update profile");
+      toast.error(`Fehler beim Aktualisieren des Profils: ${error.message}`);
     } finally {
       setSaving(false);
     }
@@ -79,22 +126,22 @@ export default function ProfilePage() {
 
   return (
     <div className="container mx-auto py-10">
-      <PageHeader title="Profile" description="Manage your profile settings" />
+      <PageHeader title="Profil" description="Verwalten Sie Ihre Profileinstellungen" />
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Profile Card */}
         <Card>
           <CardHeader>
-            <CardTitle>Profile Information</CardTitle>
-            <CardDescription>Update your personal details.</CardDescription>
+            <CardTitle>Profilinformationen</CardTitle>
+            <CardDescription>Aktualisieren Sie Ihre persönlichen Daten.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center space-x-4">
               <Avatar className="h-12 w-12">
-                <AvatarImage src="/avatar.png" alt={user.email || "User"} />
+                <AvatarImage src="/avatar.png" alt={email || "User"} />
                 <AvatarFallback>{getInitials()}</AvatarFallback>
               </Avatar>
               <div>
-                <p className="text-sm font-medium leading-none">{user.email}</p>
+                <p className="text-sm font-medium leading-none">{email}</p>
                 {isSuperAdmin && (
                   <p className="text-xs text-muted-foreground">Super Admin</p>
                 )}
@@ -104,36 +151,46 @@ export default function ProfilePage() {
               <div className="grid gap-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="first-name">First Name</Label>
+                    <Label htmlFor="first-name">Vorname</Label>
                     <Input
                       id="first-name"
                       type="text"
-                      placeholder="Enter your first name"
+                      placeholder="Geben Sie Ihren Vornamen ein"
                       value={firstName}
                       onChange={(e) => setFirstName(e.target.value)}
                     />
                   </div>
                   <div>
-                    <Label htmlFor="last-name">Last Name</Label>
+                    <Label htmlFor="last-name">Nachname</Label>
                     <Input
                       id="last-name"
                       type="text"
-                      placeholder="Enter your last name"
+                      placeholder="Geben Sie Ihren Nachnamen ein"
                       value={lastName}
                       onChange={(e) => setLastName(e.target.value)}
                     />
                   </div>
+                </div>
+                <div>
+                  <Label htmlFor="email">E-Mail-Adresse</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="name@beispiel.de"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                  />
                 </div>
               </div>
               <Button type="submit" disabled={saving} className="mt-4">
                 {saving ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Saving...
+                    Speichern...
                   </>
                 ) : (
                   <>
-                    Save Changes
+                    Änderungen speichern
                     <Check className="ml-2 h-4 w-4" />
                   </>
                 )}
@@ -145,18 +202,18 @@ export default function ProfilePage() {
         {/* Color Preference Card */}
         <Card>
           <CardHeader>
-            <CardTitle>Theme Preference</CardTitle>
-            <CardDescription>Customize the look of your application.</CardDescription>
+            <CardTitle>Farbpräferenz</CardTitle>
+            <CardDescription>Passen Sie das Erscheinungsbild Ihrer Anwendung an.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-4">
               <div>
-                <Label htmlFor="color-picker">Choose Your Theme Color</Label>
+                <Label htmlFor="color-picker">Wählen Sie Ihre Themenfarbe</Label>
                 <div className="mt-2">
                   {colorLoading ? (
                     <div className="flex items-center">
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Loading color preferences...
+                      Lade Farbpräferenzen...
                     </div>
                   ) : (
                     <ColorPicker 

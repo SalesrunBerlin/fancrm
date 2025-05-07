@@ -936,6 +936,7 @@ export type Database = {
           avatar_url: string | null
           company: string | null
           created_at: string
+          email: string | null
           favorite_color: string | null
           first_name: string | null
           id: string
@@ -948,6 +949,7 @@ export type Database = {
           avatar_url?: string | null
           company?: string | null
           created_at?: string
+          email?: string | null
           favorite_color?: string | null
           first_name?: string | null
           id: string
@@ -960,6 +962,7 @@ export type Database = {
           avatar_url?: string | null
           company?: string | null
           created_at?: string
+          email?: string | null
           favorite_color?: string | null
           first_name?: string | null
           id?: string
@@ -1705,6 +1708,10 @@ export type Database = {
           new_order_1: number
           new_order_2: number
         }
+        Returns: undefined
+      }
+      sync_user_emails_to_profiles: {
+        Args: Record<PropertyKey, never>
         Returns: undefined
       }
       user_is_collection_member: {

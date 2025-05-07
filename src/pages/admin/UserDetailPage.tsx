@@ -42,7 +42,7 @@ export default function UserDetailPage() {
         // Fetch user profile
         const { data: profileData, error: profileError } = await supabase
           .from('profiles')
-          .select('id, first_name, last_name, role, screen_name, created_at')
+          .select('id, first_name, last_name, role, screen_name, email, created_at')
           .eq('id', userId)
           .single();
         
@@ -141,9 +141,10 @@ export default function UserDetailPage() {
         
         setUserObjects(processedObjects);
         
-        // Find real email from our userEmails data
+        // Find real email from our userEmails data if profile email is not available
         const userEmailEntry = userEmails.find(ue => ue.id === profileData.id);
-        const email = userEmailEntry?.email || `user-${profileData.id.substring(0, 8)}@example.com`;
+        // Prefer profile email, fall back to auth email
+        const email = profileData.email || (userEmailEntry?.email || `user-${profileData.id.substring(0, 8)}@example.com`);
         
         setUser({
           id: profileData.id,
@@ -153,6 +154,7 @@ export default function UserDetailPage() {
             first_name: profileData.first_name,
             last_name: profileData.last_name,
             screen_name: profileData.screen_name || profileData.id.substring(0, 8),
+            email: profileData.email,
             role: profileData.role
           },
           stats: {

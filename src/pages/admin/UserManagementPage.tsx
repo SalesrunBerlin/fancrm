@@ -21,6 +21,7 @@ export interface UserSummary {
     first_name?: string;
     last_name?: string;
     screen_name?: string;
+    email?: string;
     role?: string;
   };
   stats?: {
@@ -60,7 +61,7 @@ export default function UserManagementPage() {
         // Fetch profiles which have user data
         const { data: profilesData, error: profilesError } = await supabase
           .from('profiles')
-          .select('id, first_name, last_name, role, screen_name, created_at');
+          .select('id, first_name, last_name, role, screen_name, email, created_at');
         
         if (profilesError) {
           console.error("Error fetching profiles:", profilesError);
@@ -81,14 +82,15 @@ export default function UserManagementPage() {
         // Enrich each profile with object counts
         const enrichedUsers = await Promise.all(
           profilesData.map(async (profile) => {
-            // Find real email from our userEmails data
+            // Find real email from our userEmails data (fallback if profile doesn't have email)
             const userEmailEntry = userEmails.find(ue => ue.id === profile.id);
             
             // Log the email match attempt
             console.log(`Looking for email for user ${profile.id}: `, 
                           userEmailEntry ? `Found: ${userEmailEntry.email}` : "Not found");
             
-            const email = userEmailEntry?.email || `user-${profile.id.substring(0, 8)}@example.com`;
+            // Use profile email if available, otherwise fallback to auth email or default
+            const email = profile.email || (userEmailEntry?.email || `user-${profile.id.substring(0, 8)}@example.com`);
             
             // Get object counts
             const { data: objectsData } = await supabase
@@ -116,6 +118,7 @@ export default function UserManagementPage() {
                 first_name: profile.first_name,
                 last_name: profile.last_name,
                 screen_name: profile.screen_name || profile.id.substring(0, 8),
+                email: profile.email,
                 role: profile.role
               },
               stats: {
@@ -155,20 +158,20 @@ export default function UserManagementPage() {
   return (
     <div className="space-y-6">
       <PageHeader 
-        title="User Management" 
-        description="Manage users, view statistics, and monitor activity"
+        title="Benutzerverwaltung" 
+        description="Verwalten Sie Benutzer, sehen Sie Statistiken ein und überwachen Sie Aktivitäten"
       />
       
       <Tabs defaultValue="users">
         <TabsList className="mb-4">
-          <TabsTrigger value="users">Users</TabsTrigger>
-          <TabsTrigger value="statistics">Statistics</TabsTrigger>
+          <TabsTrigger value="users">Benutzer</TabsTrigger>
+          <TabsTrigger value="statistics">Statistiken</TabsTrigger>
         </TabsList>
         
         <TabsContent value="users">
           <Card>
             <CardHeader>
-              <CardTitle>Registered Users ({users.length})</CardTitle>
+              <CardTitle>Registrierte Benutzer ({users.length})</CardTitle>
             </CardHeader>
             <CardContent>
               <UserTable users={users} />
