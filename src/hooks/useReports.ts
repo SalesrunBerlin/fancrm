@@ -1,3 +1,4 @@
+
 import { useCallback, useState, useEffect } from "react";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { ReportDefinition, ReportField } from "@/types/report";
@@ -56,8 +57,8 @@ export function useReports() {
           name: item.name,
           description: item.description || "",
           objectIds: item.object_ids,
-          selectedFields: item.selected_fields as ReportField[],
-          filters: (item.filters || []) as FilterCondition[],
+          selectedFields: item.selected_fields as unknown as ReportField[],
+          filters: (item.filters || []) as unknown as FilterCondition[],
           created_at: item.created_at,
           updated_at: item.updated_at
         }));
@@ -106,15 +107,12 @@ export function useReports() {
         for (const report of localReports) {
           // Insert reports one by one to avoid type issues
           await supabase.from("reports").insert({
-            id: report.id,
             name: report.name,
             description: report.description || "",
             user_id: userId,
             object_ids: report.objectIds,
-            selected_fields: report.selectedFields,
+            selected_fields: report.selectedFields as unknown as Record<string, any>[],
             filters: report.filters || [],
-            created_at: report.created_at,
-            updated_at: report.updated_at
           });
         }
         
@@ -177,7 +175,7 @@ export function useReports() {
           description: newReport.description,
           user_id: userId,
           object_ids: newReport.objectIds,
-          selected_fields: newReport.selectedFields,
+          selected_fields: newReport.selectedFields as unknown as Record<string, any>[],
           filters: JSON.stringify(newReport.filters) // Convert FilterCondition[] to JSON string
         });
         
@@ -222,7 +220,7 @@ export function useReports() {
       if (updates.name) dbUpdates.name = updates.name;
       if (updates.description !== undefined) dbUpdates.description = updates.description;
       if (updates.objectIds) dbUpdates.object_ids = updates.objectIds;
-      if (updates.selectedFields) dbUpdates.selected_fields = updates.selectedFields;
+      if (updates.selectedFields) dbUpdates.selected_fields = updates.selectedFields as unknown as Record<string, any>[];
       if (updates.filters) dbUpdates.filters = JSON.stringify(updates.filters); // Convert FilterCondition[] to JSON string
       
       // Update in database
@@ -326,7 +324,7 @@ export function useReports() {
           description: newReport.description,
           user_id: userId,
           object_ids: newReport.objectIds,
-          selected_fields: newReport.selectedFields,
+          selected_fields: newReport.selectedFields as unknown as Record<string, any>[],
           filters: JSON.stringify(newReport.filters) // Convert FilterCondition[] to JSON string
         });
         

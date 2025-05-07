@@ -1,3 +1,4 @@
+
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { Toaster } from "sonner"; 
 import { Layout } from "@/components/layout/Layout";
@@ -106,14 +107,12 @@ function App() {
               <Route path="/actions/mass/:actionId" element={<MassActionPage />} />
               
               {/* Admin routes - only accessible to SuperAdmin users */}
-              <Route element={<SuperAdminRoute><Layout /></SuperAdminRoute>}>
-                <Route path="/admin" element={<AdminDashboard />} />
-                <Route path="/admin/help-content" element={<HelpContentEditor />} />
-                <Route path="/admin/help-tabs" element={<HelpTabsManager />} />
-                <Route path="/admin/help-content/:tabId" element={<HelpTabContentEditor />} />
-                <Route path="/admin/users" element={<UserManagementPage />} />
-                <Route path="/admin/users/:userId" element={<UserDetailPage />} />
-              </Route>
+              <Route path="/admin" element={<SuperAdminRoute><AdminDashboard /></SuperAdminRoute>} />
+              <Route path="/admin/help-content" element={<SuperAdminRoute><HelpContentEditor /></SuperAdminRoute>} />
+              <Route path="/admin/help-tabs" element={<SuperAdminRoute><HelpTabsManager /></SuperAdminRoute>} />
+              <Route path="/admin/help-content/:tabId" element={<SuperAdminRoute><HelpTabContentEditor /></SuperAdminRoute>} />
+              <Route path="/admin/users" element={<SuperAdminRoute><UserManagementPage /></SuperAdminRoute>} />
+              <Route path="/admin/users/:userId" element={<SuperAdminRoute><UserDetailPage /></SuperAdminRoute>} />
             </Route>
           </Routes>
           <Toaster richColors position="top-right" />

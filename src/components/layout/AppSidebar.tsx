@@ -32,7 +32,7 @@ const navigationItems = [
 
 export function AppSidebar() {
   const { pathname } = useLocation();
-  const { openMobile, setOpenMobile } = useSidebar();
+  const { open, setOpen, openMobile, setOpenMobile } = useSidebar();
   const { applications, isLoading: isLoadingApps } = useApplications();
   const [defaultApplicationId, setDefaultApplicationId] = useState<string | null>(null);
   const { applicationObjects, isLoading: isLoadingObjects } = useApplicationObjects(defaultApplicationId || undefined);
@@ -41,7 +41,8 @@ export function AppSidebar() {
   // Close sidebar on route change
   useEffect(() => {
     setOpenMobile(false);
-  }, [pathname, setOpenMobile]);
+    setOpen(false);
+  }, [pathname, setOpenMobile, setOpen]);
 
   // Find the default application
   useEffect(() => {
@@ -63,6 +64,7 @@ export function AppSidebar() {
   // Handler to close sidebar when clicking on any navigation item
   const handleNavClick = () => {
     setOpenMobile(false);
+    setOpen(false); // Also close the desktop sidebar
   };
 
   return (
