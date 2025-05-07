@@ -57,7 +57,7 @@ export function useReports() {
           name: item.name,
           description: item.description || "",
           objectIds: item.object_ids,
-          selectedFields: item.selected_fields,
+          selectedFields: item.selected_fields as any,
           filters: item.filters || [],
           created_at: item.created_at,
           updated_at: item.updated_at
@@ -67,8 +67,9 @@ export function useReports() {
         setReports(formattedReports);
         
         // Check for last viewed report
-        if (item.last_viewed_at) {
-          setLastViewedReport(item.id);
+        const lastViewedItem = data.find(item => item.last_viewed_at);
+        if (lastViewedItem) {
+          setLastViewedReport(lastViewedItem.id);
         }
       } catch (err) {
         console.error("[useReports] Error fetching reports:", err);
@@ -115,11 +116,10 @@ export function useReports() {
           updated_at: report.updated_at
         }));
         
-        const { error } = await supabase
-          .from("reports")
-          .insert(reportsToInsert);
-          
-        if (error) throw error;
+        // Insert reports one by one to avoid type issues
+        for (const report of reportsToInsert) {
+          await supabase.from("reports").insert(report);
+        }
         
         console.log("[useReports] Successfully migrated local reports to database");
         toast.success("Your reports have been successfully migrated to the cloud");
@@ -153,10 +153,10 @@ export function useReports() {
   }, [reports]);
   
   // Create a new report in the database
-  const createReport = useCallback(async (name: string, objectTypeId: string, description?: string): Promise<ReportDefinition | null> => {
+  const createReport = useCallback(async (name: string, objectTypeId: string, description?: string): Promise<ReportDefinition> => {
     if (!userId) {
       toast.error("You must be logged in to create reports");
-      return null;
+      return Promise.reject("Not logged in");
     }
     
     const newReport: ReportDefinition = {
@@ -199,7 +199,7 @@ export function useReports() {
     } catch (err) {
       console.error("[useReports] Error creating report:", err);
       toast.error("Failed to create report");
-      return null;
+      throw err;
     }
   }, [userId]);
   

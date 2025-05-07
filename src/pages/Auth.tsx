@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -30,11 +31,15 @@ export default function Auth() {
     setLoading(true);
     
     try {
-      await login(email, password);
-      navigate("/dashboard");
+      const { error } = await login(email, password);
+      if (!error) {
+        navigate("/dashboard");
+      }
+      // Error is shown via toast in login method
     } catch (error) {
-      // Error is already handled in login method
-      // Just reset loading state
+      // Fallback error handling
+      console.error("Unhandled login error:", error);
+      toast.error("An unexpected error occurred. Please try again.");
     } finally {
       setLoading(false);
     }

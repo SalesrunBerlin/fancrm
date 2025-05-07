@@ -14,7 +14,7 @@ export function findDuplicates(
   headers: string[],
   mappings: Record<string, string>,
   existingRecords: Record<string, any>[],
-  fields: { api_name: string; name: string; type: string | FieldType }[]
+  fields: { api_name: string; name: string; type: string }[]
 ): DuplicateRecord[] {
   const duplicates: DuplicateRecord[] = [];
   
@@ -66,7 +66,7 @@ export function findDuplicates(
         });
         
         // Gather matching field values for display
-        const matchingFieldDetails = matchingFields.map(fieldApiName => {
+        const matchDetails = matchingFields.map(fieldApiName => {
           const field = fields.find(f => f.api_name === fieldApiName);
           return {
             fieldName: field ? field.name : fieldApiName,
@@ -82,8 +82,9 @@ export function findDuplicates(
           matchType: isEmailMatch ? 'email_match' : 'field_match',
           sourceRecord: csvRecord,
           existingRecord,
-          matchingFields: matchingFieldDetails,
-          existingRecordId: existingRecord.id
+          matchingFields: matchingFieldNames,
+          existingRecordId: existingRecord.id,
+          fields: {}
         });
       }
     });

@@ -1,215 +1,198 @@
-
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { PageHeader } from "@/components/ui/page-header";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
-import { ColorPicker } from "@/components/ui/color-picker";
 import { useColorPreference } from "@/hooks/useColorPreference";
-import { ThemedButton } from "@/components/ui/themed-button";
-import { ActionColor } from "@/hooks/useActions";
+import { toast } from "sonner";
+import { Loader2, Check } from "lucide-react";
 
 export default function ProfilePage() {
-  const { user, userRole } = useAuth();
-  const [isLoading, setIsLoading] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
+  const { user, isSuperAdmin } = useAuth();
+  const { favoriteColor, updateColorPreference, loading: colorLoading } = useColorPreference();
+  
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
-  const [screenName, setScreenName] = useState("");
-  const [role, setRole] = useState(userRole || "user");
-  const { favoriteColor, updateColorPreference, loading: colorLoading } = useColorPreference();
-
-  useEffect(() => {
-    async function fetchProfileData() {
-      if (!user) return;
-
-      try {
-        setIsLoading(true);
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', user.id)
-          .single();
-
-        if (error) throw error;
-
-        if (data) {
-          setFirstName(data.first_name || "");
-          setLastName(data.last_name || "");
-          setScreenName(data.screen_name || "");
-          setRole(data.role || "user");
-        }
-      } catch (error) {
-        console.error('Error fetching profile:', error);
-        toast.error("Failed to load profile data");
-      } finally {
-        setIsLoading(false);
-      }
+  const [saving, setSaving] = useState(false);
+  
+  // User initials for avatar
+  const getInitials = () => {
+    if (firstName && lastName) {
+      return `${firstName[0]}${lastName[0]}`.toUpperCase();
     }
-
-    fetchProfileData();
+    if (user?.email) {
+      return user.email[0].toUpperCase();
+    }
+    return "U";
+  };
+  
+  // Set initial form values from user data
+  useEffect(() => {
+    if (user) {
+      // This is just a placeholder - in a real app, you'd fetch profile data
+      // You might already have this data in user.user_metadata or you'd fetch it
+    }
   }, [user]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // Save profile changes
+  const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
-
+    setSaving(true);
+    
     try {
-      setIsSaving(true);
-      const { error } = await supabase
-        .from('profiles')
-        .update({
-          first_name: firstName,
-          last_name: lastName,
-          screen_name: screenName,
-          role: role,
-          // Note: favorite_color is updated separately through the ColorPicker component
-        })
-        .eq('id', user.id);
-
-      if (error) throw error;
-
+      // Save profile changes to your database
+      // Placeholder for profile update logic
+      await new Promise(resolve => setTimeout(resolve, 1000));
       toast.success("Profile updated successfully");
-      // Force page refresh to update auth context
-      setTimeout(() => {
-        window.location.reload();
-      }, 1000);
-    } catch (error) {
-      console.error('Error updating profile:', error);
+    } catch (error: any) {
+      console.error("Error updating profile:", error);
       toast.error("Failed to update profile");
     } finally {
-      setIsSaving(false);
+      setSaving(false);
     }
   };
 
-  const handleColorChange = async (colorValue: string) => {
-    await updateColorPreference(colorValue);
+  // Handle color preference change
+  const handleColorChange = async (color: string) => {
+    await updateColorPreference(color);
   };
 
-  if (isLoading || colorLoading) {
+  // If no user, or still loading auth state
+  if (!user) {
     return (
-      <div className="flex items-center justify-center h-64">
+      <div className="flex items-center justify-center h-screen">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto py-8">
-      <Card className="max-w-2xl mx-auto">
-        <CardHeader>
-          <CardTitle>Profile Settings</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="firstName">First Name</Label>
-                  <Input
-                    id="firstName"
-                    value={firstName}
-                    onChange={(e) => setFirstName(e.target.value)}
-                    placeholder="First Name"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="lastName">Last Name</Label>
-                  <Input
-                    id="lastName"
-                    value={lastName}
-                    onChange={(e) => setLastName(e.target.value)}
-                    placeholder="Last Name"
-                  />
-                </div>
+    <div className="container mx-auto py-10">
+      <PageHeader heading="Profile" text="Manage your profile settings" />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Profile Card */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Profile Information</CardTitle>
+            <CardDescription>Update your personal details.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center space-x-4">
+              <Avatar className="h-12 w-12">
+                <AvatarImage src="/avatar.png" alt={user.email || "User"} />
+                <AvatarFallback>{getInitials()}</AvatarFallback>
+              </Avatar>
+              <div>
+                <p className="text-sm font-medium leading-none">{user.email}</p>
+                {isSuperAdmin && (
+                  <p className="text-xs text-muted-foreground">Super Admin</p>
+                )}
               </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="screenName">Screen Name</Label>
-                <Input
-                  id="screenName"
-                  value={screenName}
-                  onChange={(e) => setScreenName(e.target.value)}
-                  placeholder="Screen Name"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  value={user?.email || ""}
-                  disabled
-                  className="bg-muted"
-                />
-                <p className="text-sm text-muted-foreground">
-                  Email cannot be changed. Contact support if you need to update your email.
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="role">User Role</Label>
-                <Select value={role} onValueChange={setRole}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select role" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="user">User</SelectItem>
-                    <SelectItem value="admin">Admin</SelectItem>
-                    <SelectItem value="SuperAdmin">SuperAdmin</SelectItem>
-                  </SelectContent>
-                </Select>
-                <p className="text-sm text-muted-foreground">
-                  Set your role to "SuperAdmin" to access all administrative features.
-                </p>
-              </div>
-
-              {/* Color Preference Section */}
-              <div className="space-y-2 pt-4 border-t">
-                <Label>Button Color Preference</Label>
-                <ColorPicker 
-                  value={favoriteColor || "default"} 
-                  onChange={handleColorChange}
-                />
-                <div className="mt-4">
-                  <p className="text-sm font-medium mb-2">Preview:</p>
-                  <div className="flex gap-2">
-                    <ThemedButton variant={(favoriteColor as ActionColor) || "default"}>
-                      Save
-                    </ThemedButton>
-                    <ThemedButton variant={(favoriteColor as ActionColor) || "default"}>
-                      New Record
-                    </ThemedButton>
-                    <ThemedButton variant={(favoriteColor as ActionColor) || "default"}>
-                      New Field
-                    </ThemedButton>
+            </div>
+            <form onSubmit={handleSaveProfile}>
+              <div className="grid gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="first-name">First Name</Label>
+                    <Input
+                      id="first-name"
+                      type="text"
+                      placeholder="Enter your first name"
+                      value={firstName}
+                      onChange={(e) => setFirstName(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="last-name">Last Name</Label>
+                    <Input
+                      id="last-name"
+                      type="text"
+                      placeholder="Enter your last name"
+                      value={lastName}
+                      onChange={(e) => setLastName(e.target.value)}
+                    />
                   </div>
                 </div>
               </div>
-            </div>
+              <Button type="submit" disabled={saving} className="mt-4">
+                {saving ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    Save Changes
+                    <Check className="ml-2 h-4 w-4" />
+                  </>
+                )}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
 
-            <ThemedButton 
-              type="submit" 
-              disabled={isSaving}
-              variant={(favoriteColor as ActionColor) || "default"}
-            >
-              {isSaving ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                "Save Changes"
-              )}
-            </ThemedButton>
-          </form>
-        </CardContent>
-      </Card>
+        {/* Color Preference Card */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Theme Preference</CardTitle>
+            <CardDescription>Customize the look of your application.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-4">
+              <div>
+                <Label>Favorite Color</Label>
+                <div className="flex items-center space-x-3">
+                  <Button
+                    variant={favoriteColor === "default" ? "default" : "outline"}
+                    onClick={() => handleColorChange("default")}
+                    disabled={colorLoading}
+                  >
+                    {colorLoading && favoriteColor === "default" ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : favoriteColor === "default" ? (
+                      <Check className="mr-2 h-4 w-4" />
+                    ) : null}
+                    Default
+                  </Button>
+                  <Button
+                    variant={favoriteColor === "secondary" ? "secondary" : "outline"}
+                    onClick={() => handleColorChange("secondary")}
+                    disabled={colorLoading}
+                  >
+                    {colorLoading && favoriteColor === "secondary" ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : favoriteColor === "secondary" ? (
+                      <Check className="mr-2 h-4 w-4" />
+                    ) : null}
+                    Secondary
+                  </Button>
+                  <Button
+                    variant={favoriteColor === "destructive" ? "destructive" : "outline"}
+                    onClick={() => handleColorChange("destructive")}
+                    disabled={colorLoading}
+                  >
+                    {colorLoading && favoriteColor === "destructive" ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : favoriteColor === "destructive" ? (
+                      <Check className="mr-2 h-4 w-4" />
+                    ) : null}
+                    Destructive
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

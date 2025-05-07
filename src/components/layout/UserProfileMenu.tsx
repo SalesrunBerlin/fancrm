@@ -16,11 +16,11 @@ import { useNavigate } from "react-router-dom";
 import { ThemedButton } from "@/components/ui/themed-button";
 
 export function UserProfileMenu() {
-  const { user, logout, isSuperAdmin } = useAuth();
+  const { user, signOut, isSuperAdmin } = useAuth();
   const navigate = useNavigate();
   
   const handleLogout = async () => {
-    await logout();
+    await signOut();
     navigate("/auth");
   };
 

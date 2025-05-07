@@ -104,5 +104,14 @@ export enum FieldType {
   CHECKBOX = "checkbox"
 }
 
+// Report field type
+export interface ReportField {
+  objectTypeId: string;
+  fieldApiName: string;
+  displayName: string;
+  isVisible: boolean;
+  order: number;
+}
+
 // Export Object types
 export * from "./ObjectFieldTypes";
