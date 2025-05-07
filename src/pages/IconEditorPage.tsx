@@ -1,3 +1,4 @@
+
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { fabric } from "fabric";
@@ -11,7 +12,10 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowLeft, Save, Loader2, ChevronRight, ChevronLeft, Pentagon, PaintBucket, Image } from "lucide-react";
+import { 
+  ArrowLeft, Save, Loader2, ChevronRight, ChevronLeft, 
+  Image, PaintBucket, Square, Crop, AlertTriangle 
+} from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -21,6 +25,7 @@ import {
 } from "@/components/ui/dialog";
 
 type EditorStep = "upload" | "crop" | "threshold" | "colorize" | "save";
+type ThresholdLevel = 1 | 2 | 3 | 4 | 5;
 
 export default function IconEditorPage() {
   const { user } = useAuth();
@@ -34,15 +39,15 @@ export default function IconEditorPage() {
   const [step, setStep] = useState<EditorStep>("upload");
   const [svgContent, setSvgContent] = useState<string | null>(null);
   const [processedSvgContent, setProcessedSvgContent] = useState<string | null>(null);
-  const [thresholdValue, setThresholdValue] = useState(128);
+  const [thresholdLevel, setThresholdLevel] = useState<ThresholdLevel>(3);
   const [showHelp, setShowHelp] = useState(false);
+  const [isCropped, setIsCropped] = useState(false);
   
   // Canvas references
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fabricCanvasRef = useRef<fabric.Canvas | null>(null);
   const imageRef = useRef<fabric.Image | null>(null);
-  const polygonRef = useRef<fabric.Polygon | null>(null);
-  const pointsRef = useRef<fabric.Point[]>([]);
+  const rectRef = useRef<fabric.Rect | null>(null);
   
   // Set up canvas when the component mounts or step changes
   useEffect(() => {
@@ -72,33 +77,30 @@ export default function IconEditorPage() {
         
         imageRef.current = img;
         fabricCanvasRef.current?.add(img);
-        fabricCanvasRef.current?.renderAll();
-      });
-      
-      // Set up polygon drawing mode
-      fabricCanvasRef.current.on("mouse:down", (options) => {
-        if (!options.pointer) return;
         
-        const pointer = fabricCanvasRef.current?.getPointer(options.e);
-        if (!pointer) return;
+        // Add crop rectangle (centered on the image)
+        const imgWidth = img.width! * scale;
+        const imgHeight = img.height! * scale;
+        const rectWidth = imgWidth * 0.8;
+        const rectHeight = imgHeight * 0.8;
         
-        pointsRef.current.push(new fabric.Point(pointer.x, pointer.y));
+        rectRef.current = new fabric.Rect({
+          left: img.left! + imgWidth * 0.1,
+          top: img.top! + imgHeight * 0.1,
+          width: rectWidth,
+          height: rectHeight,
+          fill: "rgba(0,0,0,0.1)",
+          stroke: "#0000FF",
+          strokeWidth: 2,
+          strokeDashArray: [5, 5],
+          cornerColor: "#0000FF",
+          transparentCorners: false,
+          cornerSize: 10,
+          hasRotatingPoint: false,
+        });
         
-        // If this is the first point, create a new polygon
-        if (pointsRef.current.length === 1) {
-          polygonRef.current = new fabric.Polygon(pointsRef.current, {
-            fill: "rgba(0,0,0,0.2)",
-            stroke: "#0000FF",
-            strokeWidth: 2,
-            selectable: false,
-            objectCaching: false,
-          });
-          fabricCanvasRef.current?.add(polygonRef.current);
-        } else {
-          // Update the existing polygon with new points
-          polygonRef.current?.set({ points: pointsRef.current });
-        }
-        
+        fabricCanvasRef.current?.add(rectRef.current);
+        fabricCanvasRef.current?.setActiveObject(rectRef.current);
         fabricCanvasRef.current?.renderAll();
       });
       
@@ -109,70 +111,177 @@ export default function IconEditorPage() {
     }
     
     if (step === "threshold" && canvasRef.current && imageRef.current) {
-      // Set up threshold canvas
-      const ctx = canvasRef.current.getContext("2d");
-      if (!ctx) return;
-      
-      // Apply the crop and threshold to the image
+      // Apply the threshold to the cropped image if needed
       applyThreshold();
     }
   }, [step, previewUrl]);
   
-  // Apply threshold when the threshold value changes
+  // Apply threshold when the threshold level changes
   useEffect(() => {
     if (step === "threshold") {
       applyThreshold();
     }
-  }, [thresholdValue]);
+  }, [thresholdLevel]);
+  
+  const getThresholdValue = (level: ThresholdLevel): number => {
+    // Map the 5 levels to threshold values (0-255)
+    switch (level) {
+      case 1: return 50;  // Very light (mostly black)
+      case 2: return 100;
+      case 3: return 150; // Medium
+      case 4: return 200;
+      case 5: return 225; // Very dark (mostly white)
+      default: return 150;
+    }
+  };
+  
+  const cropImage = () => {
+    if (!fabricCanvasRef.current || !imageRef.current || !rectRef.current) return;
+    
+    const canvas = fabricCanvasRef.current;
+    const rect = rectRef.current;
+    const img = imageRef.current;
+    
+    // Create offscreen canvas for cropping
+    const offscreenCanvas = document.createElement("canvas");
+    const ctx = offscreenCanvas.getContext("2d");
+    if (!ctx) return;
+    
+    // Get the image element
+    const imgEl = img.getElement() as HTMLImageElement;
+    
+    // Get the crop dimensions in relation to the scaled image
+    const scaleX = img.scaleX || 1;
+    const scaleY = img.scaleY || 1;
+    const imgLeft = img.left || 0;
+    const imgTop = img.top || 0;
+    const rectLeft = rect.left || 0;
+    const rectTop = rect.top || 0;
+    
+    // Calculate the crop area in relation to the original image
+    const cropX = (rectLeft - imgLeft) / scaleX;
+    const cropY = (rectTop - imgTop) / scaleY;
+    const cropWidth = rect.width! / scaleX;
+    const cropHeight = rect.height! / scaleY;
+    
+    // Set the canvas dimensions to the crop size
+    offscreenCanvas.width = cropWidth;
+    offscreenCanvas.height = cropHeight;
+    
+    // Draw the cropped portion
+    ctx.drawImage(
+      imgEl,
+      cropX, cropY, cropWidth, cropHeight,
+      0, 0, cropWidth, cropHeight
+    );
+    
+    // Create a new image from the cropped canvas
+    const croppedDataUrl = offscreenCanvas.toDataURL();
+    
+    // Update the preview with the cropped image
+    setPreviewUrl(croppedDataUrl);
+    setIsCropped(true);
+    
+    // Recreate the canvas with the cropped image
+    canvas.dispose();
+    fabricCanvasRef.current = null;
+    
+    fabric.Image.fromURL(croppedDataUrl, (newImg) => {
+      // Create new canvas for the cropped image
+      fabricCanvasRef.current = new fabric.Canvas(canvasRef.current, {
+        width: 500,
+        height: 500,
+        backgroundColor: "#f0f0f0",
+      });
+      
+      // Scale the image to fit within the canvas
+      const scale = Math.min(
+        (500) / newImg.width!, 
+        (500) / newImg.height!
+      ) * 0.8;
+      
+      newImg.scale(scale);
+      newImg.set({
+        left: 250 - (newImg.width! * scale / 2),
+        top: 250 - (newImg.height! * scale / 2),
+        selectable: false,
+        hoverCursor: "default",
+      });
+      
+      imageRef.current = newImg;
+      fabricCanvasRef.current.add(newImg);
+      fabricCanvasRef.current.renderAll();
+    });
+  };
   
   const applyThreshold = () => {
-    if (!canvasRef.current || !imageRef.current) return;
+    if (!canvasRef.current) return;
     
     const canvas = canvasRef.current;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     
-    // Clear canvas
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    // If we have a cropped image or original image
+    const imgSrc = previewUrl;
+    if (!imgSrc) return;
     
-    // Create an offscreen canvas to process the image
-    const offscreenCanvas = document.createElement("canvas");
-    const offCtx = offscreenCanvas.getContext("2d");
-    if (!offCtx) return;
+    // Create an image element for processing
+    const img = new Image();
+    img.onload = () => {
+      // Clear canvas
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      
+      // Create an offscreen canvas to process the image
+      const offscreenCanvas = document.createElement("canvas");
+      const offCtx = offscreenCanvas.getContext("2d");
+      if (!offCtx) return;
+      
+      // Set dimensions
+      offscreenCanvas.width = img.width;
+      offscreenCanvas.height = img.height;
+      
+      // Draw the image onto the offscreen canvas
+      offCtx.drawImage(img, 0, 0);
+      
+      // Get image data
+      const imageData = offCtx.getImageData(0, 0, offscreenCanvas.width, offscreenCanvas.height);
+      const data = imageData.data;
+      
+      // Get threshold value based on level
+      const thresholdValue = getThresholdValue(thresholdLevel);
+      
+      // Apply threshold
+      for (let i = 0; i < data.length; i += 4) {
+        const brightness = (data[i] + data[i + 1] + data[i + 2]) / 3;
+        const value = brightness >= thresholdValue ? 255 : 0;
+        data[i] = value;     // Red
+        data[i + 1] = value; // Green
+        data[i + 2] = value; // Blue
+      }
+      
+      // Put the image data back
+      offCtx.putImageData(imageData, 0, 0);
+      
+      // Draw the processed image on the visible canvas
+      canvas.width = offscreenCanvas.width;
+      canvas.height = offscreenCanvas.height;
+      ctx.drawImage(offscreenCanvas, 0, 0);
+      
+      // Generate SVG from the threshold image
+      const svg = generateSVGFromCanvas(offscreenCanvas);
+      setProcessedSvgContent(svg);
+      
+      // Scale the canvas display for better view
+      const scale = Math.min(
+        300 / canvas.width,
+        300 / canvas.height
+      );
+      canvas.style.width = `${canvas.width * scale}px`;
+      canvas.style.height = `${canvas.height * scale}px`;
+    };
     
-    // Set dimensions
-    const imgElement = imageRef.current.getElement() as HTMLImageElement;
-    offscreenCanvas.width = imgElement.width;
-    offscreenCanvas.height = imgElement.height;
-    
-    // Draw the image onto the offscreen canvas
-    offCtx.drawImage(imgElement, 0, 0);
-    
-    // Get image data
-    const imageData = offCtx.getImageData(0, 0, offscreenCanvas.width, offscreenCanvas.height);
-    const data = imageData.data;
-    
-    // Apply threshold
-    for (let i = 0; i < data.length; i += 4) {
-      const brightness = (data[i] + data[i + 1] + data[i + 2]) / 3;
-      const value = brightness >= thresholdValue ? 255 : 0;
-      data[i] = value;     // Red
-      data[i + 1] = value; // Green
-      data[i + 2] = value; // Blue
-    }
-    
-    // Put the image data back
-    offCtx.putImageData(imageData, 0, 0);
-    
-    // Draw the processed image on the visible canvas
-    canvas.width = offscreenCanvas.width;
-    canvas.height = offscreenCanvas.height;
-    ctx.drawImage(offscreenCanvas, 0, 0);
-    
-    // Generate SVG from the threshold image
-    const svg = generateSVGFromCanvas(offscreenCanvas);
-    setProcessedSvgContent(svg);
+    img.src = imgSrc;
   };
   
   const generateSVGFromCanvas = (canvas: HTMLCanvasElement): string => {
@@ -222,6 +331,9 @@ export default function IconEditorPage() {
       } else {
         setSvgContent(null);
       }
+      
+      // Reset the cropped state
+      setIsCropped(false);
     }
   };
   
@@ -248,8 +360,8 @@ export default function IconEditorPage() {
         setStep("crop");
         break;
       case "crop":
-        if (pointsRef.current.length < 3) {
-          toast.error("Bitte wählen Sie mindestens drei Punkte aus, um ein Polygon zu erstellen");
+        if (!isCropped) {
+          toast.error("Bitte stellen Sie das Bild frei, indem Sie den 'Freistellen' Button klicken");
           return;
         }
         setStep("threshold");
@@ -272,7 +384,7 @@ export default function IconEditorPage() {
         break;
       case "threshold":
         setStep("crop");
-        pointsRef.current = [];
+        setIsCropped(false); // Reset cropped state when going back
         break;
       case "colorize":
         setStep("threshold");
@@ -282,15 +394,6 @@ export default function IconEditorPage() {
         break;
       default:
         break;
-    }
-  };
-  
-  const resetPolygon = () => {
-    if (fabricCanvasRef.current && polygonRef.current) {
-      fabricCanvasRef.current.remove(polygonRef.current);
-      pointsRef.current = [];
-      polygonRef.current = null;
-      fabricCanvasRef.current.renderAll();
     }
   };
   
@@ -345,6 +448,34 @@ export default function IconEditorPage() {
     } finally {
       setUploading(false);
     }
+  };
+  
+  const renderThresholdButtons = () => {
+    return (
+      <div className="flex flex-col gap-4">
+        <div className="grid grid-cols-5 gap-2">
+          {[1, 2, 3, 4, 5].map((level) => (
+            <Button
+              key={level}
+              variant={thresholdLevel === level ? "default" : "outline"}
+              onClick={() => setThresholdLevel(level as ThresholdLevel)}
+              className="relative p-1 h-16"
+            >
+              <div className="text-xs mb-1">Stufe {level}</div>
+              <div 
+                className="w-full h-2 rounded-sm" 
+                style={{
+                  background: `linear-gradient(to right, black ${(level/5)*100}%, white ${(level/5)*100}%)`
+                }}
+              ></div>
+            </Button>
+          ))}
+        </div>
+        <p className="text-xs text-muted-foreground text-center">
+          Stufe 1: Mehr dunkle Bereiche | Stufe 5: Mehr helle Bereiche
+        </p>
+      </div>
+    );
   };
   
   return (
@@ -450,17 +581,24 @@ export default function IconEditorPage() {
             {step === "crop" && (
               <div className="space-y-6">
                 <div>
-                  <Label>Polygon-Zuschnitt</Label>
+                  <div className="flex items-center justify-between mb-2">
+                    <Label>Zuschneiden</Label>
+                    <Button 
+                      type="button" 
+                      variant="default" 
+                      size="sm"
+                      onClick={cropImage}
+                      disabled={isCropped}
+                    >
+                      <Crop className="h-4 w-4 mr-2" />
+                      Freistellen
+                    </Button>
+                  </div>
                   <p className="text-sm text-muted-foreground mb-2">
-                    Klicken Sie auf das Bild, um Punkte für ein Polygon zu setzen. Das Polygon bestimmt den Bereich, der für das Icon verwendet wird.
+                    Verschieben und vergrößern Sie das blaue Rechteck, um den Bildausschnitt zu wählen. Klicken Sie dann auf "Freistellen".
                   </p>
                   <div className="border rounded-md p-1 flex justify-center bg-gray-50">
                     <canvas ref={canvasRef} width={500} height={500} />
-                  </div>
-                  <div className="flex justify-center mt-2">
-                    <Button variant="outline" onClick={resetPolygon} className="text-sm">
-                      Polygon zurücksetzen
-                    </Button>
                   </div>
                 </div>
               </div>
@@ -470,23 +608,11 @@ export default function IconEditorPage() {
               <div className="space-y-6">
                 <div>
                   <Label>Schwarz-Weiß-Konvertierung</Label>
-                  <p className="text-sm text-muted-foreground mb-2">
-                    Stellen Sie den Schwellenwert ein, um zu bestimmen, welche Bereiche schwarz und welche weiß werden.
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Wählen Sie eine der fünf Stufen, um zu bestimmen, welche Bereiche schwarz und welche weiß werden.
                   </p>
-                  <div className="mb-4">
-                    <div className="flex items-center gap-4">
-                      <span className="text-sm font-medium">Schwellenwert: {thresholdValue}</span>
-                      <input
-                        type="range"
-                        min="0"
-                        max="255"
-                        value={thresholdValue}
-                        onChange={(e) => setThresholdValue(Number(e.target.value))}
-                        className="w-full"
-                      />
-                    </div>
-                  </div>
-                  <div className="border rounded-md p-1 flex justify-center bg-gray-50">
+                  {renderThresholdButtons()}
+                  <div className="border rounded-md p-1 flex justify-center bg-gray-50 mt-4">
                     <canvas ref={canvasRef} width={300} height={300} />
                   </div>
                 </div>
@@ -603,7 +729,7 @@ export default function IconEditorPage() {
                   onClick={handleNextStep}
                   disabled={
                     (step === "upload" && !file) ||
-                    (step === "crop" && pointsRef.current.length < 3)
+                    (step === "crop" && !isCropped)
                   }
                 >
                   Weiter
@@ -653,17 +779,17 @@ export default function IconEditorPage() {
             </div>
             <div>
               <h3 className="text-sm font-medium flex items-center">
-                <Pentagon className="w-4 h-4 mr-2" />
-                2. Polygon-Auswahl
+                <Square className="w-4 h-4 mr-2" />
+                2. Zuschneiden
               </h3>
               <p className="text-sm text-muted-foreground mt-1">
-                Klicken Sie auf das Bild, um Punkte für ein Polygon zu setzen. Das Polygon bestimmt den Bereich, der für das Icon verwendet wird.
+                Positionieren und skalieren Sie das blaue Rechteck zum Ausschneiden des gewünschten Bereichs. Klicken Sie dann auf "Freistellen".
               </p>
             </div>
             <div>
               <h3 className="text-sm font-medium">3. Schwarz-Weiß-Konvertierung</h3>
               <p className="text-sm text-muted-foreground mt-1">
-                Stellen Sie den Schwellenwert ein, um zu bestimmen, welche Bereiche schwarz und welche weiß werden.
+                Wählen Sie eine der fünf Stufenoptionen, um zu bestimmen, welche Bereiche schwarz und welche weiß werden.
               </p>
             </div>
             <div>
