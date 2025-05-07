@@ -52,8 +52,8 @@ export function WorkspaceSettings({ workspaceId }: WorkspaceSettingsProps) {
     } catch (error) {
       console.error('Error fetching workspace data:', error);
       toast({
-        description: 'Workspace-Daten konnten nicht geladen werden',
-        variant: 'destructive',
+        title: "Error",
+        description: 'Workspace-Daten konnten nicht geladen werden'
       });
     } finally {
       setIsLoading(false);
@@ -84,13 +84,14 @@ export function WorkspaceSettings({ workspaceId }: WorkspaceSettingsProps) {
       if (error) throw error;
       
       toast({
-        description: 'Workspace-Einstellungen wurden aktualisiert',
+        title: "Success",
+        description: 'Workspace-Einstellungen wurden aktualisiert'
       });
     } catch (error) {
       console.error('Error updating workspace:', error);
       toast({
-        description: 'Workspace-Einstellungen konnten nicht aktualisiert werden',
-        variant: 'destructive',
+        title: "Error",
+        description: 'Workspace-Einstellungen konnten nicht aktualisiert werden'
       });
     } finally {
       setIsSaving(false);
@@ -198,7 +199,7 @@ export function WorkspaceSettings({ workspaceId }: WorkspaceSettingsProps) {
             </p>
           </div>
           
-          <ThemedButton type="submit" disabled={isSaving}>
+          <ThemedButton type="submit" disabled={isSaving} useUserColor={false}>
             {isSaving ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />

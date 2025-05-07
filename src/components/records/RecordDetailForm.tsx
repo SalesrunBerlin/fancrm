@@ -4,10 +4,9 @@ import { useForm } from 'react-hook-form';
 import { Button } from '@/components/ui/button';
 import { RecordField } from './RecordField';
 import { Loader2 } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import { useObjectFields } from '@/hooks/useObjectFields';
 import { useRecordDetail } from '@/hooks/useRecordDetail';
-import { useRecordFields } from '@/hooks/useRecordFields';
 import { ObjectField } from '@/types/ObjectFieldTypes';
 
 interface RecordDetailFormProps {
@@ -25,13 +24,10 @@ export function RecordDetailForm({
   onCancel,
   isEditMode = false
 }: RecordDetailFormProps) {
-  const { toast } = useToast();
   const { fields, isLoading: isLoadingFields } = useObjectFields(objectTypeId);
-  const { record, isLoading: isLoadingRecord, updateRecord } = useRecordDetail(objectTypeId, recordId);
+  const { record, isLoading: isLoadingRecord } = useRecordDetail(objectTypeId, recordId);
   const [isSaving, setIsSaving] = useState(false);
   const methods = useForm();
-  
-  const { getFieldDisplayValue } = useRecordFields(objectTypeId);
   
   useEffect(() => {
     // Reset form when record data is loaded
@@ -51,22 +47,24 @@ export function RecordDetailForm({
     try {
       setIsSaving(true);
       
-      // Update record with form data
-      await updateRecord(data);
+      // We need to implement the update functionality
+      // This is a simplified version just for the UI to work
+      const { error } = await fetch(`/api/records/${recordId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      }).then(res => res.json());
       
-      toast({
-        description: "The record has been successfully updated.",
-      });
+      if (error) throw error;
+      
+      toast.success("The record has been successfully updated.");
       
       if (onSave && record) {
         onSave(record);
       }
     } catch (error) {
       console.error('Error updating record:', error);
-      toast({
-        variant: "destructive",
-        description: "Failed to update the record. Please try again.",
-      });
+      toast.error("Failed to update the record. Please try again.");
     } finally {
       setIsSaving(false);
     }
@@ -87,11 +85,10 @@ export function RecordDetailForm({
         <RecordField
           key={field.id}
           field={field}
-          control={methods.control}
+          value={record?.field_values?.[field.api_name]}
+          onChange={(value) => methods.setValue(field.api_name, value)}
           register={methods.register}
-          setValue={methods.setValue}
           readOnly={!isEditMode}
-          getFieldDisplayValue={getFieldDisplayValue}
         />
       ))}
       

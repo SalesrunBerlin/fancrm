@@ -1,16 +1,10 @@
+
 import {
   ColumnDef,
   flexRender,
   getCoreRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -55,7 +49,7 @@ export function UserTable({ users, onCreateUser }: UserTableProps) {
     {
       id: "actions",
       cell: ({ row }) => (
-        <ThemedButton asChild>
+        <ThemedButton asChild useUserColor={false}>
           <Link to={`/admin/users/${row.original.id}`}>Details</Link>
         </ThemedButton>
       ),

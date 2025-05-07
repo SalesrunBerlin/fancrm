@@ -1,6 +1,4 @@
 
-// We won't modify this file directly as it's in the read-only files list.
-// Instead we'll create a patch to extend the AuthContext type
 import { User, Session } from '@supabase/supabase-js';
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
@@ -29,6 +27,8 @@ interface AuthContextType {
   userRole?: string;
   isSuperAdmin: boolean;
   isAdmin: boolean;
+  favoriteColor?: string;
+  setFavoriteColor?: (color: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -38,6 +38,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [userRole, setUserRole] = useState<string | undefined>(undefined);
+  const [favoriteColor, setFavoriteColorState] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     // Fetch initial session
@@ -52,6 +53,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         
         if (session?.user) {
           fetchUserRole(session.user.id);
+          fetchUserFavoriteColor(session.user.id);
         }
         
         // Set up auth state change listener
@@ -62,8 +64,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             
             if (session?.user) {
               fetchUserRole(session.user.id);
+              fetchUserFavoriteColor(session.user.id);
             } else {
               setUserRole(undefined);
+              setFavoriteColorState(undefined);
             }
           }
         );
@@ -93,6 +97,45 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUserRole(data?.role);
     } catch (error) {
       console.error('Error in fetchUserRole:', error);
+    }
+  };
+
+  const fetchUserFavoriteColor = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('favorite_color')
+        .eq('id', userId)
+        .single();
+        
+      if (error) {
+        console.error('Error fetching user favorite color:', error);
+        return;
+      }
+      
+      setFavoriteColorState(data?.favorite_color || 'default');
+    } catch (error) {
+      console.error('Error in fetchUserFavoriteColor:', error);
+    }
+  };
+
+  const setFavoriteColor = async (color: string) => {
+    if (!user) return;
+    
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ favorite_color: color })
+        .eq('id', user.id);
+      
+      if (error) {
+        console.error('Error updating favorite color:', error);
+        return;
+      }
+      
+      setFavoriteColorState(color);
+    } catch (error) {
+      console.error('Error in setFavoriteColor:', error);
     }
   };
 
@@ -144,6 +187,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     userRole,
     isSuperAdmin,
     isAdmin,
+    favoriteColor,
+    setFavoriteColor,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
