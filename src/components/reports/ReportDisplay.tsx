@@ -1,17 +1,25 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ReportDefinition } from "@/types/report";
 import { useReportData } from "@/hooks/useReportData";
-import { AlertCircle, Loader } from "lucide-react";
+import { AlertCircle, Loader, RefreshCw } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface ReportDisplayProps {
   report: ReportDefinition;
 }
 
 export function ReportDisplay({ report }: ReportDisplayProps) {
+  const [retryCount, setRetryCount] = useState(0);
   console.log("Rendering ReportDisplay with report:", report);
+  
+  // Handle retry
+  const handleRetry = () => {
+    setRetryCount(prev => prev + 1);
+    console.log("Retrying report data fetch");
+  };
   
   // Validate report before proceeding
   if (!report || !report.id) {
@@ -31,26 +39,21 @@ export function ReportDisplay({ report }: ReportDisplayProps) {
     );
   }
 
-  // Check if report has the necessary properties
+  // Enhanced validation for report structure
+  const validationErrors = [];
+  
   if (!Array.isArray(report.objectIds) || report.objectIds.length === 0) {
-    console.error("Report has no object IDs:", report);
-    return (
-      <Card className="p-6 text-center">
-        <div className="flex flex-col items-center gap-4">
-          <div className="p-4 bg-amber-100 rounded-full">
-            <AlertCircle className="h-8 w-8 text-amber-600" />
-          </div>
-          <h3 className="text-xl font-medium">Incomplete Report</h3>
-          <p className="text-muted-foreground">
-            This report doesn't have any objects selected. Please edit the report to select objects.
-          </p>
-        </div>
-      </Card>
-    );
+    validationErrors.push("This report doesn't have any objects selected");
+    console.error("Report has no valid object IDs:", report);
   }
 
   if (!Array.isArray(report.selectedFields) || report.selectedFields.length === 0) {
+    validationErrors.push("This report doesn't have any fields selected");
     console.error("Report has no selected fields:", report);
+  }
+  
+  // Display validation errors if any
+  if (validationErrors.length > 0) {
     return (
       <Card className="p-6 text-center">
         <div className="flex flex-col items-center gap-4">
@@ -58,15 +61,20 @@ export function ReportDisplay({ report }: ReportDisplayProps) {
             <AlertCircle className="h-8 w-8 text-amber-600" />
           </div>
           <h3 className="text-xl font-medium">Incomplete Report</h3>
-          <p className="text-muted-foreground">
-            This report doesn't have any fields selected. Please edit the report to select fields to display.
+          <ul className="list-disc text-left mt-2 text-muted-foreground">
+            {validationErrors.map((error, index) => (
+              <li key={index}>{error}</li>
+            ))}
+          </ul>
+          <p className="text-muted-foreground mt-2">
+            Please edit the report to resolve these issues.
           </p>
         </div>
       </Card>
     );
   }
   
-  const { data, isLoading, error } = useReportData(report);
+  const { data, isLoading, error } = useReportData(report, retryCount);
   
   console.log("Report data result:", { data, isLoading, error });
   
@@ -90,23 +98,51 @@ export function ReportDisplay({ report }: ReportDisplayProps) {
             <AlertCircle className="h-8 w-8 text-red-600" />
           </div>
           <h3 className="text-xl font-medium">Error loading report data</h3>
-          <p className="text-muted-foreground text-center">
+          <p className="text-muted-foreground text-center max-w-lg">
             {error instanceof Error ? error.message : "An error occurred while loading the report data"}
           </p>
+          <Button onClick={handleRetry} variant="outline" className="mt-2">
+            <RefreshCw className="h-4 w-4 mr-2" /> 
+            Retry
+          </Button>
         </div>
       </Card>
     );
   }
   
-  if (!data || !data.rows || data.rows.length === 0) {
+  if (!data) {
+    return (
+      <Card className="p-6 text-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="p-4 bg-amber-100 rounded-full">
+            <AlertCircle className="h-8 w-8 text-amber-600" />
+          </div>
+          <h3 className="text-xl font-medium">No Data Available</h3>
+          <p className="text-muted-foreground">
+            No data was returned for this report.
+          </p>
+          <Button onClick={handleRetry} variant="outline" className="mt-2">
+            <RefreshCw className="h-4 w-4 mr-2" /> 
+            Retry
+          </Button>
+        </div>
+      </Card>
+    );
+  }
+  
+  if (!data.rows || data.rows.length === 0) {
     return (
       <Card className="p-6 text-center">
         <p className="text-muted-foreground">No data found for this report</p>
+        <Button onClick={handleRetry} variant="outline" className="mt-4">
+          <RefreshCw className="h-4 w-4 mr-2" /> 
+          Refresh
+        </Button>
       </Card>
     );
   }
 
-  // Safely check if columnDefs exists and has length before using it
+  // Enhanced handling of column definitions
   const columnDefs = data.columnDefs || [];
   const columns = data.columns || [];
   const hasColumnDefs = Array.isArray(columnDefs) && columnDefs.length > 0;
@@ -197,7 +233,11 @@ function formatCellValue(value: any): React.ReactNode {
   }
   
   if (typeof value === 'object') {
-    return JSON.stringify(value);
+    try {
+      return JSON.stringify(value);
+    } catch (e) {
+      return "[Complex Object]";
+    }
   }
   
   return String(value);

@@ -2,7 +2,7 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Download, Edit, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Download, Edit, AlertTriangle, RefreshCw } from "lucide-react";
 import { useReports } from "@/hooks/useReports";
 import { ReportDisplay } from "@/components/reports/ReportDisplay";
 import { useState, useEffect } from "react";
@@ -18,6 +18,7 @@ export default function ReportViewPage() {
   const [report, setReport] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
   
   // Add more detailed debug logging
   console.log("Current Route ReportId:", reportId);
@@ -31,32 +32,70 @@ export default function ReportViewPage() {
       return;
     }
     
-    console.log(`Loading report with ID: ${reportId}`);
-    setIsLoading(true);
-    setLoadError(null);
-    
-    try {
-      const loadedReport = getReportById(reportId);
+    const loadReport = () => {
+      console.log(`Loading report with ID: ${reportId} (attempt ${retryCount + 1})`);
+      setIsLoading(true);
+      setLoadError(null);
       
-      if (loadedReport) {
-        console.log("Found report:", loadedReport);
+      try {
+        const loadedReport = getReportById(reportId);
+        console.log("Raw report data:", loadedReport);
         
-        // Validate report structure before setting it
-        if (!loadedReport.objectIds || !Array.isArray(loadedReport.objectIds) || loadedReport.objectIds.length === 0) {
-          console.warn("Report has no object IDs:", loadedReport);
-          setLoadError("Report definition is incomplete (missing object IDs)");
+        if (!loadedReport) {
+          console.error("Report not found:", reportId);
+          setLoadError(`Report with ID ${reportId} not found`);
           setIsLoading(false);
           return;
         }
         
-        if (!loadedReport.selectedFields || !Array.isArray(loadedReport.selectedFields) || loadedReport.selectedFields.length === 0) {
-          console.warn("Report has no selected fields:", loadedReport);
-          setLoadError("Report definition is incomplete (missing selected fields)");
+        // Enhanced validation to ensure report structure is valid
+        if (!loadedReport.objectIds || !Array.isArray(loadedReport.objectIds)) {
+          console.warn("Report has invalid or missing object IDs:", loadedReport);
+          setLoadError("Report definition is incomplete (invalid object IDs format)");
           setIsLoading(false);
           return;
+        }
+        
+        if (loadedReport.objectIds.length === 0) {
+          console.warn("Report has empty object IDs array:", loadedReport);
+          setLoadError("Report definition is incomplete (no object IDs selected)");
+          setIsLoading(false);
+          return;
+        }
+        
+        if (!loadedReport.selectedFields || !Array.isArray(loadedReport.selectedFields)) {
+          console.warn("Report has invalid selected fields:", loadedReport);
+          setLoadError("Report definition is incomplete (invalid selected fields format)");
+          setIsLoading(false);
+          return;
+        }
+        
+        if (loadedReport.selectedFields.length === 0) {
+          console.warn("Report has no selected fields:", loadedReport);
+          setLoadError("Report definition is incomplete (no fields selected)");
+          setIsLoading(false);
+          return;
+        }
+
+        // Format check for filters if present
+        if (loadedReport.filters && !Array.isArray(loadedReport.filters)) {
+          try {
+            // Attempt to parse if it's a string
+            if (typeof loadedReport.filters === 'string') {
+              loadedReport.filters = JSON.parse(loadedReport.filters);
+              console.log("Parsed filters from string:", loadedReport.filters);
+            } else {
+              console.warn("Report has non-array filters that couldn't be parsed:", loadedReport.filters);
+              loadedReport.filters = []; // Set default empty array
+            }
+          } catch (error) {
+            console.error("Error parsing filters:", error);
+            loadedReport.filters = []; // Set default empty array
+          }
         }
         
         // All validation passed, set the report
+        console.log("Setting validated report:", loadedReport);
         setReport(loadedReport);
         
         // Track that this report was viewed (after successful validation)
@@ -64,24 +103,31 @@ export default function ReportViewPage() {
         
         // Only show success toast after validation is complete
         toast.success(`Report "${loadedReport.name}" loaded successfully`);
-      } else {
-        console.error("Report not found:", reportId);
-        setLoadError(`Report with ID ${reportId} not found`);
-        toast.error(`Report with ID ${reportId} not found`);
+        
+        setIsLoading(false);
+      } catch (error: any) {
+        console.error("Error loading report:", error);
+        setLoadError(error?.message || "Failed to load report");
+        setIsLoading(false);
+        toast.error("Failed to load report: " + (error?.message || "Unknown error"));
       }
-    } catch (error: any) {
-      console.error("Error loading report:", error);
-      setLoadError(error?.message || "Failed to load report");
-      toast.error("Failed to load report");
-    } finally {
-      setIsLoading(false);
-    }
-  }, [reportId, getReportById, updateLastViewedReport, reports]);
+    };
+    
+    loadReport();
+  }, [reportId, getReportById, updateLastViewedReport, reports, retryCount]);
+  
+  // Handle retry
+  const handleRetry = () => {
+    setRetryCount(prev => prev + 1);
+  };
   
   if (isLoading) {
     return (
       <div className="p-8 text-center">
-        <p className="text-muted-foreground">Loading report...</p>
+        <p className="text-muted-foreground flex items-center justify-center gap-2">
+          <RefreshCw className="h-4 w-4 animate-spin" /> 
+          Loading report...
+        </p>
       </div>
     );
   }
@@ -94,13 +140,19 @@ export default function ReportViewPage() {
             <AlertTriangle className="h-8 w-8 text-amber-600" />
           </div>
           <h2 className="text-2xl font-bold">Report nicht gefunden</h2>
-          <p className="text-muted-foreground mt-2">
+          <p className="text-muted-foreground mt-2 max-w-lg mx-auto">
             {loadError || "Der gesuchte Bericht existiert nicht oder wurde gelöscht."}
           </p>
-          <Button onClick={() => navigate("/reports")} className="mt-4">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Zurück zur Berichtsliste
-          </Button>
+          <div className="flex gap-4 mt-4">
+            <Button onClick={() => navigate("/reports")}>
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Zurück zur Berichtsliste
+            </Button>
+            <Button onClick={handleRetry} variant="outline">
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Neu laden
+            </Button>
+          </div>
         </div>
       </div>
     );
@@ -121,6 +173,7 @@ export default function ReportViewPage() {
     if (reportId) {
       const refreshedReport = getReportById(reportId);
       if (refreshedReport) {
+        console.log("Refreshed report after edit:", refreshedReport);
         setReport(refreshedReport);
       } else {
         // If the report was deleted during editing
