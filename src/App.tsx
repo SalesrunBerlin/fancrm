@@ -1,4 +1,3 @@
-
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { Toaster } from "sonner"; 
 import { Layout } from "@/components/layout/Layout";
@@ -45,6 +44,8 @@ import PublicActionPage from "./pages/PublicActionPage";
 import PublicRecordPage from "./pages/PublicRecordPage";
 import ReportsPage from "./pages/ReportsPage";
 import ReportViewPage from "./pages/ReportViewPage";
+import IconUploadPage from "./pages/IconUploadPage";
+import IconEditPage from "./pages/IconEditPage";
 
 // Create a client
 const queryClient = new QueryClient({
@@ -113,6 +114,10 @@ function App() {
               <Route path="/admin/help-content/:tabId" element={<SuperAdminRoute><HelpTabContentEditor /></SuperAdminRoute>} />
               <Route path="/admin/users" element={<SuperAdminRoute><UserManagementPage /></SuperAdminRoute>} />
               <Route path="/admin/users/:userId" element={<SuperAdminRoute><UserDetailPage /></SuperAdminRoute>} />
+              
+              {/* Icon routes */}
+              <Route path="/settings/icons/upload" element={<IconUploadPage />} />
+              <Route path="/settings/icons/edit/:iconId" element={<IconEditPage />} />
             </Route>
           </Routes>
           <Toaster richColors position="top-right" />

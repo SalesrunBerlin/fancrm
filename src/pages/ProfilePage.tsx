@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import {
   Card,
@@ -20,6 +19,7 @@ import { ColorPicker } from "@/components/ui/color-picker";
 import { supabase } from "@/integrations/supabase/client";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
+import { DeleteIconDialog } from "@/components/icons/DeleteIconDialog";
 
 export default function ProfilePage() {
   const { user, isSuperAdmin } = useAuth();
@@ -313,10 +313,11 @@ export default function ProfilePage() {
                           <span className="sr-only">Bearbeiten</span>
                         </Link>
                       </Button>
-                      <Button variant="outline" size="icon" className="text-destructive hover:text-destructive">
-                        <Trash className="h-3 w-3" />
-                        <span className="sr-only">Löschen</span>
-                      </Button>
+                      <DeleteIconDialog 
+                        iconId={icon.id} 
+                        iconName={icon.name} 
+                        onDeleted={refetchIcons} 
+                      />
                     </div>
                   </div>
                 ))}
