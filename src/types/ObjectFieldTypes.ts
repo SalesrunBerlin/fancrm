@@ -1,4 +1,3 @@
-
 // Define our own Json type since it's not exported from database.ts
 export type Json = string | number | boolean | null | { [key: string]: Json } | Json[];
 
@@ -51,7 +50,6 @@ export interface ObjectRecord {
   created_by: string | null;
   last_modified_by: string | null;
   field_values?: { [key: string]: any };
-  fieldValues?: { [key: string]: any };
   displayName?: string;
   objectName?: string;
 }

@@ -1,186 +1,123 @@
-import { useState } from "react";
-import { Sheet, SheetContent } from "@/components/ui/sheet";
-import { useMobile } from "@/hooks/useMobile";
-import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
+
 import {
-  LayoutDashboard,
-  ListChecks,
-  Settings,
-  Plus,
-  Archive,
-  Users,
-  HelpCircle,
-  LayoutList,
-  UsersRound,
-} from "lucide-react";
-import { ApplicationSwitcher } from "./ApplicationSwitcher";
-import { useCurrentApplicationData } from "@/hooks/useCurrentApplicationData";
-import { useAuth } from "@/contexts/AuthContext";
+  Sidebar,
+  SidebarContent,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  useSidebar,
+} from "@/components/ui/sidebar";
+import { LayoutDashboard, Box, BarChart3 } from "lucide-react";
+import { Link, useLocation } from "react-router-dom";
+import { useObjectTypes } from "@/hooks/useObjectTypes";
+import { useApplications } from "@/hooks/useApplications";
+import { useApplicationObjects } from "@/hooks/useApplicationObjects";
+import { useEffect, useState } from "react";
+
+const navigationItems = [
+  {
+    title: "Dashboard",
+    icon: LayoutDashboard,
+    path: "/dashboard"
+  },
+  {
+    title: "Reports",
+    icon: BarChart3,
+    path: "/reports"
+  }
+];
 
 export function AppSidebar() {
-  const [open, setOpen] = useState(true);
-  const isMobile = useMobile();
-  const navigate = useNavigate();
   const { pathname } = useLocation();
-  const { applications, currentApplication } = useCurrentApplicationData();
+  const { open, setOpen, openMobile, setOpenMobile } = useSidebar();
+  const { applications, isLoading: isLoadingApps } = useApplications();
+  const [defaultApplicationId, setDefaultApplicationId] = useState<string | null>(null);
+  const { applicationObjects, isLoading: isLoadingObjects } = useApplicationObjects(defaultApplicationId || undefined);
+  const isAuthPage = pathname.startsWith("/auth");
   
-  // Add this line to get admin status
-  const { isAdmin, isSuperAdmin } = useAuth();
+  // Only close sidebar on mobile when route changes
+  useEffect(() => {
+    if (window.innerWidth < 768) {
+      setOpenMobile(false);
+    }
+  }, [pathname, setOpenMobile]);
 
-  const isOpen = isMobile ? open : true;
+  // Find the default application
+  useEffect(() => {
+    if (applications) {
+      const defaultApp = applications.find(app => app.is_default);
+      if (defaultApp) {
+        setDefaultApplicationId(defaultApp.id);
+      }
+    }
+  }, [applications]);
+  
+  if (isAuthPage) return null;
+  
+  const isLoading = isLoadingApps || isLoadingObjects;
+  
+  // Show all assigned objects, regardless of their active status
+  const assignedObjects = applicationObjects || [];
+
+  // Handler to close sidebar on both mobile and desktop when clicking a navigation item
+  const handleNavClick = () => {
+    // Close sidebar on both mobile and desktop
+    setOpenMobile(false);
+    setOpen(false);
+  };
 
   return (
-    <Sheet open={isMobile ? isOpen : undefined} onOpenChange={setOpen}>
-      <SheetContent side="left" className="p-0 pr-0 sm:max-w-xs">
-        <div className="h-full p-4 pt-0">
-          <div className="flex h-14 items-center px-1">
-            <Link to="/" className="flex items-center gap-2">
-              <span className="font-bold">CRMBeauty</span>
-            </Link>
-            <div className="ml-auto">
-              <ApplicationSwitcher />
-            </div>
-          </div>
-          <div className="space-y-4 pt-4">
-            <div>
-              <h2 className="mb-2 px-4 text-lg font-semibold tracking-tight">
-                Navigation
-              </h2>
-              <div className="space-y-1">
-                <Button
-                  variant={pathname === "/dashboard" ? "secondary" : "ghost"}
-                  className="w-full justify-start gap-2"
-                  onClick={() => navigate("/dashboard")}
-                >
-                  <LayoutDashboard className="h-4 w-4" />
-                  <span>Dashboard</span>
-                </Button>
-                <Button
-                  variant={pathname === "/" ? "secondary" : "ghost"}
-                  className="w-full justify-start gap-2"
-                  onClick={() => navigate("/")}
-                >
-                  <ListChecks className="h-4 w-4" />
-                  <span>Tasks</span>
-                </Button>
-              </div>
-            </div>
-            {currentApplication && (
-              <div>
-                <h2 className="mb-2 px-4 text-lg font-semibold tracking-tight">
-                  {currentApplication.name}
-                </h2>
-                <div className="space-y-1">
-                  <Button
-                    variant={
-                      pathname.startsWith("/objects") ? "secondary" : "ghost"
-                    }
-                    className="w-full justify-start gap-2"
-                    onClick={() =>
-                      navigate(`/objects/${currentApplication.id}`)
-                    }
+    <Sidebar variant="floating">
+      <SidebarContent>
+        <SidebarGroup>
+          <SidebarGroupLabel>Navigation</SidebarGroupLabel>
+          <SidebarGroupContent className="space-y-0.5">
+            <SidebarMenu>
+              {navigationItems.map((item) => (
+                <SidebarMenuItem key={item.path}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={pathname === item.path || pathname.startsWith(item.path + "/")}
+                    tooltip={item.title}
                   >
-                    <LayoutList className="h-4 w-4" />
-                    <span>Objects</span>
-                  </Button>
-                  <Button
-                    variant={pathname.startsWith("/actions") ? "secondary" : "ghost"}
-                    className="w-full justify-start gap-2"
-                    onClick={() => navigate("/actions")}
-                  >
-                    <Plus className="h-4 w-4" />
-                    <span>Actions</span>
-                  </Button>
-                </div>
-              </div>
-            )}
-            <div>
-              <h2 className="mb-2 px-4 text-lg font-semibold tracking-tight">
-                Settings
-              </h2>
-              <div className="space-y-1">
-                <Button
-                  variant={pathname === "/settings" ? "secondary" : "ghost"}
-                  className="w-full justify-start gap-2"
-                  onClick={() => navigate("/settings")}
-                >
-                  <Settings className="h-4 w-4" />
-                  <span>General</span>
-                </Button>
-                <Button
-                  variant={
-                    pathname === "/settings/object-manager" ? "secondary" : "ghost"
-                  }
-                  className="w-full justify-start gap-2"
-                  onClick={() => navigate("/settings/object-manager")}
-                >
-                  <Archive className="h-4 w-4" />
-                  <span>Object Manager</span>
-                </Button>
-                <Button
-                  variant={pathname === "/profile" ? "secondary" : "ghost"}
-                  className="w-full justify-start gap-2"
-                  onClick={() => navigate("/profile")}
-                >
-                  <Users className="h-4 w-4" />
-                  <span>Profile</span>
-                </Button>
-                <Button
-                  variant={pathname === "/help" ? "secondary" : "ghost"}
-                  className="w-full justify-start gap-2"
-                  onClick={() => navigate("/help")}
-                >
-                  <HelpCircle className="h-4 w-4" />
-                  <span>Help</span>
-                </Button>
-              </div>
-            </div>
-            
-            {/* Admin Section - Only show for admin and superadmin */}
-            {(isAdmin || isSuperAdmin) && (
-              <div className="py-2">
-                <h2 className="mb-2 px-4 text-lg font-semibold tracking-tight">
-                  Administration
-                </h2>
-                <div className="space-y-1">
-                  {/* Admin workspace management */}
-                  <Button 
-                    variant={pathname.startsWith('/admin/workspace') ? 'secondary' : 'ghost'} 
-                    className="w-full justify-start gap-2" 
-                    onClick={() => navigate('/admin/workspace')}
-                  >
-                    <Users className="h-4 w-4" />
-                    <span>User Management</span>
-                  </Button>
-                  
-                  {/* Only show superadmin links to superadmin users */}
-                  {isSuperAdmin && (
-                    <>
-                      <Button 
-                        variant={pathname === '/admin' ? 'secondary' : 'ghost'} 
-                        className="w-full justify-start gap-2" 
-                        onClick={() => navigate('/admin')}
-                      >
-                        <LayoutDashboard className="h-4 w-4" />
-                        <span>Admin Dashboard</span>
-                      </Button>
-                      <Button 
-                        variant={pathname.startsWith('/admin/users') ? 'secondary' : 'ghost'} 
-                        className="w-full justify-start gap-2" 
-                        onClick={() => navigate('/admin/users')}
-                      >
-                        <UsersRound className="h-4 w-4" />
-                        <span>All Users</span>
-                      </Button>
-                    </>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      </SheetContent>
-    </Sheet>
+                    <Link to={item.path} onClick={handleNavClick}>
+                      <item.icon className="h-4 w-4" />
+                      <span>{item.title}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        {assignedObjects.length > 0 && (
+          <SidebarGroup>
+            <SidebarGroupLabel>Objects</SidebarGroupLabel>
+            <SidebarGroupContent className="space-y-0.5">
+              <SidebarMenu>
+                {assignedObjects.map((object) => (
+                  <SidebarMenuItem key={object.id}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={pathname.includes(`/objects/${object.id}`)}
+                      tooltip={object.name}
+                    >
+                      <Link to={`/objects/${object.id}`} onClick={handleNavClick}>
+                        <Box className="h-4 w-4" />
+                        <span>{object.name}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
+      </SidebarContent>
+    </Sidebar>
   );
 }
