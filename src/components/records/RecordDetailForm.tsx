@@ -1,4 +1,3 @@
-
 import { ObjectField } from "@/hooks/useObjectTypes";
 import { ObjectRecord } from "@/hooks/useObjectRecords";
 import { Input } from "@/components/ui/input";
@@ -56,6 +55,13 @@ export function RecordDetailForm({
   console.log("Record in RecordDetailForm:", record);
   console.log("Fields in RecordDetailForm:", fields);
   console.log("Edited values:", editedValues);
+
+  const initialValues = record 
+    ? record.field_values || {} 
+    : fields.reduce((acc, field) => {
+        acc[field.api_name] = getFieldValue(field.api_name);
+        return acc;
+      }, {});
 
   const renderField = (field: ObjectField) => {
     const value = getFieldValue(field.api_name);

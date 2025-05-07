@@ -5,9 +5,10 @@ import { useMobile } from "@/hooks/useMobile";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { LayoutDashboard, Box, BarChart3, ListChecks, Settings, Plus, Archive, Users, HelpCircle, LayoutList, UsersRound } from "lucide-react";
-import { ApplicationSwitcher } from "./ApplicationSwitcher";
+import { ApplicationSwitcher } from "@/components/applications/ApplicationSwitcher";
 import { useCurrentApplicationData } from "@/hooks/useCurrentApplicationData";
 import { useAuth } from "@/contexts/AuthContext";
+import { useObjectTypes } from "@/hooks/useObjectTypes";
 
 // Navigation items that will appear in the sidebar
 const navigationItems = [
@@ -29,11 +30,16 @@ export function AppSidebar() {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const { applications, currentApplication } = useCurrentApplicationData();
+  const { objectTypes } = useObjectTypes();
+  
   // Get admin status
   const { isSuperAdmin } = useAuth();
   const isAdmin = isSuperAdmin; // For compatibility with existing code
   
   const isOpen = isMobile ? open : true;
+  
+  // Filter objects to show in navigation - only show non-archived objects
+  const navigationObjects = objectTypes?.filter(obj => obj.show_in_navigation && !obj.is_archived) || [];
 
   return (
     <Sheet open={isMobile ? isOpen : undefined} onOpenChange={setOpen}>
@@ -73,6 +79,26 @@ export function AppSidebar() {
                 </Button>
               </div>
             </div>
+
+            {/* Custom Objects Section */}
+            {navigationObjects && navigationObjects.length > 0 && (
+              <div>
+                <h2 className="mb-2 px-4 text-lg font-semibold tracking-tight">Objects</h2>
+                <div className="space-y-1">
+                  {navigationObjects.map(type => (
+                    <Button
+                      key={type.id}
+                      variant={pathname.startsWith(`/objects/${type.id}`) ? "secondary" : "ghost"}
+                      className="w-full justify-start gap-2"
+                      onClick={() => navigate(`/objects/${type.id}`)}
+                    >
+                      <span className="mr-2">{type.icon || "📋"}</span>
+                      {type.name}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {currentApplication && (
               <div>
