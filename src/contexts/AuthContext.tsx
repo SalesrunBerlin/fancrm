@@ -100,9 +100,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (error) throw error;
 
+      // Debug log for role checking
+      console.log('User role data:', data);
+      
       const role = data?.role || 'user';
       setUserRole(role);
-      setIsSuperAdmin(role === 'super_admin' || role === 'admin');
+      
+      // Check for super admin role with case-insensitive comparison
+      const isAdmin = role && 
+        (role.toLowerCase() === 'super_admin' || 
+         role.toLowerCase() === 'superadmin' || 
+         role.toLowerCase() === 'admin');
+      
+      setIsSuperAdmin(isAdmin);
+      console.log('Is user super admin?', isAdmin, 'Role:', role);
 
       // Also fetch user's color preference
       const { data: colorData } = await supabase
@@ -201,8 +212,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await signOut();
   };
 
-  const updateFavoriteColor = (color: string) => {
-    setFavoriteColor(color);
+  const updateFavoriteColor = async (color: string) => {
+    if (!user) return;
+    
+    try {
+      // Update in the database
+      const { error } = await supabase
+        .from('profiles')
+        .update({ favorite_color: color })
+        .eq('id', user.id);
+        
+      if (error) throw error;
+      
+      // Update local state
+      setFavoriteColor(color);
+      console.log('Favorite color updated to:', color);
+    } catch (error) {
+      console.error('Error updating favorite color:', error);
+      toast.error('Failed to update color preference');
+    }
   };
 
   const value = {

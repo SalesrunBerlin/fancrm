@@ -1,4 +1,3 @@
-
 import { useCallback, useState, useEffect } from "react";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { ReportDefinition, ReportField } from "@/types/report";
@@ -57,8 +56,8 @@ export function useReports() {
           name: item.name,
           description: item.description || "",
           objectIds: item.object_ids,
-          selectedFields: item.selected_fields as any,
-          filters: item.filters || [],
+          selectedFields: item.selected_fields as ReportField[],
+          filters: (item.filters || []) as FilterCondition[],
           created_at: item.created_at,
           updated_at: item.updated_at
         }));
@@ -104,21 +103,19 @@ export function useReports() {
         }
         
         // Prepare reports for insertion with user_id
-        const reportsToInsert = localReports.map(report => ({
-          id: report.id,
-          name: report.name,
-          description: report.description || "",
-          user_id: userId,
-          object_ids: report.objectIds,
-          selected_fields: report.selectedFields,
-          filters: report.filters || [],
-          created_at: report.created_at,
-          updated_at: report.updated_at
-        }));
-        
-        // Insert reports one by one to avoid type issues
-        for (const report of reportsToInsert) {
-          await supabase.from("reports").insert(report);
+        for (const report of localReports) {
+          // Insert reports one by one to avoid type issues
+          await supabase.from("reports").insert({
+            id: report.id,
+            name: report.name,
+            description: report.description || "",
+            user_id: userId,
+            object_ids: report.objectIds,
+            selected_fields: report.selectedFields,
+            filters: report.filters || [],
+            created_at: report.created_at,
+            updated_at: report.updated_at
+          });
         }
         
         console.log("[useReports] Successfully migrated local reports to database");
@@ -181,7 +178,7 @@ export function useReports() {
           user_id: userId,
           object_ids: newReport.objectIds,
           selected_fields: newReport.selectedFields,
-          filters: newReport.filters
+          filters: JSON.stringify(newReport.filters) // Convert FilterCondition[] to JSON string
         });
         
       if (error) throw error;
@@ -226,7 +223,7 @@ export function useReports() {
       if (updates.description !== undefined) dbUpdates.description = updates.description;
       if (updates.objectIds) dbUpdates.object_ids = updates.objectIds;
       if (updates.selectedFields) dbUpdates.selected_fields = updates.selectedFields;
-      if (updates.filters) dbUpdates.filters = updates.filters;
+      if (updates.filters) dbUpdates.filters = JSON.stringify(updates.filters); // Convert FilterCondition[] to JSON string
       
       // Update in database
       const { error } = await supabase
@@ -330,7 +327,7 @@ export function useReports() {
           user_id: userId,
           object_ids: newReport.objectIds,
           selected_fields: newReport.selectedFields,
-          filters: newReport.filters
+          filters: JSON.stringify(newReport.filters) // Convert FilterCondition[] to JSON string
         });
         
       if (error) throw error;

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import {
   Card,
@@ -15,6 +16,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useColorPreference } from "@/hooks/useColorPreference";
 import { toast } from "sonner";
 import { Loader2, Check } from "lucide-react";
+import { ColorPicker } from "@/components/ui/color-picker";
 
 export default function ProfilePage() {
   const { user, isSuperAdmin } = useAuth();
@@ -77,7 +79,7 @@ export default function ProfilePage() {
 
   return (
     <div className="container mx-auto py-10">
-      <PageHeader heading="Profile" text="Manage your profile settings" />
+      <PageHeader title="Profile" description="Manage your profile settings" />
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Profile Card */}
         <Card>
@@ -149,44 +151,20 @@ export default function ProfilePage() {
           <CardContent className="space-y-4">
             <div className="grid gap-4">
               <div>
-                <Label>Favorite Color</Label>
-                <div className="flex items-center space-x-3">
-                  <Button
-                    variant={favoriteColor === "default" ? "default" : "outline"}
-                    onClick={() => handleColorChange("default")}
-                    disabled={colorLoading}
-                  >
-                    {colorLoading && favoriteColor === "default" ? (
+                <Label htmlFor="color-picker">Choose Your Theme Color</Label>
+                <div className="mt-2">
+                  {colorLoading ? (
+                    <div className="flex items-center">
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : favoriteColor === "default" ? (
-                      <Check className="mr-2 h-4 w-4" />
-                    ) : null}
-                    Default
-                  </Button>
-                  <Button
-                    variant={favoriteColor === "secondary" ? "secondary" : "outline"}
-                    onClick={() => handleColorChange("secondary")}
-                    disabled={colorLoading}
-                  >
-                    {colorLoading && favoriteColor === "secondary" ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : favoriteColor === "secondary" ? (
-                      <Check className="mr-2 h-4 w-4" />
-                    ) : null}
-                    Secondary
-                  </Button>
-                  <Button
-                    variant={favoriteColor === "destructive" ? "destructive" : "outline"}
-                    onClick={() => handleColorChange("destructive")}
-                    disabled={colorLoading}
-                  >
-                    {colorLoading && favoriteColor === "destructive" ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : favoriteColor === "destructive" ? (
-                      <Check className="mr-2 h-4 w-4" />
-                    ) : null}
-                    Destructive
-                  </Button>
+                      Loading color preferences...
+                    </div>
+                  ) : (
+                    <ColorPicker 
+                      value={favoriteColor} 
+                      onChange={handleColorChange} 
+                      className="max-w-md"
+                    />
+                  )}
                 </div>
               </div>
             </div>

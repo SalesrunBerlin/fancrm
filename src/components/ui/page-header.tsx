@@ -6,8 +6,10 @@ import { useNavigate } from "react-router-dom";
 import { ThemedButton } from "@/components/ui/themed-button";
 
 export interface PageHeaderProps {
-  title: string;
+  title?: string;
+  heading?: string; // For backward compatibility
   description?: string;
+  text?: string; // For backward compatibility
   actions?: React.ReactNode;
   className?: string;
   backTo?: string;
@@ -16,8 +18,10 @@ export interface PageHeaderProps {
 }
 
 export function PageHeader({ 
-  title, 
-  description, 
+  title,
+  heading, // Support both title and heading for backward compatibility
+  description,
+  text, // Support both description and text for backward compatibility
   actions, 
   className, 
   backTo, 
@@ -25,6 +29,10 @@ export function PageHeader({
   children 
 }: PageHeaderProps) {
   const navigate = useNavigate();
+  
+  // Support both naming conventions for backward compatibility
+  const displayTitle = title || heading || "";
+  const displayDescription = description || text || "";
   
   const handleBack = () => {
     if (backTo) {
@@ -48,9 +56,9 @@ export function PageHeader({
         )}
         {backButton}
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
-          {description && (
-            <p className="text-muted-foreground text-sm">{description}</p>
+          <h1 className="text-2xl font-bold tracking-tight">{displayTitle}</h1>
+          {displayDescription && (
+            <p className="text-muted-foreground text-sm">{displayDescription}</p>
           )}
         </div>
       </div>

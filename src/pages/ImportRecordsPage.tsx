@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
@@ -164,7 +165,7 @@ export default function ImportRecordsPage() {
     
     setDuplicates(duplicatesFound);
     
-    if (duplicatesFound.length > 0) {
+    if (duplicatesFound && duplicatesFound.length > 0) {
       toast.info(`Found ${duplicatesFound.length} potential duplicate records`);
       setActiveTab("duplicates");
     } else {

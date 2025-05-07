@@ -54,11 +54,11 @@ export function useColorPreference() {
       if (error) throw error;
       
       updateContextFavoriteColor(color);
-      toast.success("Farbpräferenz wurde aktualisiert");
+      toast.success("Color preference updated successfully");
       return true;
     } catch (error: any) {
       console.error("Error updating color preference:", error);
-      toast.error("Fehler beim Aktualisieren der Farbpräferenz");
+      toast.error("Failed to update color preference");
       return false;
     } finally {
       setLoading(false);
