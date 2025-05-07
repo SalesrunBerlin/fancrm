@@ -1,14 +1,6 @@
 
-import { useEffect } from "react";
-import {
-  BrowserRouter as Router,
-  Routes,
-  Route,
-  Navigate,
-  useLocation,
-  useParams,
-} from "react-router-dom";
-import { useAuth } from "./contexts/AuthContext";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import { AuthProvider } from "./contexts/AuthContext";
 import Auth from "./pages/Auth";
 import DashboardPage from "./pages/Dashboard";
 import SettingsPage from "./pages/Settings";
@@ -21,169 +13,103 @@ import ObjectRecordEditPage from "./pages/EditRecordPage";
 import ReportsPage from "./pages/ReportsPage";
 import ReportViewPage from "./pages/ReportViewPage";
 import ReportExamplePage from "./pages/ReportExamplePage";
+import { Layout } from "./components/layout/Layout";
+import { ProtectedRoute } from "./components/auth/ProtectedRoute";
+import { SuperAdminRoute } from "./components/auth/SuperAdminRoute";
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import UserManagementPage from "./pages/admin/UserManagementPage";
+import UserDetailPage from "./pages/admin/UserDetailPage";
+import HelpContentEditor from "./pages/admin/HelpContentEditor";
+import HelpPage from "./pages/HelpPage";
+import NotFound from "./pages/NotFound";
+import { Toaster } from "./components/ui/toaster";
 
 function AppRouter() {
   return (
-    <Router>
-      <AppContent />
-    </Router>
+    <AuthProvider>
+      <Router>
+        <Routes>
+          {/* Auth routes - outside of layout */}
+          <Route path="/auth" element={<Auth />} />
+          <Route path="/login" element={<Navigate to="/auth" replace />} />
+          <Route path="/register" element={<Navigate to="/auth" replace />} />
+          <Route path="/forgot-password" element={<Navigate to="/auth" replace />} />
+          <Route path="/reset-password/:token" element={<Auth />} />
+          
+          {/* Default route - redirect to dashboard */}
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+
+          {/* Protected routes - inside layout */}
+          <Route
+            element={
+              <ProtectedRoute>
+                <Layout />
+              </ProtectedRoute>
+            }
+          >
+            {/* Dashboard and settings */}
+            <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/help" element={<HelpPage />} />
+            <Route path="/profile" element={<div>Profile Page (Coming Soon)</div>} />
+            
+            {/* Object Types routes */}
+            <Route path="/objects" element={<ObjectTypesPage />} />
+            <Route path="/objects/:objectTypeId" element={<ObjectTypeViewPage />} />
+            <Route path="/objects/:objectTypeId/edit" element={<ObjectTypeEditPage />} />
+            
+            {/* Object Records routes */}
+            <Route path="/objects/:objectTypeId/records" element={<ObjectRecordsPage />} />
+            <Route path="/objects/:objectTypeId/records/:recordId" element={<ObjectRecordViewPage />} />
+            <Route path="/objects/:objectTypeId/records/:recordId/edit" element={<ObjectRecordEditPage />} />
+            
+            {/* Reports routes */}
+            <Route path="/reports" element={<ReportsPage />} />
+            <Route path="/reports/example" element={<ReportExamplePage />} />
+            <Route path="/reports/:reportId" element={<ReportViewPage />} />
+            
+            {/* Admin routes */}
+            <Route
+              path="/admin"
+              element={
+                <SuperAdminRoute>
+                  <AdminDashboard />
+                </SuperAdminRoute>
+              }
+            />
+            <Route
+              path="/admin/users"
+              element={
+                <SuperAdminRoute>
+                  <UserManagementPage />
+                </SuperAdminRoute>
+              }
+            />
+            <Route
+              path="/admin/users/:userId"
+              element={
+                <SuperAdminRoute>
+                  <UserDetailPage />
+                </SuperAdminRoute>
+              }
+            />
+            <Route
+              path="/admin/help"
+              element={
+                <SuperAdminRoute>
+                  <HelpContentEditor />
+                </SuperAdminRoute>
+              }
+            />
+            
+            {/* 404 route */}
+            <Route path="*" element={<NotFound />} />
+          </Route>
+        </Routes>
+        <Toaster />
+      </Router>
+    </AuthProvider>
   );
-}
-
-function AppContent() {
-  return (
-    <Routes>
-      <Route path="/auth" element={<Auth />} />
-      
-      {/* Main app routes */}
-      <Route
-        path="/"
-        element={
-          <ProtectedRoute>
-            <DashboardPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/settings"
-        element={
-          <ProtectedRoute>
-            <SettingsPage />
-          </ProtectedRoute>
-        }
-      />
-
-      {/* Object Types routes */}
-      <Route
-        path="/objects"
-        element={
-          <ProtectedRoute>
-            <ObjectTypesPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/objects/:objectTypeId"
-        element={
-          <ProtectedRoute>
-            <ObjectTypeViewPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/objects/:objectTypeId/edit"
-        element={
-          <ProtectedRoute>
-            <ObjectTypeEditPage />
-          </ProtectedRoute>
-        }
-      />
-
-      {/* Object Records routes */}
-      <Route
-        path="/objects/:objectTypeId/records"
-        element={
-          <ProtectedRoute>
-            <ObjectRecordsPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/objects/:objectTypeId/records/:recordId"
-        element={
-          <ProtectedRoute>
-            <ObjectRecordViewPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/objects/:objectTypeId/records/:recordId/edit"
-        element={
-          <ProtectedRoute>
-            <ObjectRecordEditPage />
-          </ProtectedRoute>
-        }
-      />
-
-      {/* Reports routes */}
-      <Route
-        path="/reports"
-        element={
-          <ProtectedRoute>
-            <ReportsPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/reports/example"
-        element={
-          <ProtectedRoute>
-            <ReportExamplePage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/reports/new"
-        element={
-          <ProtectedRoute>
-            <Navigate to="/reports?create=true" replace />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/reports/:reportId"
-        element={
-          <ProtectedRoute>
-            <ReportViewPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/reports/:reportId/edit"
-        element={
-          <ProtectedRoute>
-            <ReportEditWrapper />
-          </ProtectedRoute>
-        }
-      />
-      
-      {/* Redirect from login to auth */}
-      <Route path="/login" element={<Navigate to="/auth" replace />} />
-      <Route path="/register" element={<Navigate to="/auth" replace />} />
-      <Route path="/forgot-password" element={<Navigate to="/auth" replace />} />
-      <Route path="/reset-password/:token" element={<Auth />} />
-    </Routes>
-  );
-}
-
-function ReportEditWrapper() {
-  const match = useParams();
-  return (
-    <ProtectedRoute>
-      <Navigate to={`/reports?edit=${match.reportId}`} replace />
-    </ProtectedRoute>
-  );
-}
-
-function ProtectedRoute({ children }: { children: JSX.Element }) {
-  const { session, isLoading } = useAuth();
-  const location = useLocation();
-
-  useEffect(() => {
-    if (!session && !isLoading) {
-      console.log("No session, redirecting to login");
-    }
-  }, [session, isLoading, location]);
-
-  if (isLoading) {
-    return <div>Loading...</div>;
-  }
-
-  if (!session) {
-    return <Navigate to="/auth" replace state={{ from: location }} />;
-  }
-
-  return children;
 }
 
 export default AppRouter;

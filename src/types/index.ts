@@ -1,78 +1,17 @@
-// Public action token type
-export interface PublicActionToken {
-  id: string;
-  action_id: string;
-  token: string;
-  name: string | null;
-  created_at: string;
-  created_by: string;
-  expires_at: string | null;
-  is_active: boolean;
-}
 
-// Record form data type
-export interface RecordFormData {
-  [key: string]: string | number | boolean | Date | null | Record<string, any>;
-}
-
-// Record update data type
-export interface RecordUpdateData {
-  id: string;
-  field_values: RecordFormData;
-}
-
-// Types for mock data
-export interface ContactType {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  createdAt: string;
-  first_name?: string;
-  last_name?: string;
-  firstName?: string;
-  lastName?: string;
-  accountName?: string; // Added for mock data
-  tags?: string[]; // Added for mock data
-}
-
-export interface AccountType {
-  id: string;
-  name: string;
-  industry: string;
-  website: string;
-  createdAt: string;
-  type?: string;
-  employees?: number; // Added for mock data
-}
-
-export interface DealType {
-  id: string;
-  name: string;
-  amount: number;
-  stage: string;
-  closeDate: string;
-  probability: number;
-  status?: string;
-  accountName?: string;
-  account?: string;
-  value?: number;
-  contactId?: string; // Added for mock data
-}
-
-// Add DuplicateRecord type for imports
+// Add DuplicateRecord type definition to fix imports
 export interface DuplicateRecord {
   id: string;
   rowIndex: number;
-  matchType: string;
-  sourceRecord: any;
-  existingRecord: any;
-  resolution?: string;
-  action?: string; // Added missing properties
-  matchScore?: number;
-  importRowIndex?: number;
-  record?: any;
+  importRowIndex: number;
+  existingRecord: {
+    id: string;
+    [key: string]: any;
+  };
+  matchScore: number;
+  fields: Record<string, string>;
+  action: 'skip' | 'update' | 'create';
+  record: Record<string, string>;
+  matchType: 'field_match' | 'exact_match';
+  sourceRecord: Record<string, string>;
 }
-
-// Export Object types
-export * from "./ObjectFieldTypes";
