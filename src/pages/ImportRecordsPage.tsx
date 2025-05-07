@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
@@ -18,10 +19,10 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Progress } from "@/components/ui/progress";
 import { useImportRecords } from "@/hooks/useImportRecords";
-import { findDuplicates, DuplicateRecord } from "@/utils/importDuplicateUtils";
+import { findDuplicates } from "@/utils/importDuplicateUtils";
 import { Separator } from "@/components/ui/separator";
 import { useObjectRecords } from "@/hooks/useObjectRecords";
-import { FieldType } from "@/types/object";
+import { FieldType, DuplicateRecord } from "@/types";
 
 export default function ImportRecordsPage() {
   const { objectTypeId } = useParams<{ objectTypeId: string }>();
@@ -519,20 +520,20 @@ export default function ImportRecordsPage() {
                               <TableCell>{duplicate.rowIndex + 1}</TableCell>
                               <TableCell>
                                 <div className="space-y-1">
-                                  {duplicate.matchingFields.map((field, i) => (
+                                  {duplicate.matchingFields && duplicate.matchingFields.map((field, i) => (
                                     <div key={i} className="text-sm">
-                                      <span className="font-medium">{field.fieldName}:</span>{" "}
-                                      {field.importValue}
+                                      <span className="font-medium">{field}:</span>{" "}
+                                      {duplicate.sourceRecord && duplicate.sourceRecord[field]}
                                     </div>
                                   ))}
                                 </div>
                               </TableCell>
                               <TableCell>
                                 <div className="space-y-1">
-                                  {duplicate.matchingFields.map((field, i) => (
+                                  {duplicate.matchingFields && duplicate.matchingFields.map((field, i) => (
                                     <div key={i} className="text-sm">
-                                      <span className="font-medium">{field.fieldName}:</span>{" "}
-                                      {field.existingValue}
+                                      <span className="font-medium">{field}:</span>{" "}
+                                      {duplicate.existingRecord && duplicate.existingRecord[field]}
                                     </div>
                                   ))}
                                   <Button 

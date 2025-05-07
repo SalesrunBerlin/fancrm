@@ -1,3 +1,4 @@
+
 // Public action token type
 export interface PublicActionToken {
   id: string;
@@ -72,6 +73,35 @@ export interface DuplicateRecord {
   matchScore?: number;
   importRowIndex?: number;
   record?: any;
+  matchingFields?: string[];
+  existingRecordId?: string;
+  fields?: Record<string, string>;
+}
+
+// Create FieldType enum since it's being used in ImportRecordsPage
+export enum FieldType {
+  TEXT = "text",
+  NUMBER = "number",
+  BOOLEAN = "boolean",
+  DATE = "date",
+  EMAIL = "email",
+  PHONE = "phone",
+  URL = "url",
+  TEXTAREA = "textarea",
+  PICKLIST = "picklist",
+  MULTI_PICKLIST = "multi_picklist",
+  LOOKUP = "lookup",
+  MASTER_DETAIL = "master_detail",
+  CURRENCY = "currency",
+  PERCENT = "percent",
+  AUTO_NUMBER = "auto_number",
+  FORMULA = "formula",
+  ROLLUP = "rollup",
+  FILE = "file",
+  RICH_TEXT = "rich_text",
+  GEOLOCATION = "geolocation",
+  ADDRESS = "address",
+  CHECKBOX = "checkbox"
 }
 
 // Export Object types

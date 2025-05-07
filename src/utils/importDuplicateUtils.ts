@@ -1,138 +1,93 @@
+
 /**
  * Utility functions for handling duplicate records during import
  */
 
-import { ColumnMapping } from "@/hooks/useImportRecords";
-import { supabase } from "@/integrations/supabase/client";
-import { DuplicateRecord } from "@/types"; // Import the unified DuplicateRecord type
+import { DuplicateRecord, FieldType } from "@/types";
 
 /**
- * Checks for potential duplicate records based on provided matchingFields
+ * Finds potential duplicate records in imported CSV data by comparing against
+ * existing records.
  */
-export async function findDuplicateRecords(
-  objectTypeId: string,
-  importData: { headers: string[], rows: string[][] },
-  columnMappings: ColumnMapping[],
-  matchingFields: string[],
-  duplicateCheckIntensity: 'low' | 'medium' | 'high'
-): Promise<DuplicateRecord[]> {
-  if (!importData || matchingFields.length === 0) {
-    return [];
-  }
-
-  try {
-    const foundDuplicates: DuplicateRecord[] = [];
-    const threshold = {
-      low: 0.9,
-      medium: 0.7,
-      high: 0.5
-    }[duplicateCheckIntensity];
-    
-    // For each import row, check for potential duplicates
-    for (let rowIndex = 0; rowIndex < importData.rows.length; rowIndex++) {
-      const row = importData.rows[rowIndex];
-      
-      // Create a query to find potential duplicates
-      let query = supabase
-        .from('object_records')
-        .select('id, object_field_values!inner(field_api_name, value)')
-        .eq('object_type_id', objectTypeId);
-      
-      // Add field conditions based on matching fields
-      for (const fieldApiName of matchingFields) {
-        // Find column mapping for this field
-        const mapping = columnMappings.find(m => 
-          m.targetField?.api_name === fieldApiName
-        );
-        
-        if (mapping) {
-          const value = row[mapping.sourceColumnIndex];
-          if (value) {
-            // Add to query
-            query = query.or(`and(object_field_values.field_api_name.eq.${fieldApiName},object_field_values.value.eq.${value})`);
-          }
-        }
+export function findDuplicates(
+  csvData: string[][],
+  headers: string[],
+  mappings: Record<string, string>,
+  existingRecords: Record<string, any>[],
+  fields: { api_name: string; name: string; type: string | FieldType }[]
+): DuplicateRecord[] {
+  const duplicates: DuplicateRecord[] = [];
+  
+  // Process each CSV row
+  csvData.forEach((row, rowIndex) => {
+    // Create a record from the CSV row using the field mappings
+    const csvRecord: Record<string, any> = {};
+    headers.forEach((header, colIndex) => {
+      const fieldApiName = mappings[header];
+      if (fieldApiName) {
+        csvRecord[fieldApiName] = row[colIndex];
       }
-      
-      const { data: potentialDuplicates, error } = await query;
-      
-      if (error) throw error;
-      
-      if (potentialDuplicates && potentialDuplicates.length > 0) {
-        // Group by record_id
-        const recordMap = new Map<string, { field_api_name: string; value: string }[]>();
-        
-        for (const item of potentialDuplicates) {
-          const fieldValue = item.object_field_values as unknown as { field_api_name: string; value: string };
-          if (!recordMap.has(item.id)) {
-            recordMap.set(item.id, [fieldValue]);
-          } else {
-            const existingValues = recordMap.get(item.id);
-            if (existingValues) {
-              existingValues.push(fieldValue);
-            }
-          }
-        }
-        
-        // Calculate match score
-        for (const [recordId, fieldValues] of recordMap.entries()) {
-          const recordData: Record<string, string> = {};
-          fieldValues.forEach(fv => {
-            recordData[fv.field_api_name] = fv.value;
-          });
-          
-          // Count matching fields
-          let matchCount = 0;
-          let totalFields = matchingFields.length;
-          
-          for (const fieldApiName of matchingFields) {
-            const mapping = columnMappings.find(m => 
-              m.targetField?.api_name === fieldApiName
-            );
-            
-            if (mapping) {
-              const importValue = row[mapping.sourceColumnIndex];
-              const existingValue = recordData[fieldApiName];
-              
-              if (importValue && existingValue && 
-                  importValue.toLowerCase() === existingValue.toLowerCase()) {
-                matchCount++;
-              }
-            }
-          }
-          
-          const score = totalFields > 0 ? matchCount / totalFields : 0;
-          
-          if (score >= threshold) {
-            // Create a record for the row
-            const importRecord: Record<string, string> = {};
-            columnMappings.forEach(mapping => {
-              if (mapping.targetField) {
-                importRecord[mapping.targetField.api_name] = row[mapping.sourceColumnIndex] || '';
-              }
-            });
-            
-            foundDuplicates.push({
-              id: recordId,
-              importRowIndex: rowIndex,
-              existingRecord: {
-                id: recordId,
-                ...recordData
-              },
-              matchingFields: matchingFields,
-              matchScore: score,
-              fields: recordData,
-              action: 'skip',
-              record: importRecord
-            });
-          }
-        }
-      }
-    }
+    });
     
-    return foundDuplicates;
-  } catch (error) {
-    console.error("Error checking for duplicates:", error);
-    throw error;
-  }
+    // Find matching fields that could be used to identify duplicates
+    const potentialMatchingFields = Object.keys(mappings).filter(header => {
+      const fieldApiName = mappings[header];
+      const value = row[headers.indexOf(header)];
+      return fieldApiName && value && value.trim() !== '';
+    }).map(header => mappings[header]);
+    
+    // Check each existing record for potential duplicates
+    existingRecords.forEach(existingRecord => {
+      // Fields that match between the CSV record and existing record
+      const matchingFields: string[] = [];
+      
+      // Check each potential matching field
+      potentialMatchingFields.forEach(fieldApiName => {
+        const csvValue = csvRecord[fieldApiName]?.toString().toLowerCase();
+        const existingValue = existingRecord[fieldApiName]?.toString().toLowerCase();
+        
+        if (csvValue && existingValue && csvValue === existingValue) {
+          matchingFields.push(fieldApiName);
+        }
+      });
+      
+      // If there are enough matching fields, consider it a duplicate
+      // (Threshold: at least 2 matching fields or Email field match)
+      const isEmailMatch = matchingFields.some(fieldApiName => {
+        const field = fields.find(f => f.api_name === fieldApiName);
+        return field && field.type === FieldType.EMAIL;
+      });
+      
+      if (matchingFields.length >= 2 || isEmailMatch) {
+        // Find display names for matching fields
+        const matchingFieldNames = matchingFields.map(fieldApiName => {
+          const field = fields.find(f => f.api_name === fieldApiName);
+          return field ? field.name : fieldApiName;
+        });
+        
+        // Gather matching field values for display
+        const matchingFieldDetails = matchingFields.map(fieldApiName => {
+          const field = fields.find(f => f.api_name === fieldApiName);
+          return {
+            fieldName: field ? field.name : fieldApiName,
+            fieldApiName,
+            importValue: csvRecord[fieldApiName],
+            existingValue: existingRecord[fieldApiName]
+          };
+        });
+        
+        duplicates.push({
+          id: existingRecord.id,
+          rowIndex,
+          matchType: isEmailMatch ? 'email_match' : 'field_match',
+          sourceRecord: csvRecord,
+          existingRecord,
+          matchingFields: matchingFieldDetails,
+          existingRecordId: existingRecord.id
+        });
+      }
+    });
+  });
+  
+  return duplicates;
 }
