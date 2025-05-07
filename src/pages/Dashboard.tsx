@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -41,13 +40,9 @@ export default function Dashboard() {
   return (
     <div className="container mx-auto p-4 space-y-6">
       <PageHeader 
-        title={
-          <div className="flex items-center gap-3">
-            <span>Dashboard</span>
-            <ApplicationSwitcher variant="outline" size="sm" />
-          </div>
-        }
+        title="Dashboard"
         description={currentApplication ? `Current Application: ${currentApplication.name}` : "No application selected"}
+        actions={<ApplicationSwitcher variant="outline" size="sm" />}
       />
       
       {isLoading ? (

@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useApplications, Application } from "@/hooks/useApplications";
 import { Button } from "@/components/ui/button";
-import { AppWindow, ChevronRight, Loader2 } from "lucide-react";
+import { AppWindow, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -25,6 +25,14 @@ export function ApplicationSwitcher({
   // Find the default application
   const defaultApp = applications?.find(app => app.is_default);
   
+  // Function to truncate application name if it's longer than 12 characters
+  const truncateAppName = (name: string) => {
+    if (name.length > 12) {
+      return name.substring(0, 12) + "...";
+    }
+    return name;
+  };
+
   const handleSwitchApplication = async () => {
     if (!applications || applications.length <= 1 || switching) return;
     
@@ -70,10 +78,7 @@ export function ApplicationSwitcher({
       className={cn("gap-2", className)}
     >
       {showIcon && <AppWindow className="h-4 w-4" />}
-      {defaultApp.name}
-      {applications && applications.length > 1 && (
-        <ChevronRight className={cn("h-4 w-4", switching && "animate-pulse")} />
-      )}
+      {truncateAppName(defaultApp.name)}
     </Button>
   );
 }
