@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Button, ButtonProps } from "@/components/ui/button";
 import { ActionColor } from "@/hooks/useActions";
@@ -15,7 +16,7 @@ export const ThemedButton = React.forwardRef<HTMLButtonElement, ThemedButtonProp
     // If useUserColor is true and no variant is provided, use the user's favorite color
     // Otherwise, use the provided variant or fall back to "default"
     const buttonVariant = (useUserColor && !variant && favoriteColor) 
-      ? (favoriteColor as ActionColor) || "default" 
+      ? (favoriteColor as ActionColor) || "purple" 
       : variant || "default";
     
     return (
