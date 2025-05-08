@@ -40,6 +40,19 @@ export interface ObjectField {
   updated_at?: string;
 }
 
+// Add ObjectRecord type for components that need it
+export interface ObjectRecord {
+  id: string;
+  field_values?: Record<string, any>;
+  fieldValues?: Record<string, any>;
+  displayName?: string;
+  objectName?: string;
+  created_at?: string;
+  updated_at?: string;
+  object_type_id?: string;
+  owner_id?: string;
+}
+
 // Helper function to convert ObjectFieldWithJson to ObjectField
 export function convertToObjectField(field: ObjectFieldWithJson): ObjectField {
   // Convert Json types to string for compatibility

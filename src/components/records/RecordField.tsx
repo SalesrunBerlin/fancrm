@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useFieldPicklistValues } from '@/hooks/useFieldPicklistValues';
 import { Loader2 } from 'lucide-react';
 import { LookupField } from './LookupField';
+import { LookupValueDisplay } from './LookupValueDisplay';
 
 interface RecordFieldProps {
   field: ObjectField;
