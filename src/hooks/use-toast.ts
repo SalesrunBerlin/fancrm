@@ -1,12 +1,23 @@
 
-import { toast } from "sonner";
+import { useToast as useToastOriginal } from "@/components/ui/use-toast";
 
-// Re-export toast from sonner for backward compatibility
-export { toast };
+export type ToastProps = {
+  title?: string;
+  description: React.ReactNode;
+  action?: React.ReactNode;
+  variant?: "default" | "destructive" | "success";
+};
 
-// For backward compatibility, provide a stub implementation of useToast
-export function useToast() {
+export const useToast = () => {
+  const originalToast = useToastOriginal();
+
   return {
-    toast,
+    ...originalToast,
+    toast: (props: ToastProps) => {
+      return originalToast.toast(props);
+    }
   };
-}
+};
+
+export { ToastProps };
+export { toast } from "@/components/ui/use-toast";

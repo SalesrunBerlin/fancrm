@@ -112,7 +112,13 @@ export function RecordDetailForm({
           value={editedValues?.[field.api_name] !== undefined 
             ? editedValues[field.api_name] 
             : record?.field_values?.[field.api_name]}
-          onChange={onFieldChange || ((value) => methods.setValue(field.api_name, value))}
+          onChange={(value) => {
+            if (onFieldChange) {
+              onFieldChange(field.api_name, value);
+            } else {
+              methods.setValue(field.api_name, value);
+            }
+          }}
           register={methods.register}
           readOnly={!actualEditMode}
           form={methods}
