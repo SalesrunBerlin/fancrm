@@ -13,6 +13,7 @@ import { ObjectActionsSection } from "@/components/actions/ObjectActionsSection"
 import { RelatedRecordsList } from "@/components/records/RelatedRecordsList";
 import { Link } from 'react-router-dom';
 import { ThemedButton } from '@/components/ui/themed-button';
+import { PageHeader } from '@/components/ui/page-header';
 
 export default function ObjectRecordDetail() {
   const { objectTypeId, recordId } = useParams<{ objectTypeId: string; recordId: string }>();
@@ -67,13 +68,16 @@ export default function ObjectRecordDetail() {
     );
   }
 
+  // Get the record's display name, which comes from the default field
+  const recordTitle = record.displayName || record.id;
+
   return (
     <div className="container mx-auto py-10">
       <div className="mb-6">
         <div className="mb-4 flex justify-between items-center">
           <div>
-            <h1 className="text-2xl font-bold">{objectType.name} Record</h1>
-            <p className="text-gray-500">Viewing record details for {record.displayName || recordId}</p>
+            <h1 className="text-2xl font-bold">{recordTitle}</h1>
+            <p className="text-gray-500">{objectType.name}</p>
           </div>
           <div>
             {isEditing ? (

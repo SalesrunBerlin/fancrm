@@ -28,7 +28,7 @@ export interface ObjectField {
   api_name: string;
   description?: string;
   data_type: string;
-  is_required: boolean; // Required to match other definitions
+  is_required: boolean;
   is_unique?: boolean;
   is_system?: boolean;
   default_value?: string | null;

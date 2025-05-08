@@ -1,203 +1,98 @@
+import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Session, User } from "@supabase/supabase-js";
 
-import { User, Session } from '@supabase/supabase-js';
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-
-interface SignInCredentials {
-  email: string;
-  password: string;
-}
-
-interface SignUpCredentials {
-  email: string;
-  password: string;
-}
-
-// Extend the AuthContextType with isSuperAdmin and isAdmin
-interface AuthContextType {
+export interface AuthContextType {
   user: User | null;
   session: Session | null;
+  isAuthenticated: boolean;
   isLoading: boolean;
-  signIn: (credentials: SignInCredentials) => Promise<{ error: any }>;
-  signUp: (credentials: SignUpCredentials) => Promise<{ error: any; data: any }>;
-  signOut: () => Promise<void>;
-  resetPassword: (email: string) => Promise<{ error: any }>;
-  updatePassword: (newPassword: string) => Promise<{ error: any }>;
-  updateUser: (data: any) => Promise<{ error: any; data: any }>;
-  userRole?: string;
+  isLoggedIn: boolean; // Add this property
   isSuperAdmin: boolean;
-  isAdmin: boolean;
-  favoriteColor?: string;
-  setFavoriteColor?: (color: string) => Promise<void>;
+  signOut: () => Promise<void>;
+  refreshSession: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const AuthContext = createContext<AuthContextType>({
+  user: null,
+  session: null,
+  isAuthenticated: false,
+  isLoading: true,
+  isLoggedIn: false, // Add this property
+  isSuperAdmin: false,
+  signOut: async () => {},
+  refreshSession: async () => {},
+});
 
-export const AuthProvider = ({ children }: { children: ReactNode }) => {
+export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [userRole, setUserRole] = useState<string | undefined>(undefined);
-  const [favoriteColor, setFavoriteColorState] = useState<string | undefined>(undefined);
+	const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const isLoggedIn = !!user;
 
   useEffect(() => {
-    // Fetch initial session
-    const initializeAuth = async () => {
-      try {
-        setIsLoading(true);
-        
-        // Get current session
-        const { data: { session } } = await supabase.auth.getSession();
-        setSession(session);
-        setUser(session?.user ?? null);
-        
-        if (session?.user) {
-          fetchUserRole(session.user.id);
-          fetchUserFavoriteColor(session.user.id);
-        }
-        
-        // Set up auth state change listener
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(
-          (event, session) => {
-            setSession(session);
-            setUser(session?.user ?? null);
-            
-            if (session?.user) {
-              fetchUserRole(session.user.id);
-              fetchUserFavoriteColor(session.user.id);
-            } else {
-              setUserRole(undefined);
-              setFavoriteColorState(undefined);
-            }
-          }
-        );
+    const loadSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
 
-        return () => subscription.unsubscribe();
-      } finally {
-        setIsLoading(false);
-      }
+      setUser(session?.user || null);
+      setSession(session || null);
+      setIsAuthenticated(!!session?.user);
+      setIsLoading(false);
     };
 
-    initializeAuth();
+    loadSession();
+
+    supabase.auth.onAuthStateChange((event, session) => {
+      setUser(session?.user || null);
+      setSession(session || null);
+      setIsAuthenticated(!!session?.user);
+			setIsSuperAdmin(session?.user?.app_metadata?.is_super_admin === true);
+      setIsLoading(false);
+    });
   }, []);
 
-  const fetchUserRole = async (userId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', userId)
-        .single();
-        
-      if (error) {
-        console.error('Error fetching user role:', error);
-        return;
-      }
-      
-      setUserRole(data?.role);
-    } catch (error) {
-      console.error('Error in fetchUserRole:', error);
-    }
-  };
+	useEffect(() => {
+		const checkSuperAdmin = async () => {
+			if (user) {
+				setIsSuperAdmin(user?.app_metadata?.is_super_admin === true);
+			} else {
+				setIsSuperAdmin(false);
+			}
+		};
 
-  const fetchUserFavoriteColor = async (userId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('favorite_color')
-        .eq('id', userId)
-        .single();
-        
-      if (error) {
-        console.error('Error fetching user favorite color:', error);
-        return;
-      }
-      
-      setFavoriteColorState(data?.favorite_color || 'default');
-    } catch (error) {
-      console.error('Error in fetchUserFavoriteColor:', error);
-    }
-  };
-
-  const setFavoriteColor = async (color: string) => {
-    if (!user) return;
-    
-    try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ favorite_color: color })
-        .eq('id', user.id);
-      
-      if (error) {
-        console.error('Error updating favorite color:', error);
-        return;
-      }
-      
-      setFavoriteColorState(color);
-    } catch (error) {
-      console.error('Error in setFavoriteColor:', error);
-    }
-  };
-
-  const signIn = async ({ email, password }: SignInCredentials) => {
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    return { error, data };
-  };
-
-  const signUp = async ({ email, password }: SignUpCredentials) => {
-    const { data, error } = await supabase.auth.signUp({ email, password });
-    return { error, data };
-  };
+		checkSuperAdmin();
+	}, [user]);
 
   const signOut = async () => {
     await supabase.auth.signOut();
+    setUser(null);
+    setSession(null);
+    setIsAuthenticated(false);
+		setIsSuperAdmin(false);
   };
 
-  const resetPassword = async (email: string) => {
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/update-password`,
-    });
-    return { error };
+  const refreshSession = async () => {
+    const { data, error } = await supabase.auth.refreshSession()
+
+    if (error) {
+      console.error("Error refreshing session:", error);
+    } else {
+      setUser(data?.session?.user || null);
+      setSession(data?.session || null);
+      setIsAuthenticated(!!data?.session?.user);
+			setIsSuperAdmin(data?.session?.user?.app_metadata?.is_super_admin === true);
+    }
   };
 
-  const updatePassword = async (newPassword: string) => {
-    const { error } = await supabase.auth.updateUser({ password: newPassword });
-    return { error };
-  };
+  return (
+    <AuthContext.Provider value={{ user, session, isAuthenticated, isLoading, isLoggedIn, isSuperAdmin, signOut, refreshSession }}>
+      {children}
+    </AuthContext.Provider>
+  );
+}
 
-  const updateUser = async (data: any) => {
-    const { data: userData, error } = await supabase.auth.updateUser(data);
-    return { error, data: userData };
-  };
-
-  // Check if user is SuperAdmin or Admin
-  const isSuperAdmin = userRole === 'SuperAdmin' || userRole === 'superadmin';
-  const isAdmin = isSuperAdmin || userRole === 'admin';
-
-  const value = {
-    user,
-    session,
-    isLoading,
-    signIn,
-    signUp,
-    signOut,
-    resetPassword,
-    updatePassword,
-    updateUser,
-    userRole,
-    isSuperAdmin,
-    isAdmin,
-    favoriteColor,
-    setFavoriteColor,
-  };
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-};
-
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
-};
+export const useAuth = (): AuthContextType => {
+  return useContext(AuthContext);
+}
