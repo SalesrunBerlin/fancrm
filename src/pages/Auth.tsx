@@ -8,7 +8,7 @@ import { Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
 const Auth = () => {
-  const { user, signIn, signUp, isLoading } = useAuth();
+  const { user, isLoading, signIn, signUp } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -59,8 +59,12 @@ const Auth = () => {
 
     try {
       const { error } = await signIn({ email, password });
-      if (error) throw error;
-      navigate('/dashboard');
+      if (error) {
+        setError(`Anmeldung fehlgeschlagen: ${error.message}`);
+        console.error('Error signing in:', error);
+      } else {
+        navigate('/dashboard');
+      }
     } catch (error: any) {
       console.error('Error signing in:', error);
       setError('Anmeldung fehlgeschlagen. Bitte überprüfen Sie Ihre Zugangsdaten.');
@@ -76,9 +80,10 @@ const Auth = () => {
 
     try {
       const { error, data } = await signUp({ email, password });
-      if (error) throw error;
-
-      if (data) {
+      if (error) {
+        setError(`Registrierung fehlgeschlagen: ${error.message}`);
+        console.error('Error signing up:', error);
+      } else if (data) {
         setActiveTab('signin');
         setError('Bitte bestätigen Sie Ihre E-Mail-Adresse. Anschließend können Sie sich anmelden.');
       }
