@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Loader2, Edit, Save, ArrowLeft, X } from 'lucide-react';
-import { ObjectRecord, ObjectField } from '@/types/ObjectFieldTypes';
+import { ObjectRecord, ObjectField, convertToObjectFields } from '@/types/ObjectFieldTypes';
 import { RecordField } from './RecordField';
 import { useForm } from 'react-hook-form';
 
@@ -74,7 +74,7 @@ export function PublicRecordView({ token, recordId }: PublicRecordViewProps) {
       if (fieldsListError) throw fieldsListError;
 
       // Filter fields to only include visible ones
-      const filteredFields = fieldsListData.filter((field: ObjectField) => 
+      const filteredFields = fieldsListData.filter((field: any) => 
         visibleFields.includes(field.api_name));
       
       // Format record with field values
@@ -93,7 +93,7 @@ export function PublicRecordView({ token, recordId }: PublicRecordViewProps) {
       }
 
       setObjectType(objectTypeData);
-      setFields(filteredFields);
+      setFields(convertToObjectFields(filteredFields));
       setRecord(formattedRecord);
 
     } catch (error: any) {
@@ -129,8 +129,7 @@ export function PublicRecordView({ token, recordId }: PublicRecordViewProps) {
       
       if (!shareData.allow_edit) {
         toast({
-          description: 'You do not have permission to edit this record.',
-          variant: 'destructive',
+          description: 'You do not have permission to edit this record.'
         });
         setIsSubmitting(false);
         setIsEditing(false);
@@ -166,7 +165,7 @@ export function PublicRecordView({ token, recordId }: PublicRecordViewProps) {
       await Promise.all(updates);
 
       toast({
-        description: 'Record updated successfully.',
+        description: 'Record updated successfully.'
       });
 
       // Refresh data
@@ -176,8 +175,7 @@ export function PublicRecordView({ token, recordId }: PublicRecordViewProps) {
     } catch (error: any) {
       console.error('Error updating record:', error);
       toast({
-        description: 'Error updating record: ' + error.message,
-        variant: 'destructive',
+        description: 'Error updating record: ' + error.message
       });
     } finally {
       setIsSubmitting(false);
