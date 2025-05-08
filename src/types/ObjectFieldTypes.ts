@@ -28,7 +28,7 @@ export interface ObjectField {
   api_name: string;
   description?: string;
   data_type: string;
-  is_required: boolean; // Required property to match useObjectTypes.ObjectField
+  is_required: boolean;
   is_unique?: boolean;
   is_system?: boolean;
   default_value?: string | null;
@@ -51,7 +51,7 @@ export interface ObjectRecord {
   updated_at?: string;
   object_type_id?: string;
   owner_id?: string;
-  record_id?: string | null; // Add record_id field
+  record_id?: string | null;
 }
 
 // Helper function to convert ObjectFieldWithJson to ObjectField

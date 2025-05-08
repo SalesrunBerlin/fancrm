@@ -52,10 +52,11 @@ export default function EditRecordPage() {
   }, [record, isLoadingRecord, form]);
 
   const onSubmit = async (data: RecordFormData) => {
-    if (!recordId) return;
+    if (!recordId || !objectTypeId) return;
     
     try {
       setIsSubmitting(true);
+      console.log("Submitting form data:", data);
       
       // Process Auto-Number fields
       const autoNumberFields = fields.filter(field => field.data_type === 'auto_number');
@@ -158,19 +159,27 @@ export default function EditRecordPage() {
               <Button 
                 type="button" 
                 variant="outline"
-                size="icon"
                 onClick={handleCancel}
-                title="Cancel"
+                disabled={isSubmitting}
               >
-                <X className="h-4 w-4" />
+                <X className="h-4 w-4 mr-2" />
+                Cancel
               </Button>
               <Button 
                 type="submit" 
                 disabled={isSubmitting}
-                size="icon"
-                title="Save Changes"
               >
-                {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4 mr-2" />
+                    Save Changes
+                  </>
+                )}
               </Button>
             </CardFooter>
           </form>

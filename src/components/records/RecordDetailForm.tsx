@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Button } from '@/components/ui/button';
@@ -7,6 +8,7 @@ import { toast } from 'sonner';
 import { useObjectFields } from '@/hooks/useObjectFields';
 import { useRecordDetail } from '@/hooks/useRecordDetail';
 import { ObjectField } from '@/types/ObjectFieldTypes';
+import { useObjectRecords } from '@/hooks/useObjectRecords';
 
 interface RecordDetailFormProps {
   objectTypeId: string;
@@ -44,6 +46,7 @@ export function RecordDetailForm({
   
   const [isSaving, setIsSaving] = useState(false);
   const methods = useForm();
+  const { updateRecord } = useObjectRecords(objectTypeId);
   
   // Make sure to cast the fields to the proper ObjectField type
   const fields = (providedFields || fetchedFields || []) as ObjectField[];
@@ -68,20 +71,19 @@ export function RecordDetailForm({
     try {
       setIsSaving(true);
       
-      // We need to implement the update functionality
-      // This is a simplified version just for the UI to work
-      const { error } = await fetch(`/api/records/${recordId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-      }).then(res => res.json());
+      // Update the record using the useObjectRecords hook
+      await updateRecord.mutateAsync({
+        id: recordId,
+        field_values: data
+      });
       
-      if (error) throw error;
-      
-      toast.success("The record has been successfully updated.");
+      toast.success("Record updated successfully");
       
       if (onSave && record) {
-        onSave(record);
+        onSave({
+          ...record,
+          field_values: { ...record.field_values, ...data }
+        });
       }
     } catch (error) {
       console.error('Error updating record:', error);

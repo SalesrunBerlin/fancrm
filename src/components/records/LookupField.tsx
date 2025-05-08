@@ -7,72 +7,46 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useObjectLookup } from "@/hooks/useObjectLookup";
-import { Loader2, AlertCircle } from "lucide-react";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface LookupFieldProps {
-  value: string | null;
-  onChange: (value: string | null) => void;
+  value?: string;
+  onChange: (value: string) => void;
   targetObjectTypeId: string;
   disabled?: boolean;
 }
 
-export function LookupField({ 
-  value, 
-  onChange, 
+export function LookupField({
+  value,
+  onChange,
   targetObjectTypeId,
-  disabled 
+  disabled = false
 }: LookupFieldProps) {
-  const { records, isLoading, error } = useObjectLookup(targetObjectTypeId);
-  const [selectedRecord, setSelectedRecord] = useState<string | null>(value);
+  const { records, isLoading } = useObjectLookup(targetObjectTypeId);
   
   useEffect(() => {
-    setSelectedRecord(value);
-  }, [value]);
+    console.log("Available lookup records:", records);
+    console.log("Currently selected value:", value);
+  }, [records, value]);
+
+  if (isLoading) {
+    return <Skeleton className="h-10 w-full" />;
+  }
 
   const handleChange = (newValue: string) => {
     console.log("LookupField value changed:", newValue);
-    setSelectedRecord(newValue || null);
-    onChange(newValue || null);
+    onChange(newValue);
   };
-  
-  if (!targetObjectTypeId) {
-    return (
-      <Alert variant="destructive" className="p-2">
-        <AlertCircle className="h-4 w-4" />
-        <AlertDescription>Missing target object configuration</AlertDescription>
-      </Alert>
-    );
-  }
-  
-  if (error) {
-    return (
-      <Alert variant="destructive" className="p-2">
-        <AlertCircle className="h-4 w-4" />
-        <AlertDescription>Error loading lookup data</AlertDescription>
-      </Alert>
-    );
-  }
-
-  if (isLoading) {
-    return <div className="flex items-center space-x-2 h-10 px-3">
-      <Loader2 className="h-4 w-4 animate-spin" />
-      <span className="text-sm text-muted-foreground">Loading...</span>
-    </div>;
-  }
-
-  console.log("Available lookup records:", records);
-  console.log("Currently selected value:", selectedRecord);
 
   return (
     <Select
-      value={selectedRecord || ""}
+      value={value}
       onValueChange={handleChange}
-      disabled={disabled || !records || records.length === 0}
+      disabled={disabled}
     >
       <SelectTrigger>
-        <SelectValue placeholder={records && records.length > 0 ? "Select..." : "No records available"} />
+        <SelectValue placeholder="Select..." />
       </SelectTrigger>
       <SelectContent>
         {records?.map((record) => (
