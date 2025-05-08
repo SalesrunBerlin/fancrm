@@ -13,7 +13,7 @@ import { ThemedButton } from '@/components/ui/themed-button';
 import { supabase } from '@/integrations/supabase/client';
 import { Loader2, Plus } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
+import { CreateWorkspaceDialog } from './CreateWorkspaceDialog';
 
 export interface Workspace {
   id: string;
@@ -30,6 +30,7 @@ export interface Workspace {
 export function WorkspaceList() {
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
   useEffect(() => {
     fetchWorkspaces();
@@ -52,6 +53,11 @@ export function WorkspaceList() {
     }
   };
 
+  const handleWorkspaceCreated = () => {
+    fetchWorkspaces();
+    setCreateDialogOpen(false);
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -64,11 +70,9 @@ export function WorkspaceList() {
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle>Workspaces</CardTitle>
-        <ThemedButton size="sm" useUserColor={true} asChild>
-          <Link to="/admin/workspace/create" className="flex items-center">
-            <Plus className="mr-2 h-4 w-4" />
-            Workspace erstellen
-          </Link>
+        <ThemedButton size="sm" onClick={() => setCreateDialogOpen(true)}>
+          <Plus className="mr-2 h-4 w-4" />
+          Workspace erstellen
         </ThemedButton>
       </CardHeader>
       <CardContent>
@@ -108,15 +112,19 @@ export function WorkspaceList() {
         ) : (
           <div className="text-center py-4">
             <p className="text-muted-foreground mb-4">Keine Workspaces gefunden</p>
-            <ThemedButton asChild useUserColor={true}>
-              <Link to="/admin/workspace/create" className="flex items-center">
-                <Plus className="mr-2 h-4 w-4" />
-                Workspace erstellen
-              </Link>
+            <ThemedButton onClick={() => setCreateDialogOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Workspace erstellen
             </ThemedButton>
           </div>
         )}
       </CardContent>
+      
+      <CreateWorkspaceDialog
+        open={createDialogOpen}
+        onClose={() => setCreateDialogOpen(false)}
+        onWorkspaceCreated={handleWorkspaceCreated}
+      />
     </Card>
   );
 }

@@ -5,10 +5,9 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Loader2, Edit, Save, ArrowLeft, X } from 'lucide-react';
-import { ObjectRecord, ObjectField, convertToObjectFields } from '@/types/ObjectFieldTypes';
+import { ObjectRecord, ObjectField } from '@/types/ObjectFieldTypes';
 import { RecordField } from './RecordField';
 import { useForm } from 'react-hook-form';
-import { toast } from 'sonner';
 
 interface PublicRecordViewProps {
   token: string;
@@ -16,7 +15,7 @@ interface PublicRecordViewProps {
 }
 
 export function PublicRecordView({ token, recordId }: PublicRecordViewProps) {
-  const { toast: legacyToast } = useToast();
+  const { toast } = useToast();
   const [record, setRecord] = useState<ObjectRecord | null>(null);
   const [fields, setFields] = useState<ObjectField[]>([]);
   const [objectType, setObjectType] = useState<any | null>(null);
@@ -75,7 +74,7 @@ export function PublicRecordView({ token, recordId }: PublicRecordViewProps) {
       if (fieldsListError) throw fieldsListError;
 
       // Filter fields to only include visible ones
-      const filteredFields = fieldsListData.filter((field: any) => 
+      const filteredFields = fieldsListData.filter((field: ObjectField) => 
         visibleFields.includes(field.api_name));
       
       // Format record with field values
@@ -94,7 +93,7 @@ export function PublicRecordView({ token, recordId }: PublicRecordViewProps) {
       }
 
       setObjectType(objectTypeData);
-      setFields(convertToObjectFields(filteredFields));
+      setFields(filteredFields);
       setRecord(formattedRecord);
 
     } catch (error: any) {
@@ -129,7 +128,10 @@ export function PublicRecordView({ token, recordId }: PublicRecordViewProps) {
       if (shareError) throw shareError;
       
       if (!shareData.allow_edit) {
-        toast('You do not have permission to edit this record.');
+        toast({
+          description: 'You do not have permission to edit this record.',
+          variant: 'destructive',
+        });
         setIsSubmitting(false);
         setIsEditing(false);
         return;
@@ -163,7 +165,9 @@ export function PublicRecordView({ token, recordId }: PublicRecordViewProps) {
 
       await Promise.all(updates);
 
-      toast('Record updated successfully.');
+      toast({
+        description: 'Record updated successfully.',
+      });
 
       // Refresh data
       fetchPublicRecord();
@@ -171,7 +175,10 @@ export function PublicRecordView({ token, recordId }: PublicRecordViewProps) {
       setEditedValues({});
     } catch (error: any) {
       console.error('Error updating record:', error);
-      toast('Error updating record: ' + error.message);
+      toast({
+        description: 'Error updating record: ' + error.message,
+        variant: 'destructive',
+      });
     } finally {
       setIsSubmitting(false);
     }

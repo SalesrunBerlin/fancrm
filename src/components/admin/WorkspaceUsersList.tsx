@@ -13,7 +13,6 @@ import { ThemedButton } from '@/components/ui/themed-button';
 import { supabase } from '@/integrations/supabase/client';
 import { Loader2, Plus, UserPlus } from 'lucide-react';
 import { WorkspaceInviteDialog } from './WorkspaceInviteDialog';
-import { WorkspaceUserAssignment } from './WorkspaceUserAssignment';
 import { useAuth } from '@/contexts/AuthContext';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
@@ -130,10 +129,6 @@ export function WorkspaceUsersList({ workspaceId }: WorkspaceUsersListProps) {
     toast.success('Einladung wurde erstellt');
   };
 
-  const handleUserAssigned = () => {
-    fetchWorkspaceUsers();
-  };
-
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -146,16 +141,10 @@ export function WorkspaceUsersList({ workspaceId }: WorkspaceUsersListProps) {
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle>Workspace-Benutzer</CardTitle>
-        <div className="flex gap-2">
-          <WorkspaceUserAssignment 
-            workspaceId={workspaceId} 
-            onUserAssigned={handleUserAssigned} 
-          />
-          <ThemedButton size="sm" onClick={() => setInviteDialogOpen(true)}>
-            <UserPlus className="mr-2 h-4 w-4" />
-            Benutzer einladen
-          </ThemedButton>
-        </div>
+        <ThemedButton size="sm" onClick={() => setInviteDialogOpen(true)}>
+          <UserPlus className="mr-2 h-4 w-4" />
+          Benutzer einladen
+        </ThemedButton>
       </CardHeader>
       <CardContent>
         {workspaceUsers.length > 0 ? (
@@ -248,16 +237,10 @@ export function WorkspaceUsersList({ workspaceId }: WorkspaceUsersListProps) {
         ) : (
           <div className="text-center py-4">
             <p className="text-muted-foreground mb-4">Keine Benutzer diesem Workspace zugeordnet</p>
-            <div className="flex justify-center gap-2">
-              <WorkspaceUserAssignment 
-                workspaceId={workspaceId} 
-                onUserAssigned={handleUserAssigned} 
-              />
-              <ThemedButton onClick={() => setInviteDialogOpen(true)}>
-                <UserPlus className="mr-2 h-4 w-4" />
-                Benutzer einladen
-              </ThemedButton>
-            </div>
+            <ThemedButton onClick={() => setInviteDialogOpen(true)}>
+              <UserPlus className="mr-2 h-4 w-4" />
+              Benutzer einladen
+            </ThemedButton>
           </div>
         )}
       </CardContent>

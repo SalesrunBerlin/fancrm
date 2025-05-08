@@ -103,15 +103,6 @@ export function RecordDetailForm({
   // Determine if we're in edit mode based on either prop
   const actualEditMode = isEditMode || isEditing || false;
 
-  // Create a wrapper for onChange that adds the fieldName
-  const handleFieldChange = (fieldName: string, value: any) => {
-    if (onFieldChange) {
-      onFieldChange(fieldName, value);
-    } else {
-      methods.setValue(fieldName, value);
-    }
-  };
-
   return (
     <form onSubmit={methods.handleSubmit(onSubmit)} className="space-y-4 p-4">
       {fields && fields.map((field) => (
@@ -121,7 +112,7 @@ export function RecordDetailForm({
           value={editedValues?.[field.api_name] !== undefined 
             ? editedValues[field.api_name] 
             : record?.field_values?.[field.api_name]}
-          onChange={(value) => handleFieldChange(field.api_name, value)}
+          onChange={onFieldChange || ((value) => methods.setValue(field.api_name, value))}
           register={methods.register}
           readOnly={!actualEditMode}
           form={methods}

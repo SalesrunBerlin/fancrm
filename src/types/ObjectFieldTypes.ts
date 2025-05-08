@@ -1,96 +1,79 @@
 
-export interface ObjectField {
+// Define our own Json type since it's not exported from database.ts
+export type Json = string | number | boolean | null | { [key: string]: Json } | Json[];
+
+// Extension of ObjectField type to handle Json types for default_value and options
+export interface ObjectFieldWithJson {
   id: string;
-  object_type_id: string;
   name: string;
   api_name: string;
-  description?: string | null;
+  description?: string;
   data_type: string;
   is_required: boolean;
-  is_unique: boolean;
-  is_system: boolean;
-  is_active: boolean;
-  default_value?: any;
-  validation_regex?: string | null;
-  validation_message?: string | null;
-  help_text?: string | null;
+  is_unique?: boolean;
+  is_system?: boolean;
+  default_value?: Json | null;
+  options?: Json | null;
+  object_type_id: string;
   display_order: number;
-  is_searchable: boolean;
-  is_audit_tracked: boolean;
-  picklist_values?: PicklistValue[];
-  related_object_type_id?: string | null;
-  related_field_id?: string | null;
-  lookup_settings?: LookupSettings | null;
-  auto_number_settings?: AutoNumberSettings | null;
-  field_settings?: FieldSettings | null;
-  created_at?: string;
+  owner_id: string;
+  created_at: string;
   updated_at?: string;
-  createdAt?: string;
-  updatedAt?: string;
-  ui_settings?: UISettings;
-  max_length?: number;
 }
 
-export interface PicklistValue {
-  id?: string;
-  value: string;
-  label: string;
-  is_active?: boolean;
-  display_order?: number;
-  color?: string;
-  icon?: string;
+// Updated ObjectField interface to match useObjectTypes.ObjectField
+export interface ObjectField {
+  id: string;
+  name: string;
+  api_name: string;
   description?: string;
-  isNew?: boolean;
-  metadata?: Record<string, any>;
+  data_type: string;
+  is_required: boolean; // Now required to match other definitions
+  is_unique?: boolean;
+  is_system?: boolean;
+  default_value?: string | null;
+  options?: any | null;
+  object_type_id: string;
+  display_order: number;
+  owner_id: string;
+  created_at: string;
+  updated_at?: string;
 }
 
-export interface LookupSettings {
-  display_fields: string[];
-  search_fields: string[];
-  filter_criteria?: Record<string, any>;
-  default_sort_field?: string;
-  default_sort_direction?: 'asc' | 'desc';
+// Extend ObjectRecord interface to include missing properties
+export interface ObjectRecord {
+  id: string;
+  record_id: string | null;
+  object_type_id: string;
+  created_at: string;
+  updated_at: string;
+  owner_id: string | null;
+  created_by: string | null;
+  last_modified_by: string | null;
+  field_values?: { [key: string]: any };
+  displayName?: string;
+  objectName?: string;
 }
 
-export interface AutoNumberSettings {
-  format: string;
-  starting_number: number;
-  increment_by: number;
-  prefix?: string;
-  suffix?: string;
-}
-
-export interface FieldSettings {
-  decimals?: number;
-  min_value?: number;
-  max_value?: number;
-  min_date?: string;
-  max_date?: string;
-  rich_text?: boolean;
-  display_format?: string;
-  currency_settings?: {
-    currency_code: string;
-    decimal_places: number;
-  };
-  address_settings?: {
-    enable_map: boolean;
-    required_fields: string[];
-  };
-  file_settings?: {
-    allowed_extensions: string[];
-    max_size: number;
-    max_files: number;
+// Helper function to convert ObjectFieldWithJson to ObjectField
+export function convertToObjectField(field: ObjectFieldWithJson): ObjectField {
+  // Convert Json types to string for compatibility
+  return {
+    ...field,
+    default_value: field.default_value !== null 
+      ? typeof field.default_value === 'string' 
+        ? field.default_value 
+        : JSON.stringify(field.default_value) 
+      : null,
+    options: field.options !== null 
+      ? typeof field.options === 'string' 
+        ? field.options 
+        : JSON.stringify(field.options) 
+      : null
   };
 }
 
-export interface UISettings {
-  show_in_table?: boolean;
-  show_in_detail?: boolean;
-  column_width?: number;
-  readonly?: boolean;
-  conditional_visibility?: {
-    condition: string;
-    field_api_name: string;
-    value: any;
-  };
+// Helper function to convert an array of ObjectFieldWithJson to ObjectField[]
+export function convertToObjectFields(fields: ObjectFieldWithJson[]): ObjectField[] {
+  return fields.map(convertToObjectField);
 }
