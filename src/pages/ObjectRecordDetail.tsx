@@ -14,6 +14,8 @@ import { RelatedRecordsList } from "@/components/records/RelatedRecordsList";
 import { Link } from 'react-router-dom';
 import { ThemedButton } from '@/components/ui/themed-button';
 import { PageHeader } from '@/components/ui/page-header';
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { TooltipProvider } from "@radix-ui/react-tooltip";
 
 export default function ObjectRecordDetail() {
   const { objectTypeId, recordId } = useParams<{ objectTypeId: string; recordId: string }>();
@@ -82,31 +84,59 @@ export default function ObjectRecordDetail() {
           <div>
             {isEditing ? (
               <>
-                <ThemedButton
-                  variant="success"
-                  onClick={() => {
-                    handleSaveRecord(record);
-                  }}
-                  className="mr-2"
-                >
-                  <Save className="mr-2 h-4 w-4" />
-                  Save
-                </ThemedButton>
-                <ThemedButton
-                  variant="ghost"
-                  onClick={() => setIsEditing(false)}
-                >
-                  <X className="mr-2 h-4 w-4" />
-                  Cancel
-                </ThemedButton>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <ThemedButton
+                        variant="success"
+                        onClick={() => {
+                          handleSaveRecord(record);
+                        }}
+                        className="mr-2"
+                        size="icon"
+                      >
+                        <Save className="h-4 w-4" />
+                      </ThemedButton>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">
+                      <p>Save changes</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <ThemedButton
+                        variant="ghost"
+                        onClick={() => setIsEditing(false)}
+                        size="icon"
+                      >
+                        <X className="h-4 w-4" />
+                      </ThemedButton>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">
+                      <p>Cancel editing</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </>
             ) : (
-              <ThemedButton
-                onClick={() => setIsEditing(true)}
-              >
-                <Edit className="mr-2 h-4 w-4" />
-                Edit
-              </ThemedButton>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <ThemedButton
+                      onClick={() => setIsEditing(true)}
+                      size="icon"
+                    >
+                      <Edit className="h-4 w-4" />
+                    </ThemedButton>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">
+                    <p>Edit record</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             )}
           </div>
         </div>

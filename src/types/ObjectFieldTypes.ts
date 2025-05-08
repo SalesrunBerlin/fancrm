@@ -40,21 +40,6 @@ export interface ObjectField {
   updated_at?: string;
 }
 
-// Extend ObjectRecord interface to include missing properties
-export interface ObjectRecord {
-  id: string;
-  record_id: string | null;
-  object_type_id: string;
-  created_at: string;
-  updated_at: string;
-  owner_id: string | null;
-  created_by: string | null;
-  last_modified_by: string | null;
-  field_values?: { [key: string]: any };
-  displayName?: string;
-  objectName?: string;
-}
-
 // Helper function to convert ObjectFieldWithJson to ObjectField
 export function convertToObjectField(field: ObjectFieldWithJson): ObjectField {
   // Convert Json types to string for compatibility

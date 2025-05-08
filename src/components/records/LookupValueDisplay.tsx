@@ -2,6 +2,8 @@
 import { Link } from "react-router-dom";
 import { Loader2, AlertCircle } from "lucide-react";
 import { useObjectLookup } from "@/hooks/useObjectLookup";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { TooltipProvider } from "@radix-ui/react-tooltip";
 
 interface LookupValueDisplayProps {
   value: string | null;
@@ -45,11 +47,20 @@ export function LookupValueDisplay({ value, fieldOptions }: LookupValueDisplayPr
   }
 
   return (
-    <Link 
-      to={`/objects/${targetObjectTypeId}/${value}`}
-      className="text-blue-600 hover:underline"
-    >
-      {record.display_value}
-    </Link>
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Link 
+            to={`/objects/${targetObjectTypeId}/${value}`}
+            className="text-blue-600 hover:underline"
+          >
+            {record.display_value}
+          </Link>
+        </TooltipTrigger>
+        <TooltipContent side="top">
+          <p>View record details</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 }

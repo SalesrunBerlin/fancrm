@@ -5,6 +5,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useForm } from 'react-hook-form';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useFieldPicklistValues } from '@/hooks/useFieldPicklistValues';
+import { Loader2 } from 'lucide-react';
+import { LookupField } from './LookupField';
 
 interface RecordFieldProps {
   field: ObjectField;
@@ -23,6 +27,10 @@ export function RecordField({
   readOnly = false,
   form
 }: RecordFieldProps) {
+  const { picklistValues, isLoading: loadingPicklist } = useFieldPicklistValues(
+    field.data_type === 'picklist' ? field.id : ''
+  );
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (onChange) {
       onChange(e.target.value);
@@ -32,6 +40,12 @@ export function RecordField({
   const handleCheckboxChange = (checked: boolean) => {
     if (onChange) {
       onChange(checked);
+    }
+  };
+
+  const handleSelectChange = (value: string) => {
+    if (onChange) {
+      onChange(value);
     }
   };
 
@@ -62,6 +76,37 @@ export function RecordField({
             {...(register && register(field.api_name))}
           />
         );
+      case 'picklist':
+        if (readOnly) {
+          const selectedOption = picklistValues?.find(option => option.value === value);
+          return <div className="py-2">{selectedOption?.label || value || "-"}</div>;
+        }
+        
+        if (loadingPicklist) {
+          return <div className="flex items-center space-x-2">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <span>Loading options...</span>
+          </div>;
+        }
+        
+        return (
+          <Select 
+            value={value || ""}
+            onValueChange={handleSelectChange}
+            disabled={readOnly}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select..." />
+            </SelectTrigger>
+            <SelectContent>
+              {picklistValues?.map(option => (
+                <SelectItem key={option.id} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        );
       case 'checkbox':
         return (
           <div className="flex items-center space-x-2">
@@ -85,7 +130,30 @@ export function RecordField({
             {...(register && register(field.api_name))}
           />
         );
-      // Add more field types as needed
+      case 'lookup':
+        if (readOnly) {
+          return (
+            <div className="py-2">
+              {value ? (
+                <LookupValueDisplay 
+                  value={value} 
+                  fieldOptions={field.options || {
+                    target_object_type_id: ''
+                  }}
+                />
+              ) : "-"}
+            </div>
+          );
+        }
+        
+        return (
+          <LookupField
+            value={value}
+            onChange={onChange || (() => {})}
+            targetObjectTypeId={field.options?.target_object_type_id || ''}
+            disabled={readOnly}
+          />
+        );
       default:
         return (
           <Input
