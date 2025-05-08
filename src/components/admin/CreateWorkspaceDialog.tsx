@@ -1,160 +1,151 @@
 
 import React, { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Button } from '@/components/ui/button';
-import { ThemedButton } from '@/components/ui/themed-button';
-import { supabase } from '@/integrations/supabase/client';
-import { Loader2 } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Loader2, Plus } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from '@/contexts/AuthContext';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 
 interface CreateWorkspaceDialogProps {
-  open: boolean;
-  onClose: () => void;
-  onWorkspaceCreated: () => void;
+  onWorkspaceCreated?: () => void;
 }
 
-export function CreateWorkspaceDialog({ 
-  open, 
-  onClose, 
-  onWorkspaceCreated 
-}: CreateWorkspaceDialogProps) {
+export function CreateWorkspaceDialog({ onWorkspaceCreated }: CreateWorkspaceDialogProps) {
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
   const { user } = useAuth();
-  const { toast } = useToast();
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [formData, setFormData] = useState({
-    name: '',
-    description: '',
-    welcome_message: 'Willkommen! Bitte geben Sie Ihre Zugangsdaten ein, um auf den Workspace zuzugreifen.',
-    primary_color: '#3b82f6'
-  });
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!name) {
+      toast('Bitte geben Sie einen Namen für den Workspace an.');
+      return;
+    }
+
     if (!user) {
-      toast({
-        description: 'Sie müssen angemeldet sein, um einen Workspace zu erstellen.'
-      });
+      toast('Sie müssen eingeloggt sein, um einen Workspace zu erstellen.');
       return;
     }
 
     try {
-      setIsSubmitting(true);
-      
-      const { data, error } = await supabase
+      setIsLoading(true);
+
+      // Insert new workspace
+      const { data: workspaceData, error: workspaceError } = await supabase
         .from('workspaces')
         .insert([
-          {
-            name: formData.name,
-            description: formData.description,
-            welcome_message: formData.welcome_message,
-            primary_color: formData.primary_color,
+          { 
+            name,
+            description: description || null,
             owner_id: user.id
           }
         ])
-        .select()
+        .select('id')
         .single();
 
-      if (error) throw error;
+      if (workspaceError) throw workspaceError;
       
-      toast({
-        description: `Workspace "${formData.name}" wurde erfolgreich erstellt`
-      });
-      
-      onWorkspaceCreated();
+      // Associate user with workspace
+      const { error: userWorkspaceError } = await supabase
+        .from('workspace_users')
+        .insert([
+          {
+            workspace_id: workspaceData.id,
+            user_id: user.id,
+            is_admin: true,
+            can_create_objects: true,
+            can_modify_objects: true,
+            can_manage_users: true,
+            can_create_actions: true
+          }
+        ]);
+
+      if (userWorkspaceError) throw userWorkspaceError;
+
+      // Update user's default workspace
+      const { error: updateProfileError } = await supabase
+        .from('profiles')
+        .update({ workspace_id: workspaceData.id })
+        .eq('id', user.id);
+
+      if (updateProfileError) {
+        console.warn('Could not set workspace as default:', updateProfileError);
+      }
+
+      toast.success('Workspace wurde erfolgreich erstellt!');
+      setName('');
+      setDescription('');
+      setIsOpen(false);
+
+      if (onWorkspaceCreated) {
+        onWorkspaceCreated();
+      }
     } catch (error) {
       console.error('Error creating workspace:', error);
-      toast({
-        description: 'Workspace konnte nicht erstellt werden'
-      });
+      toast.error('Fehler beim Erstellen des Workspace. Bitte versuchen Sie es erneut.');
     } finally {
-      setIsSubmitting(false);
+      setIsLoading(false);
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
-      <DialogContent className="sm:max-w-[500px]">
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <DialogTrigger asChild>
+        <Button className="flex items-center gap-2">
+          <Plus className="h-4 w-4" />
+          Neuen Workspace erstellen
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Neuen Workspace erstellen</DialogTitle>
         </DialogHeader>
-        
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="name">Workspace-Name</Label>
-            <Input
+            <Label htmlFor="name">Name *</Label>
+            <Input 
               id="name"
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Name des Workspace"
+              disabled={isLoading}
               required
-              placeholder="Mein Unternehmen"
             />
           </div>
-          
           <div className="space-y-2">
             <Label htmlFor="description">Beschreibung</Label>
-            <Input
+            <Input 
               id="description"
-              name="description"
-              value={formData.description}
-              onChange={handleChange}
-              placeholder="Optionale Beschreibung des Workspaces"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Beschreibung des Workspace (optional)"
+              disabled={isLoading}
             />
           </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="welcome_message">Willkommensnachricht</Label>
-            <Input
-              id="welcome_message"
-              name="welcome_message"
-              value={formData.welcome_message}
-              onChange={handleChange}
-              placeholder="Nachricht auf der Login-Seite"
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="primary_color">Primärfarbe</Label>
-            <div className="flex gap-2">
-              <Input
-                id="primary_color"
-                name="primary_color"
-                type="color"
-                value={formData.primary_color}
-                onChange={handleChange}
-                className="w-12 h-10 p-1"
-              />
-              <Input
-                value={formData.primary_color}
-                onChange={handleChange}
-                name="primary_color"
-                className="flex-1"
-              />
-            </div>
-          </div>
-          
-          <div className="flex justify-end space-x-2 pt-4">
-            <Button type="button" variant="outline" onClick={onClose}>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={() => setIsOpen(false)}
+              disabled={isLoading}
+            >
               Abbrechen
             </Button>
-            <ThemedButton type="submit" disabled={isSubmitting} useUserColor={false}>
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Erstellen...
-                </>
-              ) : (
-                'Workspace erstellen'
-              )}
-            </ThemedButton>
+            <Button 
+              type="submit"
+              disabled={isLoading || !name}
+            >
+              {isLoading ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : null}
+              Workspace erstellen
+            </Button>
           </div>
         </form>
       </DialogContent>

@@ -25,7 +25,7 @@ interface WorkspaceUserAssignmentProps {
 }
 
 export function WorkspaceUserAssignment({ workspaceId, onUserAssigned }: WorkspaceUserAssignmentProps) {
-  const { toast } = useToast();
+  const { toast: legacyToast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [availableUsers, setAvailableUsers] = useState<User[]>([]);
@@ -78,9 +78,7 @@ export function WorkspaceUserAssignment({ workspaceId, onUserAssigned }: Workspa
       }
     } catch (error) {
       console.error('Error fetching available users:', error);
-      toast({
-        description: 'Fehler beim Laden der verfügbaren Benutzer'
-      });
+      toast('Fehler beim Laden der verfügbaren Benutzer');
     } finally {
       setIsLoading(false);
     }
@@ -92,9 +90,7 @@ export function WorkspaceUserAssignment({ workspaceId, onUserAssigned }: Workspa
 
   const handleAssignUser = async () => {
     if (!selectedUserId) {
-      toast({
-        description: 'Bitte wählen Sie einen Benutzer aus'
-      });
+      toast('Bitte wählen Sie einen Benutzer aus');
       return;
     }
 

@@ -8,6 +8,7 @@ import { Loader2, Edit, Save, ArrowLeft, X } from 'lucide-react';
 import { ObjectRecord, ObjectField, convertToObjectFields } from '@/types/ObjectFieldTypes';
 import { RecordField } from './RecordField';
 import { useForm } from 'react-hook-form';
+import { toast } from 'sonner';
 
 interface PublicRecordViewProps {
   token: string;
@@ -15,7 +16,7 @@ interface PublicRecordViewProps {
 }
 
 export function PublicRecordView({ token, recordId }: PublicRecordViewProps) {
-  const { toast } = useToast();
+  const { toast: legacyToast } = useToast();
   const [record, setRecord] = useState<ObjectRecord | null>(null);
   const [fields, setFields] = useState<ObjectField[]>([]);
   const [objectType, setObjectType] = useState<any | null>(null);
@@ -128,9 +129,7 @@ export function PublicRecordView({ token, recordId }: PublicRecordViewProps) {
       if (shareError) throw shareError;
       
       if (!shareData.allow_edit) {
-        toast({
-          description: 'You do not have permission to edit this record.'
-        });
+        toast('You do not have permission to edit this record.');
         setIsSubmitting(false);
         setIsEditing(false);
         return;
@@ -164,9 +163,7 @@ export function PublicRecordView({ token, recordId }: PublicRecordViewProps) {
 
       await Promise.all(updates);
 
-      toast({
-        description: 'Record updated successfully.'
-      });
+      toast('Record updated successfully.');
 
       // Refresh data
       fetchPublicRecord();
@@ -174,9 +171,7 @@ export function PublicRecordView({ token, recordId }: PublicRecordViewProps) {
       setEditedValues({});
     } catch (error: any) {
       console.error('Error updating record:', error);
-      toast({
-        description: 'Error updating record: ' + error.message
-      });
+      toast('Error updating record: ' + error.message);
     } finally {
       setIsSubmitting(false);
     }

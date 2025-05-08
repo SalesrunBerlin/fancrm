@@ -1,6 +1,6 @@
 
 import { useParams } from "react-router-dom";
-import PublicRecordView from "@/components/records/PublicRecordView";
+import { PublicRecordView } from "@/components/records/PublicRecordView";
 import { AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { getAlertVariantClass } from "@/patches/FixAlertVariants";
