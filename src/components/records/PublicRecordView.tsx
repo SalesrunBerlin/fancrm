@@ -2,12 +2,10 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Loader2, Edit, Save, ArrowLeft, X } from 'lucide-react';
 import { ObjectRecord, ObjectField, convertToObjectFields } from '@/types/ObjectFieldTypes';
 import { RecordField } from './RecordField';
-import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 
 interface PublicRecordViewProps {
@@ -16,7 +14,6 @@ interface PublicRecordViewProps {
 }
 
 export function PublicRecordView({ token, recordId }: PublicRecordViewProps) {
-  const { toast: legacyToast } = useToast();
   const [record, setRecord] = useState<ObjectRecord | null>(null);
   const [fields, setFields] = useState<ObjectField[]>([]);
   const [objectType, setObjectType] = useState<any | null>(null);

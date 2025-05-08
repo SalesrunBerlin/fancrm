@@ -18,7 +18,8 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   isLoading: boolean;
-  signIn: (credentials: SignInCredentials) => Promise<{ error: any }>;
+  isLoggedIn: boolean; // Added isLoggedIn property
+  signIn: (credentials: SignInCredentials) => Promise<{ error: any; data?: any }>;
   signUp: (credentials: SignUpCredentials) => Promise<{ error: any; data: any }>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error: any }>;
@@ -173,11 +174,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // Check if user is SuperAdmin or Admin
   const isSuperAdmin = userRole === 'SuperAdmin' || userRole === 'superadmin';
   const isAdmin = isSuperAdmin || userRole === 'admin';
+  const isLoggedIn = !!user; // Add isLoggedIn computed property
 
   const value = {
     user,
     session,
     isLoading,
+    isLoggedIn, // Add isLoggedIn to the context value
     signIn,
     signUp,
     signOut,
