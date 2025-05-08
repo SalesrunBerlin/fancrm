@@ -10,7 +10,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
-import { ThemedButton } from '@/components/ui/themed-button';
 
 export default function CreateWorkspacePage() {
   const [name, setName] = useState('');
@@ -127,15 +126,16 @@ export default function CreateWorkspacePage() {
               >
                 Abbrechen
               </Button>
-              <ThemedButton 
+              <Button 
                 type="submit"
                 disabled={isLoading || !name}
+                useUserColor={true}
               >
                 {isLoading ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 ) : null}
                 Workspace erstellen
-              </ThemedButton>
+              </Button>
             </div>
           </form>
         </CardContent>

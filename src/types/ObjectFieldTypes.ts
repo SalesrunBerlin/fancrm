@@ -1,3 +1,4 @@
+
 export interface ObjectField {
   id: string;
   object_type_id: string;
@@ -28,7 +29,6 @@ export interface ObjectField {
   updatedAt?: string;
   ui_settings?: UISettings;
   max_length?: number;
-  options?: any;
 }
 
 export interface PicklistValue {
@@ -94,31 +94,3 @@ export interface UISettings {
     value: any;
   };
 }
-
-// Add new types for record handling
-export interface ObjectRecord {
-  id: string;
-  object_type_id: string;
-  name?: string;
-  displayName?: string;
-  objectName?: string; 
-  field_values?: Record<string, any>;
-  created_at?: string;
-  updated_at?: string;
-  created_by?: string;
-  updated_by?: string;
-}
-
-export interface ObjectFieldWithJson extends ObjectField {
-  settings_json?: string;
-}
-
-// Helper function to convert API fields to ObjectFields
-export const convertToObjectFields = (fields: any[]): ObjectField[] => {
-  return fields.map(field => {
-    return {
-      ...field,
-      // Add any necessary transformations here
-    } as ObjectField;
-  });
-};
