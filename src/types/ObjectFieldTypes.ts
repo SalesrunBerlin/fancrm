@@ -21,14 +21,14 @@ export interface ObjectFieldWithJson {
   updated_at?: string;
 }
 
-// Add ObjectField interface to fix TypeScript errors
+// Updated ObjectField interface to match useObjectTypes.ObjectField
 export interface ObjectField {
   id: string;
   name: string;
   api_name: string;
   description?: string;
   data_type: string;
-  is_required: boolean;
+  is_required: boolean; // Now required to match other definitions
   is_unique?: boolean;
   is_system?: boolean;
   default_value?: string | null;

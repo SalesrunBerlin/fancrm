@@ -52,7 +52,6 @@ export function WorkspaceSettings({ workspaceId }: WorkspaceSettingsProps) {
     } catch (error) {
       console.error('Error fetching workspace data:', error);
       toast({
-        title: "Error",
         description: 'Workspace-Daten konnten nicht geladen werden'
       });
     } finally {
@@ -84,13 +83,11 @@ export function WorkspaceSettings({ workspaceId }: WorkspaceSettingsProps) {
       if (error) throw error;
       
       toast({
-        title: "Success",
         description: 'Workspace-Einstellungen wurden aktualisiert'
       });
     } catch (error) {
       console.error('Error updating workspace:', error);
       toast({
-        title: "Error",
         description: 'Workspace-Einstellungen konnten nicht aktualisiert werden'
       });
     } finally {

@@ -1,3 +1,4 @@
+
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { Toaster } from "sonner"; 
 import { Layout } from "@/components/layout/Layout";
@@ -118,6 +119,7 @@ function App() {
               <Route path="/admin/users" element={<SuperAdminRoute><UserManagementPage /></SuperAdminRoute>} />
               <Route path="/admin/users/:userId" element={<SuperAdminRoute><UserDetailPage /></SuperAdminRoute>} />
               <Route path="/admin/workspace" element={<SuperAdminRoute><AdminWorkspacePage /></SuperAdminRoute>} />
+              <Route path="/admin/workspace/:workspaceId" element={<SuperAdminRoute><AdminWorkspacePage /></SuperAdminRoute>} />
               
               {/* Icon routes */}
               <Route path="/settings/icons/upload" element={<IconUploadPage />} />
