@@ -21,7 +21,7 @@ interface User {
   role?: string;
 }
 
-interface WorkspaceUsersListProps {
+export interface WorkspaceUsersListProps {
   users: User[];
   onRemoveUser?: (userId: string) => void;
   onInviteClick?: () => void;
