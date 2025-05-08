@@ -67,6 +67,7 @@ export function RecordDetailForm({
         defaultValues[fieldKey] = record.field_values[fieldKey];
       });
       
+      console.log("Setting form values from record:", defaultValues);
       setFormValues(defaultValues);
       methods.reset(defaultValues);
     }
@@ -74,13 +75,19 @@ export function RecordDetailForm({
 
   // Handle field change
   const handleFieldChange = (fieldName: string, value: any) => {
+    console.log(`Field changed: ${fieldName} => `, value);
+    
     if (onFieldChange) {
       onFieldChange(fieldName, value);
     } else {
-      setFormValues(prev => ({
-        ...prev,
-        [fieldName]: value
-      }));
+      setFormValues(prev => {
+        const newValues = {
+          ...prev,
+          [fieldName]: value
+        };
+        console.log("Updated form values:", newValues);
+        return newValues;
+      });
       methods.setValue(fieldName, value);
     }
   };
@@ -134,8 +141,7 @@ export function RecordDetailForm({
           value={editedValues?.[field.api_name] !== undefined 
             ? editedValues[field.api_name] 
             : formValues[field.api_name]}
-          onChange={(value) => handleFieldChange(field.api_name, value)}
-          register={methods.register}
+          onCustomChange={(value) => handleFieldChange(field.api_name, value)}
           readOnly={!actualEditMode}
           form={methods}
         />

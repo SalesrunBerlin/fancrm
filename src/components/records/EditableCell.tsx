@@ -18,6 +18,7 @@ interface EditableCellProps {
   fieldType: string;
   isRequired: boolean;
   fieldOptions?: any;
+  fieldId?: string;
 }
 
 export function EditableCell({ 
@@ -26,17 +27,19 @@ export function EditableCell({
   editMode, 
   fieldType, 
   isRequired,
-  fieldOptions
+  fieldOptions,
+  fieldId
 }: EditableCellProps) {
   const [editValue, setEditValue] = useState<any>(value);
   const [error, setError] = useState<string | null>(null);
-  const { picklistValues, isLoading: loadingPicklist } = useFieldPicklistValues(fieldOptions?.field_id || '');
+  const { picklistValues, isLoading: loadingPicklist } = useFieldPicklistValues(fieldId || fieldOptions?.field_id || '');
 
   useEffect(() => {
     setEditValue(value);
   }, [value]);
 
   const handleChange = (newValue: any) => {
+    console.log(`EditableCell: Value changed for ${fieldType}:`, newValue);
     setEditValue(newValue);
     
     if (isRequired && (newValue === "" || newValue === null || newValue === undefined)) {
@@ -52,6 +55,7 @@ export function EditableCell({
       setError("This field is required");
       return;
     }
+    console.log("Clearing picklist value");
     setEditValue(null);
     onChange(null);
     setError(null);
@@ -110,6 +114,10 @@ export function EditableCell({
             <Select 
               value={editValue || ""} 
               onValueChange={handleChange}
+              onOpenChange={(open) => {
+                // Ensure we re-render when select opens to refresh picklist values
+                if (open) console.log("Opening picklist select")
+              }}
             >
               <SelectTrigger className={error ? "border-red-500" : ""}>
                 <SelectValue placeholder="Select..." />
@@ -122,13 +130,14 @@ export function EditableCell({
                 ))}
               </SelectContent>
             </Select>
-            {editValue && !isRequired && (
+            {editValue && (
               <Button 
                 type="button"
                 variant="ghost" 
                 size="icon" 
                 className="absolute right-0 top-0 h-full"
                 onClick={clearPicklistValue}
+                disabled={isRequired}
               >
                 <X className="h-4 w-4" />
                 <span className="sr-only">Clear selection</span>

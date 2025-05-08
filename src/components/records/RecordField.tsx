@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { ObjectField } from '@/types/ObjectFieldTypes';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -11,6 +11,7 @@ import { Loader2, X } from 'lucide-react';
 import { LookupField } from './LookupField';
 import { LookupValueDisplay } from './LookupValueDisplay';
 import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
 
 interface RecordFieldProps {
   field: ObjectField;
@@ -19,6 +20,7 @@ interface RecordFieldProps {
   register?: any;
   readOnly?: boolean;
   form?: ReturnType<typeof useForm>;
+  onCustomChange?: (value: any) => void;
 }
 
 export function RecordField({ 
@@ -27,35 +29,65 @@ export function RecordField({
   onChange,
   register,
   readOnly = false,
-  form
+  form,
+  onCustomChange
 }: RecordFieldProps) {
   const { picklistValues, isLoading: loadingPicklist } = useFieldPicklistValues(
     field.data_type === 'picklist' ? field.id : ''
   );
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  
+  // Determine which onChange handler to use
+  const handleFieldChange = (newValue: any) => {
+    // First priority: custom onChange handler provided by parent
+    if (onCustomChange) {
+      onCustomChange(newValue);
+      return;
+    }
+    
+    // Second priority: standard onChange handler
     if (onChange) {
-      onChange(e.target.value);
+      onChange(newValue);
+      return;
+    }
+    
+    // Third priority: if form is provided, set the value in the form
+    if (form) {
+      form.setValue(field.api_name, newValue);
     }
   };
 
+  // Handle input field changes (text, number, email, etc.)
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    handleFieldChange(e.target.value);
+  };
+
+  // Handle checkbox changes
   const handleCheckboxChange = (checked: boolean) => {
-    if (onChange) {
-      onChange(checked);
-    }
+    handleFieldChange(checked);
   };
 
+  // Handle select changes
   const handleSelectChange = (value: string) => {
-    if (onChange) {
-      onChange(value);
-    }
+    handleFieldChange(value);
   };
 
+  // Clear picklist value
   const clearPicklistValue = () => {
-    if (onChange) {
-      onChange(null);
-    }
+    handleFieldChange(null);
   };
+  
+  // Debug logging to help track value updates
+  useEffect(() => {
+    console.log(`RecordField ${field.name} (${field.api_name}) value:`, value);
+  }, [value, field.name, field.api_name]);
+
+  // Register the field with react-hook-form if register is provided and form is not
+  const registerField = register && !form ? register(field.api_name) : {};
+  
+  // Get current field value from form if available, otherwise use passed value
+  const currentValue = form?.getValues?.(field.api_name) !== undefined ? 
+                      form.getValues(field.api_name) : 
+                      value;
 
   const renderField = () => {
     switch (field.data_type) {
@@ -67,11 +99,22 @@ export function RecordField({
           <Input
             type={field.data_type === 'email' ? 'email' : 'text'}
             id={field.api_name}
-            value={value || ''}
-            onChange={handleChange}
+            value={currentValue || ''}
+            onChange={handleInputChange}
             readOnly={readOnly}
             disabled={readOnly}
-            {...(register && register(field.api_name))}
+            {...registerField}
+          />
+        );
+      case 'textarea':
+        return (
+          <Textarea
+            id={field.api_name}
+            value={currentValue || ''}
+            onChange={handleInputChange}
+            readOnly={readOnly}
+            disabled={readOnly}
+            {...registerField}
           />
         );
       case 'number':
@@ -79,17 +122,17 @@ export function RecordField({
           <Input
             type="number"
             id={field.api_name}
-            value={value || ''}
-            onChange={handleChange}
+            value={currentValue || ''}
+            onChange={handleInputChange}
             readOnly={readOnly}
             disabled={readOnly}
-            {...(register && register(field.api_name))}
+            {...registerField}
           />
         );
       case 'picklist':
         if (readOnly) {
-          const selectedOption = picklistValues?.find(option => option.value === value);
-          return <div className="py-2">{selectedOption?.label || value || "-"}</div>;
+          const selectedOption = picklistValues?.find(option => option.value === currentValue);
+          return <div className="py-2">{selectedOption?.label || currentValue || "-"}</div>;
         }
         
         if (loadingPicklist) {
@@ -102,7 +145,7 @@ export function RecordField({
         return (
           <div className="relative">
             <Select 
-              value={value || ""}
+              value={currentValue || ""}
               onValueChange={handleSelectChange}
               disabled={readOnly}
             >
@@ -117,7 +160,7 @@ export function RecordField({
                 ))}
               </SelectContent>
             </Select>
-            {value && !readOnly && (
+            {currentValue && !readOnly && (
               <Button 
                 type="button"
                 variant="ghost" 
@@ -136,10 +179,10 @@ export function RecordField({
           <div className="flex items-center space-x-2">
             <Checkbox
               id={field.api_name}
-              checked={value === true}
+              checked={currentValue === true}
               onCheckedChange={handleCheckboxChange}
               disabled={readOnly}
-              {...(register && register(field.api_name))}
+              {...registerField}
             />
           </div>
         );
@@ -148,20 +191,20 @@ export function RecordField({
           <Input
             type="date"
             id={field.api_name}
-            value={value || ''}
-            onChange={handleChange}
+            value={currentValue || ''}
+            onChange={handleInputChange}
             readOnly={readOnly}
             disabled={readOnly}
-            {...(register && register(field.api_name))}
+            {...registerField}
           />
         );
       case 'lookup':
         if (readOnly) {
           return (
             <div className="py-2">
-              {value ? (
+              {currentValue ? (
                 <LookupValueDisplay 
-                  value={value} 
+                  value={currentValue} 
                   fieldOptions={field.options || {
                     target_object_type_id: ''
                   }}
@@ -173,8 +216,8 @@ export function RecordField({
         
         return (
           <LookupField
-            value={value}
-            onChange={onChange || (() => {})}
+            value={currentValue}
+            onChange={handleFieldChange}
             targetObjectTypeId={field.options?.target_object_type_id || ''}
             disabled={readOnly}
           />
@@ -184,11 +227,11 @@ export function RecordField({
           <Input
             type="text"
             id={field.api_name}
-            value={value || ''}
-            onChange={handleChange}
+            value={currentValue || ''}
+            onChange={handleInputChange}
             readOnly={readOnly}
             disabled={readOnly}
-            {...(register && register(field.api_name))}
+            {...registerField}
           />
         );
     }

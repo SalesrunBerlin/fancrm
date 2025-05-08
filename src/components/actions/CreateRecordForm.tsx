@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -13,7 +14,7 @@ import { toast } from "sonner";
 import { getAlertVariantClass } from "@/patches/FixAlertVariants";
 import { ActionFieldWithDetails } from "@/hooks/useActionFields";
 import { RecordField } from "@/components/records/RecordField";
-import { ObjectField } from "@/hooks/useObjectTypes";
+import { ObjectField } from "@/types/ObjectFieldTypes";
 import { evaluateFormula, isValidUuid } from "@/utils/formulaEvaluator";
 import { ThemedButton } from "@/components/ui/themed-button";
 
@@ -75,6 +76,19 @@ export function CreateRecordForm({
   
   // Prepare default values from action fields and initialValues
   const defaultValues: Record<string, any> = { ...initialValues };
+  
+  // Add default values from action fields
+  enabledActionFields.forEach(actionField => {
+    const field = objectFields.find(f => f.id === actionField.field_id);
+    if (field && !initialValues[field.api_name]) {
+      // Add the static default value if there's no formula
+      if (actionField.default_value && actionField.formula_type !== 'dynamic') {
+        defaultValues[field.api_name] = actionField.default_value;
+      }
+    }
+  });
+  
+  console.log("Initial form default values:", defaultValues);
   
   // Create form with the schema and default values
   const form = useForm({
@@ -165,6 +179,7 @@ export function CreateRecordForm({
           } 
           // Otherwise use the static default value
           else if (actionField.default_value) {
+            console.log(`Setting default value for ${field.api_name}:`, actionField.default_value);
             formulaDefaults[field.api_name] = actionField.default_value;
             hasFormulaValues = true;
           }
@@ -360,20 +375,9 @@ export function CreateRecordForm({
 
   // Custom onFieldChange handler to track user edits
   const handleFieldChange = (fieldName: string, value: any) => {
+    console.log(`Field changed: ${fieldName} => `, value);
     trackUserEdit(fieldName);
     form.setValue(fieldName, value);
-  };
-
-  // Render a field with the custom change handler
-  const renderField = (field: ObjectField) => {
-    return (
-      <RecordField
-        key={field.id}
-        field={field}
-        form={form}
-        onCustomChange={(value) => handleFieldChange(field.api_name, value)}
-      />
-    );
   };
 
   return (
@@ -393,7 +397,14 @@ export function CreateRecordForm({
             </h3>
             
             <div className="space-y-4 p-4 border rounded-md bg-muted/30">
-              {preselectedFields.map((field) => renderField(field))}
+              {preselectedFields.map((field) => (
+                <RecordField
+                  key={field.id}
+                  field={field}
+                  form={form}
+                  onCustomChange={(value) => handleFieldChange(field.api_name, value)}
+                />
+              ))}
             </div>
           </div>
         )}
@@ -409,7 +420,14 @@ export function CreateRecordForm({
             </h3>
             
             <div className="space-y-4">
-              {remainingFields.map((field) => renderField(field))}
+              {remainingFields.map((field) => (
+                <RecordField
+                  key={field.id}
+                  field={field}
+                  form={form}
+                  onCustomChange={(value) => handleFieldChange(field.api_name, value)}
+                />
+              ))}
             </div>
           </div>
         )}
