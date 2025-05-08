@@ -1,88 +1,62 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
 
-export interface LookupRecord {
+interface ObjectLookupRecord {
   id: string;
   display_value: string;
 }
 
-export function useObjectLookup(objectTypeId: string) {
-  const { user } = useAuth();
-
-  const { data: records = [], isLoading, error } = useQuery({
-    queryKey: ["object-records", objectTypeId],
-    queryFn: async () => {
-      if (!objectTypeId) {
-        throw new Error("Missing target object ID");
-      }
+export function useObjectLookup(objectTypeId: string | null) {
+  const { data: records, isLoading, error } = useQuery({
+    queryKey: ["object-lookup", objectTypeId],
+    queryFn: async (): Promise<ObjectLookupRecord[]> => {
+      if (!objectTypeId) return [];
       
-      console.log("Fetching lookup records for object type:", objectTypeId);
-      
-      // Get the object type to find the default field
-      const { data: objectType, error: objectTypeError } = await supabase
+      // Get the object type to find the default display field
+      const { data: objectTypeData, error: objectTypeError } = await supabase
         .from("object_types")
         .select("default_field_api_name")
         .eq("id", objectTypeId)
         .single();
-        
-      if (objectTypeError) {
-        console.error("Error fetching object type:", objectTypeError);
-        throw objectTypeError;
-      }
       
-      const defaultFieldApiName = objectType?.default_field_api_name;
-      console.log("Default field API name:", defaultFieldApiName);
+      if (objectTypeError) throw objectTypeError;
       
-      const { data: records, error } = await supabase
+      const defaultFieldApiName = objectTypeData?.default_field_api_name || "name";
+      
+      // Get records with their field values
+      const { data: recordsData, error: recordsError } = await supabase
         .from("object_records")
-        .select(`
-          id,
-          field_values:object_field_values(field_api_name, value)
-        `)
-        .eq("object_type_id", objectTypeId);
-
-      if (error) {
-        console.error("Supabase error fetching lookup records:", error);
-        throw error;
-      }
-
-      console.log("Lookup records fetched:", records?.length || 0);
+        .select("id")
+        .eq("object_type_id", objectTypeId)
+        .limit(100);
       
-      return records.map(record => {
-        let displayValue;
-        
-        // If there's a default field configured, use that first
-        if (defaultFieldApiName) {
-          displayValue = record.field_values.find((f: any) => f.field_api_name === defaultFieldApiName)?.value;
-        }
-        
-        // Fallbacks if default field not found or not configured
-        if (!displayValue) {
-          displayValue = record.field_values.find((f: any) => f.field_api_name === "name")?.value || 
-                        [
-                          record.field_values.find((f: any) => f.field_api_name === "first_name")?.value,
-                          record.field_values.find((f: any) => f.field_api_name === "last_name")?.value
-                        ].filter(Boolean).join(" ") || 
-                        record.id.substring(0, 8) || 
-                        "Unnamed Record";
-        }
-                      
-        console.log(`Record ${record.id} display value:`, displayValue);
-        
+      if (recordsError) throw recordsError;
+      
+      // Get field values for the default field
+      const recordIds = recordsData.map(record => record.id);
+      
+      if (recordIds.length === 0) return [];
+      
+      const { data: fieldValuesData, error: fieldValuesError } = await supabase
+        .from("object_field_values")
+        .select("record_id, value")
+        .in("record_id", recordIds)
+        .eq("field_api_name", defaultFieldApiName);
+      
+      if (fieldValuesError) throw fieldValuesError;
+      
+      // Map records to display values
+      return recordsData.map(record => {
+        const fieldValue = fieldValuesData?.find(fv => fv.record_id === record.id);
         return {
           id: record.id,
-          display_value: displayValue
+          display_value: fieldValue?.value || `Record ${record.id.slice(0, 8)}`,
         };
-      }) as LookupRecord[];
+      });
     },
-    enabled: !!objectTypeId
+    enabled: !!objectTypeId,
   });
 
-  return {
-    records,
-    isLoading,
-    error
-  };
+  return { records, isLoading, error };
 }

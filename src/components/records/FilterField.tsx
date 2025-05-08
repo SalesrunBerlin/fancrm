@@ -1,10 +1,9 @@
-
-import { useEffect, useState } from "react";
-import { ObjectField } from "@/hooks/useObjectTypes";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ObjectField } from "@/types/ObjectFieldTypes";
 import { FilterCondition } from "@/hooks/useObjectRecords";
-import { supabase } from "@/integrations/supabase/client";
+import { useFieldPicklistValues } from "@/hooks/useFieldPicklistValues";
 
 interface FilterFieldProps {
   filter: FilterCondition;

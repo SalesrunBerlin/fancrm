@@ -5,7 +5,7 @@ import { useObjectTypes } from "@/hooks/useObjectTypes";
 import { useObjectRecords, FilterCondition } from "@/hooks/useObjectRecords";
 import { useEnhancedFields } from "@/hooks/useEnhancedFields";
 import { PageHeader } from "@/components/ui/page-header";
-import { Loader2, Plus, Upload, Trash2, Filter } from "lucide-react";
+import { Loader2, Plus, Upload, Trash2, Filter, KanbanIcon, TableIcon } from "lucide-react";
 import { RecordsTable } from "@/components/records/RecordsTable";
 import { Card } from "@/components/ui/card";
 import { FieldsConfigDialog } from "@/components/records/FieldsConfigDialog";
@@ -20,6 +20,10 @@ import { useAuth } from "@/contexts/AuthContext";
 import { ActionColor } from "@/hooks/useActions";
 import { ObjectRecordsFilter } from "@/components/records/ObjectRecordsFilter";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Toggle } from "@/components/ui/toggle";
+import { KanbanView } from "@/components/records/KanbanView";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 export default function ObjectRecordsList() {
   const { objectTypeId } = useParams<{ objectTypeId: string }>();
@@ -34,6 +38,7 @@ export default function ObjectRecordsList() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const { favoriteColor } = useAuth();
   const [isFilterExpanded, setIsFilterExpanded] = useState(false);
+  const [viewMode, setViewMode] = useState<"table" | "kanban">("table");
   
   // System fields definition
   const systemFields: EnhancedObjectField[] = [
@@ -162,19 +167,50 @@ export default function ObjectRecordsList() {
         description={objectType.description || `Manage your ${objectType.name.toLowerCase()}`}
         actions={
           <>
-            <Button
-              variant="outline"
-              onClick={toggleFilterPanel}
-              className="relative"
-            >
-              <Filter className="mr-1.5 h-4 w-4" />
-              Filter
-              {activeFilters.length > 0 && (
-                <span className="absolute top-0 right-0 -mt-1 -mr-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] text-primary-foreground">
-                  {activeFilters.length}
-                </span>
-              )}
-            </Button>
+            {/* Toggle between Table and Kanban view */}
+            <div className="flex items-center border rounded-md overflow-hidden">
+              <Button
+                variant={viewMode === "table" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setViewMode("table")}
+                className="rounded-none border-0"
+              >
+                <TableIcon className="h-4 w-4 mr-2" />
+                <span className="hidden sm:inline">Table</span>
+              </Button>
+              <Button
+                variant={viewMode === "kanban" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setViewMode("kanban")}
+                className="rounded-none border-0"
+              >
+                <KanbanIcon className="h-4 w-4 mr-2" />
+                <span className="hidden sm:inline">Kanban</span>
+              </Button>
+            </div>
+            
+            {/* Filter button - icon only with tooltip */}
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={toggleFilterPanel}
+                    className="relative"
+                  >
+                    <Filter className="h-4 w-4" />
+                    {activeFilters.length > 0 && (
+                      <span className="absolute top-0 right-0 -mt-1 -mr-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] text-primary-foreground">
+                        {activeFilters.length}
+                      </span>
+                    )}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">Filter records</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            
             <FieldsConfigDialog
               objectTypeId={objectTypeId!}
               onVisibilityChange={handleVisibilityChange}
@@ -292,6 +328,7 @@ export default function ObjectRecordsList() {
         </div>
       )}
 
+      {/* Main content area with tabs for table and kanban views */}
       <Card className="overflow-hidden">
         {isLoading || isLoadingFields ? (
           <div className="flex justify-center py-8">
@@ -304,13 +341,24 @@ export default function ObjectRecordsList() {
                 Showing {allRecords.length} {allRecords.length === 1 ? 'result' : 'results'} with active filters
               </div>
             )}
-            <RecordsTable 
-              records={allRecords} 
-              fields={getFieldsToDisplay()} 
-              objectTypeId={objectTypeId!}
-              selectable={true}
-              onSelectionChange={handleRecordSelectionChange}
-            />
+            
+            {viewMode === "table" ? (
+              <RecordsTable 
+                records={allRecords} 
+                fields={getFieldsToDisplay()} 
+                objectTypeId={objectTypeId!}
+                selectable={true}
+                onSelectionChange={handleRecordSelectionChange}
+              />
+            ) : (
+              <div className="p-4">
+                <KanbanView
+                  records={allRecords}
+                  fields={fields || []}
+                  objectTypeId={objectTypeId!}
+                />
+              </div>
+            )}
           </>
         )}
       </Card>
