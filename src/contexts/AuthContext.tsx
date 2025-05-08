@@ -8,8 +8,11 @@ interface AuthContextType {
   session: Session | null;
   isLoggedIn: boolean;
   isSuperAdmin: boolean;
+  isAdmin: boolean; // Added missing property
   isLoading: boolean;
   favoriteColor: string | null;
+  signOut: () => Promise<void>; // Added missing method
+  setFavoriteColor: (color: string | null) => Promise<void>; // Added missing method
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -17,8 +20,11 @@ const AuthContext = createContext<AuthContextType>({
   session: null,
   isLoggedIn: false,
   isSuperAdmin: false,
+  isAdmin: false, // Added missing property
   isLoading: true,
   favoriteColor: null,
+  signOut: async () => {}, // Added missing method
+  setFavoriteColor: async () => {}, // Added missing method
 });
 
 interface AuthProviderProps {
@@ -31,6 +37,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [isLoading, setIsLoading] = useState(true);
   const [favoriteColor, setFavoriteColor] = useState<string | null>(null);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false); // Added missing state
 
   useEffect(() => {
     const getSession = async () => {
@@ -56,6 +63,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           if (!profileError && profile) {
             setFavoriteColor(profile.favorite_color);
             setIsSuperAdmin(profile.access_level === 'admin');
+            setIsAdmin(profile.access_level === 'admin' || profile.access_level === 'manager'); // Set isAdmin based on access level
           }
         }
       } catch (error) {
@@ -71,7 +79,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, newSession) => {
         setSession(newSession);
-        setUser(newSession?.user || null);
+        setUser(newSession?.user ?? null);
         
         if (newSession?.user) {
           // Fetch user profile data
@@ -84,6 +92,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           if (!profileError && profile) {
             setFavoriteColor(profile.favorite_color);
             setIsSuperAdmin(profile.access_level === 'admin');
+            setIsAdmin(profile.access_level === 'admin' || profile.access_level === 'manager'); // Set isAdmin based on access level
           }
         }
       }
@@ -94,13 +103,44 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     };
   }, []);
 
+  // Add signOut method
+  const signOut = async () => {
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
+  };
+
+  // Add method to update favorite color
+  const updateFavoriteColor = async (color: string | null) => {
+    if (!user) return;
+    
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ favorite_color: color })
+        .eq('id', user.id);
+        
+      if (error) throw error;
+      
+      setFavoriteColor(color);
+    } catch (error) {
+      console.error('Error updating favorite color:', error);
+    }
+  };
+
   const value = {
     user,
     session,
     isLoggedIn: !!user,
     isLoading,
     isSuperAdmin,
+    isAdmin, // Added missing property
     favoriteColor,
+    signOut, // Added missing method
+    setFavoriteColor: updateFavoriteColor, // Added missing method
   };
 
   return (
