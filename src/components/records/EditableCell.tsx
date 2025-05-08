@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { TableCell } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
@@ -6,8 +7,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { LookupField } from "./LookupField";
 import { LookupValueDisplay } from "./LookupValueDisplay";
 import { useFieldPicklistValues } from "@/hooks/useFieldPicklistValues";
-import { Loader2 } from "lucide-react";
+import { Loader2, X } from "lucide-react";
 import { formatDate } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 
 interface EditableCellProps {
   value: any;
@@ -43,6 +45,16 @@ export function EditableCell({
       setError(null);
       onChange(newValue);
     }
+  };
+
+  const clearPicklistValue = () => {
+    if (isRequired) {
+      setError("This field is required");
+      return;
+    }
+    setEditValue(null);
+    onChange(null);
+    setError(null);
   };
 
   if (!editMode) {
@@ -94,21 +106,35 @@ export function EditableCell({
         }
         
         return (
-          <Select 
-            value={editValue || ""} 
-            onValueChange={handleChange}
-          >
-            <SelectTrigger className={error ? "border-red-500" : ""}>
-              <SelectValue placeholder="Select..." />
-            </SelectTrigger>
-            <SelectContent>
-              {picklistValues?.map((option) => (
-                <SelectItem key={option.id} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="relative">
+            <Select 
+              value={editValue || ""} 
+              onValueChange={handleChange}
+            >
+              <SelectTrigger className={error ? "border-red-500" : ""}>
+                <SelectValue placeholder="Select..." />
+              </SelectTrigger>
+              <SelectContent>
+                {picklistValues?.map((option) => (
+                  <SelectItem key={option.id} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {editValue && !isRequired && (
+              <Button 
+                type="button"
+                variant="ghost" 
+                size="icon" 
+                className="absolute right-0 top-0 h-full"
+                onClick={clearPicklistValue}
+              >
+                <X className="h-4 w-4" />
+                <span className="sr-only">Clear selection</span>
+              </Button>
+            )}
+          </div>
         );
       case "boolean":
         return (

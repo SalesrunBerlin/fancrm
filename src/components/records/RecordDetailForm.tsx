@@ -45,6 +45,7 @@ export function RecordDetailForm({
   );
   
   const [isSaving, setIsSaving] = useState(false);
+  const [formValues, setFormValues] = useState<Record<string, any>>({});
   const methods = useForm();
   const { updateRecord } = useObjectRecords(objectTypeId);
   
@@ -53,8 +54,11 @@ export function RecordDetailForm({
   const record = providedRecord || fetchedRecord;
   const isLoading = shouldFetchData && (isLoadingFields || isLoadingRecord);
   
+  // Determines if we're in edit mode based on either prop
+  const actualEditMode = isEditMode || isEditing || false;
+  
   useEffect(() => {
-    // Reset form when record data is loaded
+    // Reset form when record data is loaded or edit mode changes
     if (record && record.field_values) {
       const defaultValues = {}; 
       
@@ -63,18 +67,37 @@ export function RecordDetailForm({
         defaultValues[fieldKey] = record.field_values[fieldKey];
       });
       
+      setFormValues(defaultValues);
       methods.reset(defaultValues);
     }
-  }, [record, methods]);
+  }, [record, methods, actualEditMode]);
+
+  // Handle field change
+  const handleFieldChange = (fieldName: string, value: any) => {
+    if (onFieldChange) {
+      onFieldChange(fieldName, value);
+    } else {
+      setFormValues(prev => ({
+        ...prev,
+        [fieldName]: value
+      }));
+      methods.setValue(fieldName, value);
+    }
+  };
 
   const onSubmit = async (data: any) => {
     try {
       setIsSaving(true);
       
+      // If we're using our own state, use that instead of the form data
+      const dataToSubmit = onFieldChange ? editedValues : formValues;
+      
+      console.log("Submitting record data:", dataToSubmit);
+      
       // Update the record using the useObjectRecords hook
       await updateRecord.mutateAsync({
         id: recordId,
-        field_values: data
+        field_values: dataToSubmit
       });
       
       toast.success("Record updated successfully");
@@ -82,7 +105,7 @@ export function RecordDetailForm({
       if (onSave && record) {
         onSave({
           ...record,
-          field_values: { ...record.field_values, ...data }
+          field_values: { ...record.field_values, ...dataToSubmit }
         });
       }
     } catch (error) {
@@ -102,9 +125,6 @@ export function RecordDetailForm({
     );
   }
 
-  // Determine if we're in edit mode based on either prop
-  const actualEditMode = isEditMode || isEditing || false;
-
   return (
     <form onSubmit={methods.handleSubmit(onSubmit)} className="space-y-4 p-4">
       {fields && fields.map((field) => (
@@ -113,14 +133,8 @@ export function RecordDetailForm({
           field={field}
           value={editedValues?.[field.api_name] !== undefined 
             ? editedValues[field.api_name] 
-            : record?.field_values?.[field.api_name]}
-          onChange={(value) => {
-            if (onFieldChange) {
-              onFieldChange(field.api_name, value);
-            } else {
-              methods.setValue(field.api_name, value);
-            }
-          }}
+            : formValues[field.api_name]}
+          onChange={(value) => handleFieldChange(field.api_name, value)}
           register={methods.register}
           readOnly={!actualEditMode}
           form={methods}

@@ -7,9 +7,10 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { useForm } from 'react-hook-form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useFieldPicklistValues } from '@/hooks/useFieldPicklistValues';
-import { Loader2 } from 'lucide-react';
+import { Loader2, X } from 'lucide-react';
 import { LookupField } from './LookupField';
 import { LookupValueDisplay } from './LookupValueDisplay';
+import { Button } from '@/components/ui/button';
 
 interface RecordFieldProps {
   field: ObjectField;
@@ -50,6 +51,12 @@ export function RecordField({
     }
   };
 
+  const clearPicklistValue = () => {
+    if (onChange) {
+      onChange(null);
+    }
+  };
+
   const renderField = () => {
     switch (field.data_type) {
       case 'text':
@@ -63,6 +70,7 @@ export function RecordField({
             value={value || ''}
             onChange={handleChange}
             readOnly={readOnly}
+            disabled={readOnly}
             {...(register && register(field.api_name))}
           />
         );
@@ -74,6 +82,7 @@ export function RecordField({
             value={value || ''}
             onChange={handleChange}
             readOnly={readOnly}
+            disabled={readOnly}
             {...(register && register(field.api_name))}
           />
         );
@@ -91,22 +100,36 @@ export function RecordField({
         }
         
         return (
-          <Select 
-            value={value || ""}
-            onValueChange={handleSelectChange}
-            disabled={readOnly}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select..." />
-            </SelectTrigger>
-            <SelectContent>
-              {picklistValues?.map(option => (
-                <SelectItem key={option.id} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="relative">
+            <Select 
+              value={value || ""}
+              onValueChange={handleSelectChange}
+              disabled={readOnly}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select..." />
+              </SelectTrigger>
+              <SelectContent>
+                {picklistValues?.map(option => (
+                  <SelectItem key={option.id} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {value && !readOnly && (
+              <Button 
+                type="button"
+                variant="ghost" 
+                size="icon" 
+                className="absolute right-0 top-0 h-full"
+                onClick={clearPicklistValue}
+              >
+                <X className="h-4 w-4" />
+                <span className="sr-only">Clear selection</span>
+              </Button>
+            )}
+          </div>
         );
       case 'checkbox':
         return (
@@ -128,6 +151,7 @@ export function RecordField({
             value={value || ''}
             onChange={handleChange}
             readOnly={readOnly}
+            disabled={readOnly}
             {...(register && register(field.api_name))}
           />
         );
@@ -163,6 +187,7 @@ export function RecordField({
             value={value || ''}
             onChange={handleChange}
             readOnly={readOnly}
+            disabled={readOnly}
             {...(register && register(field.api_name))}
           />
         );
