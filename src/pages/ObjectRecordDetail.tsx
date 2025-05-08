@@ -81,7 +81,6 @@ export default function ObjectRecordDetail() {
                 <ThemedButton
                   variant="success"
                   onClick={() => {
-                    // Implement save functionality here
                     handleSaveRecord(record);
                   }}
                   className="mr-2"
@@ -108,12 +107,14 @@ export default function ObjectRecordDetail() {
           </div>
         </div>
 
-        {/* Add Object Actions Section */}
-        <ObjectActionsSection 
-          objectTypeId={objectTypeId || ""} 
-          objectTypeName={objectType.name}
-          recordId={recordId}
-        />
+        {/* Action buttons section - now with flex-wrap to display side by side */}
+        <div className="mb-6">
+          <ObjectActionsSection 
+            objectTypeId={objectTypeId || ""} 
+            objectTypeName={objectType.name}
+            recordId={recordId || ""}
+          />
+        </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">

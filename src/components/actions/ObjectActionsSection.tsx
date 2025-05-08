@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Loader2 } from "lucide-react";
@@ -205,11 +204,11 @@ export function ObjectActionsSection({
     );
   }
 
-  // Default layout for regular view
+  // Default layout with flex-wrap for side-by-side display
   return (
-    <div className="flex flex-wrap gap-6 mb-6">
+    <div className="flex flex-wrap gap-3">
       {filteredActions.map((action) => (
-        <div key={action.id} className="relative">
+        <div key={action.id} className="mb-3">
           <ExpandableActionButton
             actionName={action.name}
             color={action.color}

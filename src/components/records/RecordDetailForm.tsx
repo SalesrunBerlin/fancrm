@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Button } from '@/components/ui/button';
@@ -46,7 +45,8 @@ export function RecordDetailForm({
   const [isSaving, setIsSaving] = useState(false);
   const methods = useForm();
   
-  const fields = providedFields || fetchedFields || [];
+  // Make sure to cast the fields to the proper ObjectField type
+  const fields = (providedFields || fetchedFields || []) as ObjectField[];
   const record = providedRecord || fetchedRecord;
   const isLoading = shouldFetchData && (isLoadingFields || isLoadingRecord);
   

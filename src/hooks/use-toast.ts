@@ -1,5 +1,6 @@
 
-import { useToast as useToastOriginal } from "@/components/ui/use-toast";
+// Re-export the toast from sonner for consistent usage across the app
+import { toast } from "sonner";
 
 export type ToastProps = {
   title?: string;
@@ -8,16 +9,16 @@ export type ToastProps = {
   variant?: "default" | "destructive" | "success";
 };
 
+// Create a useToast hook that returns the toast function
 export const useToast = () => {
-  const originalToast = useToastOriginal();
-
   return {
-    ...originalToast,
     toast: (props: ToastProps) => {
-      return originalToast.toast(props);
+      return toast(props.description, {
+        ...props,
+      });
     }
   };
 };
 
-export { ToastProps };
-export { toast } from "@/components/ui/use-toast";
+// Export the toast function directly
+export { toast };
