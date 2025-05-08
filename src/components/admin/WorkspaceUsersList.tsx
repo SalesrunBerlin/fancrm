@@ -19,15 +19,17 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 
+interface UserProfile {
+  id: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  screen_name: string;
+}
+
 interface WorkspaceUser {
   id: string;
-  user: {
-    id: string;
-    email?: string;
-    first_name?: string;
-    last_name?: string;
-    screen_name?: string;
-  };
+  user: UserProfile;
   can_modify_objects: boolean;
   can_create_objects: boolean;
   can_manage_users: boolean;

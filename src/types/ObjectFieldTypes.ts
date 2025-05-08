@@ -1,4 +1,3 @@
-
 export interface ObjectField {
   id: string;
   object_type_id: string;
@@ -29,6 +28,7 @@ export interface ObjectField {
   updatedAt?: string;
   ui_settings?: UISettings;
   max_length?: number;
+  options?: any;
 }
 
 export interface PicklistValue {

@@ -138,9 +138,8 @@ export function WorkspaceSettings({ workspaceId }: WorkspaceSettingsProps) {
           <div className="space-y-2">
             <Label htmlFor="primaryColor">Primäre Farbe</Label>
             <ColorPicker 
-              color={primaryColor}
+              value={primaryColor}
               onChange={setPrimaryColor}
-              disabled={isSaving}
             />
           </div>
           

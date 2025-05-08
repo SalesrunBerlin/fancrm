@@ -1,200 +1,113 @@
 
-import { User, Session } from '@supabase/supabase-js';
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { User, Session } from '@supabase/supabase-js';
 
-interface SignInCredentials {
-  email: string;
-  password: string;
-}
-
-interface SignUpCredentials {
-  email: string;
-  password: string;
-}
-
-// Extend the AuthContextType with isSuperAdmin and isAdmin
 interface AuthContextType {
   user: User | null;
   session: Session | null;
-  isLoading: boolean;
-  isLoggedIn: boolean; // Added isLoggedIn property
-  signIn: (credentials: SignInCredentials) => Promise<{ error: any; data?: any }>;
-  signUp: (credentials: SignUpCredentials) => Promise<{ error: any; data: any }>;
-  signOut: () => Promise<void>;
-  resetPassword: (email: string) => Promise<{ error: any }>;
-  updatePassword: (newPassword: string) => Promise<{ error: any }>;
-  updateUser: (data: any) => Promise<{ error: any; data: any }>;
-  userRole?: string;
+  isLoggedIn: boolean;
   isSuperAdmin: boolean;
-  isAdmin: boolean;
-  favoriteColor?: string;
-  setFavoriteColor?: (color: string) => Promise<void>;
+  isLoading: boolean;
+  favoriteColor: string | null;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const AuthContext = createContext<AuthContextType>({
+  user: null,
+  session: null,
+  isLoggedIn: false,
+  isSuperAdmin: false,
+  isLoading: true,
+  favoriteColor: null,
+});
 
-export const AuthProvider = ({ children }: { children: ReactNode }) => {
+interface AuthProviderProps {
+  children: ReactNode;
+}
+
+export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [userRole, setUserRole] = useState<string | undefined>(undefined);
-  const [favoriteColor, setFavoriteColorState] = useState<string | undefined>(undefined);
+  const [favoriteColor, setFavoriteColor] = useState<string | null>(null);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
 
   useEffect(() => {
-    // Fetch initial session
-    const initializeAuth = async () => {
+    const getSession = async () => {
       try {
         setIsLoading(true);
         
-        // Get current session
-        const { data: { session } } = await supabase.auth.getSession();
-        setSession(session);
-        setUser(session?.user ?? null);
+        // Get the current session
+        const { data: { session: currentSession }, error } = await supabase.auth.getSession();
         
-        if (session?.user) {
-          fetchUserRole(session.user.id);
-          fetchUserFavoriteColor(session.user.id);
-        }
+        if (error) throw error;
         
-        // Set up auth state change listener
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(
-          (event, session) => {
-            setSession(session);
-            setUser(session?.user ?? null);
+        setSession(currentSession);
+        setUser(currentSession?.user || null);
+        
+        if (currentSession?.user) {
+          // Fetch user profile data
+          const { data: profile, error: profileError } = await supabase
+            .from('profiles')
+            .select('favorite_color, access_level')
+            .eq('id', currentSession.user.id)
+            .single();
             
-            if (session?.user) {
-              fetchUserRole(session.user.id);
-              fetchUserFavoriteColor(session.user.id);
-            } else {
-              setUserRole(undefined);
-              setFavoriteColorState(undefined);
-            }
+          if (!profileError && profile) {
+            setFavoriteColor(profile.favorite_color);
+            setIsSuperAdmin(profile.access_level === 'admin');
           }
-        );
-
-        return () => subscription.unsubscribe();
+        }
+      } catch (error) {
+        console.error('Error loading auth session:', error);
       } finally {
         setIsLoading(false);
       }
     };
 
-    initializeAuth();
+    getSession();
+
+    // Set up auth state change listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (_event, newSession) => {
+        setSession(newSession);
+        setUser(newSession?.user || null);
+        
+        if (newSession?.user) {
+          // Fetch user profile data
+          const { data: profile, error: profileError } = await supabase
+            .from('profiles')
+            .select('favorite_color, access_level')
+            .eq('id', newSession.user.id)
+            .single();
+            
+          if (!profileError && profile) {
+            setFavoriteColor(profile.favorite_color);
+            setIsSuperAdmin(profile.access_level === 'admin');
+          }
+        }
+      }
+    );
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
-
-  const fetchUserRole = async (userId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', userId)
-        .single();
-        
-      if (error) {
-        console.error('Error fetching user role:', error);
-        return;
-      }
-      
-      setUserRole(data?.role);
-    } catch (error) {
-      console.error('Error in fetchUserRole:', error);
-    }
-  };
-
-  const fetchUserFavoriteColor = async (userId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('favorite_color')
-        .eq('id', userId)
-        .single();
-        
-      if (error) {
-        console.error('Error fetching user favorite color:', error);
-        return;
-      }
-      
-      setFavoriteColorState(data?.favorite_color || 'default');
-    } catch (error) {
-      console.error('Error in fetchUserFavoriteColor:', error);
-    }
-  };
-
-  const setFavoriteColor = async (color: string) => {
-    if (!user) return;
-    
-    try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ favorite_color: color })
-        .eq('id', user.id);
-      
-      if (error) {
-        console.error('Error updating favorite color:', error);
-        return;
-      }
-      
-      setFavoriteColorState(color);
-    } catch (error) {
-      console.error('Error in setFavoriteColor:', error);
-    }
-  };
-
-  const signIn = async ({ email, password }: SignInCredentials) => {
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    return { error, data };
-  };
-
-  const signUp = async ({ email, password }: SignUpCredentials) => {
-    const { data, error } = await supabase.auth.signUp({ email, password });
-    return { error, data };
-  };
-
-  const signOut = async () => {
-    await supabase.auth.signOut();
-  };
-
-  const resetPassword = async (email: string) => {
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/update-password`,
-    });
-    return { error };
-  };
-
-  const updatePassword = async (newPassword: string) => {
-    const { error } = await supabase.auth.updateUser({ password: newPassword });
-    return { error };
-  };
-
-  const updateUser = async (data: any) => {
-    const { data: userData, error } = await supabase.auth.updateUser(data);
-    return { error, data: userData };
-  };
-
-  // Check if user is SuperAdmin or Admin
-  const isSuperAdmin = userRole === 'SuperAdmin' || userRole === 'superadmin';
-  const isAdmin = isSuperAdmin || userRole === 'admin';
-  const isLoggedIn = !!user; // Add isLoggedIn computed property
 
   const value = {
     user,
     session,
+    isLoggedIn: !!user,
     isLoading,
-    isLoggedIn, // Add isLoggedIn to the context value
-    signIn,
-    signUp,
-    signOut,
-    resetPassword,
-    updatePassword,
-    updateUser,
-    userRole,
     isSuperAdmin,
-    isAdmin,
     favoriteColor,
-    setFavoriteColor,
   };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  );
 };
 
 export const useAuth = () => {

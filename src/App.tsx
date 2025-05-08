@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import {
   BrowserRouter as Router,
@@ -12,7 +13,7 @@ import DashboardPage from './pages/DashboardPage';
 import AdminPage from './pages/AdminPage';
 import PublicRecordPage from './pages/PublicRecordPage';
 import AdminWorkspacePage from './pages/admin/AdminWorkspacePage';
-import CreateWorkspacePage from './pages/admin/CreateWorkspacePage'; // Import the new page
+import CreateWorkspacePage from './pages/admin/CreateWorkspacePage';
 
 function App() {
   return (
@@ -75,16 +76,16 @@ function AppContent() {
           isLoggedIn ? <Navigate to="/dashboard" /> : <Navigate to="/login" state={{ from: location }} />
         )}
       />
-      <Route
-        path="/admin/workspace/:workspaceId"
-        element={isLoggedIn && isSuperAdmin ? <AdminWorkspacePage /> : (
-          isLoggedIn ? <Navigate to="/dashboard" /> : <Navigate to="/login" state={{ from: location }} />
-        )}
-      />
-      {/* New route for creating a workspace */}
+      {/* New route for creating a workspace - BEFORE the parameterized route */}
       <Route
         path="/admin/workspace/create"
         element={isLoggedIn && isSuperAdmin ? <CreateWorkspacePage /> : (
+          isLoggedIn ? <Navigate to="/dashboard" /> : <Navigate to="/login" state={{ from: location }} />
+        )}
+      />
+      <Route
+        path="/admin/workspace/:workspaceId"
+        element={isLoggedIn && isSuperAdmin ? <AdminWorkspacePage /> : (
           isLoggedIn ? <Navigate to="/dashboard" /> : <Navigate to="/login" state={{ from: location }} />
         )}
       />
