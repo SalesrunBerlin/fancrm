@@ -5,6 +5,7 @@ import {
   LayoutDashboard,
   Settings,
   FileText,
+  PlusCircle
 } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -57,6 +58,12 @@ export function Sidebar() {
               icon={<Settings className="h-4 w-4" />}
               label="Settings"
               active={pathname === "/settings" || pathname.startsWith("/settings/")}
+            />
+            <SidebarLink
+              to="/quick-create"
+              icon={<PlusCircle className="h-4 w-4" />}
+              label="Quick Create"
+              active={pathname === "/quick-create"}
             />
           </div>
         </div>
