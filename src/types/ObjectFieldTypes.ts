@@ -21,7 +21,7 @@ export interface ObjectFieldWithJson {
   updated_at?: string;
 }
 
-// Updated ObjectField interface to match useObjectTypes.ObjectField
+// Updated ObjectField interface to make created_at optional to match useObjectTypes.ObjectField
 export interface ObjectField {
   id: string;
   name: string;
@@ -36,7 +36,7 @@ export interface ObjectField {
   object_type_id: string;
   display_order: number;
   owner_id?: string; // Make this optional to accommodate useObjectTypes.ObjectField
-  created_at: string;
+  created_at?: string; // Make this optional to match useObjectTypes.ObjectField
   updated_at?: string;
 }
 

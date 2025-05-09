@@ -8,7 +8,7 @@ import { ThemedButton } from '@/components/ui/themed-button';
 import { supabase } from '@/integrations/supabase/client';
 import { Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 
 interface CreateWorkspaceDialogProps {
   open: boolean;
@@ -22,8 +22,8 @@ export function CreateWorkspaceDialog({
   onWorkspaceCreated 
 }: CreateWorkspaceDialogProps) {
   const { user } = useAuth();
-  const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -34,6 +34,8 @@ export function CreateWorkspaceDialog({
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+    // Clear error when user types
+    if (errorMessage) setErrorMessage(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -45,8 +47,14 @@ export function CreateWorkspaceDialog({
       return;
     }
 
+    if (!formData.name.trim()) {
+      setErrorMessage("Workspace-Name darf nicht leer sein");
+      return;
+    }
+
     try {
       setIsSubmitting(true);
+      setErrorMessage(null);
       
       const { data, error } = await supabase
         .from('workspaces')
@@ -59,20 +67,30 @@ export function CreateWorkspaceDialog({
             owner_id: user.id
           }
         ])
-        .select()
-        .single();
+        .select();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error creating workspace:', error);
+        setErrorMessage(error.message || 'Workspace konnte nicht erstellt werden');
+        throw error;
+      }
       
-      toast({
-        description: `Workspace "${formData.name}" wurde erfolgreich erstellt`
+      toast.success(`Workspace "${formData.name}" wurde erfolgreich erstellt`);
+      
+      // Reset form
+      setFormData({
+        name: '',
+        description: '',
+        welcome_message: 'Willkommen! Bitte geben Sie Ihre Zugangsdaten ein, um auf den Workspace zuzugreifen.',
+        primary_color: '#3b82f6'
       });
       
       onWorkspaceCreated();
-    } catch (error) {
+      onClose();
+    } catch (error: any) {
       console.error('Error creating workspace:', error);
-      toast({
-        description: 'Workspace konnte nicht erstellt werden'
+      toast.error('Workspace konnte nicht erstellt werden', {
+        description: error.message || 'Bitte versuchen Sie es später erneut'
       });
     } finally {
       setIsSubmitting(false);
@@ -96,7 +114,11 @@ export function CreateWorkspaceDialog({
               onChange={handleChange}
               required
               placeholder="Mein Unternehmen"
+              className={errorMessage ? "border-red-500" : ""}
             />
+            {errorMessage && (
+              <p className="text-sm text-red-500 mt-1">{errorMessage}</p>
+            )}
           </div>
           
           <div className="space-y-2">

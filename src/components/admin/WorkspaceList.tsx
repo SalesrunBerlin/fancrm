@@ -11,9 +11,11 @@ import {
 } from '@/components/ui/table';
 import { ThemedButton } from '@/components/ui/themed-button';
 import { supabase } from '@/integrations/supabase/client';
-import { Loader2, Plus } from 'lucide-react';
+import { Loader2, Plus, RefreshCw } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { CreateWorkspaceDialog } from './CreateWorkspaceDialog';
+import { toast } from 'sonner';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 export interface Workspace {
   id: string;
@@ -30,6 +32,7 @@ export interface Workspace {
 export function WorkspaceList() {
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
   useEffect(() => {
@@ -39,15 +42,24 @@ export function WorkspaceList() {
   const fetchWorkspaces = async () => {
     try {
       setIsLoading(true);
+      setError(null);
+      
       const { data, error } = await supabase
         .from('workspaces')
         .select('*')
         .order('name');
         
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching workspaces:', error);
+        setError('Fehler beim Laden der Workspaces: ' + error.message);
+        toast.error('Fehler beim Laden der Workspaces');
+        throw error;
+      }
+      
       setWorkspaces(data || []);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching workspaces:', error);
+      setError('Fehler beim Laden der Workspaces');
     } finally {
       setIsLoading(false);
     }
@@ -70,12 +82,23 @@ export function WorkspaceList() {
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle>Workspaces</CardTitle>
-        <ThemedButton size="sm" onClick={() => setCreateDialogOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          Workspace erstellen
-        </ThemedButton>
+        <div className="flex space-x-2">
+          <ThemedButton size="sm" variant="outline" onClick={fetchWorkspaces} title="Aktualisieren">
+            <RefreshCw className="h-4 w-4" />
+          </ThemedButton>
+          <ThemedButton size="sm" onClick={() => setCreateDialogOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Workspace erstellen
+          </ThemedButton>
+        </div>
       </CardHeader>
       <CardContent>
+        {error && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+      
         {workspaces.length > 0 ? (
           <Table>
             <TableHeader>
