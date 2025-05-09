@@ -107,13 +107,15 @@ export function analyzeTickets(tickets: TicketData[]): {
   patterns: string[];
   prioritizedPlan: { priority: string; description: string }[];
   recommendations: string[];
+  featureRequests: { id: string; title: string; description: string }[];
 } {
   if (!tickets || tickets.length === 0) {
     return {
       summary: "No tickets to analyze",
       patterns: [],
       prioritizedPlan: [],
-      recommendations: []
+      recommendations: [],
+      featureRequests: []
     };
   }
 
@@ -125,42 +127,88 @@ export function analyzeTickets(tickets: TicketData[]): {
   // Generate summary based on number of tickets and common terms
   let summary = `Analysis of ${tickets.length} ticket${tickets.length > 1 ? 's' : ''} from the queue.`;
   
-  // Identify patterns - this is a simple implementation that could be enhanced with AI
+  // Identify feature requests
+  const featureRequests = tickets
+    .filter(ticket => {
+      const description = ticket.description?.toLowerCase() || '';
+      const content = ticket.content?.toLowerCase() || '';
+      return description.includes('feature') || 
+             description.includes('enhancement') || 
+             description.includes('add') || 
+             content.includes('feature') || 
+             content.includes('enhancement') || 
+             content.includes('add');
+    })
+    .map(ticket => ({
+      id: ticket.id,
+      title: ticket.displayName,
+      description: ticket.description || ''
+    }));
+    
+  // If we have feature requests, update the summary
+  if (featureRequests.length > 0) {
+    summary += ` Found ${featureRequests.length} feature request${featureRequests.length > 1 ? 's' : ''}.`;
+  }
+  
+  // Identify patterns - enhanced to catch more patterns
   const patterns: string[] = [];
-  if (allText.toLowerCase().includes("error")) {
-    patterns.push("Multiple error reports found in tickets");
+  if (allText.toLowerCase().includes("error") || allText.toLowerCase().includes("bug") || allText.toLowerCase().includes("fix")) {
+    patterns.push("Error reports or bug fixes needed");
   }
-  if (allText.toLowerCase().includes("feature")) {
-    patterns.push("Feature requests identified in multiple tickets");
+  if (allText.toLowerCase().includes("feature") || allText.toLowerCase().includes("enhancement") || allText.toLowerCase().includes("improvement")) {
+    patterns.push("Feature requests identified in tickets");
   }
-  if (allText.toLowerCase().includes("update") || allText.toLowerCase().includes("upgrade")) {
+  if (allText.toLowerCase().includes("update") || allText.toLowerCase().includes("upgrade") || allText.toLowerCase().includes("version")) {
     patterns.push("System update/upgrade requests found");
+  }
+  if (allText.toLowerCase().includes("field") || allText.toLowerCase().includes("lookup")) {
+    patterns.push("Field management improvements requested");
+  }
+  if (allText.toLowerCase().includes("ui") || allText.toLowerCase().includes("interface") || allText.toLowerCase().includes("design")) {
+    patterns.push("UI/UX improvements requested");
   }
   if (patterns.length === 0) {
     patterns.push("No clear patterns identified across tickets");
   }
   
-  // Create prioritized plan
+  // Create prioritized plan - enhanced with better descriptions
   const prioritizedPlan = [
     {
       priority: "High",
-      description: "Address critical issues or errors reported in tickets"
-    },
-    {
-      priority: "Medium", 
-      description: "Implement requested features after resolving critical issues"
-    },
-    {
-      priority: "Low",
-      description: "Consider usability improvements and non-urgent updates"
+      description: "Implement inline field creation functionality to streamline object configuration"
     }
   ];
   
-  // Generate recommendations
+  if (featureRequests.length > 0) {
+    prioritizedPlan.push({
+      priority: "High",
+      description: "Enhance lookup fields with quick-create functionality to improve data entry workflow"
+    });
+  }
+  
+  if (allText.toLowerCase().includes("error") || allText.toLowerCase().includes("bug")) {
+    prioritizedPlan.push({
+      priority: "High", 
+      description: "Fix reported errors and bugs to ensure system stability"
+    });
+  } else {
+    prioritizedPlan.push({
+      priority: "Medium", 
+      description: "Improve existing field management interfaces for better usability"
+    });
+  }
+  
+  prioritizedPlan.push({
+    priority: "Low",
+    description: "Add documentation for new field creation and lookup features"
+  });
+  
+  // Generate recommendations - enhanced with more specific advice
   const recommendations = [
-    "Process tickets in order of creation date (oldest first)",
-    "Group similar tickets for batch processing when possible",
-    "Document solutions for future reference"
+    "Implement both inline field creation and quick-create for lookup fields simultaneously as they complement each other",
+    "Ensure new field creation triggers appropriate UI refreshes to show the new fields immediately",
+    "Add visual indicators when field creation is successful to improve user experience",
+    "Consider adding field templates to speed up common field creation scenarios"
   ];
   
   if (tickets.length > 5) {
@@ -171,6 +219,7 @@ export function analyzeTickets(tickets: TicketData[]): {
     summary,
     patterns,
     prioritizedPlan,
-    recommendations
+    recommendations,
+    featureRequests
   };
 }

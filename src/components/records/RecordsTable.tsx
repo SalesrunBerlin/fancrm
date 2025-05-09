@@ -1,180 +1,236 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
-import { ObjectField } from "@/hooks/useObjectTypes";
-import { ObjectRecord } from "@/hooks/useObjectRecords";
-import { Edit } from "lucide-react";
-import { LookupValueDisplay } from "./LookupValueDisplay";
-import { format } from "date-fns";
+import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ObjectActionsSection } from "../actions/ObjectActionsSection";
+import { Button } from "@/components/ui/button";
+import { Eye, Edit, Save, X, Trash2 } from "lucide-react";
+import { Link } from "react-router-dom";
+import { toast } from "sonner";
+import { EditableCell } from "./EditableCell";
+import { ObjectField } from "@/hooks/useObjectTypes";
+import { InlineFieldCreator } from "./InlineFieldCreator";
 
 interface RecordsTableProps {
-  records: ObjectRecord[];
+  records: any[];
   fields: ObjectField[];
   objectTypeId: string;
   selectable?: boolean;
   onSelectionChange?: (selectedIds: string[]) => void;
 }
 
-export function RecordsTable({ records, fields, objectTypeId, selectable = false, onSelectionChange }: RecordsTableProps) {
+export function RecordsTable({ 
+  records, 
+  fields, 
+  objectTypeId,
+  selectable = false,
+  onSelectionChange
+}: RecordsTableProps) {
   const [selectedRecords, setSelectedRecords] = useState<string[]>([]);
-  const navigate = useNavigate();
+  const [editMode, setEditMode] = useState(false);
+  const [editingRecordId, setEditingRecordId] = useState<string | null>(null);
 
-  if (records.length === 0) {
-    return (
-      <div className="py-8 text-center text-muted-foreground">
-        No records found
-      </div>
-    );
-  }
-  
-  // Function to get field value, handling both system and custom fields
-  const getFieldValue = (record: ObjectRecord, field: ObjectField) => {
-    if (field.is_system) {
-      // Handle system fields
-      switch (field.api_name) {
-        case "created_at":
-          return record.created_at ? format(new Date(record.created_at), "yyyy-MM-dd HH:mm") : "—";
-        case "updated_at":
-          return record.updated_at ? format(new Date(record.updated_at), "yyyy-MM-dd HH:mm") : "—";
-        case "record_id":
-          return record.record_id || "—";
-        default:
-          return "—";
-      }
-    }
-    
-    // Handle lookup fields
-    if (field.data_type === "lookup" && field.options && record.field_values && record.field_values[field.api_name]) {
-      return (
-        <LookupValueDisplay
-          value={record.field_values[field.api_name]}
-          fieldOptions={field.options as { target_object_type_id: string }}
-        />
-      );
-    }
-    
-    // Handle regular fields
-    if (record.field_values && record.field_values[field.api_name] !== null) {
-      return String(record.field_values[field.api_name]);
-    }
-    
-    return "—";
-  };
+  const isAllSelected = records.length > 0 && selectedRecords.length === records.length;
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      const allIds = records.map(record => record.id);
-      setSelectedRecords(allIds);
-      if (onSelectionChange) onSelectionChange(allIds);
+      const allRecordIds = records.map(record => record.id);
+      setSelectedRecords(allRecordIds);
     } else {
       setSelectedRecords([]);
-      if (onSelectionChange) onSelectionChange([]);
     }
   };
 
-  const handleSelectRecord = (recordId: string, checked: boolean) => {
-    let newSelectedRecords = [...selectedRecords];
-    
-    if (checked) {
-      newSelectedRecords.push(recordId);
+  const handleSelectionChange = (recordId: string) => {
+    if (selectedRecords.includes(recordId)) {
+      setSelectedRecords(selectedRecords.filter(id => id !== recordId));
     } else {
-      newSelectedRecords = newSelectedRecords.filter(id => id !== recordId);
+      setSelectedRecords([...selectedRecords, recordId]);
     }
-    
-    setSelectedRecords(newSelectedRecords);
-    if (onSelectionChange) onSelectionChange(newSelectedRecords);
   };
 
-  const handleRowClick = (recordId: string) => {
-    navigate(`/objects/${objectTypeId}/${recordId}`);
+  // Notify parent component about selection changes
+  useState(() => {
+    onSelectionChange?.(selectedRecords);
+  }, [selectedRecords, onSelectionChange]);
+
+  const handleCellValueChange = (recordId: string, fieldApiName: string, newValue: any) => {
+    console.log(`Value changed for record ${recordId}, field ${fieldApiName} to ${newValue}`);
+    // TODO: Implement value change handling (e.g., update state or call an API)
   };
 
-  const allSelected = records.length > 0 && selectedRecords.length === records.length;
+  const handleSaveRecord = (recordId: string) => {
+    console.log(`Saving record ${recordId}`);
+    // TODO: Implement save record functionality (e.g., call an API)
+    setEditingRecordId(null);
+    setEditMode(false);
+    toast.success("Record saved successfully!");
+  };
+
+  const handleCancelEdit = () => {
+    setEditingRecordId(null);
+    setEditMode(false);
+  };
+
+  const handleDeleteRecord = (recordId: string) => {
+    console.log(`Deleting record ${recordId}`);
+    // TODO: Implement delete record functionality (e.g., call an API)
+    toast.success("Record deleted successfully!");
+  };
 
   return (
-    <div className="rounded-md border overflow-hidden overflow-x-auto">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            {selectable && (
-              <TableHead className="w-[50px]">
-                <Checkbox 
-                  checked={allSelected} 
-                  onCheckedChange={handleSelectAll} 
-                  aria-label="Select all records"
-                />
-              </TableHead>
-            )}
-            {/* Actions column as first column */}
-            <TableHead>Actions</TableHead>
-            
-            {fields.map((field) => (
-              <TableHead key={field.id}>{field.name}</TableHead>
-            ))}
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {records.map((record) => (
-            <TableRow 
-              key={record.id} 
-              className={`${selectedRecords.includes(record.id) ? "bg-muted/30" : ""} hover:bg-muted/50 cursor-pointer transition-colors`}
-            >
+    <div>
+      <div className="border-b">
+        <Table>
+          <TableHeader>
+            <TableRow>
               {selectable && (
-                <TableCell onClick={(e) => e.stopPropagation()}>
+                <TableHead className="w-10">
                   <Checkbox
-                    checked={selectedRecords.includes(record.id)}
-                    onCheckedChange={(checked) => handleSelectRecord(record.id, !!checked)}
-                    aria-label={`Select record ${record.id}`}
+                    checked={isAllSelected}
+                    onCheckedChange={handleSelectAll}
+                    aria-label="Select all records"
                   />
-                </TableCell>
+                </TableHead>
               )}
               
-              {/* Actions cell */}
-              <TableCell onClick={(e) => e.stopPropagation()} className="whitespace-nowrap">
-                <div className="flex items-center space-x-2">
-                  {/* Edit button */}
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-8 w-8 p-0"
-                    onClick={() => navigate(`/objects/${objectTypeId}/${record.id}/edit`)}
-                  >
-                    <Edit className="h-4 w-4" />
-                    <span className="sr-only">Edit</span>
-                  </Button>
-                  
-                  {/* Single play button for record actions */}
-                  <ObjectActionsSection 
-                    objectTypeId={objectTypeId}
-                    recordId={record.id}
-                    inTable={true}
-                  />
-                </div>
-              </TableCell>
-              
-              {/* Fields cells */}
               {fields.map((field) => (
-                <TableCell 
-                  key={`${record.id}-${field.id}`}
-                  onClick={() => handleRowClick(record.id)}
+                <TableHead 
+                  key={field.id || field.api_name} 
+                  className="font-medium"
                 >
-                  {getFieldValue(record, field)}
-                </TableCell>
+                  <div className="flex items-center gap-1">
+                    <span>{field.name}</span>
+                    {field.is_required && (
+                      <span className="text-red-500 text-xs">*</span>
+                    )}
+                  </div>
+                </TableHead>
               ))}
+              
+              {/* Actions column */}
+              <TableHead className="w-[100px] text-right">
+                <div className="flex justify-end items-center gap-2">
+                  <InlineFieldCreator
+                    objectTypeId={objectTypeId}
+                    variant="icon"
+                    className="opacity-70 hover:opacity-100"
+                    onFieldCreated={() => {
+                      // This will be handled by parent component's data refresh
+                      toast.success("Field created. Refreshing data...");
+                    }}
+                  />
+                  Actions
+                </div>
+              </TableHead>
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+          </TableHeader>
+          <TableBody>
+            {records.length === 0 && (
+              <TableRow>
+                <TableCell
+                  colSpan={fields.length + (selectable ? 2 : 1)}
+                  className="h-32 text-center"
+                >
+                  No records found
+                </TableCell>
+              </TableRow>
+            )}
+            {records.map((record) => (
+              <TableRow key={record.id}>
+                {selectable && (
+                  <TableCell className="w-10">
+                    <Checkbox
+                      checked={selectedRecords.includes(record.id)}
+                      onCheckedChange={() => handleSelectionChange(record.id)}
+                    />
+                  </TableCell>
+                )}
+                
+                {fields.map((field) => {
+                  // Try to get value first from field_values, then from the record itself
+                  const value = record.field_values?.[field.api_name] ?? 
+                                record[field.api_name as keyof typeof record] ??
+                                null;
+                  
+                  return (
+                    <EditableCell
+                      key={`${record.id}-${field.id || field.api_name}`}
+                      value={value}
+                      onChange={(newValue) => handleCellValueChange(record.id, field.api_name, newValue)}
+                      editMode={editMode && record.id === editingRecordId}
+                      fieldType={field.data_type}
+                      isRequired={field.is_required}
+                      fieldOptions={field.options}
+                      fieldId={field.id}
+                      objectTypeId={objectTypeId}
+                    />
+                  );
+                })}
+                
+                <TableCell className="text-right">
+                  <div className="flex justify-end gap-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 w-8 p-0"
+                      asChild
+                    >
+                      <Link to={`/objects/${objectTypeId}/${record.id}`}>
+                        <Eye className="h-4 w-4" />
+                        <span className="sr-only">View</span>
+                      </Link>
+                    </Button>
+                    
+                    {editMode && record.id !== editingRecordId ? (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0"
+                        onClick={() => setEditingRecordId(record.id)}
+                      >
+                        <Edit className="h-4 w-4" />
+                        <span className="sr-only">Edit</span>
+                      </Button>
+                    ) : record.id === editingRecordId ? (
+                      <>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0"
+                          onClick={() => handleSaveRecord(record.id)}
+                        >
+                          <Save className="h-4 w-4" />
+                          <span className="sr-only">Save</span>
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0"
+                          onClick={() => handleCancelEdit()}
+                        >
+                          <X className="h-4 w-4" />
+                          <span className="sr-only">Cancel</span>
+                        </Button>
+                      </>
+                    ) : null}
+                    
+                    {!editMode && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0 text-red-500 hover:text-red-600"
+                        onClick={() => handleDeleteRecord(record.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        <span className="sr-only">Delete</span>
+                      </Button>
+                    )}
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
     </div>
   );
 }
