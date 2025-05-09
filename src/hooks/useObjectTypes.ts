@@ -29,7 +29,7 @@ export interface ObjectField {
   name: string;
   api_name: string;
   data_type: string;
-  is_required?: boolean;
+  is_required: boolean; // Changed from optional to required to match ObjectFieldTypes.ts
   is_system?: boolean;
   default_value?: string | null;
   options?: any;

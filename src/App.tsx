@@ -1,3 +1,4 @@
+
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { Toaster } from "sonner"; 
 import { Layout } from "@/components/layout/Layout";
@@ -49,6 +50,7 @@ import IconUploadPage from "./pages/IconUploadPage";
 import IconEditPage from "./pages/IconEditPage";
 import IconEditorPage from "./pages/IconEditorPage";
 import AdminWorkspacePage from "./pages/admin/AdminWorkspacePage";
+import SettingsUserManagementPage from "./pages/UserManagementPage";
 
 // Create a client
 const queryClient = new QueryClient({
@@ -126,6 +128,7 @@ function AppContent() {
         <Route path="/help" element={<HelpPage />} />
         <Route path="/settings/object-manager" element={<ObjectManager />} />
         <Route path="/settings/object-manager/new" element={<CreateObjectPage />} />
+        <Route path="/settings/user-management" element={<SettingsUserManagementPage />} />
         <Route path="/settings/objects/:objectTypeId" element={<ObjectTypeDetail />} />
         <Route path="/settings/objects/:objectTypeId/archive" element={<ObjectArchivePage />} />
         <Route path="/settings/objects/:objectTypeId/restore" element={<ObjectRestorePage />} />

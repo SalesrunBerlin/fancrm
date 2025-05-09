@@ -1,7 +1,7 @@
 
 import { Link } from "react-router-dom";
 import { PageHeader } from "@/components/ui/page-header";
-import { AppWindow, Database, PlaySquare, Settings as SettingsIcon, List } from "lucide-react";
+import { AppWindow, Database, PlaySquare, Settings as SettingsIcon, List, Users } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function Settings() {
@@ -89,20 +89,24 @@ export default function Settings() {
           </Card>
         </Link>
         
-        {/* Additional settings cards can be added here in the future */}
-        <Card className="h-full opacity-60">
-          <CardHeader>
-            <CardTitle>User Management</CardTitle>
-            <CardDescription>
-              Manage users and permissions (Coming soon)
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground">
-              Control who can access your application and what they can do.
-            </p>
-          </CardContent>
-        </Card>
+        <Link to="/settings/user-management">
+          <Card className="h-full hover:bg-accent/5 transition-colors">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="h-5 w-5" />
+                User Management
+              </CardTitle>
+              <CardDescription>
+                Manage users and workspaces
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                Create and manage users, assign them to workspaces, and control their permissions.
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
       </div>
     </div>
   );

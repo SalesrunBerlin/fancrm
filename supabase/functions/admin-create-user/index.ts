@@ -22,7 +22,7 @@ serve(async (req) => {
       { global: { headers: { Authorization: authHeader } } }
     );
     
-    // Check if the user calling the function is an admin
+    // Check if the user calling the function is authenticated
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -48,6 +48,7 @@ serve(async (req) => {
       );
     }
 
+    // Allow both admin and superadmin roles
     const isAdmin = profileData.role === "admin" || profileData.role === "SuperAdmin" || profileData.role === "superadmin";
     
     if (!isAdmin) {
