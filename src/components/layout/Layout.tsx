@@ -9,7 +9,7 @@ export function Layout() {
   const isMobile = useIsMobile();
 
   return (
-    <SidebarProvider>
+    <SidebarProvider defaultOpen={!isMobile}>
       <div className="flex min-h-screen w-full overflow-hidden relative bg-background">
         <Sidebar />
         <div className="flex flex-col flex-1 w-full">
