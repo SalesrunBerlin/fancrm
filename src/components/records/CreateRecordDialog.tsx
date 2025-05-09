@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { ThemedButton } from "@/components/ui/themed-button";
 import { useAuth } from "@/contexts/AuthContext";
 import { ActionColor } from "@/hooks/useActions";
+import { useObjectLayout } from "@/hooks/useObjectLayout";
 
 interface CreateRecordDialogProps {
   objectTypeId: string;
@@ -24,11 +25,17 @@ interface CreateRecordDialogProps {
 export function CreateRecordDialog({ objectTypeId, open, onOpenChange }: CreateRecordDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { objectTypes } = useObjectTypes();
-  const { fields, isLoading: isLoadingFields } = useEnhancedFields(objectTypeId);
+  const { fields: unsortedFields, isLoading: isLoadingFields } = useEnhancedFields(objectTypeId);
   const { createRecord } = useObjectRecords(objectTypeId);
   const objectType = objectTypes?.find(type => type.id === objectTypeId);
   const form = useForm<RecordFormData>();
   const { favoriteColor } = useAuth();
+  
+  // Use layout configuration to order fields
+  const { applyLayout, isLoading: isLoadingLayout } = useObjectLayout(objectTypeId);
+  
+  // Apply layout to field order
+  const fields = applyLayout(unsortedFields || []);
 
   const onSubmit = async (data: RecordFormData) => {
     try {
@@ -75,7 +82,7 @@ export function CreateRecordDialog({ objectTypeId, open, onOpenChange }: CreateR
         
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            {isLoadingFields ? (
+            {isLoadingFields || isLoadingLayout ? (
               <div className="flex justify-center py-4">
                 <Loader2 className="h-6 w-6 animate-spin" />
               </div>

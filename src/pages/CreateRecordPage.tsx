@@ -16,6 +16,7 @@ import type { RecordFormData } from "@/lib/types/records";
 import { ThemedButton } from "@/components/ui/themed-button";
 import { useAuth } from "@/contexts/AuthContext";
 import { ActionColor } from "@/hooks/useActions";
+import { useObjectLayout } from "@/hooks/useObjectLayout";
 
 export default function CreateRecordPage() {
   const { objectTypeId } = useParams<{ objectTypeId: string }>();
@@ -24,8 +25,14 @@ export default function CreateRecordPage() {
   const { favoriteColor } = useAuth();
   
   const { objectTypes } = useObjectTypes();
-  const { fields, isLoading: isLoadingFields } = useEnhancedFields(objectTypeId!);
+  const { fields: unsortedFields, isLoading: isLoadingFields } = useEnhancedFields(objectTypeId!);
   const { createRecord } = useObjectRecords(objectTypeId!);
+  
+  // Use layout configuration to order fields
+  const { applyLayout, isLoading: isLoadingLayout } = useObjectLayout(objectTypeId);
+  
+  // Apply layout to field order
+  const fields = applyLayout(unsortedFields || []);
   
   const objectType = objectTypes?.find(type => type.id === objectTypeId);
   const form = useForm<RecordFormData>();
@@ -94,7 +101,7 @@ export default function CreateRecordPage() {
         <CardContent className="pt-6">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              {isLoadingFields ? (
+              {isLoadingFields || isLoadingLayout ? (
                 <div className="flex justify-center py-10">
                   <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                 </div>

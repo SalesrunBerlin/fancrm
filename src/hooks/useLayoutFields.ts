@@ -43,9 +43,10 @@ export function useLayoutFields(layoutId?: string, includeFields: boolean = fals
         return [];
       }
 
+      // Fix for the query that was causing the error
       let query = supabase
         .from("layout_fields")
-        .select(includeFields ? "*, field:field_id(id, name, api_name, data_type, is_required)" : "*")
+        .select(includeFields ? `*, field:field_id(*)` : "*")
         .eq("layout_id", layoutId)
         .order("display_order");
 
