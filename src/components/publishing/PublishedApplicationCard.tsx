@@ -26,7 +26,7 @@ export function PublishedApplicationCard({
   const publishedDate = new Date(application.created_at);
   const publishedTimeAgo = formatDistanceToNow(publishedDate, { addSuffix: true });
   
-  // Get publisher name
+  // Get publisher name - handle potentially missing publisher data
   const publisherName = application.publisher?.user_metadata?.full_name || 
                         application.publisher?.email || 
                         'Unknown user';

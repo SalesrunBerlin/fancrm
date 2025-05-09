@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { PageHeader } from "@/components/ui/page-header";
 import { TabsContent, TabsList, TabsTrigger, Tabs } from "@/components/ui/tabs";
@@ -18,10 +17,12 @@ export default function Structures() {
   const { 
     publishedApplications,
     isLoading: isLoadingPublished,
-    refetch: refetchPublishedApplications
+    refetch: refetchPublishedApplications,
+    error: publishedAppsError
   } = usePublishedApplications();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     // Force refresh of data when component mounts
@@ -43,8 +44,17 @@ export default function Structures() {
     navigate(`/applications/import/${applicationId}`);
   };
   
-  const handleRefreshPublishedApplications = () => {
-    refetchPublishedApplications();
+  const handleRefreshPublishedApplications = async () => {
+    setRefreshing(true);
+    try {
+      await queryClient.invalidateQueries({ queryKey: ["published-applications"] });
+      await refetchPublishedApplications();
+      console.log("Published applications refreshed, count:", publishedApplications?.length || 0);
+    } catch (error) {
+      console.error("Error refreshing published applications:", error);
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   return (
@@ -150,9 +160,10 @@ export default function Structures() {
               size="sm" 
               onClick={handleRefreshPublishedApplications}
               className="flex items-center"
+              disabled={refreshing}
             >
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Refresh
+              <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+              {refreshing ? 'Refreshing...' : 'Refresh'}
             </Button>
           </div>
           
@@ -163,20 +174,35 @@ export default function Structures() {
               ))}
             </div>
           ) : publishedApplications && publishedApplications.length > 0 ? (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {publishedApplications.map(application => (
-                <PublishedApplicationCard
-                  key={application.id}
-                  application={application}
-                  onImport={handleImportApplication}
-                />
-              ))}
-            </div>
+            <>
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {publishedApplications.map(application => (
+                  <PublishedApplicationCard
+                    key={application.id}
+                    application={application}
+                    onImport={handleImportApplication}
+                  />
+                ))}
+              </div>
+              {publishedAppsError && (
+                <Alert variant="destructive" className="mt-4">
+                  <AlertTitle>Error loading some applications</AlertTitle>
+                  <AlertDescription>
+                    There was an issue loading some published applications. Please try refreshing.
+                  </AlertDescription>
+                </Alert>
+              )}
+            </>
           ) : (
             <Alert>
               <AlertTitle>No Published Applications</AlertTitle>
               <AlertDescription>
                 There are no published applications to display. Publish an application and make sure to mark it as public to see it here.
+                {publishedAppsError && (
+                  <div className="mt-2">
+                    An error occurred while fetching applications. Please try refreshing.
+                  </div>
+                )}
               </AlertDescription>
             </Alert>
           )}

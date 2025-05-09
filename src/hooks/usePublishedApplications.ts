@@ -86,56 +86,87 @@ export function usePublishedApplications() {
   } = useQuery({
     queryKey: ["published-applications"],
     queryFn: async (): Promise<PublishedApplication[]> => {
-      // Ensure we get all public applications regardless of who's logged in
-      const query = supabase
-        .from("published_applications")
-        .select(`
-          *,
-          publisher:published_by(id, email, user_metadata)
-        `)
-        .eq("is_public", true)
-        .eq("is_active", true);
-
-      // If user is logged in, also get their private published apps
-      if (user) {
-        const { data: publicApps, error: publicError } = await query;
-        
-        if (publicError) {
-          console.error("Error fetching public applications:", publicError);
-          throw publicError;
-        }
-        
-        // Get private apps by the current user
-        const { data: privateApps, error: privateError } = await supabase
+      console.log("Fetching published applications, user:", user?.id);
+      try {
+        // Get all public applications regardless of who's logged in
+        const { data: publicApps, error: publicError } = await supabase
           .from("published_applications")
           .select(`
             *,
             publisher:published_by(id, email, user_metadata)
           `)
-          .eq("is_public", false)
-          .eq("published_by", user.id)
+          .eq("is_public", true)
           .eq("is_active", true);
           
-        if (privateError) {
-          console.error("Error fetching private applications:", privateError);
-          throw privateError;
+        if (publicError) {
+          console.error("Error fetching public applications:", publicError);
+          throw publicError;
         }
         
-        // Combine public and private apps
-        return [...(publicApps || []), ...(privateApps || [])] as PublishedApplication[];
-      } else {
-        // If user is not logged in, only return public apps
-        const { data, error } = await query;
+        console.log("Public apps fetched:", publicApps?.length || 0);
         
-        if (error) {
-          console.error("Error fetching public applications:", error);
-          throw error;
+        let allApps = [];
+        
+        // Process and normalize public apps
+        const processedPublicApps = (publicApps || []).map(app => {
+          return normalizePublisherData(app);
+        });
+        
+        allApps = processedPublicApps;
+        
+        // If user is logged in, also get their private published apps
+        if (user) {
+          const { data: privateApps, error: privateError } = await supabase
+            .from("published_applications")
+            .select(`
+              *,
+              publisher:published_by(id, email, user_metadata)
+            `)
+            .eq("is_public", false)
+            .eq("published_by", user.id)
+            .eq("is_active", true);
+            
+          if (privateError) {
+            console.error("Error fetching private applications:", privateError);
+            // Don't throw error here, just log it and continue with public apps
+          } else if (privateApps) {
+            console.log("Private apps fetched:", privateApps.length);
+            // Process and normalize private apps
+            const processedPrivateApps = privateApps.map(app => {
+              return normalizePublisherData(app);
+            });
+            
+            // Combine public and private apps
+            allApps = [...allApps, ...processedPrivateApps];
+          }
         }
         
-        return data as PublishedApplication[] || [];
+        return allApps as PublishedApplication[];
+      } catch (err) {
+        console.error("Error in published applications query:", err);
+        // Return empty array instead of throwing to prevent UI from breaking
+        return [];
       }
-    }
+    },
+    staleTime: 1000 * 60 * 5 // 5 minutes
   });
+  
+  // Helper function to normalize publisher data to match the expected type
+  const normalizePublisherData = (app: any): PublishedApplication => {
+    // Make sure publisher exists and has the right shape
+    const publisher = app.publisher || {};
+    
+    return {
+      ...app,
+      publisher: {
+        id: publisher.id || app.published_by,
+        email: publisher.email || 'Unknown email',
+        user_metadata: {
+          full_name: publisher.user_metadata?.full_name || null
+        }
+      }
+    };
+  };
 
   // Get details for a specific published application including its objects and actions
   const usePublishedApplicationDetails = (applicationId?: string) => {
