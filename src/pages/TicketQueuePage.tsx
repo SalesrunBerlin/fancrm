@@ -6,10 +6,11 @@ import { useObjectType } from "@/hooks/useObjectType";
 import { useObjectRecords } from "@/hooks/useObjectRecords";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Loader2, RefreshCw, ArrowRight } from "lucide-react";
+import { Loader2, RefreshCw, ArrowRight, Search } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 
 interface Ticket {
   id: string;
@@ -28,6 +29,7 @@ export default function TicketQueuePage() {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [commandInput, setCommandInput] = useState("");
   const navigate = useNavigate();
   
   // Fetch the Ticket object type ID by name
@@ -148,6 +150,34 @@ export default function TicketQueuePage() {
     toast.success("Queue refreshed");
   };
   
+  const handleCommandSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Parse the Next! command
+    const commandText = commandInput.trim();
+    if (commandText.toLowerCase().startsWith("next!")) {
+      // Extract the number parameter if any
+      const numberMatch = commandText.match(/next!\s+(\d+)/i);
+      let ticketCount: number | undefined = undefined;
+      
+      if (numberMatch && numberMatch[1]) {
+        ticketCount = parseInt(numberMatch[1]);
+      }
+      
+      // Navigate to the ticket analysis page
+      if (ticketCount) {
+        navigate(`/ticket-analysis/${ticketCount}`);
+      } else {
+        navigate('/ticket-analysis');
+      }
+      
+      toast.success(`Analyzing ${ticketCount || 'all'} tickets in queue`);
+      setCommandInput("");
+    } else {
+      toast.error('Unknown command. Try "Next!" or "Next! <number>"');
+    }
+  };
+  
   // Show loading state
   if (isLoading) {
     return (
@@ -216,7 +246,20 @@ export default function TicketQueuePage() {
         }
       />
       
-      <div className="grid gap-6 mt-6">
+      <form onSubmit={handleCommandSubmit} className="flex gap-2 mb-6">
+        <Input
+          placeholder='Try "Next!" or "Next! 3" to analyze tickets'
+          value={commandInput}
+          onChange={(e) => setCommandInput(e.target.value)}
+          className="flex-1"
+        />
+        <Button type="submit">
+          <Search className="h-4 w-4 mr-2" />
+          Execute
+        </Button>
+      </form>
+      
+      <div className="grid gap-6">
         {tickets.map((ticket, index) => (
           <Card key={ticket.id} className="overflow-hidden">
             <CardHeader className="bg-muted/30">
