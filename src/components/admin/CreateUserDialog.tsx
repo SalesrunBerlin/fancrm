@@ -27,6 +27,7 @@ export function CreateUserDialog({ open, onClose, onUserCreated }: CreateUserDia
   const [isLoading, setIsLoading] = useState(false);
   const [workspaces, setWorkspaces] = useState<any[]>([]);
   const [selectedWorkspace, setSelectedWorkspace] = useState<string>('');
+  const [generateEmail, setGenerateEmail] = useState<boolean>(false);
   
   useEffect(() => {
     const fetchWorkspaces = async () => {
@@ -74,7 +75,7 @@ export function CreateUserDialog({ open, onClose, onUserCreated }: CreateUserDia
       
       const { data, error } = await supabase.functions.invoke('admin-create-user', {
         body: {
-          email: formData.email,
+          email: generateEmail ? null : formData.email,
           password: formData.password,
           first_name: formData.first_name,
           last_name: formData.last_name,
@@ -87,7 +88,7 @@ export function CreateUserDialog({ open, onClose, onUserCreated }: CreateUserDia
       if (error) throw error;
       
       toast.success("Benutzer wurde erfolgreich erstellt", {
-        description: `Email: ${formData.email} mit Passwort: ${formData.password}`
+        description: `Email: ${data.email || formData.email} mit Passwort: ${formData.password}`
       });
       
       onUserCreated();
@@ -111,17 +112,28 @@ export function CreateUserDialog({ open, onClose, onUserCreated }: CreateUserDia
         </DialogHeader>
         
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              name="email"
-              type="email"
-              value={formData.email}
-              onChange={handleChange}
-              required
+          <div className="flex items-center space-x-2 mb-2">
+            <Switch
+              id="generate_email"
+              checked={generateEmail}
+              onCheckedChange={setGenerateEmail}
             />
+            <Label htmlFor="generate_email">Automatische E-Mail generieren</Label>
           </div>
+          
+          {!generateEmail && (
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                name="email"
+                type="email"
+                value={formData.email}
+                onChange={handleChange}
+                required={!generateEmail}
+              />
+            </div>
+          )}
           
           <div className="space-y-2">
             <Label htmlFor="password">Passwort</Label>

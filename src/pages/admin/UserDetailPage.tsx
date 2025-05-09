@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { UserRoleSelector } from "@/components/admin/UserRoleSelector";
 import { LoginHistoryTable } from "@/components/admin/LoginHistoryTable";
 import { UserObjectsList } from "@/components/admin/UserObjectsList";
-import { Loader2 } from "lucide-react";
+import { Loader2, PlusCircle } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { UserSummary } from "./UserManagementPage";
@@ -14,6 +14,17 @@ import { toast } from "sonner";
 import { ThemedButton } from "@/components/ui/themed-button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useUserEmails } from "@/hooks/useUserEmails";
+import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+
+interface WorkspaceInfo {
+  id: string;
+  name: string;
+  role: string;
+}
 
 export default function UserDetailPage() {
   const { userId } = useParams();
@@ -23,6 +34,12 @@ export default function UserDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [loginHistory, setLoginHistory] = useState<any[]>([]);
   const [userObjects, setUserObjects] = useState<any[]>([]);
+  const [userWorkspaces, setUserWorkspaces] = useState<WorkspaceInfo[]>([]);
+  const [workspaces, setWorkspaces] = useState<any[]>([]);
+  const [isLoadingWorkspaces, setIsLoadingWorkspaces] = useState(false);
+  const [addWorkspaceDialogOpen, setAddWorkspaceDialogOpen] = useState(false);
+  const [selectedWorkspace, setSelectedWorkspace] = useState<string>('');
+  const [selectedRole, setSelectedRole] = useState<string>('user');
   const { userEmails, isLoading: isLoadingEmails } = useUserEmails();
 
   useEffect(() => {
@@ -105,6 +122,32 @@ export default function UserDetailPage() {
           }
         } catch (err) {
           console.error("Exception fetching object records:", err);
+        }
+
+        // Fetch user workspaces
+        try {
+          const { data: workspacesData, error: workspacesError } = await supabase
+            .from('workspace_users')
+            .select(`
+              workspace_id,
+              role,
+              workspaces:workspace_id (
+                id,
+                name
+              )
+            `)
+            .eq('user_id', userId);
+
+          if (!workspacesError && workspacesData) {
+            const formattedWorkspaces = workspacesData.map(item => ({
+              id: item.workspaces.id,
+              name: item.workspaces.name,
+              role: item.role
+            }));
+            setUserWorkspaces(formattedWorkspaces);
+          }
+        } catch (err) {
+          console.error("Exception fetching user workspaces:", err);
         }
         
         // Fetch auth logs
@@ -228,6 +271,96 @@ export default function UserDetailPage() {
     fetchUserDetails();
   }, [userId, userEmails]);
 
+  useEffect(() => {
+    const fetchAvailableWorkspaces = async () => {
+      if (!addWorkspaceDialogOpen) return;
+      
+      try {
+        setIsLoadingWorkspaces(true);
+        
+        // Get all workspaces
+        const { data: allWorkspaces, error: workspacesError } = await supabase
+          .from('workspaces')
+          .select('id, name');
+        
+        if (workspacesError) throw workspacesError;
+        
+        // Filter out workspaces the user is already in
+        const availableWorkspaces = allWorkspaces?.filter(
+          workspace => !userWorkspaces.some(uw => uw.id === workspace.id)
+        ) || [];
+        
+        setWorkspaces(availableWorkspaces);
+        
+        if (availableWorkspaces.length > 0) {
+          setSelectedWorkspace(availableWorkspaces[0].id);
+        }
+      } catch (error) {
+        console.error('Error fetching available workspaces:', error);
+        toast.error("Could not fetch available workspaces");
+      } finally {
+        setIsLoadingWorkspaces(false);
+      }
+    };
+    
+    fetchAvailableWorkspaces();
+  }, [addWorkspaceDialogOpen, userWorkspaces]);
+
+  const addUserToWorkspace = async () => {
+    if (!selectedWorkspace || !userId) {
+      toast.error('Please select a workspace');
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('workspace_users')
+        .insert({
+          workspace_id: selectedWorkspace,
+          user_id: userId,
+          role: selectedRole
+        });
+      
+      if (error) throw error;
+      
+      toast.success('User added to workspace');
+      
+      // Add the new workspace to our list
+      const selectedWorkspaceInfo = workspaces.find(w => w.id === selectedWorkspace);
+      if (selectedWorkspaceInfo) {
+        setUserWorkspaces([...userWorkspaces, {
+          id: selectedWorkspaceInfo.id,
+          name: selectedWorkspaceInfo.name,
+          role: selectedRole
+        }]);
+      }
+      
+      setAddWorkspaceDialogOpen(false);
+    } catch (error) {
+      console.error('Error adding user to workspace:', error);
+      toast.error('Failed to add user to workspace');
+    }
+  };
+
+  const removeUserFromWorkspace = async (workspaceId: string) => {
+    try {
+      const { error } = await supabase
+        .from('workspace_users')
+        .delete()
+        .eq('workspace_id', workspaceId)
+        .eq('user_id', userId);
+      
+      if (error) throw error;
+      
+      // Remove the workspace from our list
+      setUserWorkspaces(userWorkspaces.filter(w => w.id !== workspaceId));
+      toast.success('User removed from workspace');
+    } catch (error) {
+      console.error('Error removing user from workspace:', error);
+      toast.error('Failed to remove user from workspace');
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -333,6 +466,10 @@ export default function UserDetailPage() {
                 <dt className="text-sm font-medium text-muted-foreground">Records Created</dt>
                 <dd className="text-2xl font-bold">{user.stats?.recordCount}</dd>
               </div>
+              <div>
+                <dt className="text-sm font-medium text-muted-foreground">Workspaces</dt>
+                <dd className="text-2xl font-bold">{userWorkspaces.length}</dd>
+              </div>
             </dl>
           </CardContent>
         </Card>
@@ -352,6 +489,48 @@ export default function UserDetailPage() {
         </Card>
       </div>
       
+      {/* User Workspaces Card */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle>User Workspaces</CardTitle>
+            <CardDescription>Workspaces this user belongs to</CardDescription>
+          </div>
+          <Button onClick={() => setAddWorkspaceDialogOpen(true)}>
+            <PlusCircle className="h-4 w-4 mr-2" /> Add to Workspace
+          </Button>
+        </CardHeader>
+        <CardContent>
+          {userWorkspaces.length === 0 ? (
+            <p className="text-center text-muted-foreground py-4">
+              This user doesn't belong to any workspaces.
+            </p>
+          ) : (
+            <div className="space-y-4">
+              {userWorkspaces.map((workspace) => (
+                <div key={workspace.id} className="flex items-center justify-between border-b pb-3">
+                  <div>
+                    <h4 className="font-medium">{workspace.name}</h4>
+                    <div className="flex items-center mt-1">
+                      <Badge variant="outline" className="mr-2">
+                        {workspace.role}
+                      </Badge>
+                    </div>
+                  </div>
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => removeUserFromWorkspace(workspace.id)}
+                  >
+                    Remove
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+      
       <UserObjectsList userObjects={userObjects} />
       
       <Card>
@@ -363,6 +542,75 @@ export default function UserDetailPage() {
           <LoginHistoryTable loginHistory={loginHistory} />
         </CardContent>
       </Card>
+
+      {/* Add to workspace dialog */}
+      <Dialog open={addWorkspaceDialogOpen} onOpenChange={setAddWorkspaceDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add User to Workspace</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            {isLoadingWorkspaces ? (
+              <div className="flex justify-center">
+                <Loader2 className="h-6 w-6 animate-spin" />
+              </div>
+            ) : workspaces.length === 0 ? (
+              <p className="text-center text-muted-foreground">
+                No available workspaces found. The user is already a member of all workspaces.
+              </p>
+            ) : (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="workspace">Select Workspace</Label>
+                  <Select 
+                    value={selectedWorkspace} 
+                    onValueChange={setSelectedWorkspace}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a workspace" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {workspaces.map((workspace) => (
+                        <SelectItem key={workspace.id} value={workspace.id}>
+                          {workspace.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="role">User Role</Label>
+                  <Select 
+                    value={selectedRole} 
+                    onValueChange={setSelectedRole}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="admin">Admin</SelectItem>
+                      <SelectItem value="user">User</SelectItem>
+                      <SelectItem value="viewer">Viewer</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAddWorkspaceDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={addUserToWorkspace} 
+              disabled={isLoadingWorkspaces || workspaces.length === 0}
+            >
+              Add to Workspace
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

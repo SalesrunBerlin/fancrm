@@ -60,13 +60,6 @@ serve(async (req) => {
     // Parse the request body
     const { email, password, first_name, last_name, workspace_id, metadata_access = true, data_access = false } = await req.json();
     
-    if (!email || !password) {
-      return new Response(
-        JSON.stringify({ error: "E-Mail und Passwort sind erforderlich" }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
-      );
-    }
-
     // Create the user with admin rights
     const { data: functionData, error: functionError } = await supabase.rpc(
       'admin_create_user',
@@ -88,10 +81,20 @@ serve(async (req) => {
       );
     }
     
-    // Return the user ID
+    // Get the created user's email for confirmation
+    const { data: userData, error: userError } = await supabase
+      .from('profiles')
+      .select('email')
+      .eq('id', functionData)
+      .single();
+
+    const userEmail = userData?.email || email;
+    
+    // Return the user ID and email
     return new Response(
       JSON.stringify({ 
         id: functionData,
+        email: userEmail,
         message: "Benutzer erfolgreich erstellt" 
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }

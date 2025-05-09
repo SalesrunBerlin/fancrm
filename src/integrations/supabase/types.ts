@@ -1757,6 +1757,7 @@ export type Database = {
           can_modify_objects: boolean | null
           created_at: string
           id: string
+          role: string
           updated_at: string
           user_id: string
           workspace_id: string
@@ -1768,6 +1769,7 @@ export type Database = {
           can_modify_objects?: boolean | null
           created_at?: string
           id?: string
+          role?: string
           updated_at?: string
           user_id: string
           workspace_id: string
@@ -1779,6 +1781,7 @@ export type Database = {
           can_modify_objects?: boolean | null
           created_at?: string
           id?: string
+          role?: string
           updated_at?: string
           user_id?: string
           workspace_id?: string
@@ -1977,8 +1980,8 @@ export type Database = {
     Functions: {
       admin_create_user: {
         Args: {
-          email: string
-          password: string
+          email?: string
+          password?: string
           first_name?: string
           last_name?: string
           workspace_id?: string
