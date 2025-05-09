@@ -5,13 +5,11 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { LookupField } from "./LookupField";
-import { EnhancedLookupField } from "./EnhancedLookupField";
 import { LookupValueDisplay } from "./LookupValueDisplay";
 import { useFieldPicklistValues } from "@/hooks/useFieldPicklistValues";
 import { Loader2, X } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { InlineFieldCreator } from "./InlineFieldCreator";
 
 interface EditableCellProps {
   value: any;
@@ -21,7 +19,6 @@ interface EditableCellProps {
   isRequired: boolean;
   fieldOptions?: any;
   fieldId?: string;
-  objectTypeId?: string;
 }
 
 export function EditableCell({ 
@@ -31,8 +28,7 @@ export function EditableCell({
   fieldType, 
   isRequired,
   fieldOptions,
-  fieldId,
-  objectTypeId
+  fieldId
 }: EditableCellProps) {
   const [editValue, setEditValue] = useState<any>(value);
   const [error, setError] = useState<string | null>(null);
@@ -63,10 +59,6 @@ export function EditableCell({
     setEditValue(null);
     onChange(null);
     setError(null);
-  };
-
-  const handleFieldCreated = () => {
-    // Refresh the component - no direct action needed as parent will likely refresh
   };
 
   if (!editMode) {
@@ -118,35 +110,32 @@ export function EditableCell({
         }
         
         return (
-          <div className="relative flex items-center gap-2">
-            <div className="flex-1">
-              <Select 
-                value={editValue || ""} 
-                onValueChange={handleChange}
-                onOpenChange={(open) => {
-                  // Ensure we re-render when select opens to refresh picklist values
-                  if (open) console.log("Opening picklist select")
-                }}
-              >
-                <SelectTrigger className={error ? "border-red-500" : ""}>
-                  <SelectValue placeholder="Select..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {picklistValues?.map((option) => (
-                    <SelectItem key={option.id} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            
+          <div className="relative">
+            <Select 
+              value={editValue || ""} 
+              onValueChange={handleChange}
+              onOpenChange={(open) => {
+                // Ensure we re-render when select opens to refresh picklist values
+                if (open) console.log("Opening picklist select")
+              }}
+            >
+              <SelectTrigger className={error ? "border-red-500" : ""}>
+                <SelectValue placeholder="Select..." />
+              </SelectTrigger>
+              <SelectContent>
+                {picklistValues?.map((option) => (
+                  <SelectItem key={option.id} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             {editValue && (
               <Button 
                 type="button"
                 variant="ghost" 
                 size="icon" 
-                className="h-8 w-8"
+                className="absolute right-0 top-0 h-full"
                 onClick={clearPicklistValue}
                 disabled={isRequired}
               >
@@ -216,12 +205,11 @@ export function EditableCell({
         
         if (fieldType === "lookup") {
           return (
-            <EnhancedLookupField
+            <LookupField
               value={value}
               onChange={handleChange}
               targetObjectTypeId={fieldOptions.target_object_type_id}
               disabled={false}
-              required={isRequired}
             />
           );
         }
@@ -262,17 +250,6 @@ export function EditableCell({
       <div className="relative">
         {renderEditControl()}
         {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
-        
-        {/* Show inline field creator button when appropriate */}
-        {objectTypeId && fieldType === "lookup" && fieldOptions?.target_object_type_id && (
-          <div className="absolute right-0 top-0 -mt-6">
-            <InlineFieldCreator
-              objectTypeId={fieldOptions.target_object_type_id}
-              variant="icon"
-              onFieldCreated={handleFieldCreated}
-            />
-          </div>
-        )}
       </div>
     </TableCell>
   );

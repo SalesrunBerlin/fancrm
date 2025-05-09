@@ -4,9 +4,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { ObjectType } from "@/hooks/useObjectTypes";
 
 export function useObjectType(objectTypeId: string) {
-  const { data: objectType, isLoading, error, refetch } = useQuery({
+  const { data: objectType, isLoading, error } = useQuery({
     queryKey: ["object-type", objectTypeId],
-    queryFn: async (): Promise<ObjectType | null> => {
+    queryFn: async () => {
       if (!objectTypeId) return null;
       
       const { data, error } = await supabase
@@ -18,8 +18,12 @@ export function useObjectType(objectTypeId: string) {
       if (error) throw error;
       return data as ObjectType;
     },
-    enabled: !!objectTypeId,
+    enabled: !!objectTypeId
   });
 
-  return { objectType, isLoading, error, refetch };
+  return {
+    objectType,
+    isLoading,
+    error
+  };
 }

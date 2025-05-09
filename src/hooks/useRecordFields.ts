@@ -5,7 +5,7 @@ import { ObjectField } from "@/hooks/useObjectTypes";
 import { useQueryClient } from "@tanstack/react-query";
 
 export function useRecordFields(objectTypeId: string) {
-  const { fields: originalFields, isLoading, refetch } = useObjectFields(objectTypeId);
+  const { fields: originalFields, isLoading } = useObjectFields(objectTypeId);
   const [sortedFields, setSortedFields] = useState<ObjectField[]>([]);
   const queryClient = useQueryClient();
 
@@ -25,7 +25,6 @@ export function useRecordFields(objectTypeId: string) {
       if (customEvent.detail?.objectTypeId === objectTypeId) {
         console.log("Refreshing fields for object type:", objectTypeId);
         queryClient.invalidateQueries({ queryKey: ["object-fields", objectTypeId] });
-        refetch(); // Add direct refetch call
       }
     };
 
@@ -34,11 +33,10 @@ export function useRecordFields(objectTypeId: string) {
     return () => {
       window.removeEventListener('refetch-fields', handleRefetchFields as EventListener);
     };
-  }, [objectTypeId, queryClient, refetch]);
+  }, [objectTypeId, queryClient]);
 
   return {
     fields: sortedFields,
-    isLoading,
-    refetch
+    isLoading
   };
 }

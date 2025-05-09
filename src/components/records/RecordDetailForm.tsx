@@ -1,241 +1,165 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Loader2, ChevronDown } from "lucide-react";
-import { toast } from "sonner";
-import { useObjectType } from "@/hooks/useObjectType";
-import { useEnhancedFields } from "@/hooks/useEnhancedFields";
-import { useRecordDetail } from "@/hooks/useRecordDetail";
-import { useObjectRecords } from "@/hooks/useObjectRecords";
-import { Collapsible } from "@/components/ui/collapsible";
-import { CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ViewField } from "./ViewField";
-import { EditField } from "./EditField";
-import { InlineFieldCreator } from "./InlineFieldCreator";
+import { Button } from '@/components/ui/button';
+import { RecordField } from './RecordField';
+import { Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
+import { useObjectFields } from '@/hooks/useObjectFields';
+import { useRecordDetail } from '@/hooks/useRecordDetail';
+import { ObjectField } from '@/types/ObjectFieldTypes';
+import { useObjectRecords } from '@/hooks/useObjectRecords';
 
 interface RecordDetailFormProps {
   objectTypeId: string;
   recordId: string;
-  isEditMode: boolean;
-  onSave: (record: any) => void;
-  onCancel: () => void;
+  onSave?: (record: any) => void;
+  onCancel?: () => void;
+  isEditMode?: boolean;
+  record?: any;
+  fields?: ObjectField[];
+  onFieldChange?: (fieldName: string, value: any) => void;
+  editedValues?: Record<string, any>;
+  isEditing?: boolean;
 }
 
 export function RecordDetailForm({
   objectTypeId,
   recordId,
-  isEditMode,
   onSave,
-  onCancel
+  onCancel,
+  isEditMode = false,
+  record: providedRecord,
+  fields: providedFields,
+  onFieldChange,
+  editedValues = {},
+  isEditing
 }: RecordDetailFormProps) {
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const { objectType, isLoading: isLoadingObjectType } = useObjectType(objectTypeId);
-  const { fields, isLoading: isLoadingFields } = useEnhancedFields(objectTypeId);
-  const { record, isLoading: isLoadingRecord, refetch: refetchRecord } = useRecordDetail(objectTypeId, recordId);
+  const shouldFetchData = !providedRecord || !providedFields;
+  const { fields: fetchedFields, isLoading: isLoadingFields } = useObjectFields(
+    shouldFetchData ? objectTypeId : undefined
+  );
+  const { record: fetchedRecord, isLoading: isLoadingRecord } = useRecordDetail(
+    shouldFetchData ? objectTypeId : undefined,
+    shouldFetchData ? recordId : undefined
+  );
+  
+  const [isSaving, setIsSaving] = useState(false);
+  const [formValues, setFormValues] = useState<Record<string, any>>({});
+  const methods = useForm();
   const { updateRecord } = useObjectRecords(objectTypeId);
-  const [recordValues, setRecordValues] = useState<any>({});
-
-  // Populate initial values when record loads
+  
+  // Make sure to cast the fields to the proper ObjectField type
+  const fields = (providedFields || fetchedFields || []) as ObjectField[];
+  const record = providedRecord || fetchedRecord;
+  const isLoading = shouldFetchData && (isLoadingFields || isLoadingRecord);
+  
+  // Determines if we're in edit mode based on either prop
+  const actualEditMode = isEditMode || isEditing || false;
+  
   useEffect(() => {
-    if (record) {
-      setRecordValues(record.field_values);
-    }
-  }, [record]);
-
-  const handleFieldChange = (fieldApiName: string, value: any) => {
-    setRecordValues(prev => ({
-      ...prev,
-      [fieldApiName]: value
-    }));
-  };
-
-  const handleSave = async () => {
-    try {
-      setIsSubmitting(true);
+    // Reset form when record data is loaded or edit mode changes
+    if (record && record.field_values) {
+      const defaultValues = {}; 
       
-      // Update the record with field values
-      await updateRecord.mutateAsync({
-        id: recordId,
-        field_values: recordValues
+      // Map record field values to form values
+      Object.keys(record.field_values).forEach(fieldKey => {
+        defaultValues[fieldKey] = record.field_values[fieldKey];
       });
       
-      setIsSubmitting(false);
-      toast.success("Record updated successfully");
-      onSave(recordValues);
-      refetchRecord(); // Refresh record data
-    } catch (error) {
-      console.error("Error submitting form:", error);
-      toast.error("Failed to update record. Please try again.");
-      setIsSubmitting(false);
+      console.log("Setting form values from record:", defaultValues);
+      setFormValues(defaultValues);
+      methods.reset(defaultValues);
+    }
+  }, [record, methods, actualEditMode]);
+
+  // Handle field change
+  const handleFieldChange = (fieldName: string, value: any) => {
+    console.log(`Field changed: ${fieldName} => `, value);
+    
+    if (onFieldChange) {
+      onFieldChange(fieldName, value);
+    } else {
+      setFormValues(prev => {
+        const newValues = {
+          ...prev,
+          [fieldName]: value
+        };
+        console.log("Updated form values:", newValues);
+        return newValues;
+      });
+      methods.setValue(fieldName, value);
     }
   };
 
-  const handleCancel = () => {
-    onCancel();
+  const onSubmit = async (data: any) => {
+    try {
+      setIsSaving(true);
+      
+      // If we're using our own state, use that instead of the form data
+      const dataToSubmit = onFieldChange ? editedValues : formValues;
+      
+      console.log("Submitting record data:", dataToSubmit);
+      
+      // Update the record using the useObjectRecords hook
+      await updateRecord.mutateAsync({
+        id: recordId,
+        field_values: dataToSubmit
+      });
+      
+      toast.success("Record updated successfully");
+      
+      if (onSave && record) {
+        onSave({
+          ...record,
+          field_values: { ...record.field_values, ...dataToSubmit }
+        });
+      }
+    } catch (error) {
+      console.error('Error updating record:', error);
+      toast.error("Failed to update the record. Please try again.");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  // Prepare sections
-  const sections = React.useMemo(() => {
-    if (!fields) return [];
-
-    // Default section for fields without specified section
-    const defaultSection = { 
-      id: 'default', 
-      title: '', 
-      fields: [] 
-    };
-    
-    const sectionsMap: { [key: string]: { id: string, title: string, fields: any[] } } = {
-      'default': defaultSection
-    };
-
-    fields.forEach(field => {
-      // Check if field has section_id or section_name properties
-      const sectionId = (field as any).section_id || 'default';
-      if (!sectionsMap[sectionId]) {
-        sectionsMap[sectionId] = {
-          id: sectionId,
-          title: (field as any).section_name || '',
-          fields: []
-        };
-      }
-      sectionsMap[sectionId].fields.push(field);
-    });
-
-    return Object.values(sectionsMap);
-  }, [fields]);
-
-  // Combined loading state
-  const isLoading = isLoadingObjectType || isLoadingFields || isLoadingRecord;
+  // Show loading state while fetching data
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
-    <div className="p-6">
-      {isLoading ? (
-        <div className="flex justify-center items-center h-64">
-          <Loader2 className="h-8 w-8 animate-spin" />
-        </div>
-      ) : (
-        <div className="space-y-6">
-          {/* Header section with actions */}
-          {isEditMode && (
-            <div className="flex justify-between items-center">
-              <h3 className="text-lg font-medium">Edit Record</h3>
-              <div className="flex items-center gap-2">
-                <InlineFieldCreator 
-                  objectTypeId={objectTypeId}
-                  onFieldCreated={() => {
-                    // We'll trigger a custom event to refresh fields
-                    const event = new CustomEvent('refetch-fields', { 
-                      detail: { objectTypeId } 
-                    });
-                    window.dispatchEvent(event);
-                  }}
-                />
-                <Button onClick={handleCancel} variant="outline">
-                  Cancel
-                </Button>
-                <Button 
-                  onClick={handleSave}
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Save
-                </Button>
-              </div>
-            </div>
+    <form onSubmit={methods.handleSubmit(onSubmit)} className="space-y-4 p-4">
+      {fields && fields.map((field) => (
+        <RecordField
+          key={field.id}
+          field={field}
+          value={editedValues?.[field.api_name] !== undefined 
+            ? editedValues[field.api_name] 
+            : formValues[field.api_name]}
+          onCustomChange={(value) => handleFieldChange(field.api_name, value)}
+          readOnly={!actualEditMode}
+          form={methods}
+        />
+      ))}
+      
+      {actualEditMode && (
+        <div className="flex justify-end space-x-2 pt-4">
+          {onCancel && (
+            <Button type="button" variant="outline" onClick={onCancel}>
+              Cancel
+            </Button>
           )}
-          
-          {/* Fields */}
-          <div className="grid gap-6">
-            {sections.map((section) => (
-              <div key={section.id || 'default'} className="space-y-4">
-                {section.title && (
-                  <h4 className="font-medium border-b pb-1">{section.title}</h4>
-                )}
-                
-                <div className="grid gap-4">
-                  {section.fields.map((field) => (
-                    <div key={field.id} className="grid grid-cols-3 gap-4 items-start">
-                      <div className="flex items-center">
-                        <label 
-                          htmlFor={field.api_name}
-                          className={`text-sm font-medium ${field.is_required ? 'after:content-["*"] after:ml-0.5 after:text-red-500' : ''}`}
-                        >
-                          {field.name}
-                        </label>
-                      </div>
-                      
-                      <div className="col-span-2">
-                        {isEditMode ? (
-                          <EditField 
-                            field={field}
-                            value={recordValues[field.api_name]}
-                            onChange={(value) => handleFieldChange(field.api_name, value)}
-                            objectTypeId={objectTypeId}
-                          />
-                        ) : (
-                          <ViewField 
-                            field={field}
-                            value={recordValues[field.api_name]}
-                            objectTypeId={objectTypeId}
-                          />
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-          
-          {/* System fields section */}
-          <Collapsible>
-            <div className="flex items-center justify-between space-x-4 mb-2">
-              <h4 className="text-sm font-medium">System Fields</h4>
-              <CollapsibleTrigger asChild>
-                <Button variant="ghost" size="sm">
-                  <ChevronDown className="h-4 w-4" />
-                  <span className="sr-only">Toggle system fields</span>
-                </Button>
-              </CollapsibleTrigger>
-            </div>
-            
-            <CollapsibleContent>
-              <div className="space-y-2 pt-2">
-                <div className="grid grid-cols-3 gap-4 items-start">
-                  <div className="flex items-center">
-                    <Label htmlFor="created_at" className="text-sm font-medium">Created At</Label>
-                  </div>
-                  <div className="col-span-2">
-                    <Input type="text" id="created_at" value={record?.created_at || ''} readOnly disabled className="cursor-not-allowed" />
-                  </div>
-                </div>
-                <div className="grid grid-cols-3 gap-4 items-start">
-                  <div className="flex items-center">
-                    <Label htmlFor="updated_at" className="text-sm font-medium">Updated At</Label>
-                  </div>
-                  <div className="col-span-2">
-                    <Input type="text" id="updated_at" value={record?.updated_at || ''} readOnly disabled className="cursor-not-allowed" />
-                  </div>
-                </div>
-                <div className="grid grid-cols-3 gap-4 items-start">
-                  <div className="flex items-center">
-                    <Label htmlFor="record_id" className="text-sm font-medium">Record ID</Label>
-                  </div>
-                  <div className="col-span-2">
-                    <Input type="text" id="record_id" value={record?.record_id || ''} readOnly disabled className="cursor-not-allowed" />
-                  </div>
-                </div>
-              </div>
-            </CollapsibleContent>
-          </Collapsible>
+          <Button type="submit" disabled={isSaving}>
+            {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Save Changes
+          </Button>
         </div>
       )}
-    </div>
+    </form>
   );
 }
