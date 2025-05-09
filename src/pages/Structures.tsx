@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { PageHeader } from "@/components/ui/page-header";
 import { TabsContent, TabsList, TabsTrigger, Tabs } from "@/components/ui/tabs";
@@ -23,9 +24,11 @@ export default function Structures() {
   const navigate = useNavigate();
 
   useEffect(() => {
+    // Force refresh of data when component mounts
     queryClient.invalidateQueries({ queryKey: ["objectTypes"] });
     queryClient.invalidateQueries({ queryKey: ["published-applications"] });
-  }, [queryClient]);
+    refetchPublishedApplications();
+  }, [queryClient, refetchPublishedApplications]);
 
   const handlePublish = async (objectId: string) => {
     try {

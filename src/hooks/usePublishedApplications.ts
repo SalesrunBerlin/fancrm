@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -87,30 +86,54 @@ export function usePublishedApplications() {
   } = useQuery({
     queryKey: ["published-applications"],
     queryFn: async (): Promise<PublishedApplication[]> => {
-      let query = supabase
+      // Ensure we get all public applications regardless of who's logged in
+      const query = supabase
         .from("published_applications")
         .select(`
           *,
           publisher:published_by(id, email, user_metadata)
-        `);
+        `)
+        .eq("is_public", true)
+        .eq("is_active", true);
 
+      // If user is logged in, also get their private published apps
       if (user) {
-        // If user is logged in, show their private published apps and all public apps
-        query = query.or(`is_public.eq.true,published_by.eq.${user.id}`);
+        const { data: publicApps, error: publicError } = await query;
+        
+        if (publicError) {
+          console.error("Error fetching public applications:", publicError);
+          throw publicError;
+        }
+        
+        // Get private apps by the current user
+        const { data: privateApps, error: privateError } = await supabase
+          .from("published_applications")
+          .select(`
+            *,
+            publisher:published_by(id, email, user_metadata)
+          `)
+          .eq("is_public", false)
+          .eq("published_by", user.id)
+          .eq("is_active", true);
+          
+        if (privateError) {
+          console.error("Error fetching private applications:", privateError);
+          throw privateError;
+        }
+        
+        // Combine public and private apps
+        return [...(publicApps || []), ...(privateApps || [])] as PublishedApplication[];
       } else {
-        // If user is not logged in, only show public apps
-        query = query.eq("is_public", true);
+        // If user is not logged in, only return public apps
+        const { data, error } = await query;
+        
+        if (error) {
+          console.error("Error fetching public applications:", error);
+          throw error;
+        }
+        
+        return data as PublishedApplication[] || [];
       }
-
-      const { data, error } = await query.order("created_at", { ascending: false });
-
-      if (error) {
-        console.error("Error fetching published applications:", error);
-        throw error;
-      }
-
-      // Ensure all returned applications match our type
-      return (data as unknown as PublishedApplication[]) || [];
     }
   });
 
