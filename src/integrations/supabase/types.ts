@@ -596,6 +596,58 @@ export type Database = {
         }
         Relationships: []
       }
+      layout_fields: {
+        Row: {
+          created_at: string
+          display_order: number
+          field_id: string
+          id: string
+          is_visible: boolean
+          layout_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          display_order?: number
+          field_id: string
+          id?: string
+          is_visible?: boolean
+          layout_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          display_order?: number
+          field_id?: string
+          id?: string
+          is_visible?: boolean
+          layout_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "layout_fields_field_id_fkey"
+            columns: ["field_id"]
+            isOneToOne: false
+            referencedRelation: "object_field_relationships"
+            referencedColumns: ["field_id"]
+          },
+          {
+            foreignKeyName: "layout_fields_field_id_fkey"
+            columns: ["field_id"]
+            isOneToOne: false
+            referencedRelation: "object_fields"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "layout_fields_layout_id_fkey"
+            columns: ["layout_id"]
+            isOneToOne: false
+            referencedRelation: "object_layouts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       object_application_assignments: {
         Row: {
           application_id: string
@@ -792,6 +844,54 @@ export type Database = {
           },
           {
             foreignKeyName: "object_fields_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "auth_users_view"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      object_layouts: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_default: boolean
+          name: string
+          object_type_id: string
+          owner_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_default?: boolean
+          name: string
+          object_type_id: string
+          owner_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_default?: boolean
+          name?: string
+          object_type_id?: string
+          owner_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "object_layouts_object_type_id_fkey"
+            columns: ["object_type_id"]
+            isOneToOne: false
+            referencedRelation: "object_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "object_layouts_owner_id_fkey"
             columns: ["owner_id"]
             isOneToOne: false
             referencedRelation: "auth_users_view"

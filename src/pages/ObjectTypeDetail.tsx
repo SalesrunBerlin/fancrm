@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
@@ -14,6 +13,7 @@ import { ThemedButton } from "@/components/ui/themed-button";
 import { useObjectType } from "@/hooks/useObjectType";
 import { FieldOrderManager } from "@/components/settings/FieldOrderManager";
 import { ObjectField } from "@/hooks/useObjectTypes";
+import { LayoutManager } from "@/components/settings/LayoutManager";
 
 export default function ObjectTypeDetail() {
   const { objectTypeId } = useParams<{ objectTypeId: string }>();
@@ -117,54 +117,6 @@ export default function ObjectTypeDetail() {
       default_field_api_name: fieldApiName
     });
   };
-  
-  const handleDragStart = (field: ObjectField) => {
-    setIsDragging(true);
-    setDraggedField(field);
-  };
-  
-  const handleDragEnd = () => {
-    setIsDragging(false);
-    setDraggedField(null);
-  };
-  
-  const handleDragOver = (e: React.DragEvent, targetIndex: number) => {
-    e.preventDefault();
-    if (!isDragging || !draggedField) return;
-    
-    const draggedFieldIndex = orderedFields.findIndex(field => field.id === draggedField.id);
-    if (draggedFieldIndex === targetIndex) return;
-    
-    // Create a new array with the reordered fields
-    const newOrderedFields = [...orderedFields];
-    const [movedField] = newOrderedFields.splice(draggedFieldIndex, 1);
-    newOrderedFields.splice(targetIndex, 0, movedField);
-    
-    setOrderedFields(newOrderedFields);
-  };
-  
-  const handleSaveFieldOrder = async () => {
-    if (!objectTypeId || orderedFields.length === 0) return;
-    
-    setIsReordering(true);
-    try {
-      // Create an array of objects with id and new display_order values
-      const updatedFieldOrders = orderedFields.map((field, index) => ({
-        id: field.id,
-        display_order: index + 1
-      }));
-      
-      // Call the mutation to update field orders
-      await updateFieldOrder.mutateAsync(updatedFieldOrders);
-      
-      toast.success("Field order updated successfully");
-    } catch (error) {
-      console.error("Error updating field order:", error);
-      toast.error("Failed to update field order");
-    } finally {
-      setIsReordering(false);
-    }
-  };
 
   // Check if this is an imported template (previously published by others)
   const isImportedTemplate = currentObjectType.is_template === true;
@@ -205,60 +157,31 @@ export default function ObjectTypeDetail() {
             </ThemedButton>
             
             {canModifyFields && !isArchived && (
-              <>
-                {isDragging && (
-                  <ThemedButton
-                    variant="success"
-                    size="responsive"
-                    onClick={handleSaveFieldOrder}
-                    disabled={isReordering}
-                  >
-                    <Loader2 className={`h-4 w-4 ${isReordering ? 'animate-spin' : ''} mr-2`} />
-                    <span>Save Order</span>
-                  </ThemedButton>
-                )}
-              
-                <ThemedButton
-                  variant="outline"
-                  size="responsive"
-                  onClick={() => setShowFieldOrderManager(true)}
-                >
-                  <MoveVertical className="h-4 w-4" />
-                  <span className="hidden md:inline">Reorder Fields</span>
-                </ThemedButton>
-              
-                <ThemedButton 
-                  variant="default"
-                  size="responsive"
-                  onClick={() => navigate(`/settings/objects/${objectTypeId}/fields/new`)}
-                >
-                  <Plus className="h-4 w-4" />
-                  <span className="hidden md:inline">New Field</span>
-                </ThemedButton>
-                {!isImportedTemplate && isOwnedObject && (
-                  <ThemedButton 
-                    onClick={handleTogglePublish}
-                    disabled={isPublishing}
-                    size="responsive"
-                    variant={currentObjectType.is_published ? "outline" : "default"}
-                  >
-                    <List className="h-4 w-4" />
-                    <span className="hidden md:inline">
-                      {currentObjectType.is_published ? "Unpublish" : "Publish"}
-                    </span>
-                  </ThemedButton>
-                )}
-                <ThemedButton 
-                  variant="warning"
-                  size="responsive"
-                  onClick={() => navigate(`/settings/objects/${objectTypeId}/archive`)}
-                >
-                  <Archive className="h-4 w-4" />
-                  <span className="hidden md:inline">Archive</span>
-                </ThemedButton>
-              </>
+              <ThemedButton 
+                variant="default"
+                size="responsive"
+                onClick={() => navigate(`/settings/objects/${objectTypeId}/fields/new`)}
+              >
+                <Plus className="h-4 w-4" />
+                <span className="hidden md:inline">New Field</span>
+              </ThemedButton>
             )}
-            {isArchived && (
+              
+            {!isImportedTemplate && isOwnedObject && (
+              <ThemedButton 
+                onClick={handleTogglePublish}
+                disabled={isPublishing}
+                size="responsive"
+                variant={currentObjectType.is_published ? "outline" : "default"}
+              >
+                <List className="h-4 w-4" />
+                <span className="hidden md:inline">
+                  {currentObjectType.is_published ? "Unpublish" : "Publish"}
+                </span>
+              </ThemedButton>
+            )}
+            
+            {isArchived ? (
               <ThemedButton
                 variant="success" 
                 size="responsive"
@@ -266,6 +189,15 @@ export default function ObjectTypeDetail() {
               >
                 <Archive className="h-4 w-4" />
                 <span className="hidden md:inline">Restore</span>
+              </ThemedButton>
+            ) : (
+              <ThemedButton 
+                variant="warning"
+                size="responsive"
+                onClick={() => navigate(`/settings/objects/${objectTypeId}/archive`)}
+              >
+                <Archive className="h-4 w-4" />
+                <span className="hidden md:inline">Archive</span>
               </ThemedButton>
             )}
           </div>
@@ -289,14 +221,16 @@ export default function ObjectTypeDetail() {
           isLoading={isLoading}
           onManagePicklistValues={handleManagePicklistValues}
           onDeleteField={canModifyFields ? handleDeleteField : undefined}
-          showDragHandles={canModifyFields && !isArchived}
-          onDragStart={handleDragStart}
-          onDragEnd={handleDragEnd}
-          onDragOver={handleDragOver}
+          showDragHandles={false}
         />
       </div>
       
-      {/* Field Order Manager Dialog */}
+      {/* Layout Manager */}
+      {canModifyFields && !isArchived && (
+        <LayoutManager objectTypeId={objectTypeId || ""} />
+      )}
+      
+      {/* Field Order Manager Dialog - Keeping this for backward compatibility */}
       {canModifyFields && (
         <FieldOrderManager
           objectTypeId={objectTypeId || ''}

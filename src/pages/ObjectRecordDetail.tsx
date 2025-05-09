@@ -1,9 +1,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
 import { Edit, Save, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { useObjectType } from "@/hooks/useObjectType";
@@ -11,12 +10,12 @@ import { useRecordDetail } from "@/hooks/useRecordDetail";
 import { RecordDetailForm } from "@/components/records/RecordDetailForm";
 import { ObjectActionsSection } from "@/components/actions/ObjectActionsSection";
 import { RelatedRecordsList } from "@/components/records/RelatedRecordsList";
-import { Link } from 'react-router-dom';
 import { ThemedButton } from '@/components/ui/themed-button';
 import { PageHeader } from '@/components/ui/page-header';
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { TooltipProvider } from "@radix-ui/react-tooltip";
 import { TicketProcessor } from '@/components/tickets/TicketProcessor';
+import { LayoutSelector } from "@/components/records/LayoutSelector";
 
 export default function ObjectRecordDetail() {
   const { objectTypeId, recordId } = useParams<{ objectTypeId: string; recordId: string }>();
@@ -27,6 +26,7 @@ export default function ObjectRecordDetail() {
   const { record, isLoading: isLoadingRecord } = useRecordDetail(objectTypeId || "", recordId || "");
   const [isTicket, setIsTicket] = useState(false);
   const [aiStatus, setAiStatus] = useState<string | null>(null);
+  const [selectedLayoutId, setSelectedLayoutId] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     if (!objectTypeId || !recordId) {
@@ -56,6 +56,10 @@ export default function ObjectRecordDetail() {
 
   const handleStatusChange = (newStatus: string) => {
     setAiStatus(newStatus);
+  };
+
+  const handleLayoutChange = (layoutId: string) => {
+    setSelectedLayoutId(layoutId);
   };
 
   if (isLoadingObjectType || isLoadingRecord) {
@@ -108,7 +112,14 @@ export default function ObjectRecordDetail() {
               </div>
             )}
           </div>
-          <div>
+          <div className="flex items-center gap-2">
+            {/* Layout Selector */}
+            <LayoutSelector
+              objectTypeId={objectTypeId || ""}
+              selectedLayoutId={selectedLayoutId}
+              onLayoutChange={handleLayoutChange}
+            />
+            
             {isEditing ? (
               <>
                 <TooltipProvider>

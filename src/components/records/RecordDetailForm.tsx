@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Button } from '@/components/ui/button';
@@ -8,6 +9,7 @@ import { useObjectFields } from '@/hooks/useObjectFields';
 import { useRecordDetail } from '@/hooks/useRecordDetail';
 import { ObjectField } from '@/types/ObjectFieldTypes';
 import { useObjectRecords } from '@/hooks/useObjectRecords';
+import { useObjectLayout } from '@/hooks/useObjectLayout';
 
 interface RecordDetailFormProps {
   objectTypeId: string;
@@ -48,12 +50,17 @@ export function RecordDetailForm({
   const methods = useForm();
   const { updateRecord } = useObjectRecords(objectTypeId);
   
-  // Make sure to cast the fields to the proper ObjectField type and sort by display_order
+  // Get layout configuration for this object type
+  const { applyLayout, isLoading: isLoadingLayout } = useObjectLayout(objectTypeId);
+  
+  // Make sure to cast the fields to the proper ObjectField type
   const unsortedFields = (providedFields || fetchedFields || []) as ObjectField[];
-  const fields = unsortedFields.sort((a, b) => a.display_order - b.display_order);
+  
+  // Apply layout configuration to the fields
+  const fields = applyLayout(unsortedFields);
   
   const record = providedRecord || fetchedRecord;
-  const isLoading = shouldFetchData && (isLoadingFields || isLoadingRecord);
+  const isLoading = shouldFetchData && (isLoadingFields || isLoadingRecord || isLoadingLayout);
   
   // Determines if we're in edit mode based on either prop
   const actualEditMode = isEditMode || isEditing || false;
