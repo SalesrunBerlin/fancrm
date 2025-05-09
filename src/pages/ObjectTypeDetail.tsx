@@ -1,17 +1,17 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
 import { useObjectFields } from "@/hooks/useObjectFields";
 import { ObjectFieldsList } from "@/components/settings/ObjectFieldsList";
 import { PageHeader } from "@/components/ui/page-header";
-import { ArrowLeft, List, Plus, Archive, Loader2, RefreshCw } from "lucide-react";
+import { ArrowLeft, List, Plus, Archive, Loader2, RefreshCw, MoveVertical } from "lucide-react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { DefaultFieldSelector } from "@/components/settings/DefaultFieldSelector";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { ThemedButton } from "@/components/ui/themed-button";
 import { useObjectType } from "@/hooks/useObjectType";
+import { FieldOrderManager } from "@/components/settings/FieldOrderManager";
 
 export default function ObjectTypeDetail() {
   const { objectTypeId } = useParams<{ objectTypeId: string }>();
@@ -20,6 +20,8 @@ export default function ObjectTypeDetail() {
   const { objectTypes, updateObjectType, publishObjectType, unpublishObjectType, publishedObjects, isLoadingPublished } = useObjectTypes();
   const { fields, isLoading, createField, updateField, deleteField, refetch } = useObjectFields(objectTypeId);
   const [isPublishing, setIsPublishing] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [showFieldOrderManager, setShowFieldOrderManager] = useState(false);
   
   // Use useObjectType hook for direct access to a single object type
   const { objectType: singleObjectType } = useObjectType(objectTypeId || '');
@@ -29,8 +31,6 @@ export default function ObjectTypeDetail() {
     singleObjectType || 
     objectTypes?.find(obj => obj.id === objectTypeId) || 
     publishedObjects?.find(obj => obj.id === objectTypeId);
-  
-  const [isRefreshing, setIsRefreshing] = useState(false);
   
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -147,6 +147,15 @@ export default function ObjectTypeDetail() {
             
             {canModifyFields && !isArchived && (
               <>
+                <ThemedButton
+                  variant="outline"
+                  size="responsive"
+                  onClick={() => setShowFieldOrderManager(true)}
+                >
+                  <MoveVertical className="h-4 w-4" />
+                  <span className="hidden md:inline">Reorder Fields</span>
+                </ThemedButton>
+              
                 <ThemedButton 
                   variant="default"
                   size="responsive"
@@ -211,6 +220,15 @@ export default function ObjectTypeDetail() {
           onDeleteField={canModifyFields ? handleDeleteField : undefined}
         />
       </div>
+      
+      {/* Field Order Manager Dialog */}
+      {canModifyFields && (
+        <FieldOrderManager
+          objectTypeId={objectTypeId || ''}
+          open={showFieldOrderManager}
+          onOpenChange={setShowFieldOrderManager}
+        />
+      )}
     </div>
   );
 }

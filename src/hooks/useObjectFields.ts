@@ -205,6 +205,8 @@ export function useObjectFields(objectTypeId?: string) {
         throw new Error("You must be logged in to reorder fields");
       }
 
+      console.log("Updating field order:", orderedFields);
+
       // Use individual updates for each field
       for (const field of orderedFields) {
         const { error } = await supabase
@@ -214,6 +216,7 @@ export function useObjectFields(objectTypeId?: string) {
           .eq("object_type_id", objectTypeId);
 
         if (error) {
+          console.error("Error updating field order:", error);
           throw error;
         }
       }

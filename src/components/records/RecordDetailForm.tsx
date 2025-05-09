@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Button } from '@/components/ui/button';
@@ -49,8 +48,10 @@ export function RecordDetailForm({
   const methods = useForm();
   const { updateRecord } = useObjectRecords(objectTypeId);
   
-  // Make sure to cast the fields to the proper ObjectField type
-  const fields = (providedFields || fetchedFields || []) as ObjectField[];
+  // Make sure to cast the fields to the proper ObjectField type and sort by display_order
+  const unsortedFields = (providedFields || fetchedFields || []) as ObjectField[];
+  const fields = unsortedFields.sort((a, b) => a.display_order - b.display_order);
+  
   const record = providedRecord || fetchedRecord;
   const isLoading = shouldFetchData && (isLoadingFields || isLoadingRecord);
   

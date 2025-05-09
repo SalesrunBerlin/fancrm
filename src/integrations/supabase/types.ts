@@ -2004,6 +2004,10 @@ export type Database = {
         }
         Returns: string
       }
+      delete_published_objects: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       delete_system_objects: {
         Args: Record<PropertyKey, never>
         Returns: undefined
