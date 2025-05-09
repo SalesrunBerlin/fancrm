@@ -2,9 +2,13 @@
 import { useState, useEffect } from "react";
 
 export function useIsMobile() {
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  // Initialize with null to avoid hydration mismatch
+  const [isMobile, setIsMobile] = useState<boolean | null>(null);
 
   useEffect(() => {
+    // Set initial value once we're in the browser
+    setIsMobile(window.innerWidth < 768);
+
     function handleResize() {
       setIsMobile(window.innerWidth < 768);
     }
@@ -13,5 +17,6 @@ export function useIsMobile() {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  return isMobile;
+  // During SSR or initial render, default to false
+  return isMobile === null ? false : isMobile;
 }
