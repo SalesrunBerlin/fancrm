@@ -22,6 +22,7 @@ export default function CreateRecordPage() {
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { favoriteColor } = useAuth();
+  const [formValues, setFormValues] = useState<RecordFormData>({});
   
   const { objectTypes } = useObjectTypes();
   const { fields, isLoading: isLoadingFields } = useEnhancedFields(objectTypeId!);
@@ -35,9 +36,27 @@ export default function CreateRecordPage() {
     return null;
   }
 
+  // Handle field change 
+  const handleFieldChange = (fieldName: string, value: any) => {
+    console.log(`Field changed in create page: ${fieldName} => `, value);
+    setFormValues(prev => ({
+      ...prev,
+      [fieldName]: value
+    }));
+    form.setValue(fieldName, value, { shouldValidate: true, shouldDirty: true });
+  };
+
   const onSubmit = async (data: RecordFormData) => {
     try {
       setIsSubmitting(true);
+      
+      // Merge form values with react-hook-form data to ensure we have all the values
+      const submitData = {
+        ...data,
+        ...formValues
+      };
+      
+      console.log("Submitting form data:", submitData);
       
       // Process auto-number fields
       const autoNumberFields = fields.filter(f => f.data_type === 'auto_number');
@@ -46,7 +65,7 @@ export default function CreateRecordPage() {
         try {
           const autoNumberValue = await generateAutoNumber(field.id);
           // Add the auto-number value to the form data
-          data[field.api_name] = autoNumberValue;
+          submitData[field.api_name] = autoNumberValue;
         } catch (error) {
           console.error(`Failed to generate auto-number for field ${field.api_name}:`, error);
           toast.error(`Failed to generate auto-number for field ${field.name}`);
@@ -55,7 +74,7 @@ export default function CreateRecordPage() {
       
       // Create the record
       const result = await createRecord.mutateAsync({
-        field_values: data
+        field_values: submitData
       });
       
       toast.success(`${objectType?.name || 'Record'} created successfully`);
@@ -104,6 +123,8 @@ export default function CreateRecordPage() {
                     <RecordField
                       key={field.id}
                       field={field}
+                      value={formValues[field.api_name]}
+                      onCustomChange={(value) => handleFieldChange(field.api_name, value)}
                       form={form}
                     />
                   ))}
@@ -122,7 +143,7 @@ export default function CreateRecordPage() {
                       variant={(favoriteColor as ActionColor) || "default"}
                     >
                       {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                      Create
+                      Create Record
                     </ThemedButton>
                   </div>
                 </div>

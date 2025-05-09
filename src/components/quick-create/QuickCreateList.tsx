@@ -3,11 +3,12 @@ import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Plus, Loader2 } from "lucide-react";
+import { Plus, Loader2, ArrowRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { useObjectType } from "@/hooks/useObjectType";
+import { useRouter } from "@/hooks/useRouter";
 
 interface QuickCreateListProps {
   objectTypeId: string;
@@ -21,6 +22,7 @@ export function QuickCreateList({ objectTypeId, nameFieldApiName }: QuickCreateL
   const [isCreating, setIsCreating] = useState(false);
   const { user } = useAuth();
   const { objectType } = useObjectType(objectTypeId);
+  const router = useRouter();
   
   // Load existing items when component mounts
   useEffect(() => {
@@ -115,6 +117,11 @@ export function QuickCreateList({ objectTypeId, nameFieldApiName }: QuickCreateL
     );
     return nameField?.value || `Item ${item.record_id || ''}`;
   };
+  
+  // Navigate to item detail
+  const viewItem = (itemId: string) => {
+    router.push(`/objects/${objectTypeId}/${itemId}`);
+  };
 
   return (
     <Card>
@@ -150,9 +157,11 @@ export function QuickCreateList({ objectTypeId, nameFieldApiName }: QuickCreateL
               items.map((item) => (
                 <div 
                   key={item.id}
-                  className="p-3 border rounded-lg flex justify-between items-center hover:bg-accent hover:text-accent-foreground transition-colors"
+                  className="p-3 border rounded-lg flex justify-between items-center hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer"
+                  onClick={() => viewItem(item.id)}
                 >
                   <span className="font-medium">{getItemName(item)}</span>
+                  <ArrowRight className="h-4 w-4" />
                 </div>
               ))
             ) : (

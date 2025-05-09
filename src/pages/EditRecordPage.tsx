@@ -18,6 +18,7 @@ import { generateAutoNumber } from "@/hooks/useAutoNumberFields";
 
 export default function EditRecordPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formValues, setFormValues] = useState<RecordFormData>({});
   const navigate = useNavigate();
   const { objectTypeId, recordId } = useParams<{ objectTypeId: string; recordId: string }>();
   const { objectTypes } = useObjectTypes();
@@ -47,25 +48,43 @@ export default function EditRecordPage() {
         });
       }
       
+      setFormValues(defaultValues);
       form.reset(defaultValues);
     }
   }, [record, isLoadingRecord, form]);
+
+  // Handle field change
+  const handleFieldChange = (fieldName: string, value: any) => {
+    console.log(`Field changed in edit page: ${fieldName} => `, value);
+    setFormValues(prev => ({
+      ...prev,
+      [fieldName]: value
+    }));
+    form.setValue(fieldName, value, { shouldValidate: true, shouldDirty: true });
+  };
 
   const onSubmit = async (data: RecordFormData) => {
     if (!recordId || !objectTypeId) return;
     
     try {
       setIsSubmitting(true);
-      console.log("Submitting form data:", data);
+      
+      // Merge form values with react-hook-form data
+      const submitData = {
+        ...data,
+        ...formValues
+      };
+      
+      console.log("Submitting form data:", submitData);
       
       // Process Auto-Number fields
       const autoNumberFields = fields.filter(field => field.data_type === 'auto_number');
       for (const field of autoNumberFields) {
         // If no value is present, generate a new one
-        if (!data[field.api_name] || data[field.api_name] === 'undefined') {
+        if (!submitData[field.api_name] || submitData[field.api_name] === 'undefined') {
           try {
             const autoNumberValue = await generateAutoNumber(field.id);
-            data[field.api_name] = autoNumberValue as string;
+            submitData[field.api_name] = autoNumberValue as string;
           } catch (error) {
             console.error(`Failed to generate auto-number for field ${field.api_name}:`, error);
           }
@@ -74,7 +93,7 @@ export default function EditRecordPage() {
       
       await updateRecord.mutateAsync({
         id: recordId,
-        field_values: data
+        field_values: submitData
       });
       toast("Record updated successfully");
       navigate(`/objects/${objectTypeId}/${recordId}`);
@@ -135,6 +154,8 @@ export default function EditRecordPage() {
                     <RecordField
                       key={field.id}
                       field={field}
+                      value={formValues[field.api_name]}
+                      onCustomChange={(value) => handleFieldChange(field.api_name, value)}
                       form={form}
                     />
                   ))}
