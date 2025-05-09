@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { PageHeader } from "@/components/ui/page-header";
@@ -11,11 +10,12 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
-import { ArrowLeft, Loader2, Share, RefreshCw } from "lucide-react";
+import { ArrowLeft, Globe, Loader2, Lock, RefreshCw, Share } from "lucide-react";
 import { useApplications, Application } from "@/hooks/useApplications";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { usePublishedApplications } from "@/hooks/usePublishedApplications";
+import { Badge } from "@/components/ui/badge";
 
 const publishFormSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -93,6 +93,9 @@ export default function ApplicationPublishSettingsPage() {
       }
     }
   }, [applications, applicationId, navigate, form, isUpdate, publishedApp]);
+
+  // This function watches isPublic value for visual feedback
+  const watchIsPublic = form.watch("isPublic");
 
   const onSubmit = async (values: PublishFormValues) => {
     setIsSubmitting(true);
@@ -216,6 +219,18 @@ export default function ApplicationPublishSettingsPage() {
                       <FormDescription>
                         Allow other users to discover and import your application.
                       </FormDescription>
+                      {watchIsPublic && (
+                        <Badge variant="secondary" className="mt-2 flex items-center gap-1 w-fit">
+                          <Globe className="h-3 w-3" />
+                          <span>Public - Visible to all users</span>
+                        </Badge>
+                      )}
+                      {!watchIsPublic && (
+                        <Badge variant="outline" className="mt-2 flex items-center gap-1 w-fit">
+                          <Lock className="h-3 w-3" />
+                          <span>Private - Only visible to you</span>
+                        </Badge>
+                      )}
                     </div>
                     <FormControl>
                       <Switch
@@ -249,7 +264,10 @@ export default function ApplicationPublishSettingsPage() {
                 Continue to Update
               </>
             ) : (
-              'Continue to Selection'
+              <>
+                <Share className="h-4 w-4 mr-1" />
+                Continue to Selection
+              </>
             )}
           </Button>
         </CardFooter>

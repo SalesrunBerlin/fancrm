@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { PageHeader } from "@/components/ui/page-header";
 import { TabsContent, TabsList, TabsTrigger, Tabs } from "@/components/ui/tabs";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
@@ -11,8 +11,7 @@ import { Button } from "@/components/ui/button";
 import { PublishedObjectDetail } from "@/components/structures/PublishedObjectDetail";
 import { PublishingConfigDialog } from "@/components/settings/PublishingConfigDialog";
 import { useQueryClient } from "@tanstack/react-query";
-import { AppWindow } from "lucide-react";
-import { useEffect } from "react";
+import { AppWindow, RefreshCw } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { usePublishedApplications } from "@/hooks/usePublishedApplications";
 
@@ -21,7 +20,8 @@ export default function Structures() {
   const { objectTypes, isLoading, publishObjectType } = useObjectTypes();
   const { 
     publishedApplications,
-    isLoading: isLoadingPublished 
+    isLoading: isLoadingPublished,
+    refetch: refetchPublishedApplications
   } = usePublishedApplications();
   const queryClient = useQueryClient();
   const [selectedObject, setSelectedObject] = useState(null);
@@ -43,6 +43,10 @@ export default function Structures() {
 
   const handleImportApplication = (applicationId: string) => {
     navigate(`/applications/import/${applicationId}`);
+  };
+  
+  const handleRefreshPublishedApplications = () => {
+    refetchPublishedApplications();
   };
 
   return (
@@ -141,6 +145,19 @@ export default function Structures() {
         </TabsContent>
 
         <TabsContent value="public-applications" className="space-y-4">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-medium">All Published Applications</h3>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleRefreshPublishedApplications}
+              className="flex items-center"
+            >
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Refresh
+            </Button>
+          </div>
+          
           {isLoadingPublished ? (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {Array.from({ length: 6 }).map((_, i) => (
@@ -161,7 +178,7 @@ export default function Structures() {
             <Alert>
               <AlertTitle>No Public Applications</AlertTitle>
               <AlertDescription>
-                There are no published applications to display. Publish an application to see it here.
+                There are no published applications to display. Publish an application and make sure to mark it as public to see it here.
               </AlertDescription>
             </Alert>
           )}

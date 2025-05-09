@@ -3,7 +3,7 @@ import { Card, CardHeader, CardTitle, CardContent, CardFooter, CardDescription }
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PublishedApplication } from "@/hooks/usePublishedApplications";
-import { Calendar, Users, Package, FileCode, ArrowDownToLine, Eye } from "lucide-react";
+import { Calendar, Users, Package, FileCode, ArrowDownToLine, Eye, Globe, Lock } from "lucide-react";
 import { Link } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
 
@@ -45,9 +45,15 @@ export function PublishedApplicationCard({
           </div>
           <div>
             {application.is_public ? (
-              <Badge variant="success">Public</Badge>
+              <Badge variant="secondary" className="flex items-center gap-1">
+                <Globe className="h-3 w-3" />
+                <span>Public</span>
+              </Badge>
             ) : (
-              <Badge variant="outline">Private</Badge>
+              <Badge variant="outline" className="flex items-center gap-1">
+                <Lock className="h-3 w-3" />
+                <span>Private</span>
+              </Badge>
             )}
           </div>
         </div>
