@@ -9,8 +9,9 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useApplications } from "@/hooks/useApplications";
 import { useApplicationObjects } from "@/hooks/useApplicationObjects";
-import { usePublishedApplications, PublishedApplication } from "@/hooks/usePublishedApplications";
+import { usePublishedApplications } from "@/hooks/usePublishedApplications";
 import { ArrowLeft, Share, User, Settings, Eye, Globe, Plus, Loader2, RefreshCw } from "lucide-react";
+import { PublishingDetailsTab } from "@/components/applications/PublishingDetailsTab";
 
 export default function ApplicationDetailPage() {
   const { applicationId } = useParams<{ applicationId: string }>();
@@ -104,6 +105,7 @@ export default function ApplicationDetailPage() {
       <Tabs defaultValue="objects">
         <TabsList>
           <TabsTrigger value="objects">Objects</TabsTrigger>
+          <TabsTrigger value="publishing">Publishing</TabsTrigger>
           <TabsTrigger value="settings">Settings</TabsTrigger>
         </TabsList>
         
@@ -176,6 +178,13 @@ export default function ApplicationDetailPage() {
               </CardContent>
             </Card>
           </div>
+        </TabsContent>
+
+        <TabsContent value="publishing">
+          <PublishingDetailsTab 
+            applicationId={applicationId || ""}
+            publishedApp={publishedApp}
+          />
         </TabsContent>
         
         <TabsContent value="settings">

@@ -12,12 +12,14 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { AppWindow, Plus, Settings, Download } from "lucide-react";
+import { AppWindow, Plus, Settings, Download, Check, X } from "lucide-react";
 import { toast } from "sonner";
 import { ThemedButton } from "@/components/ui/themed-button";
 import { useAuth } from "@/contexts/AuthContext";
 import { ActionColor } from "@/hooks/useActions";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { usePublishedApplications } from "@/hooks/usePublishedApplications";
 
 const formSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -29,6 +31,7 @@ type FormValues = z.infer<typeof formSchema>;
 export default function ApplicationsPage() {
   const [open, setOpen] = useState(false);
   const { applications, isLoading, createApplication, setDefaultApplication } = useApplications();
+  const { publishedApplications } = usePublishedApplications();
   const { favoriteColor } = useAuth();
   
   const form = useForm<FormValues>({
@@ -61,6 +64,11 @@ export default function ApplicationsPage() {
       console.error("Error setting default application:", error);
       toast.error("Failed to set default application");
     }
+  };
+
+  // Helper to check if an application is published
+  const isApplicationPublished = (appId: string) => {
+    return publishedApplications?.some(pub => pub.application_id === appId);
   };
 
   return (
@@ -129,7 +137,6 @@ export default function ApplicationsPage() {
                     </DialogFooter>
                   </form>
                 </Form>
-                
               </DialogContent>
             </Dialog>
           </div>
@@ -153,43 +160,64 @@ export default function ApplicationsPage() {
             </Card>
           ))
         ) : applications && applications.length > 0 ? (
-          applications.map((app) => (
-            <Card key={app.id} className={`h-full overflow-hidden ${app.is_default ? 'border-primary border-2' : ''}`}>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 flex-wrap">
-                  <AppWindow className="h-5 w-5 flex-shrink-0" />
-                  <span className="break-words">{app.name}</span>
-                  {app.is_default && <span className="text-xs bg-primary/10 px-2 py-0.5 rounded-full text-primary">Default</span>}
-                </CardTitle>
-                <CardDescription className="break-words">
-                  {app.description || "No description provided"}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground">
-                  Created: {new Date(app.created_at).toLocaleDateString()}
-                </p>
-              </CardContent>
-              <CardFooter className="flex gap-2">
-                <Link to={`/applications/${app.id}`} className="flex-1">
-                  <ThemedButton variant="outline" className="w-full">
-                    <Settings className="mr-2 h-4 w-4" />
-                    Manage
-                  </ThemedButton>
-                </Link>
-                {!app.is_default && (
-                  <ThemedButton 
-                    variant="outline" 
-                    className="flex-1"
-                    onClick={() => handleSetDefault(app.id)}
-                    disabled={setDefaultApplication.isPending}
-                  >
-                    Set Default
-                  </ThemedButton>
-                )}
-              </CardFooter>
-            </Card>
-          ))
+          applications.map((app) => {
+            const published = isApplicationPublished(app.id);
+            return (
+              <Card key={app.id} className={`h-full overflow-hidden ${app.is_default ? 'border-primary border-2' : ''}`}>
+                <CardHeader>
+                  <div className="flex justify-between items-start">
+                    <CardTitle className="flex items-center gap-2 flex-wrap">
+                      <AppWindow className="h-5 w-5 flex-shrink-0" />
+                      <span className="break-words">{app.name}</span>
+                      {app.is_default && <span className="text-xs bg-primary/10 px-2 py-0.5 rounded-full text-primary">Default</span>}
+                    </CardTitle>
+                    <Badge 
+                      variant={published ? "success" : "outline"} 
+                      className="flex items-center gap-1"
+                    >
+                      {published ? (
+                        <>
+                          <Check className="h-3 w-3" />
+                          <span>Published</span>
+                        </>
+                      ) : (
+                        <>
+                          <X className="h-3 w-3" />
+                          <span>Not Published</span>
+                        </>
+                      )}
+                    </Badge>
+                  </div>
+                  <CardDescription className="break-words">
+                    {app.description || "No description provided"}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground">
+                    Created: {new Date(app.created_at).toLocaleDateString()}
+                  </p>
+                </CardContent>
+                <CardFooter className="flex gap-2">
+                  <Link to={`/applications/${app.id}`} className="flex-1">
+                    <ThemedButton variant="outline" className="w-full">
+                      <Settings className="mr-2 h-4 w-4" />
+                      Manage
+                    </ThemedButton>
+                  </Link>
+                  {!app.is_default && (
+                    <ThemedButton 
+                      variant="outline" 
+                      className="flex-1"
+                      onClick={() => handleSetDefault(app.id)}
+                      disabled={setDefaultApplication.isPending}
+                    >
+                      Set Default
+                    </ThemedButton>
+                  )}
+                </CardFooter>
+              </Card>
+            );
+          })
         ) : (
           <Card className="col-span-full">
             <CardHeader>
