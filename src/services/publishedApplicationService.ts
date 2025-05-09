@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { PublishedApplication, PublishedField } from "@/types/publishing";
 import { toast } from "sonner";
@@ -38,7 +39,7 @@ export const fetchPublishedApplications = async (userId?: string): Promise<Publi
       throw publicError;
     }
     
-    console.log("Public apps fetched:", publicApps?.length || 0);
+    console.log("Public apps fetched:", publicApps?.length || 0, publicApps);
     
     let allApps = [];
     
@@ -76,6 +77,7 @@ export const fetchPublishedApplications = async (userId?: string): Promise<Publi
       }
     }
     
+    console.log("Total apps returned:", allApps.length);
     return allApps as PublishedApplication[];
   } catch (err) {
     console.error("Error in published applications query:", err);

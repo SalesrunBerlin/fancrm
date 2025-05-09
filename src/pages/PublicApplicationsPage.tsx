@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { PageHeader } from "@/components/ui/page-header";
 import { usePublishedApplications } from "@/hooks/usePublishedApplications";
@@ -8,16 +8,39 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, Search, Globe, User } from "lucide-react";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"; 
+import { ArrowLeft, Search, Globe, User, RefreshCw } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 
 export default function PublicApplicationsPage() {
   const navigate = useNavigate();
-  const { publishedApplications, isLoading } = usePublishedApplications();
+  const queryClient = useQueryClient();
+  const { publishedApplications, isLoading, refetch, error } = usePublishedApplications();
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState<'all' | 'public' | 'mine'>('all');
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Initial data load on mount
+  useEffect(() => {
+    refetch();
+  }, [refetch]);
 
   const handleImport = (applicationId: string) => {
     navigate(`/applications/import/${applicationId}`);
+  };
+
+  // Function to refresh applications
+  const refreshApplications = async () => {
+    setIsRefreshing(true);
+    try {
+      await queryClient.invalidateQueries({ queryKey: ["published-applications"] });
+      await refetch();
+      console.log("Applications refreshed, count:", publishedApplications?.length || 0);
+    } catch (err) {
+      console.error("Error refreshing applications:", err);
+    } finally {
+      setIsRefreshing(false);
+    }
   };
 
   // Filter applications based on search term and active tab
@@ -93,17 +116,39 @@ export default function PublicApplicationsPage() {
           </TabsList>
         </Tabs>
 
-        <div className="relative max-w-sm">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            type="search"
-            placeholder="Search applications..."
-            className="pl-9 pr-4"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+        <div className="flex gap-2 items-center">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={refreshApplications}
+            disabled={isRefreshing}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+            {isRefreshing ? 'Refreshing...' : 'Refresh'}
+          </Button>
+          
+          <div className="relative max-w-sm">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="search"
+              placeholder="Search applications..."
+              className="pl-9 pr-4"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
         </div>
       </div>
+
+      {/* Display an error message if there was an error fetching applications */}
+      {error && (
+        <Alert variant="destructive">
+          <AlertTitle>Error loading applications</AlertTitle>
+          <AlertDescription>
+            There was an error loading the published applications. Please try refreshing.
+          </AlertDescription>
+        </Alert>
+      )}
 
       <TabsContent value="all" className="mt-0 p-0">
         {isLoading ? (
@@ -131,9 +176,18 @@ export default function PublicApplicationsPage() {
               </p>
             ) : (
               <p className="text-muted-foreground">
-                There are no applications available yet.
+                There are no applications available yet. Try refreshing or check back later.
               </p>
             )}
+            <Button 
+              variant="outline" 
+              onClick={refreshApplications} 
+              className="mt-4"
+              disabled={isRefreshing}
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+              Refresh Applications
+            </Button>
           </div>
         )}
       </TabsContent>

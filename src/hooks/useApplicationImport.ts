@@ -76,6 +76,9 @@ export function useApplicationImport() {
         throw new Error("User must be logged in to import an application");
       }
 
+      // Declare importRecord at the function scope so it's available throughout
+      let importRecord: any = null;
+
       try {
         setImportProgress({
           currentStep: "Creating import record",
@@ -84,7 +87,7 @@ export function useApplicationImport() {
         });
 
         // 1. Create an import record
-        const { data: importRecord, error: importError } = await supabase
+        const { data: newImportRecord, error: importError } = await supabase
           .from("application_imports")
           .insert({
             published_application_id: input.publishedApplicationId,
@@ -98,6 +101,8 @@ export function useApplicationImport() {
           console.error("Error creating import record:", importError);
           throw importError;
         }
+        
+        importRecord = newImportRecord;
 
         // 2. Create a new application for the imported components
         setImportProgress({

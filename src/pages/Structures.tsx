@@ -72,6 +72,7 @@ export default function Structures() {
           <TabsTrigger value="public-applications">Public Applications</TabsTrigger>
         </TabsList>
 
+        {/* Active objects tab */}
         <TabsContent value="active" className="space-y-4">
           {isLoading ? (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -102,6 +103,7 @@ export default function Structures() {
           )}
         </TabsContent>
 
+        {/* Inactive objects tab */}
         <TabsContent value="inactive" className="space-y-4">
           {isLoading ? (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -127,6 +129,7 @@ export default function Structures() {
           )}
         </TabsContent>
 
+        {/* Published objects tab */}
         <TabsContent value="published" className="space-y-4">
           {isLoading ? (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -203,6 +206,16 @@ export default function Structures() {
                     An error occurred while fetching applications. Please try refreshing.
                   </div>
                 )}
+                <div className="mt-4">
+                  <Button 
+                    variant="outline" 
+                    onClick={handleRefreshPublishedApplications} 
+                    disabled={refreshing}
+                  >
+                    <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+                    Refresh Applications
+                  </Button>
+                </div>
               </AlertDescription>
             </Alert>
           )}
