@@ -70,13 +70,13 @@ export function useLayoutFields(layoutId?: string, includeFields: boolean = fals
               return {
                 ...layoutField,
                 field: null
-              };
+              } as LayoutField;
             }
 
             return {
               ...layoutField,
-              field: fieldData
-            };
+              field: fieldData as ObjectField
+            } as LayoutField;
           })
         );
 

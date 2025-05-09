@@ -1,30 +1,27 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 
+// Define types for published application entities
 export interface PublishedApplication {
   id: string;
-  application_id: string;
   name: string;
-  description: string | null;
-  is_active: boolean;
-  is_public: boolean;
-  version: string | null;
+  description: string;
   published_by: string;
+  is_public: boolean;
   created_at: string;
   updated_at: string;
-}
-
-export interface PublicationSettings {
-  id: string;
-  application_id: string;
-  published_application_id: string;
-  include_objects: boolean;
-  include_actions: boolean;
-  created_at: string;
-  updated_at: string;
+  publisher?: {
+    id: string;
+    email: string;
+    user_metadata?: {
+      full_name?: string;
+    };
+  };
+  objects?: PublishedObject[];
+  actions?: PublishedAction[];
 }
 
 export interface PublishedObject {
@@ -34,7 +31,8 @@ export interface PublishedObject {
   is_included: boolean;
   created_at: string;
   updated_at: string;
-  object_type?: {
+  // Fix the type to include required fields
+  object_type: {
     id: string;
     name: string;
     api_name: string;
@@ -49,40 +47,43 @@ export interface PublishedAction {
   is_included: boolean;
   created_at: string;
   updated_at: string;
-  action?: {
+  // Fix the type to include required fields
+  action: {
     id: string;
     name: string;
     description?: string;
   };
 }
 
-export interface PublishApplicationInput {
-  applicationId: string;
-  name: string;
-  description?: string;
-  isPublic: boolean;
-  version?: string;
-  includedObjectIds: string[];
-  includedActionIds: string[];
-}
-
 export function usePublishedApplications() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
-  // Get all published applications
+  // Get all published applications that are public or published by the current user
   const {
     data: publishedApplications,
-    isLoading: isLoadingPublishedApps,
-    error: publishedAppsError,
-    refetch: refetchPublishedApps
+    isLoading,
+    error,
+    refetch
   } = useQuery({
     queryKey: ["published-applications"],
     queryFn: async (): Promise<PublishedApplication[]> => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("published_applications")
-        .select("*")
-        .order("created_at", { ascending: false });
+        .select(`
+          *,
+          publisher:published_by(id, email, user_metadata)
+        `);
+
+      if (user) {
+        // If user is logged in, show their private published apps and all public apps
+        query = query.or(`is_public.eq.true,published_by.eq.${user.id}`);
+      } else {
+        // If user is not logged in, only show public apps
+        query = query.eq("is_public", true);
+      }
+
+      const { data, error } = await query.order("created_at", { ascending: false });
 
       if (error) {
         console.error("Error fetching published applications:", error);
@@ -90,123 +91,115 @@ export function usePublishedApplications() {
       }
 
       return data || [];
-    },
-    enabled: !!user
+    }
   });
 
-  // Get applications published by the current user
-  const {
-    data: myPublishedApplications,
-    isLoading: isLoadingMyPublishedApps
-  } = useQuery({
-    queryKey: ["my-published-applications"],
-    queryFn: async (): Promise<PublishedApplication[]> => {
-      if (!user) return [];
+  // Get details for a specific published application including its objects and actions
+  const usePublishedApplicationDetails = (applicationId?: string) => {
+    return useQuery({
+      queryKey: ["published-application", applicationId],
+      queryFn: async (): Promise<PublishedApplication | null> => {
+        if (!applicationId) return null;
 
-      const { data, error } = await supabase
-        .from("published_applications")
-        .select("*")
-        .eq("published_by", user.id)
-        .order("created_at", { ascending: false });
+        // Get the application details
+        const { data: appData, error: appError } = await supabase
+          .from("published_applications")
+          .select(`
+            *,
+            publisher:published_by(id, email, user_metadata)
+          `)
+          .eq("id", applicationId)
+          .single();
 
-      if (error) {
-        console.error("Error fetching my published applications:", error);
-        throw error;
-      }
+        if (appError) {
+          console.error("Error fetching published application:", appError);
+          throw appError;
+        }
 
-      return data || [];
-    },
-    enabled: !!user
-  });
+        // Get included objects
+        const { data: objectsData, error: objectsError } = await supabase
+          .from("published_application_objects")
+          .select(`
+            *,
+            object_type:object_type_id(id, name, api_name, description)
+          `)
+          .eq("published_application_id", applicationId);
 
-  // Get objects for a published application
-  const getPublishedObjects = async (publishedAppId: string): Promise<PublishedObject[]> => {
-    const { data, error } = await supabase
-      .from("published_application_objects")
-      .select(`
-        *,
-        object_type:object_type_id(id, name, api_name, description)
-      `)
-      .eq("published_application_id", publishedAppId)
-      .eq("is_included", true);
+        if (objectsError) {
+          console.error("Error fetching published objects:", objectsError);
+          throw objectsError;
+        }
 
-    if (error) {
-      console.error("Error fetching published objects:", error);
-      throw error;
-    }
+        // Get included actions
+        const { data: actionsData, error: actionsError } = await supabase
+          .from("published_application_actions")
+          .select(`
+            *,
+            action:action_id(id, name, description)
+          `)
+          .eq("published_application_id", applicationId);
 
-    return (data || []).map(item => ({
-      ...item,
-      object_type: item.object_type
-    }));
+        if (actionsError) {
+          console.error("Error fetching published actions:", actionsError);
+          throw actionsError;
+        }
+
+        // Type assertion to ensure correct types
+        const typedObjectsData = objectsData as unknown as PublishedObject[];
+        const typedActionsData = actionsData as unknown as PublishedAction[];
+
+        return {
+          ...appData,
+          objects: typedObjectsData || [],
+          actions: typedActionsData || []
+        };
+      },
+      enabled: !!applicationId
+    });
   };
 
-  // Get actions for a published application
-  const getPublishedActions = async (publishedAppId: string): Promise<PublishedAction[]> => {
-    const { data, error } = await supabase
-      .from("published_application_actions")
-      .select(`
-        *,
-        action:action_id(id, name, description)
-      `)
-      .eq("published_application_id", publishedAppId)
-      .eq("is_included", true);
-
-    if (error) {
-      console.error("Error fetching published actions:", error);
-      throw error;
-    }
-
-    return (data || []).map(item => ({
-      ...item,
-      action: item.action
-    }));
-  };
-
-  // Publish an application
+  // Publish a new application
   const publishApplication = useMutation({
-    mutationFn: async (input: PublishApplicationInput): Promise<PublishedApplication> => {
+    mutationFn: async ({
+      name,
+      description,
+      isPublic,
+      objectTypeIds,
+      actionIds
+    }: {
+      name: string;
+      description: string;
+      isPublic: boolean;
+      objectTypeIds: string[];
+      actionIds: string[];
+    }): Promise<string> => {
       if (!user) {
         throw new Error("User must be logged in to publish an application");
       }
 
-      // 1. Create the published application record
-      const { data: publishedApp, error: publishError } = await supabase
+      // 1. Create the published application
+      const { data: appData, error: appError } = await supabase
         .from("published_applications")
         .insert({
-          application_id: input.applicationId,
-          name: input.name,
-          description: input.description,
-          is_public: input.isPublic,
-          version: input.version || "1.0",
-          published_by: user.id
+          name,
+          description,
+          published_by: user.id,
+          is_public: isPublic
         })
         .select()
         .single();
 
-      if (publishError) {
-        throw publishError;
+      if (appError) {
+        throw appError;
       }
 
-      // 2. Create the application publishing settings
-      const { error: settingsError } = await supabase
-        .from("application_publishing_settings")
-        .insert({
-          application_id: input.applicationId,
-          published_application_id: publishedApp.id,
-          include_objects: input.includedObjectIds.length > 0,
-          include_actions: input.includedActionIds.length > 0
-        });
+      const publishedApplicationId = appData.id;
 
-      if (settingsError) {
-        throw settingsError;
-      }
-
-      // 3. Add the included objects
-      if (input.includedObjectIds.length > 0) {
-        const objectInserts = input.includedObjectIds.map(objectId => ({
-          published_application_id: publishedApp.id,
-          object_type_id: objectId,
+      // 2. Add object types to the published application
+      if (objectTypeIds.length > 0) {
+        const objectInserts = objectTypeIds.map(objectTypeId => ({
+          published_application_id: publishedApplicationId,
+          object_type_id: objectTypeId,
           is_included: true
         }));
 
@@ -219,10 +212,10 @@ export function usePublishedApplications() {
         }
       }
 
-      // 4. Add the included actions
-      if (input.includedActionIds.length > 0) {
-        const actionInserts = input.includedActionIds.map(actionId => ({
-          published_application_id: publishedApp.id,
+      // 3. Add actions to the published application
+      if (actionIds.length > 0) {
+        const actionInserts = actionIds.map(actionId => ({
+          published_application_id: publishedApplicationId,
           action_id: actionId,
           is_included: true
         }));
@@ -236,11 +229,10 @@ export function usePublishedApplications() {
         }
       }
 
-      return publishedApp;
+      return publishedApplicationId;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["published-applications"] });
-      queryClient.invalidateQueries({ queryKey: ["my-published-applications"] });
       toast.success("Application published successfully");
     },
     onError: (error: any) => {
@@ -250,13 +242,14 @@ export function usePublishedApplications() {
     }
   });
 
-  // Toggle published application status (active/inactive)
-  const togglePublishedAppStatus = useMutation({
-    mutationFn: async ({ id, isActive }: { id: string; isActive: boolean }): Promise<void> => {
+  // Delete a published application
+  const deletePublishedApplication = useMutation({
+    mutationFn: async (applicationId: string): Promise<void> => {
+      // Delete application (cascade should handle related objects and actions)
       const { error } = await supabase
         .from("published_applications")
-        .update({ is_active: isActive })
-        .eq("id", id);
+        .delete()
+        .eq("id", applicationId);
 
       if (error) {
         throw error;
@@ -264,11 +257,10 @@ export function usePublishedApplications() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["published-applications"] });
-      queryClient.invalidateQueries({ queryKey: ["my-published-applications"] });
-      toast.success("Application status updated");
+      toast.success("Application unpublished successfully");
     },
     onError: (error: any) => {
-      toast.error("Failed to update application status", {
+      toast.error("Failed to unpublish application", {
         description: error.message || "An error occurred."
       });
     }
@@ -276,14 +268,11 @@ export function usePublishedApplications() {
 
   return {
     publishedApplications,
-    myPublishedApplications,
-    isLoadingPublishedApps,
-    isLoadingMyPublishedApps,
-    publishedAppsError,
+    isLoading,
+    error,
+    refetch,
+    usePublishedApplicationDetails,
     publishApplication,
-    togglePublishedAppStatus,
-    getPublishedObjects,
-    getPublishedActions,
-    refetchPublishedApps
+    deletePublishedApplication
   };
 }
