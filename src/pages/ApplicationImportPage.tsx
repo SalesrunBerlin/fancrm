@@ -4,24 +4,29 @@ import { useParams, useNavigate } from "react-router-dom";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Progress } from "@/components/ui/progress";
 import { usePublishedApplications } from "@/hooks/usePublishedApplications";
 import { useApplicationImport } from "@/hooks/useApplicationImport";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ArrowLeft, Download } from "lucide-react";
+import { AlertCircle, ArrowLeft, Download, Globe, Lock } from "lucide-react";
 import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export default function ApplicationImportPage() {
   const { applicationId } = useParams<{ applicationId: string }>();
   const navigate = useNavigate();
   const { usePublishedApplicationDetails } = usePublishedApplications();
   const { data: application, isLoading } = usePublishedApplicationDetails(applicationId);
-  const { importApplication } = useApplicationImport();
+  const { importApplication, importProgress } = useApplicationImport();
   
   const [loading, setLoading] = useState(false);
   const [selectedObjects, setSelectedObjects] = useState<Record<string, boolean>>({});
   const [selectedActions, setSelectedActions] = useState<Record<string, boolean>>({});
+  const [applicationName, setApplicationName] = useState("");
 
   // Set initial selections when data is loaded
   useEffect(() => {
@@ -40,6 +45,10 @@ export default function ApplicationImportPage() {
       }, {} as Record<string, boolean>);
       setSelectedActions(initialActionSelections);
     }
+
+    if (application?.name) {
+      setApplicationName(`${application.name} (Imported)`);
+    }
   }, [application]);
 
   const handleImport = async () => {
@@ -56,11 +65,18 @@ export default function ApplicationImportPage() {
       const selectedActionIds = Object.entries(selectedActions)
         .filter(([_, isSelected]) => isSelected)
         .map(([id]) => id);
+
+      if (selectedObjectIds.length === 0 && selectedActionIds.length === 0) {
+        toast.error("Please select at least one object or action to import");
+        setLoading(false);
+        return;
+      }
       
       await importApplication.mutateAsync({
         publishedApplicationId: applicationId,
         selectedObjectIds,
-        selectedActionIds
+        selectedActionIds,
+        applicationName
       });
       
       // Navigate to applications page after successful import
@@ -105,13 +121,15 @@ export default function ApplicationImportPage() {
     );
   }
 
+  const isImportInProgress = importProgress.totalSteps > 0;
+
   return (
     <div className="space-y-6">
       <div className="flex items-center">
         <Button 
           variant="outline" 
           size="icon" 
-          onClick={() => navigate("/structures")} 
+          onClick={() => navigate("/applications")} 
           className="mr-4"
         >
           <ArrowLeft className="h-4 w-4" />
@@ -124,88 +142,219 @@ export default function ApplicationImportPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Application Details</CardTitle>
-          <CardDescription>
-            {application.description || "No description provided"}
-          </CardDescription>
-          <div className="flex gap-2 mt-2">
-            <div className="text-sm">
-              <span className="text-muted-foreground">Publisher:</span>{" "}
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>{application.name}</CardTitle>
+              <CardDescription className="mt-1">
+                {application.description || "No description provided"}
+              </CardDescription>
+            </div>
+            <Badge 
+              variant={application.is_public ? "success" : "outline"} 
+              className="flex items-center gap-1"
+            >
+              {application.is_public ? (
+                <>
+                  <Globe className="h-3 w-3" />
+                  <span>Public</span>
+                </>
+              ) : (
+                <>
+                  <Lock className="h-3 w-3" />
+                  <span>Private</span>
+                </>
+              )}
+            </Badge>
+          </div>
+          <div className="flex flex-wrap gap-2 mt-2 text-sm text-muted-foreground">
+            <div>
+              <span className="font-medium">Publisher:</span>{" "}
               {application.publisher?.user_metadata?.full_name || application.publisher?.email || "Unknown"}
             </div>
             {application.version && (
-              <div className="text-sm">
-                <span className="text-muted-foreground">Version:</span> {application.version}
+              <div>
+                <span className="font-medium">Version:</span> {application.version}
               </div>
             )}
           </div>
         </CardHeader>
 
+        {!application.is_public && !applicationId && (
+          <CardContent>
+            <Alert variant="warning">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>This is a private application</AlertTitle>
+              <AlertDescription>
+                This application is set to private and is only visible to you because you are the publisher.
+              </AlertDescription>
+            </Alert>
+          </CardContent>
+        )}
+
         <CardContent>
-          <Tabs defaultValue="objects" className="space-y-4">
-            <TabsList>
-              <TabsTrigger value="objects">Objects ({application.objects?.length || 0})</TabsTrigger>
-              <TabsTrigger value="actions">Actions ({application.actions?.length || 0})</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="objects">
-              {application.objects && application.objects.length > 0 ? (
-                <div className="space-y-2">
-                  {application.objects.map(obj => (
-                    <div key={obj.object_type_id} className="flex items-center space-x-2 p-2 border rounded">
-                      <Checkbox
-                        id={`object-${obj.object_type_id}`}
-                        checked={selectedObjects[obj.object_type_id] || false}
-                        onCheckedChange={(checked) => toggleObjectSelection(obj.object_type_id, !!checked)}
-                      />
-                      <label
-                        htmlFor={`object-${obj.object_type_id}`}
-                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+          {isImportInProgress && (
+            <div className="mb-6 space-y-2">
+              <div className="flex justify-between text-sm text-muted-foreground">
+                <span>{importProgress.currentStep}</span>
+                <span>{importProgress.currentStepNumber} of {importProgress.totalSteps}</span>
+              </div>
+              <Progress 
+                value={(importProgress.currentStepNumber / importProgress.totalSteps) * 100} 
+                className="h-2" 
+              />
+            </div>
+          )}
+
+          <div className="space-y-4">
+            <div>
+              <label htmlFor="applicationName" className="block text-sm font-medium mb-1">
+                Application Name
+              </label>
+              <Input
+                id="applicationName"
+                value={applicationName}
+                onChange={(e) => setApplicationName(e.target.value)}
+                placeholder="Enter application name"
+                disabled={loading || isImportInProgress}
+                className="max-w-md"
+              />
+            </div>
+
+            <Tabs defaultValue="objects" className="space-y-4">
+              <TabsList>
+                <TabsTrigger value="objects">Objects ({application.objects?.length || 0})</TabsTrigger>
+                <TabsTrigger value="actions">Actions ({application.actions?.length || 0})</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="objects">
+                {application.objects && application.objects.length > 0 ? (
+                  <div className="space-y-2">
+                    <div className="flex justify-end mb-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => {
+                          const newSelection = {} as Record<string, boolean>;
+                          application.objects?.forEach(obj => {
+                            newSelection[obj.object_type_id] = true;
+                          });
+                          setSelectedObjects(newSelection);
+                        }}
+                        disabled={loading || isImportInProgress}
                       >
-                        {obj.object_type?.name || obj.object_type_id}
-                      </label>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-muted-foreground">No objects available in this application</p>
-              )}
-            </TabsContent>
-            
-            <TabsContent value="actions">
-              {application.actions && application.actions.length > 0 ? (
-                <div className="space-y-2">
-                  {application.actions.map(action => (
-                    <div key={action.action_id} className="flex items-center space-x-2 p-2 border rounded">
-                      <Checkbox
-                        id={`action-${action.action_id}`}
-                        checked={selectedActions[action.action_id] || false}
-                        onCheckedChange={(checked) => toggleActionSelection(action.action_id, !!checked)}
-                      />
-                      <label
-                        htmlFor={`action-${action.action_id}`}
-                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                        Select All
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => setSelectedObjects({})}
+                        className="ml-2"
+                        disabled={loading || isImportInProgress}
                       >
-                        {action.action?.name || action.action_id}
-                      </label>
+                        Deselect All
+                      </Button>
                     </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-muted-foreground">No actions available in this application</p>
-              )}
-            </TabsContent>
-          </Tabs>
+                    {application.objects.map(obj => (
+                      <div key={obj.object_type_id} className="flex items-center space-x-2 p-3 border rounded hover:bg-muted/50">
+                        <Checkbox
+                          id={`object-${obj.object_type_id}`}
+                          checked={selectedObjects[obj.object_type_id] || false}
+                          onCheckedChange={(checked) => toggleObjectSelection(obj.object_type_id, !!checked)}
+                          disabled={loading || isImportInProgress}
+                        />
+                        <div className="flex flex-col">
+                          <label
+                            htmlFor={`object-${obj.object_type_id}`}
+                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                          >
+                            {obj.object_type?.name || "Unnamed Object"}
+                          </label>
+                          {obj.object_type?.api_name && (
+                            <span className="text-xs text-muted-foreground mt-1">
+                              API Name: {obj.object_type.api_name}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 border rounded">
+                    <p className="text-muted-foreground">No objects available in this application</p>
+                  </div>
+                )}
+              </TabsContent>
+              
+              <TabsContent value="actions">
+                {application.actions && application.actions.length > 0 ? (
+                  <div className="space-y-2">
+                    <div className="flex justify-end mb-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => {
+                          const newSelection = {} as Record<string, boolean>;
+                          application.actions?.forEach(action => {
+                            newSelection[action.action_id] = true;
+                          });
+                          setSelectedActions(newSelection);
+                        }}
+                        disabled={loading || isImportInProgress}
+                      >
+                        Select All
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => setSelectedActions({})}
+                        className="ml-2"
+                        disabled={loading || isImportInProgress}
+                      >
+                        Deselect All
+                      </Button>
+                    </div>
+                    {application.actions.map(action => (
+                      <div key={action.action_id} className="flex items-center space-x-2 p-3 border rounded hover:bg-muted/50">
+                        <Checkbox
+                          id={`action-${action.action_id}`}
+                          checked={selectedActions[action.action_id] || false}
+                          onCheckedChange={(checked) => toggleActionSelection(action.action_id, !!checked)}
+                          disabled={loading || isImportInProgress}
+                        />
+                        <div className="flex flex-col">
+                          <label
+                            htmlFor={`action-${action.action_id}`}
+                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                          >
+                            {action.action?.name || "Unnamed Action"}
+                          </label>
+                          {action.action?.description && (
+                            <span className="text-xs text-muted-foreground mt-1">
+                              {action.action.description}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 border rounded">
+                    <p className="text-muted-foreground">No actions available in this application</p>
+                  </div>
+                )}
+              </TabsContent>
+            </Tabs>
+          </div>
         </CardContent>
         
         <CardFooter>
           <Button 
             onClick={handleImport} 
-            disabled={loading}
+            disabled={loading || isImportInProgress}
             className="ml-auto"
           >
             <Download className="mr-2 h-4 w-4" />
-            Import Selected
+            {loading || isImportInProgress ? "Importing..." : "Import Selected"}
           </Button>
         </CardFooter>
       </Card>

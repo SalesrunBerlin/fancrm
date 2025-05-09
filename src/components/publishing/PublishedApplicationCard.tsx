@@ -44,17 +44,22 @@ export function PublishedApplicationCard({
             )}
           </div>
           <div>
-            {application.is_public ? (
-              <Badge variant="secondary" className="flex items-center gap-1">
-                <Globe className="h-3 w-3" />
-                <span>Public</span>
-              </Badge>
-            ) : (
-              <Badge variant="outline" className="flex items-center gap-1">
-                <Lock className="h-3 w-3" />
-                <span>Private</span>
-              </Badge>
-            )}
+            <Badge 
+              variant={application.is_public ? "success" : "outline"} 
+              className="flex items-center gap-1"
+            >
+              {application.is_public ? (
+                <>
+                  <Globe className="h-3 w-3" />
+                  <span>Public</span>
+                </>
+              ) : (
+                <>
+                  <Lock className="h-3 w-3" />
+                  <span>Private</span>
+                </>
+              )}
+            </Badge>
           </div>
         </div>
         <CardDescription className="mt-2">
