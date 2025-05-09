@@ -41,7 +41,7 @@ export function CreateWorkspaceDialog({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) {
-      toast({
+      toast.error("Nicht angemeldet", {
         description: 'Sie müssen angemeldet sein, um einen Workspace zu erstellen.'
       });
       return;
@@ -89,8 +89,8 @@ export function CreateWorkspaceDialog({
       onClose();
     } catch (error: any) {
       console.error('Error creating workspace:', error);
-      toast.error('Workspace konnte nicht erstellt werden', {
-        description: error.message || 'Bitte versuchen Sie es später erneut'
+      toast.error("Fehler", {
+        description: error.message || 'Workspace konnte nicht erstellt werden'
       });
     } finally {
       setIsSubmitting(false);

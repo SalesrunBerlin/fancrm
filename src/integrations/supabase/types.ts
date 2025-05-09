@@ -2119,6 +2119,10 @@ export type Database = {
         Args: { collection_uuid: string; user_uuid: string }
         Returns: boolean
       }
+      user_owns_workspace: {
+        Args: { workspace_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       action_type: "new_record" | "linked_record" | "mass_action"
