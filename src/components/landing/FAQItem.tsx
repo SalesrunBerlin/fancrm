@@ -16,8 +16,8 @@ interface FAQItemProps {
 export const FAQItem = ({ question, answer, value }: FAQItemProps) => {
   return (
     <AccordionItem value={value}>
-      <AccordionTrigger className="text-left font-medium">{question}</AccordionTrigger>
-      <AccordionContent className="text-muted-foreground">{answer}</AccordionContent>
+      <AccordionTrigger className="text-left font-medium text-lg">{question}</AccordionTrigger>
+      <AccordionContent className="text-muted-foreground text-base">{answer}</AccordionContent>
     </AccordionItem>
   );
 };
