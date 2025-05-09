@@ -139,6 +139,10 @@ export default function TicketQueuePage() {
     navigate('/process-ticket');
   }
   
+  const handleAutoProcessTickets = () => {
+    navigate('/auto-process-ticket');
+  }
+  
   const handleRefresh = () => {
     fetchQueueTickets();
     toast.success("Queue refreshed");
@@ -195,9 +199,14 @@ export default function TicketQueuePage() {
         actions={
           <div className="flex gap-2">
             {tickets.length > 0 && (
-              <Button onClick={handleProcessAllTickets}>
-                Process All Tickets
-              </Button>
+              <>
+                <Button onClick={handleProcessAllTickets}>
+                  Process All Tickets
+                </Button>
+                <Button onClick={handleAutoProcessTickets} variant="success">
+                  Auto Process Next
+                </Button>
+              </>
             )}
             <Button onClick={handleRefresh} variant="outline">
               <RefreshCw className="h-4 w-4 mr-2" />
