@@ -11,7 +11,6 @@ import { toast } from "sonner";
 import { DefaultFieldSelector } from "@/components/settings/DefaultFieldSelector";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { ThemedButton } from "@/components/ui/themed-button";
-import { AddFieldSheet } from "@/components/records/AddFieldSheet";
 import { useObjectType } from "@/hooks/useObjectType";
 
 export default function ObjectTypeDetail() {
@@ -21,7 +20,6 @@ export default function ObjectTypeDetail() {
   const { objectTypes, updateObjectType, publishObjectType, unpublishObjectType, publishedObjects, isLoadingPublished } = useObjectTypes();
   const { fields, isLoading, createField, updateField, deleteField, refetch } = useObjectFields(objectTypeId);
   const [isPublishing, setIsPublishing] = useState(false);
-  const [showAddFieldSheet, setShowAddFieldSheet] = useState(false);
   
   // Use useObjectType hook for direct access to a single object type
   const { objectType: singleObjectType } = useObjectType(objectTypeId || '');
@@ -152,7 +150,7 @@ export default function ObjectTypeDetail() {
                 <ThemedButton 
                   variant="default"
                   size="responsive"
-                  onClick={() => setShowAddFieldSheet(true)}
+                  onClick={() => navigate(`/settings/objects/${objectTypeId}/fields/new`)}
                 >
                   <Plus className="h-4 w-4" />
                   <span className="hidden md:inline">New Field</span>
@@ -213,17 +211,6 @@ export default function ObjectTypeDetail() {
           onDeleteField={(canModifyFields || isImportedTemplate) ? handleDeleteField : undefined}
         />
       </div>
-
-      {/* Add New Field Sheet */}
-      <AddFieldSheet
-        open={showAddFieldSheet}
-        onOpenChange={setShowAddFieldSheet}
-        objectTypeId={objectTypeId as string}
-        onFieldCreated={() => {
-          refetch();
-          toast.success("New field created successfully");
-        }}
-      />
     </div>
   );
 }
