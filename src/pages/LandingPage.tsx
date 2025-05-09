@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Link } from "react-router-dom";
 import { 
@@ -466,3 +467,61 @@ const LandingPage = () => {
                     <span className="sr-only">YouTube</span>
                     <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                       <path fillRule="evenodd" d="M19.812 5.418c.861.23 1.538.907 1.768 1.768C21.998 8.746 22 12 22 12s0 3.255-.418 4.814a2.504 2.504 0 0 1-1.768 1.768c-1.56.419-7.814.419-7.814.419s-6.255 0-7.814-.419a2.505 2.505 0 0 1-1.768-1.768C2 15.255 2 12 2 12s0-3.255.418-4.814a2.507 2.507 0 0 1 1.768-1.768C5.744 5 11.998 5 11.998 5s6.255 0 7.814.418ZM15.194 12 10 15V9l5.194 3Z" clipRule="evenodd" />
+                    </svg>
+                  </Link>
+                </Button>
+              </div>
+            </div>
+            <div>
+              <h4 className="font-medium text-sm mb-4">Features</h4>
+              <nav className="flex flex-col gap-2">
+                <Link to="#funktionen" className="text-sm text-muted-foreground hover:text-foreground">Übersicht</Link>
+                <Link to="#probleme" className="text-sm text-muted-foreground hover:text-foreground">Probleme & Lösungen</Link>
+                <Link to="#anwendungsfaelle" className="text-sm text-muted-foreground hover:text-foreground">Anwendungsfälle</Link>
+                <Link to="#demo" className="text-sm text-muted-foreground hover:text-foreground">Demo</Link>
+              </nav>
+            </div>
+            <div>
+              <h4 className="font-medium text-sm mb-4">Rechtliches</h4>
+              <nav className="flex flex-col gap-2">
+                <Link to="#" className="text-sm text-muted-foreground hover:text-foreground">Datenschutz</Link>
+                <Link to="#" className="text-sm text-muted-foreground hover:text-foreground">AGB</Link>
+                <Link to="#" className="text-sm text-muted-foreground hover:text-foreground">Impressum</Link>
+              </nav>
+            </div>
+            <div className="max-w-xs">
+              <h4 className="font-medium text-sm mb-4">Newsletter</h4>
+              <div className="space-y-3">
+                <p className="text-sm text-muted-foreground">Beauty-News und Tipps für mehr Effizienz im Salon</p>
+                <div className="flex gap-2">
+                  <div className="relative flex-grow">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <input 
+                      type="email" 
+                      placeholder="Ihre E-Mail-Adresse" 
+                      className="w-full pl-10 pr-4 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                  </div>
+                  <Button type="submit" size="sm">Abonnieren</Button>
+                </div>
+              </div>
+              <div className="mt-6">
+                <Button variant="outline" className="gap-2" asChild>
+                  <Link to="#">
+                    Community-Slack beitreten
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
+                </Button>
+              </div>
+            </div>
+          </div>
+          <div className="mt-12 pt-6 border-t border-border text-center text-sm text-muted-foreground">
+            &copy; {new Date().getFullYear()} Beauty CRM. Alle Rechte vorbehalten.
+          </div>
+        </div>
+      </footer>
+    </div>
+  );
+};
+
+export default LandingPage;
