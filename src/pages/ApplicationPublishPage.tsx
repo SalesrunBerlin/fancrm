@@ -2,15 +2,17 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { PageHeader } from "@/components/ui/page-header";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { useApplications } from "@/hooks/useApplications";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
 import { useApplicationObjects } from "@/hooks/useApplicationObjects";
 import { useActions } from "@/hooks/useActions";
 import { usePublishedApplications, PublishedField } from "@/hooks/usePublishedApplications";
-import { ArrowLeft, Check, Loader2, Share, RefreshCw } from "lucide-react";
+import { ArrowLeft, Check, Loader2, Share, RefreshCw, Globe, Lock } from "lucide-react";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -37,6 +39,7 @@ export default function ApplicationPublishPage() {
   const [selectedObjectIds, setSelectedObjectIds] = useState<string[]>([]);
   const [selectedActionIds, setSelectedActionIds] = useState<string[]>([]);
   const [publishingParams, setPublishingParams] = useState<PublishingParams | null>(null);
+  const [isPublic, setIsPublic] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUpdate] = useState(location.state?.isUpdate || false);
   const [publishedAppId] = useState(location.state?.publishedAppId || null);
@@ -55,6 +58,7 @@ export default function ApplicationPublishPage() {
         const params = location.state?.publishingParams;
         if (params) {
           setPublishingParams(params);
+          setIsPublic(params.isPublic); // Initialize isPublic from params
         } else {
           // If no params found, redirect to settings page
           navigate(`/applications/${applicationId}/publish-settings`);
@@ -233,35 +237,50 @@ export default function ApplicationPublishPage() {
     setIsSubmitting(true);
     
     try {
+      // Use the isPublic state from the Review tab instead of from publishingParams
+      const updatedPublishingParams = {
+        ...publishingParams,
+        isPublic: isPublic
+      };
+      
       if (isUpdate && publishedAppId) {
         // Update existing published application
         await updatePublishedApplication.mutateAsync({
           id: publishedAppId,
-          name: publishingParams.name,
-          description: publishingParams.description,
-          isPublic: publishingParams.isPublic,
+          name: updatedPublishingParams.name,
+          description: updatedPublishingParams.description,
+          isPublic: updatedPublishingParams.isPublic,
           objectTypeIds: selectedObjectIds,
           actionIds: selectedActionIds,
           fieldSettings: fieldSelections,
-          version: publishingParams.version
+          version: updatedPublishingParams.version
         });
       } else {
         // Publish new application
         await publishApplication.mutateAsync({
-          name: publishingParams.name,
-          description: publishingParams.description,
-          isPublic: publishingParams.isPublic,
+          name: updatedPublishingParams.name,
+          description: updatedPublishingParams.description,
+          isPublic: updatedPublishingParams.isPublic,
           objectTypeIds: selectedObjectIds,
           actionIds: selectedActionIds,
           fieldSettings: fieldSelections,
-          version: publishingParams.version,
+          version: updatedPublishingParams.version,
           applicationId: applicationId
         });
       }
       
+      // Invalidate relevant queries to ensure fresh data
+      const queryClient = new (await import('@tanstack/react-query')).QueryClient();
+      queryClient.invalidateQueries({ queryKey: ["published-applications"] });
+      
+      toast.success(isUpdate ? "Application updated successfully" : "Application published successfully", {
+        description: isPublic ? "Your application is now publicly available" : "Your application is published privately"
+      });
+      
       navigate(`/applications/${applicationId}`);
     } catch (error) {
       console.error("Error publishing application:", error);
+      toast.error("Failed to publish application");
     } finally {
       setIsSubmitting(false);
     }
@@ -551,7 +570,7 @@ export default function ApplicationPublishPage() {
               <div className="space-y-6">
                 <div>
                   <h3 className="text-sm font-medium mb-2">Publication Details</h3>
-                  <div className="bg-muted/50 p-3 rounded-md">
+                  <div className="bg-muted/50 p-4 rounded-md space-y-4">
                     <div className="grid grid-cols-2 gap-2 text-sm">
                       <div className="text-muted-foreground">Name:</div>
                       <div>{publishingParams?.name || currentApplication.name}</div>
@@ -561,9 +580,39 @@ export default function ApplicationPublishPage() {
                       
                       <div className="text-muted-foreground">Version:</div>
                       <div>{publishingParams?.version || "1.0"}</div>
-                      
-                      <div className="text-muted-foreground">Visibility:</div>
-                      <div>{publishingParams?.isPublic ? "Public" : "Private"}</div>
+                    </div>
+                    
+                    <div className="border-t pt-4">
+                      <div className="flex items-center justify-between">
+                        <div className="space-y-0.5">
+                          <Label htmlFor="public-switch" className="text-base font-medium">Make Application Public</Label>
+                          <div className="text-sm text-muted-foreground">
+                            {isPublic ? 
+                              "This application will be visible to all users" : 
+                              "This application will only be visible to you"}
+                          </div>
+                        </div>
+                        <div className="flex items-center">
+                          <Switch
+                            id="public-switch"
+                            checked={isPublic}
+                            onCheckedChange={setIsPublic}
+                          />
+                          <Badge variant="outline" className="ml-2 flex items-center gap-1">
+                            {isPublic ? (
+                              <>
+                                <Globe className="h-3 w-3" />
+                                <span>Public</span>
+                              </>
+                            ) : (
+                              <>
+                                <Lock className="h-3 w-3" />
+                                <span>Private</span>
+                              </>
+                            )}
+                          </Badge>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>

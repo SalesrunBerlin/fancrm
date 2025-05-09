@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { PageHeader } from "@/components/ui/page-header";
 import { TabsContent, TabsList, TabsTrigger, Tabs } from "@/components/ui/tabs";
@@ -8,15 +7,12 @@ import { PublishedApplicationCard } from "@/components/publishing/PublishedAppli
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { PublishedObjectDetail } from "@/components/structures/PublishedObjectDetail";
-import { PublishingConfigDialog } from "@/components/settings/PublishingConfigDialog";
 import { useQueryClient } from "@tanstack/react-query";
-import { AppWindow, RefreshCw } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { usePublishedApplications } from "@/hooks/usePublishedApplications";
 
 export default function Structures() {
-  const [open, setOpen] = useState(false);
   const { objectTypes, isLoading, publishObjectType } = useObjectTypes();
   const { 
     publishedApplications,
@@ -24,7 +20,6 @@ export default function Structures() {
     refetch: refetchPublishedApplications
   } = usePublishedApplications();
   const queryClient = useQueryClient();
-  const [selectedObject, setSelectedObject] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -176,7 +171,7 @@ export default function Structures() {
             </div>
           ) : (
             <Alert>
-              <AlertTitle>No Public Applications</AlertTitle>
+              <AlertTitle>No Published Applications</AlertTitle>
               <AlertDescription>
                 There are no published applications to display. Publish an application and make sure to mark it as public to see it here.
               </AlertDescription>

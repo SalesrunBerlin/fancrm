@@ -7,15 +7,16 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { usePublishedApplications } from "@/hooks/usePublishedApplications";
-import { ArrowLeft, Package, FileCode, Calendar, Users, ArrowDownToLine, Globe } from "lucide-react";
+import { ArrowLeft, Package, FileCode, Calendar, Users, ArrowDownToLine, Globe, Lock } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 
 export default function PublicApplicationDetailPage() {
   const { applicationId } = useParams<{ applicationId: string }>();
   const navigate = useNavigate();
   const { usePublishedApplicationDetails } = usePublishedApplications();
-  const { data: application, isLoading } = usePublishedApplicationDetails(applicationId);
+  const { data: application, isLoading, error } = usePublishedApplicationDetails(applicationId);
 
   if (isLoading) {
     return (
@@ -43,6 +44,27 @@ export default function PublicApplicationDetailPage() {
             <Skeleton className="h-36 w-full" />
           </CardContent>
         </Card>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <PageHeader 
+          title="Error Loading Application" 
+          description="There was an error loading the application details." 
+        />
+        <Alert variant="destructive">
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>
+            {error instanceof Error ? error.message : "An unknown error occurred."}
+          </AlertDescription>
+        </Alert>
+        <Button onClick={() => navigate("/structures")}>
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back to Structures
+        </Button>
       </div>
     );
   }
@@ -84,7 +106,7 @@ export default function PublicApplicationDetailPage() {
         </Button>
         <PageHeader 
           title={application.name} 
-          description="Public application details"
+          description="Application details"
         />
       </div>
 
@@ -93,10 +115,18 @@ export default function PublicApplicationDetailPage() {
           <div className="flex items-center justify-between">
             <CardTitle>{application.name}</CardTitle>
             <div className="flex items-center gap-2">
-              <Badge variant="secondary" className="flex items-center gap-1">
-                <Globe className="h-3 w-3" />
-                Public
-              </Badge>
+              {application.is_public ? (
+                <Badge variant="secondary" className="flex items-center gap-1">
+                  <Globe className="h-3 w-3" />
+                  <span>Public</span>
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="flex items-center gap-1">
+                  <Lock className="h-3 w-3" />
+                  <span>Private</span>
+                </Badge>
+              )}
+              
               {application.version && (
                 <Badge variant="outline">v{application.version}</Badge>
               )}
