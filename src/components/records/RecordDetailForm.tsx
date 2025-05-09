@@ -73,7 +73,7 @@ export function RecordDetailForm({
     }
   }, [record, methods, actualEditMode]);
 
-  // Handle field change - fixed to properly update state and form values
+  // Handle field change
   const handleFieldChange = (fieldName: string, value: any) => {
     console.log(`Field changed: ${fieldName} => `, value);
     
@@ -88,9 +88,7 @@ export function RecordDetailForm({
         console.log("Updated form values:", newValues);
         return newValues;
       });
-      
-      // Important: Update the form value in react-hook-form state
-      methods.setValue(fieldName, value, { shouldValidate: true, shouldDirty: true });
+      methods.setValue(fieldName, value);
     }
   };
 
@@ -99,7 +97,6 @@ export function RecordDetailForm({
       setIsSaving(true);
       
       // If we're using our own state, use that instead of the form data
-      // Use form values by default, fallback to editedValues if provided externally
       const dataToSubmit = onFieldChange ? editedValues : formValues;
       
       console.log("Submitting record data:", dataToSubmit);

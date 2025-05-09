@@ -52,7 +52,7 @@ export function RecordField({
     
     // Third priority: if form is provided, set the value in the form
     if (form) {
-      form.setValue(field.api_name, newValue, { shouldValidate: true, shouldDirty: true });
+      form.setValue(field.api_name, newValue);
     }
   };
 

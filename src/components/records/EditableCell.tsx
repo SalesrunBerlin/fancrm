@@ -46,7 +46,6 @@ export function EditableCell({
       setError("This field is required");
     } else {
       setError(null);
-      // Make sure to call the parent onChange handler to update the form state
       onChange(newValue);
     }
   };

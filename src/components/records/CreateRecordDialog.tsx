@@ -29,29 +29,10 @@ export function CreateRecordDialog({ objectTypeId, open, onOpenChange }: CreateR
   const objectType = objectTypes?.find(type => type.id === objectTypeId);
   const form = useForm<RecordFormData>();
   const { favoriteColor } = useAuth();
-  const [formValues, setFormValues] = useState<RecordFormData>({});
-
-  // Handle field change
-  const handleFieldChange = (fieldName: string, value: any) => {
-    console.log(`Field changed in dialog: ${fieldName} => `, value);
-    setFormValues(prev => ({
-      ...prev,
-      [fieldName]: value
-    }));
-    form.setValue(fieldName, value, { shouldValidate: true, shouldDirty: true });
-  };
 
   const onSubmit = async (data: RecordFormData) => {
     try {
       setIsSubmitting(true);
-      
-      // Merge form values with the data from react-hook-form
-      const submitData = {
-        ...data,
-        ...formValues
-      };
-      
-      console.log("Submitting form data:", submitData);
       
       // Process auto-number fields
       const autoNumberFields = fields.filter(f => f.data_type === 'auto_number');
@@ -60,7 +41,7 @@ export function CreateRecordDialog({ objectTypeId, open, onOpenChange }: CreateR
         try {
           const autoNumberValue = await generateAutoNumber(field.id);
           // Add the auto-number value to the form data
-          submitData[field.api_name] = autoNumberValue;
+          data[field.api_name] = autoNumberValue;
         } catch (error) {
           console.error(`Failed to generate auto-number for field ${field.api_name}:`, error);
           toast.error(`Failed to generate auto-number for field ${field.name}`);
@@ -69,11 +50,10 @@ export function CreateRecordDialog({ objectTypeId, open, onOpenChange }: CreateR
       
       // Create the record with field values
       await createRecord.mutateAsync({
-        field_values: submitData
+        field_values: data
       });
       
       form.reset();
-      setFormValues({});
       onOpenChange(false);
       toast.success("Record created successfully");
     } catch (error) {
@@ -105,8 +85,6 @@ export function CreateRecordDialog({ objectTypeId, open, onOpenChange }: CreateR
                   <RecordField
                     key={field.id}
                     field={field}
-                    value={formValues[field.api_name]}
-                    onCustomChange={(value) => handleFieldChange(field.api_name, value)}
                     form={form}
                   />
                 ))}

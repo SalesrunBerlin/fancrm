@@ -1,17 +1,17 @@
 
 import { Header } from "./Header";
 import { Outlet } from "react-router-dom";
-import { Sidebar } from "./Sidebar";
-import { useIsMobile } from "@/hooks/use-mobile";
 import { SidebarProvider } from "@/components/ui/sidebar";
+import { AppSidebar } from "./AppSidebar";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export function Layout() {
   const isMobile = useIsMobile();
 
   return (
-    <SidebarProvider defaultOpen={!isMobile}>
+    <SidebarProvider>
       <div className="flex min-h-screen w-full overflow-hidden relative bg-background">
-        <Sidebar />
+        <AppSidebar />
         <div className="flex flex-col flex-1 w-full">
           <Header />
           <main 

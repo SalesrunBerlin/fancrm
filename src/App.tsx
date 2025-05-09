@@ -1,3 +1,4 @@
+
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { Toaster } from "sonner"; 
 import { Layout } from "@/components/layout/Layout";
@@ -53,7 +54,6 @@ import SettingsUserManagementPage from "./pages/UserManagementPage";
 import TicketQueuePage from "./pages/TicketQueuePage";
 import TicketProcessorPage from "./pages/TicketProcessorPage";
 import AutoTicketProcessorPage from "./pages/AutoTicketProcessorPage";
-import QuickCreatePage from "./pages/QuickCreatePage";
 
 // Create a client
 const queryClient = new QueryClient({
@@ -153,9 +153,6 @@ function AppContent() {
         <Route path="/ticket-queue" element={<TicketQueuePage />} />
         <Route path="/process-ticket" element={<TicketProcessorPage />} />
         <Route path="/auto-process-ticket" element={<AutoTicketProcessorPage />} />
-        
-        {/* Quick Create route */}
-        <Route path="/quick-create" element={<QuickCreatePage />} />
         
         {/* Report routes */}
         <Route path="/reports" element={<ReportsPage />} />
