@@ -1,6 +1,5 @@
-
 import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -18,6 +17,7 @@ import { Badge } from "@/components/ui/badge";
 
 export default function ApplicationPublishPage() {
   const { applicationId } = useParams<{ applicationId: string }>();
+  const location = useLocation();
   const navigate = useNavigate();
   const { applications, isLoading: isLoadingApplications } = useApplications();
   const { applicationObjects, isLoading: isLoadingObjects } = useApplicationObjects(applicationId);
@@ -37,10 +37,14 @@ export default function ApplicationPublishPage() {
       if (app) {
         setCurrentApplication(app);
         
-        // Get any publishing params from state
-        const params = history.state?.publishingParams;
+        // Get publishing params from state
+        const params = location.state?.publishingParams;
         if (params) {
           setPublishingParams(params);
+        } else {
+          // If no params found, redirect to settings page
+          navigate(`/applications/${applicationId}/publish-settings`);
+          toast.error("Publication settings required");
         }
       } else {
         // Application not found, redirect to applications list
@@ -48,7 +52,7 @@ export default function ApplicationPublishPage() {
         toast.error("Application not found");
       }
     }
-  }, [applications, applicationId, navigate]);
+  }, [applications, applicationId, navigate, location.state]);
   
   // Pre-select all objects when they load
   useEffect(() => {
@@ -69,7 +73,7 @@ export default function ApplicationPublishPage() {
     }
   }, [actions, applicationObjects, selectedObjectIds]);
   
-  if (isLoadingApplications || !currentApplication) {
+  if (isLoadingApplications || !currentApplication || !publishingParams) {
     return (
       <div className="flex justify-center items-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -131,13 +135,11 @@ export default function ApplicationPublishPage() {
     
     try {
       await publishApplication.mutateAsync({
-        applicationId: applicationId!,
         name: publishingParams.name,
         description: publishingParams.description,
         isPublic: publishingParams.isPublic,
-        version: publishingParams.version,
-        includedObjectIds: selectedObjectIds,
-        includedActionIds: selectedActionIds
+        objectTypeIds: selectedObjectIds,
+        actionIds: selectedActionIds
       });
       
       navigate(`/applications/${applicationId}`);
@@ -160,7 +162,7 @@ export default function ApplicationPublishPage() {
           <Button 
             variant="outline" 
             size="icon" 
-            onClick={() => navigate(`/applications/${applicationId}`)} 
+            onClick={() => navigate(`/applications/${applicationId}/publish-settings`)} 
             className="mr-4"
           >
             <ArrowLeft className="h-4 w-4" />

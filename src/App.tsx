@@ -1,4 +1,3 @@
-
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { Toaster } from "sonner"; 
 import { Layout } from "@/components/layout/Layout";
@@ -28,6 +27,7 @@ import ObjectRestorePage from "@/pages/ObjectRestorePage";
 import ApplicationsPage from "@/pages/ApplicationsPage";
 import ApplicationDetailPage from "@/pages/ApplicationDetailPage";
 import ApplicationObjectsPage from "@/pages/ApplicationObjectsPage";
+import ApplicationPublishSettingsPage from "@/pages/ApplicationPublishSettingsPage";
 import ApplicationPublishPage from "@/pages/ApplicationPublishPage";
 import ApplicationImportPage from "@/pages/ApplicationImportPage";
 import CreateObjectFromFieldValuesPage from "@/pages/CreateObjectFromFieldValuesPage";
@@ -123,7 +123,7 @@ function AppContent() {
   return (
     <Routes>
       {/* Public routes */}
-      <Route path="/" element={<LandingPage />} />
+      <Route path="/" element={<Index />} />
       <Route path="/landing" element={<LandingPage />} />
       <Route path="/auth" element={!isLoggedIn ? <Auth /> : <Navigate to="/" />} />
       <Route path="/auth/:workspaceId" element={!isLoggedIn ? <Auth /> : <Navigate to="/" />} />
@@ -150,6 +150,7 @@ function AppContent() {
         <Route path="/applications" element={<ApplicationsPage />} />
         <Route path="/applications/:applicationId" element={<ApplicationDetailPage />} />
         <Route path="/applications/:applicationId/objects" element={<ApplicationObjectsPage />} />
+        <Route path="/applications/:applicationId/publish-settings" element={<ApplicationPublishSettingsPage />} />
         <Route path="/applications/:applicationId/publish" element={<ApplicationPublishPage />} />
         <Route path="/applications/import" element={<ApplicationImportPage />} />
         <Route path="/objects/:objectTypeId" element={<ObjectRecordsList />} />

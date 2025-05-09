@@ -44,7 +44,7 @@ const LandingPage = () => {
         <ProblemSolutionCard 
           icon={<Database />} 
           title="Objekte & Felder nach Maß" 
-          description="Baue dir eigene Datenkisten – von „Bohrmaschine" bis „Wartungsvertrag". Kein Code, nur Klicks."
+          description="Baue dir eigene Datenkisten – von 'Bohrmaschine' bis 'Wartungsvertrag'. Kein Code, nur Klicks."
           isLight 
         />
         <ProblemSolutionCard 
