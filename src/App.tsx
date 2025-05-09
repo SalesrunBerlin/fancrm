@@ -52,6 +52,7 @@ import AdminWorkspacePage from "./pages/admin/AdminWorkspacePage";
 import SettingsUserManagementPage from "./pages/UserManagementPage";
 import TicketQueuePage from "./pages/TicketQueuePage";
 import TicketProcessorPage from "./pages/TicketProcessorPage";
+import AutoTicketProcessorPage from "./pages/AutoTicketProcessorPage";
 
 // Create a client
 const queryClient = new QueryClient({
@@ -147,11 +148,10 @@ function AppContent() {
         <Route path="/objects/:objectTypeId/:recordId" element={<ObjectRecordDetail />} />
         <Route path="/objects/:objectTypeId/:recordId/edit" element={<EditRecordPage />} />
         
-        {/* Ticket Queue route */}
+        {/* Ticket Queue routes */}
         <Route path="/ticket-queue" element={<TicketQueuePage />} />
-        
-        {/* Ticket Processor route */}
         <Route path="/process-ticket" element={<TicketProcessorPage />} />
+        <Route path="/auto-process-ticket" element={<AutoTicketProcessorPage />} />
         
         {/* Report routes */}
         <Route path="/reports" element={<ReportsPage />} />
