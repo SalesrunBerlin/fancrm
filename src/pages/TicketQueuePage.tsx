@@ -5,10 +5,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { useObjectType } from "@/hooks/useObjectType";
 import { useObjectRecords } from "@/hooks/useObjectRecords";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, RefreshCw } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Loader2, RefreshCw, ArrowRight } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
 
 interface Ticket {
   id: string;
@@ -17,6 +18,7 @@ interface Ticket {
   field_values: {
     [key: string]: any;
   };
+  created_at?: string;
 }
 
 export default function TicketQueuePage() {
@@ -105,7 +107,11 @@ export default function TicketQueuePage() {
           ...record,
           field_values: fieldValuesByRecordId[record.id] || {},
           displayName: fieldValuesByRecordId[record.id]?.title || fieldValuesByRecordId[record.id]?.name || record.record_id
-        }));
+        }))
+        .sort((a, b) => {
+          // Sort by created_at, with most recent first
+          return new Date(b.created_at || "").getTime() - new Date(a.created_at || "").getTime();
+        });
       
       setTickets(queueTickets);
     } catch (error) {
@@ -128,6 +134,10 @@ export default function TicketQueuePage() {
     // Navigate to the ticket detail page
     navigate(`/objects/${objectTypeId}/${ticket.id}`);
   };
+  
+  const handleProcessAllTickets = () => {
+    navigate('/process-ticket');
+  }
   
   const handleRefresh = () => {
     fetchQueueTickets();
@@ -181,45 +191,64 @@ export default function TicketQueuePage() {
     <div className="container mx-auto py-10">
       <PageHeader
         title="Ticket Queue"
-        description="View and process tickets in the queue"
+        description={`${tickets.length} tickets in the queue with AI Status: Warteschlange`}
         actions={
-          <Button onClick={handleRefresh} variant="outline">
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Refresh Queue
-          </Button>
+          <div className="flex gap-2">
+            {tickets.length > 0 && (
+              <Button onClick={handleProcessAllTickets}>
+                Process All Tickets
+              </Button>
+            )}
+            <Button onClick={handleRefresh} variant="outline">
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Refresh Queue
+            </Button>
+          </div>
         }
       />
       
       <div className="grid gap-6 mt-6">
-        {tickets.map((ticket) => (
+        {tickets.map((ticket, index) => (
           <Card key={ticket.id} className="overflow-hidden">
             <CardHeader className="bg-muted/30">
-              <CardTitle className="flex justify-between items-center">
-                <div>{ticket.displayName}</div>
+              <div className="flex justify-between items-center">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    {ticket.displayName}
+                    <Badge className="bg-yellow-500">Warteschlange</Badge>
+                  </CardTitle>
+                  <CardDescription>
+                    Ticket #{index + 1} • Created: {new Date(ticket.created_at || "").toLocaleString()}
+                  </CardDescription>
+                </div>
                 <Button 
                   onClick={() => handleProcessTicket(ticket)} 
                   disabled={isProcessing}
                 >
-                  Process Ticket
+                  Process <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
-              </CardTitle>
+              </div>
             </CardHeader>
             <CardContent className="pt-6">
               <div className="grid gap-4">
                 {Object.entries(ticket.field_values)
-                  .filter(([key]) => key !== "ai_status" && key !== "title" && key !== "name")
+                  .filter(([key]) => !['ai_status', 'title', 'name'].includes(key))
+                  .slice(0, 5) // Show only first 5 fields to keep the cards compact
                   .map(([key, value]) => (
                     <div key={key} className="flex">
-                      <span className="font-medium w-1/3">{key.replace(/_/g, ' ')}: </span>
-                      <span>{value}</span>
+                      <span className="font-medium w-1/3 capitalize">{key.replace(/_/g, ' ')}: </span>
+                      <span className="truncate">{
+                        typeof value === 'string' && value.length > 100 
+                          ? `${value.substring(0, 100)}...` 
+                          : value
+                      }</span>
                     </div>
                   ))}
-                <div className="flex">
-                  <span className="font-medium w-1/3">AI Status: </span>
-                  <span className="bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 px-2 py-1 rounded">
-                    {ticket.field_values.ai_status}
-                  </span>
-                </div>
+                {Object.keys(ticket.field_values).filter(key => !['ai_status', 'title', 'name'].includes(key)).length > 5 && (
+                  <p className="text-sm text-muted-foreground italic">
+                    And {Object.keys(ticket.field_values).filter(key => !['ai_status', 'title', 'name'].includes(key)).length - 5} more fields...
+                  </p>
+                )}
               </div>
             </CardContent>
           </Card>
