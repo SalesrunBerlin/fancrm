@@ -12,6 +12,7 @@ export interface TicketData {
   created_at?: string;
   description?: string;
   content?: string;
+  object_type_id?: string;
 }
 
 /**
@@ -79,7 +80,8 @@ export async function getQueueTickets(limit?: number): Promise<TicketData[]> {
         field_values: fieldValuesByRecordId[record.id] || {},
         displayName: fieldValuesByRecordId[record.id]?.title || fieldValuesByRecordId[record.id]?.name || record.record_id,
         description: fieldValuesByRecordId[record.id]?.description,
-        content: fieldValuesByRecordId[record.id]?.content
+        content: fieldValuesByRecordId[record.id]?.content,
+        object_type_id: record.object_type_id  // Make sure object_type_id is included in the mapped result
       }));
     
     // Apply limit if provided
