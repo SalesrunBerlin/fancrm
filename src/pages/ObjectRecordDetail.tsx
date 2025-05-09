@@ -16,6 +16,7 @@ import { ThemedButton } from '@/components/ui/themed-button';
 import { PageHeader } from '@/components/ui/page-header';
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { TooltipProvider } from "@radix-ui/react-tooltip";
+import { TicketProcessor } from '@/components/tickets/TicketProcessor';
 
 export default function ObjectRecordDetail() {
   const { objectTypeId, recordId } = useParams<{ objectTypeId: string; recordId: string }>();
@@ -24,6 +25,8 @@ export default function ObjectRecordDetail() {
   const [isEditing, setIsEditing] = useState(false);
   const { objectType, isLoading: isLoadingObjectType } = useObjectType(objectTypeId || "");
   const { record, isLoading: isLoadingRecord } = useRecordDetail(objectTypeId || "", recordId || "");
+  const [isTicket, setIsTicket] = useState(false);
+  const [aiStatus, setAiStatus] = useState<string | null>(null);
 
   useEffect(() => {
     if (!objectTypeId || !recordId) {
@@ -32,10 +35,27 @@ export default function ObjectRecordDetail() {
     }
   }, [objectTypeId, recordId]);
 
+  // Check if this is a ticket object and get AI status if available
+  useEffect(() => {
+    if (objectType && record) {
+      // Check if this is the Ticket object type
+      setIsTicket(objectType.name === "Ticket");
+      
+      // Get AI status if available
+      if (record.field_values && record.field_values.ai_status) {
+        setAiStatus(record.field_values.ai_status);
+      }
+    }
+  }, [objectType, record]);
+
   const handleSaveRecord = (updatedRecord: any) => {
     setIsEditing(false);
     toast.success("Record updated successfully!");
     // Optionally, refresh the record data here
+  };
+
+  const handleStatusChange = (newStatus: string) => {
+    setAiStatus(newStatus);
   };
 
   if (isLoadingObjectType || isLoadingRecord) {
@@ -80,6 +100,13 @@ export default function ObjectRecordDetail() {
           <div>
             <h1 className="text-2xl font-bold">{recordTitle}</h1>
             <p className="text-gray-500">{objectType.name}</p>
+            {isTicket && aiStatus && (
+              <div className="mt-1">
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                  AI Status: {aiStatus}
+                </span>
+              </div>
+            )}
           </div>
           <div>
             {isEditing ? (
@@ -155,6 +182,9 @@ export default function ObjectRecordDetail() {
         <TabsList>
           <TabsTrigger value="details">Details</TabsTrigger>
           <TabsTrigger value="related">Related</TabsTrigger>
+          {isTicket && aiStatus === "Warteschlange" && (
+            <TabsTrigger value="process">Process Ticket</TabsTrigger>
+          )}
         </TabsList>
         <TabsContent value="details">
           <Card>
@@ -179,6 +209,21 @@ export default function ObjectRecordDetail() {
             </CardContent>
           </Card>
         </TabsContent>
+        {isTicket && aiStatus === "Warteschlange" && (
+          <TabsContent value="process">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Card>
+                <CardContent className="p-4">
+                  <TicketProcessor
+                    objectTypeId={objectTypeId || ""}
+                    recordId={recordId || ""}
+                    onStatusChange={handleStatusChange}
+                  />
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );

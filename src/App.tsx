@@ -51,6 +51,7 @@ import IconEditPage from "./pages/IconEditPage";
 import IconEditorPage from "./pages/IconEditorPage";
 import AdminWorkspacePage from "./pages/admin/AdminWorkspacePage";
 import SettingsUserManagementPage from "./pages/UserManagementPage";
+import TicketQueuePage from "./pages/TicketQueuePage";
 
 // Create a client
 const queryClient = new QueryClient({
@@ -145,6 +146,9 @@ function AppContent() {
         <Route path="/objects/:objectTypeId/new" element={<CreateRecordPage />} />
         <Route path="/objects/:objectTypeId/:recordId" element={<ObjectRecordDetail />} />
         <Route path="/objects/:objectTypeId/:recordId/edit" element={<EditRecordPage />} />
+        
+        {/* Ticket Queue route */}
+        <Route path="/ticket-queue" element={<TicketQueuePage />} />
         
         {/* Report routes */}
         <Route path="/reports" element={<ReportsPage />} />
