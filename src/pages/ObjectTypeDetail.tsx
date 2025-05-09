@@ -13,16 +13,21 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { ThemedButton } from "@/components/ui/themed-button";
 import { useObjectType } from "@/hooks/useObjectType";
 import { FieldOrderManager } from "@/components/settings/FieldOrderManager";
+import { ObjectField } from "@/hooks/useObjectTypes";
 
 export default function ObjectTypeDetail() {
   const { objectTypeId } = useParams<{ objectTypeId: string }>();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const { objectTypes, updateObjectType, publishObjectType, unpublishObjectType, publishedObjects, isLoadingPublished } = useObjectTypes();
-  const { fields, isLoading, createField, updateField, deleteField, refetch } = useObjectFields(objectTypeId);
+  const { fields, isLoading, createField, updateField, deleteField, refetch, updateFieldOrder } = useObjectFields(objectTypeId);
   const [isPublishing, setIsPublishing] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showFieldOrderManager, setShowFieldOrderManager] = useState(false);
+  const [orderedFields, setOrderedFields] = useState<ObjectField[]>([]);
+  const [isDragging, setIsDragging] = useState(false);
+  const [draggedField, setDraggedField] = useState<ObjectField | null>(null);
+  const [isReordering, setIsReordering] = useState(false);
   
   // Use useObjectType hook for direct access to a single object type
   const { objectType: singleObjectType } = useObjectType(objectTypeId || '');
@@ -32,6 +37,13 @@ export default function ObjectTypeDetail() {
     singleObjectType || 
     objectTypes?.find(obj => obj.id === objectTypeId) || 
     publishedObjects?.find(obj => obj.id === objectTypeId);
+  
+  // Initialize ordered fields when fields change
+  useEffect(() => {
+    if (fields && fields.length > 0) {
+      setOrderedFields([...fields].sort((a, b) => a.display_order - b.display_order));
+    }
+  }, [fields]);
   
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -84,9 +96,7 @@ export default function ObjectTypeDetail() {
   };
 
   const handleManagePicklistValues = (fieldId: string) => {
-    // This would be implemented to handle managing picklist values
     console.log("Managing picklist values for field:", fieldId);
-    // You could navigate to another page or open a dialog here
   };
 
   const handleDeleteField = async (fieldId: string) => {
@@ -106,6 +116,54 @@ export default function ObjectTypeDetail() {
       id: objectTypeId,
       default_field_api_name: fieldApiName
     });
+  };
+  
+  const handleDragStart = (field: ObjectField) => {
+    setIsDragging(true);
+    setDraggedField(field);
+  };
+  
+  const handleDragEnd = () => {
+    setIsDragging(false);
+    setDraggedField(null);
+  };
+  
+  const handleDragOver = (e: React.DragEvent, targetIndex: number) => {
+    e.preventDefault();
+    if (!isDragging || !draggedField) return;
+    
+    const draggedFieldIndex = orderedFields.findIndex(field => field.id === draggedField.id);
+    if (draggedFieldIndex === targetIndex) return;
+    
+    // Create a new array with the reordered fields
+    const newOrderedFields = [...orderedFields];
+    const [movedField] = newOrderedFields.splice(draggedFieldIndex, 1);
+    newOrderedFields.splice(targetIndex, 0, movedField);
+    
+    setOrderedFields(newOrderedFields);
+  };
+  
+  const handleSaveFieldOrder = async () => {
+    if (!objectTypeId || orderedFields.length === 0) return;
+    
+    setIsReordering(true);
+    try {
+      // Create an array of objects with id and new display_order values
+      const updatedFieldOrders = orderedFields.map((field, index) => ({
+        id: field.id,
+        display_order: index + 1
+      }));
+      
+      // Call the mutation to update field orders
+      await updateFieldOrder.mutateAsync(updatedFieldOrders);
+      
+      toast.success("Field order updated successfully");
+    } catch (error) {
+      console.error("Error updating field order:", error);
+      toast.error("Failed to update field order");
+    } finally {
+      setIsReordering(false);
+    }
   };
 
   // Check if this is an imported template (previously published by others)
@@ -148,6 +206,18 @@ export default function ObjectTypeDetail() {
             
             {canModifyFields && !isArchived && (
               <>
+                {isDragging && (
+                  <ThemedButton
+                    variant="success"
+                    size="responsive"
+                    onClick={handleSaveFieldOrder}
+                    disabled={isReordering}
+                  >
+                    <Loader2 className={`h-4 w-4 ${isReordering ? 'animate-spin' : ''} mr-2`} />
+                    <span>Save Order</span>
+                  </ThemedButton>
+                )}
+              
                 <ThemedButton
                   variant="outline"
                   size="responsive"
@@ -214,12 +284,15 @@ export default function ObjectTypeDetail() {
       
       <div className="overflow-x-auto">
         <ObjectFieldsList 
-          fields={fields || []} 
+          fields={orderedFields || []} 
           objectTypeId={objectTypeId as string} 
           isLoading={isLoading}
           onManagePicklistValues={handleManagePicklistValues}
           onDeleteField={canModifyFields ? handleDeleteField : undefined}
-          showDragHandles={true}
+          showDragHandles={canModifyFields && !isArchived}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+          onDragOver={handleDragOver}
         />
       </div>
       

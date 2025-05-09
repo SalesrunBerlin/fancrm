@@ -30,6 +30,8 @@ interface ObjectFieldsListProps {
   onManagePicklistValues?: (fieldId: string) => void;
   onDeleteField?: (fieldId: string) => void;
   onDragStart?: (field: ObjectField) => void;
+  onDragEnd?: () => void;
+  onDragOver?: (e: React.DragEvent, fieldIndex: number) => void;
 }
 
 export function ObjectFieldsList({
@@ -39,7 +41,9 @@ export function ObjectFieldsList({
   showDragHandles = false,
   onManagePicklistValues,
   onDeleteField,
-  onDragStart
+  onDragStart,
+  onDragEnd,
+  onDragOver
 }: ObjectFieldsListProps) {
   
   if (isLoading) {
@@ -80,16 +84,22 @@ export function ObjectFieldsList({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {fields.map((field) => (
-            <TableRow key={field.id}>
+          {fields.map((field, index) => (
+            <TableRow 
+              key={field.id}
+              onDragOver={(e) => onDragOver && onDragOver(e, index)}
+              className="transition-colors"
+              data-field-id={field.id}
+            >
               {showDragHandles && (
                 <TableCell className="w-8">
                   <div 
-                    className="cursor-grab"
-                    draggable
+                    className="cursor-grab active:cursor-grabbing"
+                    draggable={true}
                     onDragStart={() => onDragStart && onDragStart(field)}
+                    onDragEnd={() => onDragEnd && onDragEnd()}
                   >
-                    <GripVertical className="h-4 w-4 text-muted-foreground" />
+                    <GripVertical className="h-4 w-4 text-muted-foreground hover:text-primary" />
                   </div>
                 </TableCell>
               )}
