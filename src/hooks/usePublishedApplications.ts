@@ -4,6 +4,12 @@ import { usePublishedApplicationDetail } from "./usePublishedApplicationDetail";
 import { usePublishApplication } from "./usePublishApplication";
 import { useObjectFieldsPublishing } from "./useObjectFieldsPublishing";
 import { fetchObjectFields } from "@/services/publishedApplicationService";
+import type { 
+  PublishedApplication, 
+  PublishedObject, 
+  PublishedAction, 
+  PublishedField 
+} from "@/types/publishing";
 
 // This is now a facade that aggregates all the functionality from the specialized hooks
 export function usePublishedApplications() {
@@ -34,5 +40,5 @@ export function usePublishedApplications() {
   };
 }
 
-// Re-export types from the new location
-export { PublishedApplication, PublishedObject, PublishedAction, PublishedField } from "@/types/publishing";
+// Re-export types from the new location using 'export type'
+export type { PublishedApplication, PublishedObject, PublishedAction, PublishedField } from "@/types/publishing";

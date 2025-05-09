@@ -1,4 +1,3 @@
-
 // Types related to published applications and their components
 export interface PublishedApplication {
   id: string;
@@ -82,4 +81,5 @@ export interface PublishApplicationParams {
 
 export interface UpdatePublishedApplicationParams extends PublishApplicationParams {
   id: string;
+  version: string; // Make version required for updates
 }

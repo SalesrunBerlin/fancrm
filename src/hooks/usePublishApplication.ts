@@ -38,7 +38,12 @@ export function usePublishApplication() {
       if (!user) {
         throw new Error("User must be logged in to update a published application");
       }
-      return updatePublishedApplicationService(params, user.id);
+      // Here we ensure that version is always provided, either from params or defaulting to "1.0"
+      const updatedParams = {
+        ...params,
+        version: params.version || "1.0"
+      };
+      return updatePublishedApplicationService(updatedParams, user.id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["published-applications"] });

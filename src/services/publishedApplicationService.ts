@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { PublishedApplication, PublishedField } from "@/types/publishing";
 import { toast } from "sonner";
@@ -317,7 +316,7 @@ export const updatePublishedApplication = async (
     objectTypeIds: string[];
     actionIds: string[];
     fieldSettings?: Record<string, Record<string, boolean>>;
-    version: string;
+    version: string; // Make sure version is required here
   },
   userId: string
 ): Promise<string> => {
