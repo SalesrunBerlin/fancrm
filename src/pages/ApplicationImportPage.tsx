@@ -1,126 +1,91 @@
 
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { PageHeader } from "@/components/ui/page-header";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Switch } from "@/components/ui/switch";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { usePublishedApplications } from "@/hooks/usePublishedApplications";
+import { useToast } from "@/hooks/use-toast";
 import { useApplicationImport } from "@/hooks/useApplicationImport";
-import { ArrowLeft, Download, Loader2 } from "lucide-react";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { usePublishedApplications, PublishedApplication } from "@/hooks/usePublishedApplications";
+import { PageHeader } from "@/components/ui/page-header";
+import { toast } from "sonner";
+import { ArrowLeft, Clock, Download, Eye, Globe, Lock, Search, User } from "lucide-react";
 
 export default function ApplicationImportPage() {
   const navigate = useNavigate();
-  const { 
-    publishedApplications, 
-    isLoadingPublishedApps,
-    getPublishedObjects,
-    getPublishedActions 
-  } = usePublishedApplications();
-  const { importApplication } = useApplicationImport();
+  const { toast } = useToast();
   
-  const [selectedPublicationId, setSelectedPublicationId] = useState<string | null>(null);
-  const [selectedPublication, setSelectedPublication] = useState<any>(null);
-  const [publishedObjects, setPublishedObjects] = useState<any[]>([]);
-  const [publishedActions, setPublishedActions] = useState<any[]>([]);
-  const [isLoadingDetails, setIsLoadingDetails] = useState(false);
-  const [selectedObjectIds, setSelectedObjectIds] = useState<string[]>([]);
-  const [selectedActionIds, setSelectedActionIds] = useState<string[]>([]);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { publishedApplications, isLoading, usePublishedApplicationDetails } = usePublishedApplications();
+  const { importApplication, isImporting } = useApplicationImport();
   
-  // Load objects and actions when a publication is selected
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedAppId, setSelectedAppId] = useState<string | null>(null);
+  const [filteredApps, setFilteredApps] = useState<PublishedApplication[]>([]);
+  
+  const { data: selectedAppDetails, isLoading: isLoadingDetails } = usePublishedApplicationDetails(selectedAppId || undefined);
+  
+  // Filter applications based on search query
   useEffect(() => {
-    const loadPublicationDetails = async () => {
-      if (!selectedPublicationId) return;
-      
-      setIsLoadingDetails(true);
-      try {
-        // Find selected publication
-        const publication = publishedApplications?.find(p => p.id === selectedPublicationId);
-        setSelectedPublication(publication);
-        
-        // Get objects and actions
-        const objects = await getPublishedObjects(selectedPublicationId);
-        const actions = await getPublishedActions(selectedPublicationId);
-        
-        setPublishedObjects(objects);
-        setPublishedActions(actions);
-        
-        // Pre-select all objects and actions
-        setSelectedObjectIds(objects.map(obj => obj.object_type_id));
-        setSelectedActionIds(actions.map(action => action.action_id));
-      } catch (error) {
-        console.error("Error loading publication details:", error);
-      } finally {
-        setIsLoadingDetails(false);
-      }
-    };
+    if (!publishedApplications) return;
     
-    loadPublicationDetails();
-  }, [selectedPublicationId, publishedApplications, getPublishedObjects, getPublishedActions]);
-  
-  const handleToggleObject = (objectId: string) => {
-    setSelectedObjectIds(prev => {
-      if (prev.includes(objectId)) {
-        return prev.filter(id => id !== objectId);
-      } else {
-        return [...prev, objectId];
-      }
-    });
-  };
-  
-  const handleToggleAction = (actionId: string) => {
-    setSelectedActionIds(prev => {
-      if (prev.includes(actionId)) {
-        return prev.filter(id => id !== actionId);
-      } else {
-        return [...prev, actionId];
-      }
-    });
-  };
-  
-  const handleSelectAllObjects = (checked: boolean) => {
-    if (checked) {
-      setSelectedObjectIds(publishedObjects.map(obj => obj.object_type_id));
-    } else {
-      setSelectedObjectIds([]);
+    if (!searchQuery.trim()) {
+      setFilteredApps(publishedApplications);
+      return;
     }
-  };
+    
+    const query = searchQuery.toLowerCase();
+    const filtered = publishedApplications.filter(app => 
+      app.name.toLowerCase().includes(query) ||
+      app.description?.toLowerCase().includes(query) ||
+      app.publisher?.email.toLowerCase().includes(query)
+    );
+    
+    setFilteredApps(filtered);
+  }, [publishedApplications, searchQuery]);
   
-  const handleSelectAllActions = (checked: boolean) => {
-    if (checked) {
-      setSelectedActionIds(publishedActions.map(action => action.action_id));
-    } else {
-      setSelectedActionIds([]);
-    }
-  };
-  
+  // Handle import
   const handleImport = async () => {
-    if (!selectedPublicationId) return;
-    
-    setIsSubmitting(true);
-    try {
-      await importApplication.mutateAsync({
-        publishedApplicationId: selectedPublicationId,
-        selectedObjectIds: selectedObjectIds,
-        selectedActionIds: selectedActionIds
+    if (!selectedAppId || !selectedAppDetails) {
+      toast({
+        title: "No application selected",
+        description: "Please select an application to import",
+        variant: "destructive"
       });
-      
-      navigate("/applications");
-    } catch (error) {
-      console.error("Error importing application:", error);
-    } finally {
-      setIsSubmitting(false);
+      return;
     }
+    
+    try {
+      const importId = await importApplication(selectedAppId);
+      if (importId) {
+        toast({
+          title: "Import started",
+          description: "The application is being imported. You'll be notified when it's complete."
+        });
+        navigate("/applications");
+      }
+    } catch (error) {
+      console.error("Import error:", error);
+      toast({
+        title: "Import failed",
+        description: "There was an error importing the application",
+        variant: "destructive"
+      });
+    }
+  };
+  
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString(undefined, { 
+      year: 'numeric', 
+      month: 'short', 
+      day: 'numeric' 
+    });
   };
   
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div className="flex items-center">
           <Button 
             variant="outline" 
@@ -130,251 +95,175 @@ export default function ApplicationImportPage() {
           >
             <ArrowLeft className="h-4 w-4" />
           </Button>
-          <PageHeader 
+          <PageHeader
             title="Import Application"
             description="Browse and import published applications"
           />
         </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-        <div className="md:col-span-4">
-          <Card className="h-full">
-            <CardHeader>
-              <CardTitle>Available Applications</CardTitle>
-              <CardDescription>
-                Select an application to view details and import
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {isLoadingPublishedApps ? (
-                <div className="flex justify-center py-10">
-                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                </div>
-              ) : (
-                <ScrollArea className="h-[calc(100vh-300px)] pr-4">
-                  <div className="space-y-3">
-                    {publishedApplications?.filter(app => app.is_active && app.is_public).length ? (
-                      publishedApplications?.filter(app => app.is_active && app.is_public).map(publication => (
-                        <div 
-                          key={publication.id}
-                          className={`p-3 border rounded-md cursor-pointer hover:bg-muted/50 transition-colors
-                            ${selectedPublicationId === publication.id ? "bg-muted/50 border-primary" : ""}`}
-                          onClick={() => setSelectedPublicationId(publication.id)}
-                        >
-                          <div className="font-medium">{publication.name}</div>
-                          <div className="text-xs text-muted-foreground mt-1">
-                            {publication.description || "No description"}
-                          </div>
-                          <div className="flex items-center mt-2 gap-2">
-                            {publication.version && (
-                              <Badge variant="outline" className="text-xs">v{publication.version}</Badge>
-                            )}
-                          </div>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="text-center py-8 text-muted-foreground">
-                        No published applications available.
-                      </div>
-                    )}
-                  </div>
-                </ScrollArea>
-              )}
-            </CardContent>
-          </Card>
-        </div>
         
-        <div className="md:col-span-8">
-          {!selectedPublicationId ? (
-            <Card className="h-full flex items-center justify-center">
-              <div className="text-center p-8">
-                <h3 className="text-lg font-medium mb-2">No Application Selected</h3>
-                <p className="text-muted-foreground">
-                  Select an application from the list to view details and configure import options.
-                </p>
-              </div>
-            </Card>
-          ) : (
-            <Card>
-              <CardHeader>
-                <CardTitle>{selectedPublication?.name}</CardTitle>
-                <CardDescription>
-                  {selectedPublication?.description || "No description"}
-                </CardDescription>
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            type="search"
+            placeholder="Search applications..."
+            className="pl-8"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+      </div>
+      
+      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {isLoading ? (
+          <p className="text-muted-foreground col-span-full text-center py-12">Loading available applications...</p>
+        ) : filteredApps && filteredApps.length > 0 ? (
+          filteredApps.map(app => (
+            <Card 
+              key={app.id} 
+              className={`cursor-pointer hover:border-primary transition-colors ${selectedAppId === app.id ? 'ring-2 ring-primary' : ''}`}
+              onClick={() => setSelectedAppId(app.id)}
+            >
+              <CardHeader className="pb-2">
+                <div className="flex justify-between items-start">
+                  <CardTitle className="text-lg">{app.name}</CardTitle>
+                  <Badge variant={app.is_public ? "default" : "secondary"}>
+                    {app.is_public ? <Globe className="h-3 w-3 mr-1" /> : <Lock className="h-3 w-3 mr-1" />}
+                    {app.is_public ? "Public" : "Private"}
+                  </Badge>
+                </div>
+                <CardDescription className="line-clamp-2">{app.description || "No description available"}</CardDescription>
               </CardHeader>
-              <CardContent>
-                {isLoadingDetails ? (
-                  <div className="flex justify-center py-10">
-                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                  </div>
-                ) : (
-                  <Tabs defaultValue="objects" className="space-y-4">
-                    <TabsList>
-                      <TabsTrigger value="objects">Objects</TabsTrigger>
-                      <TabsTrigger value="actions">Actions</TabsTrigger>
-                      <TabsTrigger value="review">Review & Import</TabsTrigger>
-                    </TabsList>
-                    
-                    <TabsContent value="objects">
-                      <div className="space-y-4">
-                        <div className="flex justify-between items-center">
-                          <h3 className="text-sm font-medium">Select Objects to Import</h3>
-                          <div className="flex items-center space-x-2">
-                            <Checkbox 
-                              id="select-all-objects"
-                              checked={publishedObjects.length > 0 && selectedObjectIds.length === publishedObjects.length}
-                              onCheckedChange={handleSelectAllObjects}
-                            />
-                            <label htmlFor="select-all-objects" className="text-sm font-normal">
-                              Select All
-                            </label>
-                          </div>
-                        </div>
-                        
-                        <ScrollArea className="h-[calc(100vh-400px)] pr-4">
-                          <div className="space-y-3">
-                            {publishedObjects.length > 0 ? (
-                              publishedObjects.map(obj => (
-                                <div key={obj.id} className="flex items-center space-x-3 p-3 border rounded-md">
-                                  <Checkbox 
-                                    id={`object-${obj.object_type_id}`}
-                                    checked={selectedObjectIds.includes(obj.object_type_id)}
-                                    onCheckedChange={() => handleToggleObject(obj.object_type_id)}
-                                  />
-                                  <div className="flex-1">
-                                    <label 
-                                      htmlFor={`object-${obj.object_type_id}`} 
-                                      className="text-sm font-medium cursor-pointer flex flex-col"
-                                    >
-                                      <span>{obj.object_type?.name}</span>
-                                      <span className="text-xs text-muted-foreground">{obj.object_type?.api_name}</span>
-                                    </label>
-                                  </div>
-                                </div>
-                              ))
-                            ) : (
-                              <div className="text-center py-8 text-muted-foreground">
-                                No objects found in this application.
-                              </div>
-                            )}
-                          </div>
-                        </ScrollArea>
-                      </div>
-                    </TabsContent>
-                    
-                    <TabsContent value="actions">
-                      <div className="space-y-4">
-                        <div className="flex justify-between items-center">
-                          <h3 className="text-sm font-medium">Select Actions to Import</h3>
-                          <div className="flex items-center space-x-2">
-                            <Checkbox 
-                              id="select-all-actions"
-                              checked={publishedActions.length > 0 && selectedActionIds.length === publishedActions.length}
-                              onCheckedChange={handleSelectAllActions}
-                            />
-                            <label htmlFor="select-all-actions" className="text-sm font-normal">
-                              Select All
-                            </label>
-                          </div>
-                        </div>
-                        
-                        <ScrollArea className="h-[calc(100vh-400px)] pr-4">
-                          <div className="space-y-3">
-                            {publishedActions.length > 0 ? (
-                              publishedActions.map(actionItem => (
-                                <div key={actionItem.id} className="flex items-center space-x-3 p-3 border rounded-md">
-                                  <Checkbox 
-                                    id={`action-${actionItem.action_id}`}
-                                    checked={selectedActionIds.includes(actionItem.action_id)}
-                                    onCheckedChange={() => handleToggleAction(actionItem.action_id)}
-                                  />
-                                  <div className="flex-1">
-                                    <label 
-                                      htmlFor={`action-${actionItem.action_id}`} 
-                                      className="text-sm font-medium cursor-pointer flex flex-col"
-                                    >
-                                      <span>{actionItem.action?.name}</span>
-                                      <span className="text-xs text-muted-foreground">{actionItem.action?.description || "No description"}</span>
-                                    </label>
-                                  </div>
-                                </div>
-                              ))
-                            ) : (
-                              <div className="text-center py-8 text-muted-foreground">
-                                No actions available for import.
-                              </div>
-                            )}
-                          </div>
-                        </ScrollArea>
-                      </div>
-                    </TabsContent>
-                    
-                    <TabsContent value="review">
-                      <div className="space-y-6">
-                        <div>
-                          <h3 className="text-sm font-medium mb-2">Selected Objects ({selectedObjectIds.length})</h3>
-                          <div className="bg-muted/50 p-3 rounded-md">
-                            {selectedObjectIds.length > 0 ? (
-                              <div className="flex flex-wrap gap-2">
-                                {publishedObjects
-                                  .filter(obj => selectedObjectIds.includes(obj.object_type_id))
-                                  .map(obj => (
-                                    <Badge key={obj.id} variant="outline" className="text-xs">
-                                      {obj.object_type?.name}
-                                    </Badge>
-                                  ))}
-                              </div>
-                            ) : (
-                              <div className="text-sm text-muted-foreground">No objects selected</div>
-                            )}
-                          </div>
-                        </div>
-                        
-                        <div>
-                          <h3 className="text-sm font-medium mb-2">Selected Actions ({selectedActionIds.length})</h3>
-                          <div className="bg-muted/50 p-3 rounded-md">
-                            {selectedActionIds.length > 0 ? (
-                              <div className="flex flex-wrap gap-2">
-                                {publishedActions
-                                  .filter(action => selectedActionIds.includes(action.action_id))
-                                  .map(action => (
-                                    <Badge key={action.id} variant="outline" className="text-xs">
-                                      {action.action?.name}
-                                    </Badge>
-                                  ))}
-                              </div>
-                            ) : (
-                              <div className="text-sm text-muted-foreground">No actions selected</div>
-                            )}
-                          </div>
-                        </div>
-                        
-                        <div className="pt-4 flex justify-end space-x-3">
-                          <Button
-                            variant="outline"
-                            onClick={() => navigate("/applications")}
-                          >
-                            Cancel
-                          </Button>
-                          <Button
-                            onClick={handleImport}
-                            disabled={isSubmitting || (selectedObjectIds.length === 0 && selectedActionIds.length === 0)}
-                          >
-                            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            <Download className="mr-2 h-4 w-4" />
-                            Import Application
-                          </Button>
-                        </div>
-                      </div>
-                    </TabsContent>
-                  </Tabs>
+              <CardContent className="pb-2 pt-0">
+                <div className="text-xs text-muted-foreground flex items-center mb-1">
+                  <User className="h-3 w-3 mr-1" /> 
+                  <span>Published by: {app.publisher?.email || "Unknown user"}</span>
+                </div>
+                <div className="text-xs text-muted-foreground flex items-center">
+                  <Clock className="h-3 w-3 mr-1" /> 
+                  <span>Updated: {formatDate(app.updated_at)}</span>
+                </div>
+                {app.version && (
+                  <Badge variant="outline" className="mt-2">v{app.version}</Badge>
                 )}
               </CardContent>
+              <CardFooter className="pt-2">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="w-full"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedAppId(app.id);
+                  }}
+                >
+                  <Eye className="h-4 w-4 mr-2" /> View Details
+                </Button>
+              </CardFooter>
             </Card>
-          )}
-        </div>
+          ))
+        ) : (
+          <div className="col-span-full py-12 text-center border rounded-lg">
+            <h3 className="text-lg font-medium mb-2">No applications found</h3>
+            {searchQuery ? (
+              <p className="text-muted-foreground mb-4">No applications match your search criteria</p>
+            ) : (
+              <p className="text-muted-foreground mb-4">There are no published applications available</p>
+            )}
+            <Button 
+              variant="outline" 
+              onClick={() => navigate("/applications")}
+            >
+              Back to Applications
+            </Button>
+          </div>
+        )}
       </div>
+      
+      {/* Selected application details */}
+      {selectedAppId && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Application Details</CardTitle>
+            <CardDescription>
+              Review the details of the selected application before importing
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {isLoadingDetails ? (
+              <p className="text-center py-4 text-muted-foreground">Loading details...</p>
+            ) : selectedAppDetails ? (
+              <div className="space-y-4">
+                <div>
+                  <h3 className="text-sm font-medium">Name</h3>
+                  <p>{selectedAppDetails.name}</p>
+                </div>
+                <div>
+                  <h3 className="text-sm font-medium">Description</h3>
+                  <p className="text-muted-foreground">
+                    {selectedAppDetails.description || "No description available"}
+                  </p>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <h3 className="text-sm font-medium">Version</h3>
+                    <p>{selectedAppDetails.version || "1.0"}</p>
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-medium">Visibility</h3>
+                    <p>{selectedAppDetails.is_public ? "Public" : "Private"}</p>
+                  </div>
+                </div>
+                <div>
+                  <h3 className="text-sm font-medium mb-1">Objects</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedAppDetails.objects && selectedAppDetails.objects.length > 0 ? (
+                      selectedAppDetails.objects.map(obj => (
+                        <Badge key={obj.id} variant="outline">
+                          {obj.object_type.name}
+                        </Badge>
+                      ))
+                    ) : (
+                      <p className="text-muted-foreground">No objects included</p>
+                    )}
+                  </div>
+                </div>
+                <div>
+                  <h3 className="text-sm font-medium mb-1">Actions</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedAppDetails.actions && selectedAppDetails.actions.length > 0 ? (
+                      selectedAppDetails.actions.map(action => (
+                        <Badge key={action.id} variant="outline">
+                          {action.action.name}
+                        </Badge>
+                      ))
+                    ) : (
+                      <p className="text-muted-foreground">No actions included</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <p className="text-center py-4 text-muted-foreground">Failed to load application details</p>
+            )}
+          </CardContent>
+          <CardFooter className="flex justify-end space-x-2">
+            <Button 
+              variant="outline"
+              onClick={() => setSelectedAppId(null)}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleImport}
+              disabled={isImporting || !selectedAppDetails}
+              className="gap-2"
+            >
+              <Download className="h-4 w-4" />
+              Import Application
+            </Button>
+          </CardFooter>
+        </Card>
+      )}
     </div>
   );
 }

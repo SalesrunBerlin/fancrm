@@ -14,6 +14,8 @@ export interface PublishedApplication {
   created_at: string;
   updated_at: string;
   version?: string;
+  application_id?: string;
+  is_active?: boolean;
   publisher?: {
     id: string;
     email: string;
@@ -23,6 +25,7 @@ export interface PublishedApplication {
   };
   objects?: PublishedObject[];
   actions?: PublishedAction[];
+  fields?: PublishedField[];
 }
 
 export interface PublishedObject {
@@ -38,6 +41,7 @@ export interface PublishedObject {
     api_name: string;
     description?: string;
   };
+  fields?: PublishedField[];
 }
 
 export interface PublishedAction {
@@ -51,6 +55,22 @@ export interface PublishedAction {
     id: string;
     name: string;
     description?: string;
+  };
+}
+
+export interface PublishedField {
+  id: string;
+  object_type_id: string;
+  field_id: string; 
+  field_api_name?: string;
+  is_included: boolean;
+  created_at: string;
+  updated_at: string;
+  field?: {
+    id: string;
+    name: string;
+    api_name: string;
+    data_type: string;
   };
 }
 
@@ -90,7 +110,7 @@ export function usePublishedApplications() {
       }
 
       // Ensure all returned applications match our type
-      return (data as PublishedApplication[]) || [];
+      return (data as unknown as PublishedApplication[]) || [];
     }
   });
 
@@ -149,13 +169,68 @@ export function usePublishedApplications() {
         const typedActionsData = actionsData as unknown as PublishedAction[];
 
         return {
-          ...appData as PublishedApplication,
+          ...(appData as unknown as PublishedApplication),
           objects: typedObjectsData || [],
           actions: typedActionsData || []
         };
       },
       enabled: !!applicationId
     });
+  };
+
+  // Get fields for a specific object in a published application
+  const getObjectFields = async (objectTypeId: string): Promise<PublishedField[]> => {
+    const { data, error } = await supabase
+      .from("object_fields")
+      .select(`
+        id,
+        name,
+        api_name,
+        data_type,
+        is_required,
+        is_system,
+        object_type_id
+      `)
+      .eq("object_type_id", objectTypeId);
+
+    if (error) {
+      console.error("Error fetching object fields:", error);
+      throw error;
+    }
+
+    // Get publishing status for each field
+    const { data: publishingData, error: publishingError } = await supabase
+      .from("object_field_publishing")
+      .select("*")
+      .eq("object_type_id", objectTypeId);
+
+    if (publishingError) {
+      console.error("Error fetching field publishing status:", publishingError);
+      throw publishingError;
+    }
+
+    // Create a map of field_id to publishing status
+    const publishingMap = publishingData.reduce((acc: Record<string, boolean>, item: any) => {
+      acc[item.field_id] = item.is_included;
+      return acc;
+    }, {});
+
+    // Merge field data with publishing status
+    return data.map(field => ({
+      id: crypto.randomUUID(), // Generate a temporary ID for the published field
+      object_type_id: objectTypeId,
+      field_id: field.id,
+      field_api_name: field.api_name,
+      is_included: publishingMap[field.id] !== undefined ? publishingMap[field.id] : true,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      field: {
+        id: field.id,
+        name: field.name,
+        api_name: field.api_name,
+        data_type: field.data_type
+      }
+    })) as PublishedField[];
   };
 
   // Publish a new application
@@ -166,14 +241,18 @@ export function usePublishedApplications() {
       isPublic,
       objectTypeIds,
       actionIds,
-      version = "1.0"
+      fieldSettings,
+      version = "1.0",
+      applicationId
     }: {
       name: string;
       description: string;
       isPublic: boolean;
       objectTypeIds: string[];
       actionIds: string[];
+      fieldSettings?: Record<string, Record<string, boolean>>;
       version?: string;
+      applicationId?: string;
     }): Promise<string> => {
       if (!user) {
         throw new Error("User must be logged in to publish an application");
@@ -187,7 +266,8 @@ export function usePublishedApplications() {
           description,
           published_by: user.id,
           is_public: isPublic,
-          version
+          version,
+          application_id: applicationId
         })
         .select()
         .single();
@@ -212,6 +292,29 @@ export function usePublishedApplications() {
 
         if (objectsError) {
           throw objectsError;
+        }
+
+        // Update field publishing status
+        if (fieldSettings) {
+          for (const objectTypeId of objectTypeIds) {
+            const objectFieldSettings = fieldSettings[objectTypeId];
+            
+            if (objectFieldSettings) {
+              for (const [fieldId, isIncluded] of Object.entries(objectFieldSettings)) {
+                const { error: fieldPublishingError } = await supabase
+                  .from("object_field_publishing")
+                  .upsert({
+                    object_type_id: objectTypeId,
+                    field_id: fieldId,
+                    is_included: isIncluded
+                  });
+
+                if (fieldPublishingError) {
+                  console.error("Error updating field publishing status:", fieldPublishingError);
+                }
+              }
+            }
+          }
         }
       }
 
@@ -240,6 +343,139 @@ export function usePublishedApplications() {
     },
     onError: (error: any) => {
       toast.error("Failed to publish application", {
+        description: error.message || "An error occurred."
+      });
+    }
+  });
+
+  // Update an existing published application
+  const updatePublishedApplication = useMutation({
+    mutationFn: async ({
+      id,
+      name,
+      description,
+      isPublic,
+      objectTypeIds,
+      actionIds,
+      fieldSettings,
+      version
+    }: {
+      id: string;
+      name: string;
+      description: string;
+      isPublic: boolean;
+      objectTypeIds: string[];
+      actionIds: string[];
+      fieldSettings?: Record<string, Record<string, boolean>>;
+      version: string;
+    }): Promise<string> => {
+      if (!user) {
+        throw new Error("User must be logged in to update a published application");
+      }
+
+      // 1. Update the published application details
+      const { data: appData, error: appError } = await supabase
+        .from("published_applications")
+        .update({
+          name,
+          description,
+          is_public: isPublic,
+          version,
+          updated_at: new Date().toISOString()
+        })
+        .eq("id", id)
+        .eq("published_by", user.id)
+        .select()
+        .single();
+
+      if (appError) {
+        throw appError;
+      }
+
+      // 2. Delete existing objects and actions to replace with new ones
+      const { error: deleteObjectsError } = await supabase
+        .from("published_application_objects")
+        .delete()
+        .eq("published_application_id", id);
+
+      if (deleteObjectsError) {
+        throw deleteObjectsError;
+      }
+
+      const { error: deleteActionsError } = await supabase
+        .from("published_application_actions")
+        .delete()
+        .eq("published_application_id", id);
+
+      if (deleteActionsError) {
+        throw deleteActionsError;
+      }
+
+      // 3. Add updated object types to the published application
+      if (objectTypeIds.length > 0) {
+        const objectInserts = objectTypeIds.map(objectTypeId => ({
+          published_application_id: id,
+          object_type_id: objectTypeId,
+          is_included: true
+        }));
+
+        const { error: objectsError } = await supabase
+          .from("published_application_objects")
+          .insert(objectInserts);
+
+        if (objectsError) {
+          throw objectsError;
+        }
+
+        // Update field publishing status
+        if (fieldSettings) {
+          for (const objectTypeId of objectTypeIds) {
+            const objectFieldSettings = fieldSettings[objectTypeId];
+            
+            if (objectFieldSettings) {
+              for (const [fieldId, isIncluded] of Object.entries(objectFieldSettings)) {
+                const { error: fieldPublishingError } = await supabase
+                  .from("object_field_publishing")
+                  .upsert({
+                    object_type_id: objectTypeId,
+                    field_id: fieldId,
+                    is_included: isIncluded
+                  });
+
+                if (fieldPublishingError) {
+                  console.error("Error updating field publishing status:", fieldPublishingError);
+                }
+              }
+            }
+          }
+        }
+      }
+
+      // 4. Add actions to the published application
+      if (actionIds.length > 0) {
+        const actionInserts = actionIds.map(actionId => ({
+          published_application_id: id,
+          action_id: actionId,
+          is_included: true
+        }));
+
+        const { error: actionsError } = await supabase
+          .from("published_application_actions")
+          .insert(actionInserts);
+
+        if (actionsError) {
+          throw actionsError;
+        }
+      }
+
+      return id;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["published-applications"] });
+      toast.success("Application updated successfully");
+    },
+    onError: (error: any) => {
+      toast.error("Failed to update application", {
         description: error.message || "An error occurred."
       });
     }
@@ -276,6 +512,8 @@ export function usePublishedApplications() {
     refetch,
     usePublishedApplicationDetails,
     publishApplication,
-    deletePublishedApplication
+    deletePublishedApplication,
+    updatePublishedApplication,
+    getObjectFields
   };
 }

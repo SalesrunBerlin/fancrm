@@ -9,24 +9,33 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useApplications } from "@/hooks/useApplications";
 import { useApplicationObjects } from "@/hooks/useApplicationObjects";
-import { ArrowLeft, Share, Share2, User, Settings, Eye, Globe, Plus, Loader2 } from "lucide-react";
+import { usePublishedApplications, PublishedApplication } from "@/hooks/usePublishedApplications";
+import { ArrowLeft, Share, User, Settings, Eye, Globe, Plus, Loader2, RefreshCw } from "lucide-react";
 
 export default function ApplicationDetailPage() {
   const { applicationId } = useParams<{ applicationId: string }>();
   const navigate = useNavigate();
   const { applications, deleteApplication, updateApplication, setDefaultApplication, isLoading: isLoadingApps } = useApplications();
   const { applicationObjects, isLoading: isLoadingObjects } = useApplicationObjects(applicationId);
+  const { publishedApplications, isLoading: isLoadingPublishedApps } = usePublishedApplications();
   const { toast } = useToast();
   
   const application = applications?.find(app => app.id === applicationId);
-
+  const publishedApp = publishedApplications?.find(app => app.application_id === applicationId);
+  
   // Handle publish button click
   const handlePublishClick = () => {
     if (!applicationId) return;
-    navigate(`/applications/${applicationId}/publish-settings`);
+    navigate(`/applications/${applicationId}/publish-settings`, { 
+      state: { 
+        isUpdate: !!publishedApp,
+        publishedAppId: publishedApp?.id,
+        currentVersion: publishedApp?.version
+      } 
+    });
   };
   
-  if (isLoadingApps) {
+  if (isLoadingApps || isLoadingPublishedApps) {
     return (
       <div className="flex justify-center items-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -59,11 +68,38 @@ export default function ApplicationDetailPage() {
         </div>
         <div className="flex gap-2">
           <Button onClick={handlePublishClick} className="gap-2">
-            <Share className="h-4 w-4" />
-            Publish
+            {publishedApp ? (
+              <>
+                <RefreshCw className="h-4 w-4" />
+                Update Published App
+              </>
+            ) : (
+              <>
+                <Share className="h-4 w-4" />
+                Publish
+              </>
+            )}
           </Button>
         </div>
       </div>
+
+      {publishedApp && (
+        <Card className="bg-muted/50">
+          <CardContent className="pt-4 pb-2">
+            <div className="flex justify-between">
+              <div>
+                <h3 className="font-medium">Published as: {publishedApp.name}</h3>
+                <p className="text-sm text-muted-foreground">
+                  Version: {publishedApp.version || "1.0"} · 
+                  {publishedApp.is_public ? " Public" : " Private"} ·
+                  Last updated: {new Date(publishedApp.updated_at).toLocaleDateString()}
+                </p>
+              </div>
+              <Badge variant="secondary">Published</Badge>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Tabs defaultValue="objects">
         <TabsList>
@@ -157,7 +193,7 @@ export default function ApplicationDetailPage() {
                   When enabled, this will be your default application when logging in
                 </p>
                 <Button
-                  onClick={() => setDefaultApplication(applicationId || '')}
+                  onClick={() => setDefaultApplication.mutateAsync(applicationId || '')}
                   variant={application.is_default ? "secondary" : "outline"}
                   disabled={application.is_default}
                   className="gap-2"
@@ -175,7 +211,7 @@ export default function ApplicationDetailPage() {
                   variant="destructive"
                   onClick={() => {
                     if (window.confirm("Are you sure you want to delete this application? This action cannot be undone.")) {
-                      deleteApplication(applicationId || '')
+                      deleteApplication.mutateAsync(applicationId || '')
                         .then(() => {
                           toast({
                             title: "Application deleted",
