@@ -109,12 +109,13 @@ export default function ObjectTypeDetail() {
 
   // Check if this is an imported template (previously published by others)
   const isImportedTemplate = currentObjectType.is_template === true;
-  // Check if the current user owns this object
-  const isPublishedByOthers = !isImportedTemplate && publishedObjects?.some(obj => obj.id === objectTypeId) || false;
+  // Check if the current object is owned by the user
+  const isOwnedObject = currentObjectType.owner_id === objectTypes?.[0]?.owner_id;
   const isArchived = currentObjectType.is_archived;
   
-  // Allow adding fields to templates (imported objects) but not to directly published objects from others
-  const canModifyFields = !isPublishedByOthers && !currentObjectType.is_system;
+  // Allow adding fields to objects the user owns or to templates (imported objects)
+  // We're removing the condition that prevented adding fields to published objects
+  const canModifyFields = (isOwnedObject || isImportedTemplate) && !currentObjectType.is_system;
 
   return (
     <div className="container mx-auto px-2 md:px-0 space-y-6 max-w-5xl overflow-x-hidden">
@@ -144,8 +145,7 @@ export default function ObjectTypeDetail() {
               <span className="hidden md:inline">Refresh</span>
             </ThemedButton>
             
-            {/* Modified condition to allow adding fields to imported templates */}
-            {(canModifyFields || isImportedTemplate) && !isArchived && (
+            {canModifyFields && !isArchived && (
               <>
                 <ThemedButton 
                   variant="default"
@@ -155,7 +155,7 @@ export default function ObjectTypeDetail() {
                   <Plus className="h-4 w-4" />
                   <span className="hidden md:inline">New Field</span>
                 </ThemedButton>
-                {!isImportedTemplate && (
+                {!isImportedTemplate && isOwnedObject && (
                   <ThemedButton 
                     onClick={handleTogglePublish}
                     disabled={isPublishing}
@@ -192,8 +192,8 @@ export default function ObjectTypeDetail() {
         }
       />
       
-      {/* Only show the field selector for objects that can be edited */}
-      {(canModifyFields || isImportedTemplate) && fields && (
+      {/* Show the field selector for objects that can be edited */}
+      {canModifyFields && fields && (
         <DefaultFieldSelector
           objectType={currentObjectType}
           fields={fields}
@@ -208,7 +208,7 @@ export default function ObjectTypeDetail() {
           objectTypeId={objectTypeId as string} 
           isLoading={isLoading}
           onManagePicklistValues={handleManagePicklistValues}
-          onDeleteField={(canModifyFields || isImportedTemplate) ? handleDeleteField : undefined}
+          onDeleteField={canModifyFields ? handleDeleteField : undefined}
         />
       </div>
     </div>
