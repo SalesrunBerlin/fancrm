@@ -8,12 +8,14 @@ import { useUserEmails } from "@/hooks/useUserEmails";
 import { UserTable } from "@/components/admin/UserTable";
 import { CreateUserDialog } from "@/components/admin/CreateUserDialog";
 import { UserSummary } from "@/pages/admin/UserManagementPage";
+import { useAuth } from "@/contexts/AuthContext";
 
 export function UserManagementTab() {
   const [users, setUsers] = useState<UserSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [createUserDialogOpen, setCreateUserDialogOpen] = useState(false);
   const { userEmails, isLoading: isLoadingEmails, error: emailError } = useUserEmails();
+  const { user } = useAuth();
 
   useEffect(() => {
     if (emailError) {
@@ -28,10 +30,11 @@ export function UserManagementTab() {
         setIsLoading(true);
         console.log("Starting user data fetch process");
         
-        // Fetch profiles which have user data
+        // Fetch only profiles created by the current user
         const { data: profilesData, error: profilesError } = await supabase
           .from('profiles')
-          .select('id, first_name, last_name, role, screen_name, email, created_at');
+          .select('id, first_name, last_name, role, screen_name, email, created_at, created_by')
+          .eq('created_by', user?.id);
         
         if (profilesError) {
           console.error("Error fetching profiles:", profilesError);
@@ -44,7 +47,7 @@ export function UserManagementTab() {
           return;
         }
 
-        console.log(`Fetched ${profilesData.length} profiles`);
+        console.log(`Fetched ${profilesData.length} profiles created by current user`);
         
         // Enrich each profile with object counts
         const enrichedUsers = await Promise.all(
@@ -53,12 +56,13 @@ export function UserManagementTab() {
             const userEmailEntry = userEmails.find(ue => ue.id === profile.id);
             
             // Use profile email if available, otherwise fallback to auth email or default
-            const email = profile.email || (userEmailEntry?.email || `user-${profile.id.substring(0, 8)}@example.com`);
+            const email = profile.email || (userEmailEntry?.email || profile.screen_name || `user-${profile.id.substring(0, 8)}`);
             
             return {
               id: profile.id,
               email: email,
               created_at: profile.created_at,
+              created_by: profile.created_by,
               profile: {
                 first_name: profile.first_name,
                 last_name: profile.last_name,
@@ -80,15 +84,15 @@ export function UserManagementTab() {
     };
 
     // Only fetch users when we have emails data and not loading
-    if (!isLoadingEmails) {
+    if (!isLoadingEmails && user) {
       console.log("Email data loaded, fetching users");
       fetchUsers();
     }
-  }, [userEmails, isLoadingEmails]);
+  }, [userEmails, isLoadingEmails, user]);
 
   const handleUserCreated = () => {
     // Reload the users list when a new user is created
-    if (!isLoadingEmails) {
+    if (!isLoadingEmails && user) {
       setIsLoading(true);
       // Small delay to ensure the database has updated
       setTimeout(async () => {
@@ -96,7 +100,8 @@ export function UserManagementTab() {
           // Fetch profiles which have user data
           const { data: profilesData, error: profilesError } = await supabase
             .from('profiles')
-            .select('id, first_name, last_name, role, screen_name, email, created_at');
+            .select('id, first_name, last_name, role, screen_name, email, created_at, created_by')
+            .eq('created_by', user.id);
           
           if (profilesError) {
             console.error("Error fetching profiles:", profilesError);
@@ -112,12 +117,13 @@ export function UserManagementTab() {
           const enrichedUsers = await Promise.all(
             profilesData.map(async (profile) => {
               const userEmailEntry = userEmails.find(ue => ue.id === profile.id);
-              const email = profile.email || (userEmailEntry?.email || `user-${profile.id.substring(0, 8)}@example.com`);
+              const email = profile.email || (userEmailEntry?.email || profile.screen_name || `user-${profile.id.substring(0, 8)}`);
               
               return {
                 id: profile.id,
                 email: email,
                 created_at: profile.created_at,
+                created_by: profile.created_by,
                 profile: {
                   first_name: profile.first_name,
                   last_name: profile.last_name,

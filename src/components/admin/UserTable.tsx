@@ -18,6 +18,8 @@ import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { ThemedButton } from "@/components/ui/themed-button";
 import { UserSummary } from "@/pages/admin/UserManagementPage";
+import { useAuth } from "@/contexts/AuthContext";
+import { Badge } from "@/components/ui/badge";
 
 interface UserTableProps {
   users: UserSummary[];
@@ -25,10 +27,12 @@ interface UserTableProps {
 }
 
 export function UserTable({ users, onCreateUser }: UserTableProps) {
+  const { user: currentUser } = useAuth();
+  
   const columns: ColumnDef<UserSummary>[] = [
     {
       accessorKey: "profile.screen_name",
-      header: "Benutzername",
+      header: "Username",
     },
     {
       accessorKey: "email",
@@ -36,14 +40,24 @@ export function UserTable({ users, onCreateUser }: UserTableProps) {
     },
     {
       accessorKey: "profile.role",
-      header: "Rolle",
+      header: "Role",
     },
     {
       accessorKey: "created_at",
-      header: "Registriert",
+      header: "Created",
       cell: ({ row }) => {
         const date = new Date(row.getValue("created_at") as string);
         return date.toLocaleDateString();
+      },
+    },
+    {
+      id: "status",
+      header: "Status",
+      cell: ({ row }) => {
+        const createdByCurrentUser = row.original.created_by === currentUser?.id;
+        return createdByCurrentUser ? (
+          <Badge className="bg-green-500">Created by you</Badge>
+        ) : null;
       },
     },
     {
@@ -65,7 +79,7 @@ export function UserTable({ users, onCreateUser }: UserTableProps) {
   return (
     <div className="w-full">
       <div className="pb-4">
-        <Button onClick={onCreateUser}>Benutzer erstellen</Button>
+        <Button onClick={onCreateUser}>Create User</Button>
       </div>
       <div className="rounded-md border">
         <Table>
@@ -88,15 +102,23 @@ export function UserTable({ users, onCreateUser }: UserTableProps) {
             ))}
           </TableHeader>
           <TableBody>
-            {table.getRowModel().rows.map((row) => (
-              <TableRow key={row.id}>
-                {row.getVisibleCells().map((cell) => (
-                  <TableCell key={cell.id}>
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </TableCell>
-                ))}
+            {table.getRowModel().rows.length ? (
+              table.getRowModel().rows.map((row) => (
+                <TableRow key={row.id}>
+                  {row.getVisibleCells().map((cell) => (
+                    <TableCell key={cell.id}>
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell colSpan={columns.length} className="h-24 text-center">
+                  No users found.
+                </TableCell>
               </TableRow>
-            ))}
+            )}
           </TableBody>
         </Table>
       </div>

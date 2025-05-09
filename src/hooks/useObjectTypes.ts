@@ -3,6 +3,7 @@ import { useQuery, useMutation, QueryObserverResult, RefetchOptions } from "@tan
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
+import { ObjectField as ObjectFieldType } from "@/types/ObjectFieldTypes";
 
 export interface ObjectType {
   id: string;
@@ -23,20 +24,29 @@ export interface ObjectType {
   updated_at?: string;
 }
 
+// Ensure this matches the ObjectField type in ObjectFieldTypes.ts
 export interface ObjectField {
   id: string;
   object_type_id: string;
   name: string;
   api_name: string;
   data_type: string;
-  is_required: boolean; // Changed from optional to required to match ObjectFieldTypes.ts
+  is_required: boolean;
   is_system?: boolean;
   default_value?: string | null;
   options?: any;
-  display_order?: number;
+  display_order: number; // Make this required to match ObjectFieldTypes
   owner_id?: string;
   created_at?: string;
 }
+
+// Helper function to convert ObjectField to ObjectFieldType
+export const convertToObjectFieldType = (field: ObjectField): ObjectFieldType => {
+  return {
+    ...field,
+    display_order: field.display_order || 0, // Ensure display_order is always set
+  };
+};
 
 export function useObjectTypes() {
   const { user } = useAuth();
@@ -251,6 +261,7 @@ export function useObjectTypes() {
     restoreObjectType,
     deleteObjectType,
     archivedObjects,
-    importObjectType
+    importObjectType,
+    convertToObjectFieldType
   };
 }

@@ -17,6 +17,7 @@ export interface UserSummary {
   id: string;
   email: string;
   created_at: string;
+  created_by?: string;
   last_sign_in_at?: string;
   profile?: {
     first_name?: string;
@@ -33,7 +34,7 @@ export interface UserSummary {
 }
 
 export default function UserManagementPage() {
-  const { isSuperAdmin } = useAuth();
+  const { isSuperAdmin, user } = useAuth();
   const navigate = useNavigate();
   const [users, setUsers] = useState<UserSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -60,10 +61,11 @@ export default function UserManagementPage() {
         setIsLoading(true);
         console.log("Starting user data fetch process");
         
-        // Fetch profiles which have user data
+        // Fetch only profiles created by current user or the user's own profile
         const { data: profilesData, error: profilesError } = await supabase
           .from('profiles')
-          .select('id, first_name, last_name, role, screen_name, email, created_at');
+          .select('id, first_name, last_name, role, screen_name, email, created_at, created_by')
+          .or(`created_by.eq.${user?.id},id.eq.${user?.id}`);
         
         if (profilesError) {
           console.error("Error fetching profiles:", profilesError);
@@ -116,6 +118,7 @@ export default function UserManagementPage() {
               id: profile.id,
               email: email,
               created_at: profile.created_at,
+              created_by: profile.created_by,
               profile: {
                 first_name: profile.first_name,
                 last_name: profile.last_name,
@@ -143,24 +146,25 @@ export default function UserManagementPage() {
     };
 
     // Only fetch users when we have emails data and not loading
-    if (!isLoadingEmails) {
+    if (!isLoadingEmails && user) {
       console.log("Email data loaded, fetching users");
       fetchUsers();
     }
-  }, [userEmails, isLoadingEmails]);
+  }, [userEmails, isLoadingEmails, user]);
 
   const handleUserCreated = () => {
     // Reload the users list when a new user is created
-    if (!isLoadingEmails) {
+    if (!isLoadingEmails && user) {
       setIsLoading(true);
       // Small delay to ensure the database has updated
       setTimeout(() => {
         const fetchUsers = async () => {
           try {
-            // Fetch profiles which have user data
+            // Fetch only profiles created by current user or the user's own profile
             const { data: profilesData, error: profilesError } = await supabase
               .from('profiles')
-              .select('id, first_name, last_name, role, screen_name, email, created_at');
+              .select('id, first_name, last_name, role, screen_name, email, created_at, created_by')
+              .or(`created_by.eq.${user?.id},id.eq.${user?.id}`);
             
             if (profilesError) {
               console.error("Error fetching profiles:", profilesError);
@@ -200,6 +204,7 @@ export default function UserManagementPage() {
                   id: profile.id,
                   email: email,
                   created_at: profile.created_at,
+                  created_by: profile.created_by,
                   profile: {
                     first_name: profile.first_name,
                     last_name: profile.last_name,
@@ -254,7 +259,7 @@ export default function UserManagementPage() {
         <TabsContent value="users">
           <Card>
             <CardHeader>
-              <CardTitle>Registrierte Benutzer ({users.length})</CardTitle>
+              <CardTitle>Registered Users ({users.length})</CardTitle>
             </CardHeader>
             <CardContent>
               <UserTable 

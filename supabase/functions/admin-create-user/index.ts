@@ -85,17 +85,29 @@ serve(async (req) => {
     // Get the created user's email for confirmation
     const { data: userData, error: userError } = await supabase
       .from('profiles')
-      .select('email')
+      .select('email, screen_name')
       .eq('id', functionData)
       .single();
 
     const userEmail = userData?.email || email;
+    
+    // Update created_by field to link this user to the current admin
+    const { error: updateError } = await supabase
+      .from('profiles')
+      .update({ created_by: user.id })
+      .eq('id', functionData);
+      
+    if (updateError) {
+      console.error("Failed to update created_by field:", updateError);
+      // Continue even if this fails, as the user has been created
+    }
     
     // Return the user ID and email
     return new Response(
       JSON.stringify({ 
         id: functionData,
         email: userEmail,
+        screen_name: userData?.screen_name || first_name,
         message: "Benutzer erfolgreich erstellt" 
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }

@@ -34,7 +34,7 @@ export interface ObjectField {
   default_value?: string | null;
   options?: any | null;
   object_type_id: string;
-  display_order: number;
+  display_order: number; // This is required
   owner_id: string;
   created_at: string;
   updated_at?: string;

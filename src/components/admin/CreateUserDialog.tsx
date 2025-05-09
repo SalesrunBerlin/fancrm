@@ -8,6 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Loader2 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface CreateUserDialogProps {
   open: boolean;
@@ -17,24 +18,25 @@ interface CreateUserDialogProps {
 
 export function CreateUserDialog({ open, onClose, onUserCreated }: CreateUserDialogProps) {
   const [formData, setFormData] = useState({
-    email: '',
+    username: '',
     password: '',
-    first_name: '',
-    last_name: '',
+    email: '',
     metadata_access: true,
     data_access: false,
   });
   const [isLoading, setIsLoading] = useState(false);
   const [workspaces, setWorkspaces] = useState<any[]>([]);
   const [selectedWorkspace, setSelectedWorkspace] = useState<string>('');
-  const [generateEmail, setGenerateEmail] = useState<boolean>(false);
+  const [showEmailField, setShowEmailField] = useState<boolean>(false);
+  const { user } = useAuth();
   
   useEffect(() => {
     const fetchWorkspaces = async () => {
       try {
         const { data, error } = await supabase
           .from('workspaces')
-          .select('id, name');
+          .select('id, name')
+          .eq('owner_id', user?.id);
           
         if (error) throw error;
         setWorkspaces(data || []);
@@ -52,7 +54,7 @@ export function CreateUserDialog({ open, onClose, onUserCreated }: CreateUserDia
       const randomPassword = Math.random().toString(36).slice(-8);
       setFormData(prev => ({ ...prev, password: randomPassword }));
     }
-  }, [open]);
+  }, [open, user]);
   
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -72,13 +74,16 @@ export function CreateUserDialog({ open, onClose, onUserCreated }: CreateUserDia
     
     try {
       setIsLoading(true);
+
+      // Generate email from username if email is not provided
+      const emailToUse = showEmailField && formData.email ? formData.email : `${formData.username}@workspace.local`;
       
       const { data, error } = await supabase.functions.invoke('admin-create-user', {
         body: {
-          email: generateEmail ? null : formData.email,
+          email: emailToUse,
           password: formData.password,
-          first_name: formData.first_name,
-          last_name: formData.last_name,
+          first_name: formData.username,
+          last_name: '',
           workspace_id: selectedWorkspace,
           metadata_access: formData.metadata_access,
           data_access: formData.data_access
@@ -87,8 +92,8 @@ export function CreateUserDialog({ open, onClose, onUserCreated }: CreateUserDia
       
       if (error) throw error;
       
-      toast.success("Benutzer wurde erfolgreich erstellt", {
-        description: `Email: ${data.email || formData.email} mit Passwort: ${formData.password}`
+      toast.success("User created successfully", {
+        description: `Username: ${formData.username} with password: ${formData.password}`
       });
       
       onUserCreated();
@@ -96,8 +101,8 @@ export function CreateUserDialog({ open, onClose, onUserCreated }: CreateUserDia
       
     } catch (error: any) {
       console.error('Error creating user:', error);
-      toast.error("Fehler beim Erstellen des Benutzers", {
-        description: error.message || "Bitte versuchen Sie es erneut"
+      toast.error("Error creating user", {
+        description: error.message || "Please try again"
       });
     } finally {
       setIsLoading(false);
@@ -108,35 +113,48 @@ export function CreateUserDialog({ open, onClose, onUserCreated }: CreateUserDia
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Neuen Benutzer erstellen</DialogTitle>
+          <DialogTitle>Create New User</DialogTitle>
         </DialogHeader>
         
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="flex items-center space-x-2 mb-2">
-            <Switch
-              id="generate_email"
-              checked={generateEmail}
-              onCheckedChange={setGenerateEmail}
+          <div className="space-y-2">
+            <Label htmlFor="username">Username</Label>
+            <Input
+              id="username"
+              name="username"
+              value={formData.username}
+              onChange={handleChange}
+              required
             />
-            <Label htmlFor="generate_email">Automatische E-Mail generieren</Label>
           </div>
           
-          {!generateEmail && (
+          <div className="flex items-center space-x-2">
+            <Switch
+              id="show_email"
+              checked={showEmailField}
+              onCheckedChange={setShowEmailField}
+            />
+            <Label htmlFor="show_email">Add custom email address</Label>
+          </div>
+          
+          {showEmailField && (
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">Email (Optional)</Label>
               <Input
                 id="email"
                 name="email"
                 type="email"
                 value={formData.email}
                 onChange={handleChange}
-                required={!generateEmail}
               />
+              <p className="text-sm text-muted-foreground">
+                If left empty, an email will be generated from the username
+              </p>
             </div>
           )}
           
           <div className="space-y-2">
-            <Label htmlFor="password">Passwort</Label>
+            <Label htmlFor="password">Password</Label>
             <div className="flex gap-2">
               <Input
                 id="password"
@@ -155,30 +173,8 @@ export function CreateUserDialog({ open, onClose, onUserCreated }: CreateUserDia
                   setFormData(prev => ({ ...prev, password: randomPassword }));
                 }}
               >
-                Generieren
+                Generate
               </Button>
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="first_name">Vorname</Label>
-              <Input
-                id="first_name"
-                name="first_name"
-                value={formData.first_name}
-                onChange={handleChange}
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="last_name">Nachname</Label>
-              <Input
-                id="last_name"
-                name="last_name"
-                value={formData.last_name}
-                onChange={handleChange}
-              />
             </div>
           </div>
           
@@ -204,7 +200,7 @@ export function CreateUserDialog({ open, onClose, onUserCreated }: CreateUserDia
               checked={formData.metadata_access}
               onCheckedChange={(checked) => handleSwitchChange('metadata_access', checked)}
             />
-            <Label htmlFor="metadata_access">Metadaten-Zugriff (Objekte und Felder)</Label>
+            <Label htmlFor="metadata_access">Metadata access (Objects and fields)</Label>
           </div>
           
           <div className="flex items-center space-x-2">
@@ -213,21 +209,21 @@ export function CreateUserDialog({ open, onClose, onUserCreated }: CreateUserDia
               checked={formData.data_access}
               onCheckedChange={(checked) => handleSwitchChange('data_access', checked)}
             />
-            <Label htmlFor="data_access">Datenzugriff (Datensätze)</Label>
+            <Label htmlFor="data_access">Data access (Records)</Label>
           </div>
           
           <div className="flex justify-end space-x-2 pt-4">
             <Button type="button" variant="outline" onClick={onClose}>
-              Abbrechen
+              Cancel
             </Button>
             <Button type="submit" disabled={isLoading}>
               {isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Erstellen...
+                  Creating...
                 </>
               ) : (
-                'Benutzer erstellen'
+                'Create User'
               )}
             </Button>
           </div>
