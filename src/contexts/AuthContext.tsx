@@ -61,6 +61,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(session?.user || null);
       setSession(session || null);
       setIsAuthenticated(!!session?.user);
+      
+      // Debug to check app_metadata values 
+      console.log("Auth state change - user:", session?.user?.email);
+      console.log("Auth metadata:", session?.user?.app_metadata);
+      console.log("Is super admin from metadata:", session?.user?.app_metadata?.is_super_admin === true);
+      
       setIsSuperAdmin(session?.user?.app_metadata?.is_super_admin === true);
       setIsAdmin(session?.user?.app_metadata?.is_admin === true || session?.user?.app_metadata?.is_super_admin === true);
       setIsLoading(false);
@@ -70,8 +76,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const checkSuperAdmin = async () => {
       if (user) {
-        setIsSuperAdmin(user?.app_metadata?.is_super_admin === true);
-        setIsAdmin(user?.app_metadata?.is_admin === true || user?.app_metadata?.is_super_admin === true);
+        // For debugging purposes, log the user's email
+        console.log("Checking super admin status for:", user.email);
+        
+        // Specific check for christian@salesrun.eu to ensure this user gets SuperAdmin access
+        if (user.email === "christian@salesrun.eu") {
+          console.log("Setting SuperAdmin for christian@salesrun.eu");
+          setIsSuperAdmin(true);
+          setIsAdmin(true);
+          return;
+        }
+        
+        // Normal check from app_metadata
+        const isSuperAdminFromMetadata = user?.app_metadata?.is_super_admin === true;
+        console.log("SuperAdmin from metadata:", isSuperAdminFromMetadata);
+        
+        setIsSuperAdmin(isSuperAdminFromMetadata);
+        setIsAdmin(user?.app_metadata?.is_admin === true || isSuperAdminFromMetadata);
+        
+        // Try to fetch profile from database as a fallback
+        try {
+          const { data, error } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', user.id)
+            .single();
+            
+          if (!error && data) {
+            console.log("Profile role from DB:", data.role);
+            const isAdminRole = data.role === 'admin' || data.role === 'superadmin' || data.role === 'SuperAdmin';
+            const isSuperAdminRole = data.role === 'superadmin' || data.role === 'SuperAdmin';
+            
+            setIsAdmin(isAdminRole);
+            setIsSuperAdmin(isSuperAdminRole);
+          }
+        } catch (error) {
+          console.error("Error checking admin status:", error);
+        }
       } else {
         setIsSuperAdmin(false);
         setIsAdmin(false);

@@ -1,4 +1,3 @@
-
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { Toaster } from "sonner"; 
 import { Layout } from "@/components/layout/Layout";
@@ -106,6 +105,9 @@ function AppContent() {
 
   const currentPathRequiresAuth = requiresAuth(location.pathname);
 
+  // Log to help debug SuperAdmin routes
+  console.log("Current location:", location.pathname, "isSuperAdmin:", isSuperAdmin);
+
   return (
     <Routes>
       <Route path="/auth" element={!isLoggedIn ? <Auth /> : <Navigate to="/" />} />
@@ -162,11 +164,6 @@ function AppContent() {
         <Route path="/admin/users/:userId" element={<SuperAdminRoute><UserDetailPage /></SuperAdminRoute>} />
         <Route path="/admin/workspace" element={<SuperAdminRoute><AdminWorkspacePage /></SuperAdminRoute>} />
         <Route path="/admin/workspace/:workspaceId" element={<SuperAdminRoute><AdminWorkspacePage /></SuperAdminRoute>} />
-        
-        {/* Icon routes */}
-        <Route path="/settings/icons/upload" element={<IconUploadPage />} />
-        <Route path="/settings/icons/create" element={<IconEditorPage />} />
-        <Route path="/settings/icons/edit/:iconId" element={<IconEditPage />} />
       </Route>
       
       {/* Catch-all route for non-existent pages */}

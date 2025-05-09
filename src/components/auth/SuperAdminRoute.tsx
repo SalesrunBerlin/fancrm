@@ -18,9 +18,14 @@ export function SuperAdminRoute({ children }: { children: React.ReactNode }) {
     return <Navigate to="/auth" replace />;
   }
 
+  // Check if the user is marked as a SuperAdmin
   if (!isSuperAdmin) {
+    console.log("Access denied: User is not a SuperAdmin");
     return <Navigate to="/dashboard" replace />;
   }
 
+  // Debug log to help troubleshoot
+  console.log("SuperAdminRoute granted access to:", user.email);
+  
   return <>{children}</>;
 }

@@ -4,6 +4,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ObjectField } from "@/types/ObjectFieldTypes";
 import { FilterCondition } from "@/hooks/useObjectRecords";
 import { useFieldPicklistValues } from "@/hooks/useFieldPicklistValues";
+import { supabase } from "@/integrations/supabase/client";
 
 interface FilterFieldProps {
   filter: FilterCondition;

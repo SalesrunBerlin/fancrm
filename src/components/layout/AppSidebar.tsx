@@ -1,4 +1,3 @@
-
 import {
   Sidebar,
   SidebarContent,
@@ -10,7 +9,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { LayoutDashboard, Box, BarChart3, Settings, Archive, Users, HelpCircle } from "lucide-react";
+import { LayoutDashboard, Box, BarChart3, Settings, Archive, Users, HelpCircle, Shield } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
 import { useApplications } from "@/hooks/useApplications";
@@ -71,6 +70,9 @@ export function AppSidebar() {
     setOpen(false);
   };
 
+  // Debug log to check super admin status
+  console.log("AppSidebar - isSuperAdmin:", isSuperAdmin, "isAdmin:", isAdmin);
+
   return (
     <Sidebar variant="floating">
       <SidebarContent>
@@ -78,20 +80,31 @@ export function AppSidebar() {
           <SidebarGroupLabel>Navigation</SidebarGroupLabel>
           <SidebarGroupContent className="space-y-0.5">
             <SidebarMenu>
-              {navigationItems.map((item) => (
-                <SidebarMenuItem key={item.path}>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={pathname === item.path || pathname.startsWith(item.path + "/")}
-                    tooltip={item.title}
-                  >
-                    <Link to={item.path} onClick={handleNavClick}>
-                      <item.icon className="h-4 w-4" />
-                      <span>{item.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
+                  isActive={pathname === "/dashboard"}
+                  tooltip="Dashboard"
+                >
+                  <Link to="/dashboard" onClick={handleNavClick}>
+                    <LayoutDashboard className="h-4 w-4" />
+                    <span>Dashboard</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
+                  isActive={pathname === "/reports"}
+                  tooltip="Reports"
+                >
+                  <Link to="/reports" onClick={handleNavClick}>
+                    <BarChart3 className="h-4 w-4" />
+                    <span>Reports</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
@@ -163,34 +176,48 @@ export function AppSidebar() {
                 </SidebarMenuButton>
               </SidebarMenuItem>
               
-              {(isAdmin || isSuperAdmin) && (
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={pathname.startsWith("/admin")}
-                    tooltip="Admin"
-                  >
-                    <Link to="/admin" onClick={handleNavClick}>
-                      <Users className="h-4 w-4" />
-                      <span>Admin</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              )}
-              
-              {(isAdmin || isSuperAdmin) && (
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={pathname === "/admin/workspace"}
-                    tooltip="Workspace Management"
-                  >
-                    <Link to="/admin/workspace" onClick={handleNavClick}>
-                      <Users className="h-4 w-4" />
-                      <span>Workspace</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
+              {/* Add Admin section for SuperAdmin users */}
+              {isSuperAdmin && (
+                <>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={pathname.startsWith("/admin")}
+                      tooltip="Admin"
+                    >
+                      <Link to="/admin" onClick={handleNavClick}>
+                        <Shield className="h-4 w-4" />
+                        <span>Admin</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={pathname === "/admin/help-content"}
+                      tooltip="Help Content"
+                    >
+                      <Link to="/admin/help-content" onClick={handleNavClick}>
+                        <HelpCircle className="h-4 w-4" />
+                        <span>Help Content</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={pathname === "/admin/users"}
+                      tooltip="User Management"
+                    >
+                      <Link to="/admin/users" onClick={handleNavClick}>
+                        <Users className="h-4 w-4" />
+                        <span>User Management</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                </>
               )}
             </SidebarMenu>
           </SidebarGroupContent>

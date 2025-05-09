@@ -30,6 +30,9 @@ export function UserProfileMenu() {
     return user.email.charAt(0).toUpperCase();
   };
 
+  // Debug log to check super admin status
+  console.log("User profile menu - isSuperAdmin:", isSuperAdmin, "for user:", user?.email);
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>

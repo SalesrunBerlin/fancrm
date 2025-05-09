@@ -1,36 +1,25 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from '@/components/ui/table';
-import { ThemedButton } from '@/components/ui/themed-button';
-import { supabase } from '@/integrations/supabase/client';
-import { Loader2, Plus, UserPlus } from 'lucide-react';
-import { WorkspaceInviteDialog } from './WorkspaceInviteDialog';
-import { useAuth } from '@/contexts/AuthContext';
-import { Switch } from '@/components/ui/switch';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Loader2, Plus, Search, UserPlus, X } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { useUserEmails } from '@/hooks/useUserEmails';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 interface WorkspaceUser {
   id: string;
-  user: {
-    id: string;
-    email?: string;
-    first_name?: string;
-    last_name?: string;
-    screen_name?: string;
-  };
-  can_modify_objects: boolean;
-  can_create_objects: boolean;
-  can_manage_users: boolean;
-  can_create_actions: boolean;
+  email: string;
+  role: string;
+  first_name?: string;
+  last_name?: string;
+  screen_name?: string;
+  created_at: string;
 }
 
 interface WorkspaceUsersListProps {
@@ -38,11 +27,13 @@ interface WorkspaceUsersListProps {
 }
 
 export function WorkspaceUsersList({ workspaceId }: WorkspaceUsersListProps) {
-  const { user } = useAuth();
-  const [workspaceUsers, setWorkspaceUsers] = useState<WorkspaceUser[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
-  const [isUpdating, setIsUpdating] = useState<string | null>(null);
+  const [users, setUsers] = useState<WorkspaceUser[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [addUserDialogOpen, setAddUserDialogOpen] = useState(false);
+  const [selectedUserId, setSelectedUserId] = useState<string>('');
+  const [selectedRole, setSelectedRole] = useState<string>('user');
+  const { userEmails, isLoading: isLoadingEmails } = useUserEmails();
 
   useEffect(() => {
     fetchWorkspaceUsers();
@@ -50,207 +41,298 @@ export function WorkspaceUsersList({ workspaceId }: WorkspaceUsersListProps) {
 
   const fetchWorkspaceUsers = async () => {
     try {
-      setIsLoading(true);
+      setLoading(true);
+      
+      // Fetch workspace users
       const { data, error } = await supabase
         .from('workspace_users')
         .select(`
           id,
-          can_modify_objects,
-          can_create_objects,
-          can_manage_users,
-          can_create_actions,
-          user:user_id(
-            id,
-            email:profiles!inner(email),
-            first_name:profiles!inner(first_name),
-            last_name:profiles!inner(last_name),
-            screen_name:profiles!inner(screen_name)
+          user_id,
+          workspace_id,
+          role,
+          created_at,
+          profiles:user_id (
+            email,
+            first_name,
+            last_name,
+            screen_name
           )
         `)
-        .eq('workspace_id', workspaceId)
-        .order('created_at');
-        
+        .eq('workspace_id', workspaceId);
+      
       if (error) throw error;
       
-      // Format data for display
-      const formattedData = data?.map(item => ({
-        id: item.id,
-        user: {
-          id: item.user.id,
-          email: item.user.email?.[0]?.email || '',
-          first_name: item.user.first_name?.[0]?.first_name || '',
-          last_name: item.user.last_name?.[0]?.last_name || '',
-          screen_name: item.user.screen_name?.[0]?.screen_name || item.user.id.substring(0, 8)
-        },
-        can_modify_objects: item.can_modify_objects || false,
-        can_create_objects: item.can_create_objects || false,
-        can_manage_users: item.can_manage_users || false,
-        can_create_actions: item.can_create_actions || false,
-      })) || [];
-
-      setWorkspaceUsers(formattedData);
+      // Transform the data to match our WorkspaceUser interface
+      const transformedUsers = data.map(item => {
+        const profile = item.profiles as { 
+          email?: string; 
+          first_name?: string; 
+          last_name?: string; 
+          screen_name?: string; 
+        };
+        
+        // Find the email from userEmails if profile doesn't have it
+        let email = profile?.email || '';
+        if (!email && userEmails) {
+          const userEmail = userEmails.find(ue => ue.id === item.user_id);
+          if (userEmail) {
+            email = userEmail.email;
+          }
+        }
+        
+        return {
+          id: item.user_id,
+          email: email,
+          role: item.role,
+          first_name: profile?.first_name,
+          last_name: profile?.last_name,
+          screen_name: profile?.screen_name,
+          created_at: item.created_at
+        };
+      });
+      
+      setUsers(transformedUsers);
     } catch (error) {
       console.error('Error fetching workspace users:', error);
+      toast.error('Failed to load workspace users');
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
-  const handlePermissionChange = async (userId: string, permission: string, value: boolean) => {
-    setIsUpdating(userId);
+  const addUserToWorkspace = async () => {
+    if (!selectedUserId) {
+      toast.error('Please select a user');
+      return;
+    }
+
+    try {
+      // Check if user is already in workspace
+      const { data: existingUser } = await supabase
+        .from('workspace_users')
+        .select('id')
+        .eq('workspace_id', workspaceId)
+        .eq('user_id', selectedUserId)
+        .single();
+      
+      if (existingUser) {
+        toast.error('User is already in this workspace');
+        return;
+      }
+
+      // Add user to workspace
+      const { error } = await supabase
+        .from('workspace_users')
+        .insert({
+          workspace_id: workspaceId,
+          user_id: selectedUserId,
+          role: selectedRole
+        });
+      
+      if (error) throw error;
+      
+      toast.success('User added to workspace');
+      setAddUserDialogOpen(false);
+      fetchWorkspaceUsers();
+    } catch (error) {
+      console.error('Error adding user to workspace:', error);
+      toast.error('Failed to add user to workspace');
+    }
+  };
+
+  const removeUserFromWorkspace = async (userId: string) => {
     try {
       const { error } = await supabase
         .from('workspace_users')
-        .update({ [permission]: value })
-        .eq('id', userId);
-        
+        .delete()
+        .eq('workspace_id', workspaceId)
+        .eq('user_id', userId);
+      
       if (error) throw error;
       
-      // Update local state
-      setWorkspaceUsers(prev => 
-        prev.map(wsUser => 
-          wsUser.id === userId 
-            ? { ...wsUser, [permission]: value } 
-            : wsUser
-        )
-      );
-      
-      toast.success('Berechtigungen aktualisiert');
+      toast.success('User removed from workspace');
+      fetchWorkspaceUsers();
     } catch (error) {
-      console.error('Error updating permissions:', error);
-      toast.error('Fehler beim Aktualisieren der Berechtigungen');
-    } finally {
-      setIsUpdating(null);
+      console.error('Error removing user from workspace:', error);
+      toast.error('Failed to remove user from workspace');
     }
   };
 
-  const handleInviteCreated = () => {
-    setInviteDialogOpen(false);
-    toast.success('Einladung wurde erstellt');
+  const updateUserRole = async (userId: string, newRole: string) => {
+    try {
+      const { error } = await supabase
+        .from('workspace_users')
+        .update({ role: newRole })
+        .eq('workspace_id', workspaceId)
+        .eq('user_id', userId);
+      
+      if (error) throw error;
+      
+      toast.success('User role updated');
+      fetchWorkspaceUsers();
+    } catch (error) {
+      console.error('Error updating user role:', error);
+      toast.error('Failed to update user role');
+    }
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
+  const filteredUsers = users.filter(user => 
+    user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (user.first_name && user.first_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (user.last_name && user.last_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (user.screen_name && user.screen_name.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
+
+  // Get available users (not already in workspace)
+  const availableUsers = userEmails.filter(user => 
+    !users.some(workspaceUser => workspaceUser.id === user.id)
+  );
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle>Workspace-Benutzer</CardTitle>
-        <ThemedButton size="sm" onClick={() => setInviteDialogOpen(true)}>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <CardTitle>Workspace Users</CardTitle>
+        <Button onClick={() => setAddUserDialogOpen(true)}>
           <UserPlus className="mr-2 h-4 w-4" />
-          Benutzer einladen
-        </ThemedButton>
+          Add User
+        </Button>
       </CardHeader>
       <CardContent>
-        {workspaceUsers.length > 0 ? (
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Benutzer</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Berechtigungen</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {workspaceUsers.map((wsUser) => (
-                  <TableRow key={wsUser.id}>
-                    <TableCell className="font-medium">
-                      {wsUser.user.first_name} {wsUser.user.last_name || ''}
-                      <div className="text-xs text-muted-foreground">
-                        {wsUser.user.screen_name}
-                      </div>
-                    </TableCell>
-                    <TableCell>{wsUser.user.email}</TableCell>
-                    <TableCell>
-                      {isUpdating === wsUser.id ? (
-                        <div className="flex items-center justify-center h-full">
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        </div>
-                      ) : (
-                        <div className="space-y-2">
-                          <div className="flex items-center space-x-2">
-                            <Switch
-                              id={`create-objects-${wsUser.id}`}
-                              checked={wsUser.can_create_objects}
-                              onCheckedChange={(checked) => 
-                                handlePermissionChange(wsUser.id, 'can_create_objects', checked)
-                              }
-                              disabled={wsUser.user.id === user?.id} // Can't change own permissions
-                            />
-                            <Label htmlFor={`create-objects-${wsUser.id}`}>
-                              Objekte erstellen
-                            </Label>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <Switch
-                              id={`modify-objects-${wsUser.id}`}
-                              checked={wsUser.can_modify_objects}
-                              onCheckedChange={(checked) => 
-                                handlePermissionChange(wsUser.id, 'can_modify_objects', checked)
-                              }
-                              disabled={wsUser.user.id === user?.id}
-                            />
-                            <Label htmlFor={`modify-objects-${wsUser.id}`}>
-                              Objekte bearbeiten
-                            </Label>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <Switch
-                              id={`create-actions-${wsUser.id}`}
-                              checked={wsUser.can_create_actions}
-                              onCheckedChange={(checked) => 
-                                handlePermissionChange(wsUser.id, 'can_create_actions', checked)
-                              }
-                              disabled={wsUser.user.id === user?.id}
-                            />
-                            <Label htmlFor={`create-actions-${wsUser.id}`}>
-                              Aktionen erstellen
-                            </Label>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <Switch
-                              id={`manage-users-${wsUser.id}`}
-                              checked={wsUser.can_manage_users}
-                              onCheckedChange={(checked) => 
-                                handlePermissionChange(wsUser.id, 'can_manage_users', checked)
-                              }
-                              disabled={wsUser.user.id === user?.id}
-                            />
-                            <Label htmlFor={`manage-users-${wsUser.id}`}>
-                              Benutzer verwalten
-                            </Label>
-                          </div>
-                        </div>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+        <div className="mb-4">
+          <div className="relative">
+            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search users..."
+              className="pl-8"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+        </div>
+
+        {loading ? (
+          <div className="flex justify-center py-8">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
         ) : (
-          <div className="text-center py-4">
-            <p className="text-muted-foreground mb-4">Keine Benutzer diesem Workspace zugeordnet</p>
-            <ThemedButton onClick={() => setInviteDialogOpen(true)}>
-              <UserPlus className="mr-2 h-4 w-4" />
-              Benutzer einladen
-            </ThemedButton>
+          <div className="space-y-4">
+            {filteredUsers.length === 0 ? (
+              <p className="text-center text-muted-foreground py-8">
+                No users found in this workspace.
+              </p>
+            ) : (
+              filteredUsers.map((user) => (
+                <div key={user.id} className="flex items-center justify-between border-b pb-4">
+                  <div className="flex items-center space-x-4">
+                    <Avatar>
+                      <AvatarImage src="" />
+                      <AvatarFallback>
+                        {user.first_name ? user.first_name[0] : user.email[0].toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <p className="font-medium">
+                        {user.first_name && user.last_name 
+                          ? `${user.first_name} ${user.last_name}` 
+                          : user.screen_name || user.email}
+                      </p>
+                      <p className="text-sm text-muted-foreground">{user.email}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Select
+                      defaultValue={user.role}
+                      onValueChange={(value) => updateUserRole(user.id, value)}
+                    >
+                      <SelectTrigger className="w-[120px]">
+                        <SelectValue placeholder="Role" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="admin">Admin</SelectItem>
+                        <SelectItem value="user">User</SelectItem>
+                        <SelectItem value="viewer">Viewer</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Button 
+                      variant="ghost" 
+                      size="icon"
+                      onClick={() => removeUserFromWorkspace(user.id)}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         )}
+
+        {/* Add User Dialog */}
+        <Dialog open={addUserDialogOpen} onOpenChange={setAddUserDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Add User to Workspace</DialogTitle>
+              <DialogDescription>
+                Select a user and assign a role to add them to this workspace.
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="user">User</Label>
+                <Select 
+                  value={selectedUserId} 
+                  onValueChange={setSelectedUserId}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a user" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {isLoadingEmails ? (
+                      <div className="flex justify-center p-2">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      </div>
+                    ) : (
+                      availableUsers.map((user) => (
+                        <SelectItem key={user.id} value={user.id}>
+                          {user.email}
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="role">Role</Label>
+                <Select 
+                  value={selectedRole} 
+                  onValueChange={setSelectedRole}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="admin">Admin</SelectItem>
+                    <SelectItem value="user">User</SelectItem>
+                    <SelectItem value="viewer">Viewer</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setAddUserDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={addUserToWorkspace}>
+                Add User
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </CardContent>
-      
-      <WorkspaceInviteDialog
-        open={inviteDialogOpen}
-        onClose={() => setInviteDialogOpen(false)}
-        workspaceId={workspaceId}
-        onInviteCreated={handleInviteCreated}
-      />
     </Card>
   );
 }
