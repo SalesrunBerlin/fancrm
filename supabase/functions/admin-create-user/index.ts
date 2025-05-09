@@ -61,6 +61,52 @@ serve(async (req) => {
     // Parse the request body
     const { email, password, first_name, last_name, workspace_id, metadata_access = true, data_access = false } = await req.json();
     
+    // Find or create a workspace
+    let finalWorkspaceId = workspace_id;
+    
+    if (!finalWorkspaceId) {
+      console.log("No workspace provided, checking for existing workspaces...");
+      
+      // Check if admin has any workspaces
+      const { data: existingWorkspaces, error: workspaceError } = await supabase
+        .from('workspaces')
+        .select('id')
+        .eq('owner_id', user.id)
+        .limit(1);
+      
+      if (workspaceError) {
+        console.error("Error checking existing workspaces:", workspaceError);
+      }
+      
+      if (existingWorkspaces && existingWorkspaces.length > 0) {
+        console.log("Using existing workspace:", existingWorkspaces[0].id);
+        finalWorkspaceId = existingWorkspaces[0].id;
+      } else {
+        console.log("No existing workspaces found, creating a new default workspace");
+        
+        // Create a new default workspace
+        const { data: newWorkspace, error: createWorkspaceError } = await supabase
+          .from('workspaces')
+          .insert({
+            name: `${profileData.first_name || 'Default'}'s Workspace`,
+            description: 'Default workspace created automatically',
+            owner_id: user.id
+          })
+          .select('id')
+          .single();
+        
+        if (createWorkspaceError) {
+          return new Response(
+            JSON.stringify({ error: "Fehler beim Erstellen des Workspace: " + createWorkspaceError.message }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
+          );
+        }
+        
+        finalWorkspaceId = newWorkspace.id;
+        console.log("Created new workspace:", finalWorkspaceId);
+      }
+    }
+    
     // Create the user with admin rights
     const { data: functionData, error: functionError } = await supabase.rpc(
       'admin_create_user',
@@ -69,7 +115,7 @@ serve(async (req) => {
         password,
         first_name,
         last_name,
-        workspace_id,
+        workspace_id: finalWorkspaceId,
         metadata_access,
         data_access
       }
@@ -108,7 +154,8 @@ serve(async (req) => {
         id: functionData,
         email: userEmail,
         screen_name: userData?.screen_name || first_name,
-        message: "Benutzer erfolgreich erstellt" 
+        message: "Benutzer erfolgreich erstellt",
+        workspace_id: finalWorkspaceId
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
     );

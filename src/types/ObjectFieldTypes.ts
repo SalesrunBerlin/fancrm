@@ -28,14 +28,14 @@ export interface ObjectField {
   api_name: string;
   description?: string;
   data_type: string;
-  is_required: boolean; // Making this required to match the expected type
+  is_required: boolean; 
   is_unique?: boolean;
   is_system?: boolean;
   default_value?: string | null;
   options?: any | null;
   object_type_id: string;
-  display_order: number; // This is required
-  owner_id: string;
+  display_order: number;
+  owner_id?: string; // Make this optional to accommodate useObjectTypes.ObjectField
   created_at: string;
   updated_at?: string;
 }
