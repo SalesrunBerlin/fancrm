@@ -12,6 +12,7 @@ import { LookupField } from './LookupField';
 import { LookupValueDisplay } from './LookupValueDisplay';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { RichTextEditor } from '@/components/ui/rich-text-editor';
 
 interface RecordFieldProps {
   field: ObjectField;
@@ -71,6 +72,11 @@ export function RecordField({
     handleFieldChange(value);
   };
 
+  // Handle rich text changes
+  const handleRichTextChange = (value: string) => {
+    handleFieldChange(value);
+  };
+
   // Clear picklist value
   const clearPicklistValue = () => {
     handleFieldChange(null);
@@ -114,7 +120,22 @@ export function RecordField({
             onChange={handleInputChange}
             readOnly={readOnly}
             disabled={readOnly}
+            className="min-h-[100px]"
             {...registerField}
+          />
+        );
+      case 'rich_text':
+      case 'long_text':
+        return readOnly ? (
+          <div 
+            className="p-3 border rounded-md bg-background" 
+            dangerouslySetInnerHTML={{ __html: currentValue || '' }}
+          />
+        ) : (
+          <RichTextEditor
+            value={currentValue || ''}
+            onChange={handleRichTextChange}
+            placeholder={`Enter ${field.name}...`}
           />
         );
       case 'number':

@@ -10,6 +10,7 @@ import { useFieldPicklistValues } from "@/hooks/useFieldPicklistValues";
 import { Loader2, X } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
 
 interface EditableCellProps {
   value: any;
@@ -86,6 +87,16 @@ export function EditableCell({
       return <TableCell className="font-medium">{value}</TableCell>;
     }
     
+    if (fieldType === 'rich_text' || fieldType === 'long_text') {
+      return (
+        <TableCell>
+          <div className="max-h-20 overflow-y-auto">
+            <div dangerouslySetInnerHTML={{ __html: value || '' }} />
+          </div>
+        </TableCell>
+      );
+    }
+    
     return <TableCell>{value || "-"}</TableCell>;
   }
 
@@ -97,6 +108,15 @@ export function EditableCell({
             value={editValue || ""}
             onChange={(e) => handleChange(e.target.value)}
             className={error ? "border-red-500" : ""}
+          />
+        );
+      case "rich_text":
+      case "long_text":
+        return (
+          <RichTextEditor 
+            value={editValue || ""} 
+            onChange={handleChange}
+            minHeight="150px"
           />
         );
       case "picklist":
