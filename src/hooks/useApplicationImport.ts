@@ -14,6 +14,7 @@ export interface ApplicationImport {
   imported_actions_count: number;
   created_at: string;
   updated_at: string;
+  published_application?: PublishedApplication;
 }
 
 export interface ImportApplicationInput {
@@ -48,7 +49,11 @@ export function useApplicationImport() {
         throw error;
       }
 
-      return data || [];
+      // Transform data to ensure import_status is of the correct type
+      return data?.map(item => ({
+        ...item,
+        import_status: item.import_status as "pending" | "completed" | "failed"
+      })) || [];
     },
     enabled: !!user
   });
@@ -121,7 +126,11 @@ export function useApplicationImport() {
           throw updateError;
         }
 
-        return updatedRecord;
+        // Ensure the returned record has the correct type for import_status
+        return {
+          ...updatedRecord,
+          import_status: updatedRecord.import_status as "pending" | "completed" | "failed"
+        };
       } catch (error) {
         // Update the import record to failed status
         if (error instanceof Error) {

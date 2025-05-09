@@ -42,34 +42,60 @@ export function useLayoutFields(layoutId?: string, includeFields: boolean = fals
         return [];
       }
 
-      // Use proper query format for including related tables
-      const query = supabase
-        .from("layout_fields")
-        .select(includeFields ? "*, field_id(*)" : "*")
-        .eq("layout_id", layoutId)
-        .order("display_order");
+      // Use separate queries based on whether we need to include field data
+      if (includeFields) {
+        // First fetch layout fields
+        const { data: fieldsData, error: fieldsError } = await supabase
+          .from("layout_fields")
+          .select("*")
+          .eq("layout_id", layoutId)
+          .order("display_order");
 
-      const { data, error } = await query;
-
-      if (error) {
-        console.error("Error fetching layout fields:", error);
-        throw error;
-      }
-
-      // Transform data to ensure proper field property structure
-      const transformedData = data?.map(item => {
-        // If we included fields, format the response to match expected structure
-        if (includeFields && item.field_id) {
-          return {
-            ...item,
-            field: item.field_id,
-            field_id: item.field_id.id
-          };
+        if (fieldsError) {
+          console.error("Error fetching layout fields:", fieldsError);
+          throw fieldsError;
         }
-        return item;
-      }) || [];
 
-      return transformedData as LayoutField[];
+        // Then fetch related field data for each layout field
+        const fieldsWithData = await Promise.all(
+          (fieldsData || []).map(async (layoutField) => {
+            const { data: fieldData, error: fieldError } = await supabase
+              .from("object_fields")
+              .select("*")
+              .eq("id", layoutField.field_id)
+              .single();
+
+            if (fieldError) {
+              console.error("Error fetching field data:", fieldError);
+              return {
+                ...layoutField,
+                field: null
+              };
+            }
+
+            return {
+              ...layoutField,
+              field: fieldData
+            };
+          })
+        );
+
+        return fieldsWithData;
+      } else {
+        // Simple query without joining field data
+        const { data, error } = await supabase
+          .from("layout_fields")
+          .select("*")
+          .eq("layout_id", layoutId)
+          .order("display_order");
+
+        if (error) {
+          console.error("Error fetching layout fields:", error);
+          throw error;
+        }
+
+        return data || [];
+      }
     },
     enabled: !!layoutId,
   });

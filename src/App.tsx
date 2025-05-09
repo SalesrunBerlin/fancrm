@@ -57,6 +57,8 @@ import TicketQueuePage from "./pages/TicketQueuePage";
 import TicketProcessorPage from "./pages/TicketProcessorPage";
 import AutoTicketProcessorPage from "./pages/AutoTicketProcessorPage";
 import TicketAnalysisPage from "./pages/TicketAnalysisPage";
+import LandingPage from "./pages/LandingPage";
+import Index from "./pages/Index";
 
 // Create a client
 const queryClient = new QueryClient({
@@ -88,6 +90,8 @@ function AppContent() {
   // Function to determine if the current route requires authentication
   const requiresAuth = (pathname) => {
     const publicRoutes = [
+      '/',
+      '/landing',
       '/auth',
       '/public-action/:token',
       '/public-record/:token/:recordId'
@@ -118,6 +122,9 @@ function AppContent() {
 
   return (
     <Routes>
+      {/* Public routes */}
+      <Route path="/" element={<LandingPage />} />
+      <Route path="/landing" element={<LandingPage />} />
       <Route path="/auth" element={!isLoggedIn ? <Auth /> : <Navigate to="/" />} />
       <Route path="/auth/:workspaceId" element={!isLoggedIn ? <Auth /> : <Navigate to="/" />} />
       
@@ -127,7 +134,6 @@ function AppContent() {
       
       {/* Protected routes */}
       <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
-        <Route path="/" element={<Dashboard />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/profile" element={<ProfilePage />} />
