@@ -15,6 +15,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 
+interface PublishingParams {
+  name: string;
+  description: string;
+  isPublic: boolean;
+  version: string;
+}
+
 export default function ApplicationPublishPage() {
   const { applicationId } = useParams<{ applicationId: string }>();
   const location = useLocation();
@@ -27,7 +34,7 @@ export default function ApplicationPublishPage() {
   const [currentApplication, setCurrentApplication] = useState<any>(null);
   const [selectedObjectIds, setSelectedObjectIds] = useState<string[]>([]);
   const [selectedActionIds, setSelectedActionIds] = useState<string[]>([]);
-  const [publishingParams, setPublishingParams] = useState<any>(null);
+  const [publishingParams, setPublishingParams] = useState<PublishingParams | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   // Find the current application and available objects
@@ -139,7 +146,8 @@ export default function ApplicationPublishPage() {
         description: publishingParams.description,
         isPublic: publishingParams.isPublic,
         objectTypeIds: selectedObjectIds,
-        actionIds: selectedActionIds
+        actionIds: selectedActionIds,
+        version: publishingParams.version
       });
       
       navigate(`/applications/${applicationId}`);

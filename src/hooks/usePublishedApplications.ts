@@ -13,6 +13,7 @@ export interface PublishedApplication {
   is_public: boolean;
   created_at: string;
   updated_at: string;
+  version?: string;
   publisher?: {
     id: string;
     email: string;
@@ -31,7 +32,6 @@ export interface PublishedObject {
   is_included: boolean;
   created_at: string;
   updated_at: string;
-  // Fix the type to include required fields
   object_type: {
     id: string;
     name: string;
@@ -47,7 +47,6 @@ export interface PublishedAction {
   is_included: boolean;
   created_at: string;
   updated_at: string;
-  // Fix the type to include required fields
   action: {
     id: string;
     name: string;
@@ -90,7 +89,8 @@ export function usePublishedApplications() {
         throw error;
       }
 
-      return data || [];
+      // Ensure all returned applications match our type
+      return (data as PublishedApplication[]) || [];
     }
   });
 
@@ -149,7 +149,7 @@ export function usePublishedApplications() {
         const typedActionsData = actionsData as unknown as PublishedAction[];
 
         return {
-          ...appData,
+          ...appData as PublishedApplication,
           objects: typedObjectsData || [],
           actions: typedActionsData || []
         };
@@ -165,13 +165,15 @@ export function usePublishedApplications() {
       description,
       isPublic,
       objectTypeIds,
-      actionIds
+      actionIds,
+      version = "1.0"
     }: {
       name: string;
       description: string;
       isPublic: boolean;
       objectTypeIds: string[];
       actionIds: string[];
+      version?: string;
     }): Promise<string> => {
       if (!user) {
         throw new Error("User must be logged in to publish an application");
@@ -184,7 +186,8 @@ export function usePublishedApplications() {
           name,
           description,
           published_by: user.id,
-          is_public: isPublic
+          is_public: isPublic,
+          version
         })
         .select()
         .single();

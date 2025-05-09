@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { PageHeader } from "@/components/ui/page-header";
@@ -8,7 +9,6 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useApplications } from "@/hooks/useApplications";
 import { useApplicationObjects } from "@/hooks/useApplicationObjects";
-import { PublishApplicationDialog } from "@/components/publishing/PublishApplicationDialog";
 import { ArrowLeft, Share, Share2, User, Settings, Eye, Globe, Plus, Loader2 } from "lucide-react";
 
 export default function ApplicationDetailPage() {
@@ -16,7 +16,6 @@ export default function ApplicationDetailPage() {
   const navigate = useNavigate();
   const { applications, deleteApplication, updateApplication, setDefaultApplication, isLoading: isLoadingApps } = useApplications();
   const { applicationObjects, isLoading: isLoadingObjects } = useApplicationObjects(applicationId);
-  const [isPublishOpen, setIsPublishOpen] = useState(false);
   const { toast } = useToast();
   
   const application = applications?.find(app => app.id === applicationId);
@@ -26,8 +25,6 @@ export default function ApplicationDetailPage() {
     if (!applicationId) return;
     navigate(`/applications/${applicationId}/publish-settings`);
   };
-  
-  // Other handler functions remain the same...
   
   if (isLoadingApps) {
     return (
@@ -68,7 +65,142 @@ export default function ApplicationDetailPage() {
         </div>
       </div>
 
-      {/* Rest of the component remains the same */}
+      <Tabs defaultValue="objects">
+        <TabsList>
+          <TabsTrigger value="objects">Objects</TabsTrigger>
+          <TabsTrigger value="settings">Settings</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="objects">
+          <div className="grid grid-cols-1 gap-6">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle>Application Objects</CardTitle>
+                  <CardDescription>
+                    Manage objects associated with this application
+                  </CardDescription>
+                </div>
+                <Button 
+                  onClick={() => navigate(`/applications/${applicationId}/objects`)}
+                  className="gap-2"
+                >
+                  <Settings className="h-4 w-4" />
+                  Manage Objects
+                </Button>
+              </CardHeader>
+              <CardContent>
+                {isLoadingObjects ? (
+                  <div className="flex justify-center p-4">
+                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                  </div>
+                ) : applicationObjects && applicationObjects.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {applicationObjects.map(object => (
+                      <Card key={object.id} className="border hover:shadow-md transition-shadow">
+                        <CardHeader className="py-3">
+                          <CardTitle className="text-base flex items-center justify-between">
+                            {object.name}
+                            {object.is_system && (
+                              <Badge variant="outline" className="ml-2">System</Badge>
+                            )}
+                          </CardTitle>
+                          <CardDescription className="text-xs truncate">
+                            {object.api_name}
+                          </CardDescription>
+                        </CardHeader>
+                        <CardFooter className="py-3 flex justify-between">
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => navigate(`/objects/${object.id}`)}
+                          >
+                            <Eye className="h-4 w-4 mr-1" />
+                            View Records
+                          </Button>
+                        </CardFooter>
+                      </Card>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 border rounded-md">
+                    <h3 className="text-lg font-medium text-gray-600">No objects assigned</h3>
+                    <p className="text-gray-500 mt-1 mb-4">
+                      Add objects to this application to get started
+                    </p>
+                    <Button 
+                      onClick={() => navigate(`/applications/${applicationId}/objects`)}
+                      className="gap-2"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Add Objects
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+        
+        <TabsContent value="settings">
+          <Card>
+            <CardHeader>
+              <CardTitle>Application Settings</CardTitle>
+              <CardDescription>
+                Manage application details and preferences
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div>
+                <h3 className="text-sm font-medium mb-1">Set as Default Application</h3>
+                <p className="text-sm text-muted-foreground mb-2">
+                  When enabled, this will be your default application when logging in
+                </p>
+                <Button
+                  onClick={() => setDefaultApplication(applicationId || '')}
+                  variant={application.is_default ? "secondary" : "outline"}
+                  disabled={application.is_default}
+                  className="gap-2"
+                >
+                  {application.is_default ? "Default Application" : "Set as Default"}
+                </Button>
+              </div>
+              
+              <div>
+                <h3 className="text-sm font-medium text-destructive mb-1">Delete Application</h3>
+                <p className="text-sm text-muted-foreground mb-2">
+                  Permanently remove this application and all its settings
+                </p>
+                <Button
+                  variant="destructive"
+                  onClick={() => {
+                    if (window.confirm("Are you sure you want to delete this application? This action cannot be undone.")) {
+                      deleteApplication(applicationId || '')
+                        .then(() => {
+                          toast({
+                            title: "Application deleted",
+                            description: "The application has been deleted successfully.",
+                          });
+                          navigate("/applications");
+                        })
+                        .catch((error) => {
+                          console.error("Failed to delete application:", error);
+                          toast({
+                            variant: "destructive",
+                            title: "Failed to delete application",
+                            description: "An error occurred while deleting the application.",
+                          });
+                        });
+                    }
+                  }}
+                >
+                  Delete Application
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
