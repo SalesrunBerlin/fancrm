@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
@@ -218,6 +219,7 @@ export default function ObjectTypeDetail() {
           isLoading={isLoading}
           onManagePicklistValues={handleManagePicklistValues}
           onDeleteField={canModifyFields ? handleDeleteField : undefined}
+          showDragHandles={true}
         />
       </div>
       

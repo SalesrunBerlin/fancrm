@@ -1,184 +1,147 @@
 
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useState } from "react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Loader2, Edit, List, Trash2 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { MoreHorizontal, Edit, Trash2, List, GripVertical } from "lucide-react";
 import { ObjectField } from "@/hooks/useObjectTypes";
 import { Link } from "react-router-dom";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Card } from "@/components/ui/card";
-import { useState } from "react";
-import { DeleteDialog } from "@/components/common/DeleteDialog";
-import { Checkbox } from "@/components/ui/checkbox";
-import { toast } from "sonner";
 
-export interface ObjectFieldsListProps {
+interface ObjectFieldsListProps {
   fields: ObjectField[];
   objectTypeId: string;
-  isLoading: boolean;
-  onManagePicklistValues: (fieldId: string) => void;
-  onDeleteField?: (fieldId: string) => Promise<void>;
-  selectable?: boolean;
-  selectedFields?: string[];
-  onSelectionChange?: (selectedFieldIds: string[]) => void;
+  isLoading?: boolean;
+  showDragHandles?: boolean;
+  onManagePicklistValues?: (fieldId: string) => void;
+  onDeleteField?: (fieldId: string) => void;
+  onDragStart?: (field: ObjectField) => void;
 }
 
-export function ObjectFieldsList({ 
-  fields, 
-  objectTypeId, 
-  isLoading, 
-  onManagePicklistValues, 
+export function ObjectFieldsList({
+  fields,
+  objectTypeId,
+  isLoading = false,
+  showDragHandles = false,
+  onManagePicklistValues,
   onDeleteField,
-  selectable = false,
-  selectedFields = [],
-  onSelectionChange
+  onDragStart
 }: ObjectFieldsListProps) {
-  const [deleteFieldId, setDeleteFieldId] = useState<string | null>(null);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   
-  const fieldToDelete = fields.find(field => field.id === deleteFieldId);
-
-  const handleDeleteField = async () => {
-    if (deleteFieldId && onDeleteField) {
-      try {
-        await onDeleteField(deleteFieldId);
-        toast.success(`Field "${fieldToDelete?.name}" deleted successfully`);
-        setDeleteFieldId(null);
-        setIsDeleteDialogOpen(false);
-      } catch (error) {
-        console.error("Error deleting field:", error);
-        toast.error("Failed to delete field");
-      }
-    }
-  };
-
-  const handleToggleSelectField = (fieldId: string) => {
-    if (!onSelectionChange) return;
-
-    const isSelected = selectedFields.includes(fieldId);
-    const newSelection = isSelected
-      ? selectedFields.filter(id => id !== fieldId)
-      : [...selectedFields, fieldId];
-    
-    onSelectionChange(newSelection);
-  };
-
-  const handleToggleSelectAll = () => {
-    if (!onSelectionChange) return;
-
-    if (selectedFields.length === fields.length) {
-      // Deselect all
-      onSelectionChange([]);
-    } else {
-      // Select all
-      onSelectionChange(fields.map(field => field.id));
-    }
-  };
-
   if (isLoading) {
     return (
-      <div className="flex justify-center py-8">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
+      <Card className="p-4">
+        <div className="space-y-2">
+          <Skeleton className="h-6 w-24" />
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-10 w-full" />
+        </div>
+      </Card>
+    );
+  }
+
+  if (fields.length === 0) {
+    return (
+      <Card className="p-8 text-center">
+        <p className="text-muted-foreground mb-4">No fields found</p>
+        <Link to={`/settings/objects/${objectTypeId}/fields/new`}>
+          <Button>Add your first field</Button>
+        </Link>
+      </Card>
     );
   }
 
   return (
-    <Card className="overflow-hidden">
-      {/* Replace the simple overflow-x-auto div with a properly constrained container */}
-      <div className="rounded-md border overflow-hidden overflow-x-auto">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              {selectable && (
-                <TableHead className="w-[50px]">
-                  <Checkbox 
-                    checked={selectedFields.length === fields.length && fields.length > 0}
-                    onCheckedChange={handleToggleSelectAll}
-                    aria-label="Select all fields"
-                  />
-                </TableHead>
-              )}
-              <TableHead>Name</TableHead>
-              <TableHead>API Name</TableHead>
-              <TableHead>Type</TableHead>
-              <TableHead className="w-[100px]">Required</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {fields.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={selectable ? 6 : 5} className="text-center text-muted-foreground">
-                  No fields found
+    <div className="rounded-md border">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            {showDragHandles && <TableHead className="w-8"></TableHead>}
+            <TableHead>Field Name</TableHead>
+            <TableHead>API Name</TableHead>
+            <TableHead>Type</TableHead>
+            <TableHead>Required</TableHead>
+            <TableHead className="w-16"></TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {fields.map((field) => (
+            <TableRow key={field.id}>
+              {showDragHandles && (
+                <TableCell className="w-8">
+                  <div 
+                    className="cursor-grab"
+                    draggable
+                    onDragStart={() => onDragStart && onDragStart(field)}
+                  >
+                    <GripVertical className="h-4 w-4 text-muted-foreground" />
+                  </div>
                 </TableCell>
-              </TableRow>
-            ) : (
-              fields.map((field) => (
-                <TableRow key={field.id}>
-                  {selectable && (
-                    <TableCell>
-                      <Checkbox 
-                        checked={selectedFields.includes(field.id)}
-                        onCheckedChange={() => handleToggleSelectField(field.id)}
-                        aria-label={`Select ${field.name}`}
-                      />
-                    </TableCell>
-                  )}
-                  <TableCell className="font-medium whitespace-nowrap">{field.name}</TableCell>
-                  <TableCell className="text-muted-foreground whitespace-nowrap">{field.api_name}</TableCell>
-                  <TableCell className="whitespace-nowrap">{field.data_type}</TableCell>
-                  <TableCell className="whitespace-nowrap">{field.is_required ? "Yes" : "No"}</TableCell>
-                  <TableCell className="text-right whitespace-nowrap">
-                    <div className="flex justify-end items-center gap-2">
-                      {field.data_type === "picklist" && (
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          onClick={() => onManagePicklistValues(field.id)}
-                        >
-                          <List className="h-4 w-4" />
-                          <span className="sr-only">Manage Values</span>
-                        </Button>
-                      )}
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        asChild
+              )}
+              <TableCell>
+                <div className="font-medium">{field.name}</div>
+                {field.is_system && <Badge variant="outline">System</Badge>}
+              </TableCell>
+              <TableCell className="font-mono text-sm text-muted-foreground">
+                {field.api_name}
+              </TableCell>
+              <TableCell>{field.data_type}</TableCell>
+              <TableCell>{field.is_required ? "Yes" : "No"}</TableCell>
+              <TableCell>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      className="h-8 w-8 p-0 focus-visible:ring-0"
+                    >
+                      <MoreHorizontal className="h-4 w-4" />
+                      <span className="sr-only">Open menu</span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <Link to={`/settings/objects/${objectTypeId}/fields/${field.id}/edit`}>
+                      <DropdownMenuItem>
+                        <Edit className="mr-2 h-4 w-4" />
+                        Edit
+                      </DropdownMenuItem>
+                    </Link>
+                    {field.data_type === "picklist" && onManagePicklistValues && (
+                      <DropdownMenuItem onClick={() => onManagePicklistValues(field.id)}>
+                        <List className="mr-2 h-4 w-4" />
+                        Manage Values
+                      </DropdownMenuItem>
+                    )}
+                    {onDeleteField && !field.is_system && (
+                      <DropdownMenuItem
+                        onClick={() => onDeleteField(field.id)}
+                        className="text-red-600"
                       >
-                        <Link to={`/settings/objects/${objectTypeId}/fields/${field.id}/edit`}>
-                          <Edit className="h-4 w-4" />
-                          <span className="sr-only">Edit</span>
-                        </Link>
-                      </Button>
-                      {!field.is_system && onDeleteField && (
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                          onClick={() => {
-                            setDeleteFieldId(field.id);
-                            setIsDeleteDialogOpen(true);
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                          <span className="sr-only">Delete</span>
-                        </Button>
-                      )}
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
-
-      <DeleteDialog
-        open={isDeleteDialogOpen}
-        onOpenChange={setIsDeleteDialogOpen}
-        onConfirm={handleDeleteField}
-        title={`Delete Field: ${fieldToDelete?.name}`}
-        description={`Are you sure you want to delete the field "${fieldToDelete?.name}"? This action cannot be undone and may affect existing records.`}
-      />
-    </Card>
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Delete
+                      </DropdownMenuItem>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
   );
 }
