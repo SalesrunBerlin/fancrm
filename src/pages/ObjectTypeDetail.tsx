@@ -109,9 +109,14 @@ export default function ObjectTypeDetail() {
     });
   };
 
+  // Check if this is an imported template (previously published by others)
+  const isImportedTemplate = currentObjectType.is_template === true;
   // Check if the current user owns this object
-  const isPublishedByOthers = publishedObjects?.some(obj => obj.id === objectTypeId) || false;
+  const isPublishedByOthers = !isImportedTemplate && publishedObjects?.some(obj => obj.id === objectTypeId) || false;
   const isArchived = currentObjectType.is_archived;
+  
+  // Allow adding fields to templates (imported objects) but not to directly published objects from others
+  const canModifyFields = !isPublishedByOthers && !currentObjectType.is_system;
 
   return (
     <div className="container mx-auto px-2 md:px-0 space-y-6 max-w-5xl overflow-x-hidden">
@@ -141,7 +146,8 @@ export default function ObjectTypeDetail() {
               <span className="hidden md:inline">Refresh</span>
             </ThemedButton>
             
-            {!isPublishedByOthers && !currentObjectType.is_system && !isArchived && (
+            {/* Modified condition to allow adding fields to imported templates */}
+            {(canModifyFields || isImportedTemplate) && !isArchived && (
               <>
                 <ThemedButton 
                   variant="default"
@@ -151,17 +157,19 @@ export default function ObjectTypeDetail() {
                   <Plus className="h-4 w-4" />
                   <span className="hidden md:inline">New Field</span>
                 </ThemedButton>
-                <ThemedButton 
-                  onClick={handleTogglePublish}
-                  disabled={isPublishing}
-                  size="responsive"
-                  variant={currentObjectType.is_published ? "outline" : "default"}
-                >
-                  <List className="h-4 w-4" />
-                  <span className="hidden md:inline">
-                    {currentObjectType.is_published ? "Unpublish" : "Publish"}
-                  </span>
-                </ThemedButton>
+                {!isImportedTemplate && (
+                  <ThemedButton 
+                    onClick={handleTogglePublish}
+                    disabled={isPublishing}
+                    size="responsive"
+                    variant={currentObjectType.is_published ? "outline" : "default"}
+                  >
+                    <List className="h-4 w-4" />
+                    <span className="hidden md:inline">
+                      {currentObjectType.is_published ? "Unpublish" : "Publish"}
+                    </span>
+                  </ThemedButton>
+                )}
                 <ThemedButton 
                   variant="warning"
                   size="responsive"
@@ -187,7 +195,7 @@ export default function ObjectTypeDetail() {
       />
       
       {/* Only show the field selector for objects that can be edited */}
-      {!isPublishedByOthers && !currentObjectType.is_system && fields && (
+      {(canModifyFields || isImportedTemplate) && fields && (
         <DefaultFieldSelector
           objectType={currentObjectType}
           fields={fields}
@@ -202,7 +210,7 @@ export default function ObjectTypeDetail() {
           objectTypeId={objectTypeId as string} 
           isLoading={isLoading}
           onManagePicklistValues={handleManagePicklistValues}
-          onDeleteField={!currentObjectType.is_system && !isPublishedByOthers ? handleDeleteField : undefined}
+          onDeleteField={(canModifyFields || isImportedTemplate) ? handleDeleteField : undefined}
         />
       </div>
 
