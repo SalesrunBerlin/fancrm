@@ -1,114 +1,168 @@
 
-import { useState, useEffect, KeyboardEvent, FormEvent } from "react";
-import { useObjectType } from "@/hooks/useObjectType";
-import { useObjectRecords } from "@/hooks/useObjectRecords";
-import { Checkbox } from "@/components/ui/checkbox";
+import { useState, useEffect } from "react";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Loader2, PlusCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Plus, Loader2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
+import { useObjectType } from "@/hooks/useObjectType";
 
 interface QuickCreateListProps {
   objectTypeId: string;
-  nameFieldApiName?: string;
-  onRecordCreated?: (recordId: string) => void;
+  nameFieldApiName: string;
 }
 
-export function QuickCreateList({
-  objectTypeId,
-  nameFieldApiName = "name",
-  onRecordCreated,
-}: QuickCreateListProps) {
+export function QuickCreateList({ objectTypeId, nameFieldApiName }: QuickCreateListProps) {
+  const [items, setItems] = useState<any[]>([]);
   const [newItemName, setNewItemName] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
+  const { user } = useAuth();
   const { objectType } = useObjectType(objectTypeId);
-  const { records, isLoading, refetch, createRecord } = useObjectRecords(objectTypeId);
-
-  // Handle form submission and Enter key press
-  const handleCreateRecord = async (e?: FormEvent) => {
-    if (e) {
-      e.preventDefault();
+  
+  // Load existing items when component mounts
+  useEffect(() => {
+    if (objectTypeId) {
+      loadItems();
     }
-    
-    if (!newItemName.trim()) {
-      return;
-    }
+  }, [objectTypeId]);
 
+  const loadItems = async () => {
+    setIsLoading(true);
     try {
-      setIsCreating(true);
+      const { data: records, error } = await supabase
+        .from("object_records")
+        .select(`
+          id,
+          record_id,
+          object_field_values (
+            field_api_name,
+            value
+          )
+        `)
+        .eq("object_type_id", objectTypeId)
+        .order("created_at", { ascending: false })
+        .limit(20);
+
+      if (error) throw error;
       
-      // Create a new record with just the name field
-      await createRecord.mutateAsync({
-        [nameFieldApiName]: newItemName.trim()
-      });
-      
-      toast.success("Record created successfully");
-      setNewItemName("");
-      refetch();
-      
-      if (onRecordCreated) {
-        // We don't have the new record ID immediately, but the UI will refresh
-        onRecordCreated("created");
-      }
+      // Process and set items
+      setItems(records || []);
     } catch (error) {
-      console.error("Failed to create record:", error);
-      toast.error("Failed to create record");
+      console.error("Error loading items:", error);
+      toast.error("Failed to load items");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const createItem = async () => {
+    if (!newItemName.trim() || !objectTypeId || !user) return;
+    
+    setIsCreating(true);
+    try {
+      // First create the record
+      const { data: record, error: recordError } = await supabase
+        .from("object_records")
+        .insert({
+          object_type_id: objectTypeId,
+          owner_id: user.id,
+          created_by: user.id,
+          last_modified_by: user.id
+        })
+        .select()
+        .single();
+
+      if (recordError) throw recordError;
+
+      // Then add the field value
+      const { error: fieldError } = await supabase
+        .from("object_field_values")
+        .insert({
+          record_id: record.id,
+          field_api_name: nameFieldApiName,
+          value: newItemName
+        });
+
+      if (fieldError) throw fieldError;
+
+      // Add new item to the list
+      setItems((prevItems) => [{
+        id: record.id,
+        record_id: record.record_id,
+        object_field_values: [{ 
+          field_api_name: nameFieldApiName, 
+          value: newItemName 
+        }]
+      }, ...prevItems]);
+      
+      setNewItemName(""); // Clear input
+      toast.success("Item created successfully");
+    } catch (error) {
+      console.error("Error creating item:", error);
+      toast.error("Failed to create item");
     } finally {
       setIsCreating(false);
     }
   };
 
-  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      handleCreateRecord();
-    }
+  // Get display name for an item
+  const getItemName = (item: any) => {
+    const nameField = item.object_field_values?.find(
+      (fv: any) => fv.field_api_name === nameFieldApiName
+    );
+    return nameField?.value || `Item ${item.record_id || ''}`;
   };
 
   return (
-    <div className="space-y-4">
-      <form onSubmit={handleCreateRecord} className="flex items-center gap-2">
-        <PlusCircle className="h-4 w-4 text-muted-foreground" />
-        <Input
-          type="text"
-          placeholder={`Add new ${objectType?.name || "item"}...`}
-          value={newItemName}
-          onChange={(e) => setNewItemName(e.target.value)}
-          onKeyDown={handleKeyDown}
-          disabled={isCreating}
-          className="flex-1"
-        />
-        {isCreating && <Loader2 className="h-4 w-4 animate-spin" />}
-      </form>
+    <Card>
+      <CardContent className="p-4 space-y-4">
+        <div className="flex gap-2">
+          <Input
+            placeholder={`New ${objectType?.name || 'Item'} Name...`}
+            value={newItemName}
+            onChange={(e) => setNewItemName(e.target.value)}
+            disabled={isCreating}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && newItemName.trim()) {
+                createItem();
+              }
+            }}
+          />
+          <Button 
+            onClick={createItem} 
+            disabled={!newItemName.trim() || isCreating}
+          >
+            {isCreating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+            <span className="ml-2">Add</span>
+          </Button>
+        </div>
 
-      {isLoading ? (
-        <div className="flex items-center justify-center p-4">
-          <Loader2 className="h-6 w-6 animate-spin text-primary" />
-        </div>
-      ) : records && records.length > 0 ? (
-        <div className="space-y-2">
-          {records.map((record) => {
-            const displayName = record.field_values?.[nameFieldApiName] || record.record_id;
-            return (
-              <div 
-                key={record.id}
-                className="flex items-center space-x-2 p-2 rounded-md hover:bg-muted transition-colors"
-              >
-                <Checkbox id={record.id} checked={true} disabled />
-                <label
-                  htmlFor={record.id}
-                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+        {isLoading ? (
+          <div className="flex justify-center py-8">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          </div>
+        ) : (
+          <div className="space-y-2 mt-4">
+            {items.length > 0 ? (
+              items.map((item) => (
+                <div 
+                  key={item.id}
+                  className="p-3 border rounded-lg flex justify-between items-center hover:bg-accent hover:text-accent-foreground transition-colors"
                 >
-                  {displayName}
-                </label>
+                  <span className="font-medium">{getItemName(item)}</span>
+                </div>
+              ))
+            ) : (
+              <div className="text-center p-8 text-muted-foreground">
+                No items found. Create your first one above.
               </div>
-            );
-          })}
-        </div>
-      ) : (
-        <div className="text-center p-4 text-muted-foreground italic">
-          No items yet. Add your first one above.
-        </div>
-      )}
-    </div>
+            )}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
