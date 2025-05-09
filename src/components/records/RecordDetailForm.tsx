@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -7,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
-import { useObjectTypes, ObjectField } from "@/hooks/useObjectTypes";
+import { useObjectType } from "@/hooks/useObjectType";
 import { useEnhancedFields } from "@/hooks/useEnhancedFields";
 import { useRecordDetail } from "@/hooks/useRecordDetail";
 import { useObjectRecords } from "@/hooks/useObjectRecords";
@@ -33,8 +34,8 @@ export function RecordDetailForm({
   onCancel
 }: RecordDetailFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { objectType, isLoading: isLoadingObjectType } = useObjectTypes(objectTypeId);
-  const { fields, isLoading: isLoadingFields, refetch: refetchFields } = useEnhancedFields(objectTypeId);
+  const { objectType, isLoading: isLoadingObjectType } = useObjectType(objectTypeId);
+  const { fields, isLoading: isLoadingFields } = useEnhancedFields(objectTypeId);
   const { record, isLoading: isLoadingRecord, refetch: refetchRecord } = useRecordDetail(objectTypeId, recordId);
   const { updateRecord } = useObjectRecords(objectTypeId);
   const [recordValues, setRecordValues] = useState<any>({});
@@ -59,7 +60,7 @@ export function RecordDetailForm({
       
       // Update the record with field values
       await updateRecord.mutateAsync({
-        recordId: recordId,
+        id: recordId,
         field_values: recordValues
       });
       
@@ -82,14 +83,24 @@ export function RecordDetailForm({
   const sections = React.useMemo(() => {
     if (!fields) return [];
 
-    const sectionsMap: { [key: string]: { id: string, title: string, fields: ObjectField[] } } = {};
+    // Default section for fields without specified section
+    const defaultSection = { 
+      id: 'default', 
+      title: '', 
+      fields: [] 
+    };
+    
+    const sectionsMap: { [key: string]: { id: string, title: string, fields: any[] } } = {
+      'default': defaultSection
+    };
 
     fields.forEach(field => {
-      const sectionId = field.section_id || 'default';
+      // Check if field has section_id or section_name properties
+      const sectionId = (field as any).section_id || 'default';
       if (!sectionsMap[sectionId]) {
         sectionsMap[sectionId] = {
           id: sectionId,
-          title: field.section_name || '',
+          title: (field as any).section_name || '',
           fields: []
         };
       }
@@ -99,9 +110,12 @@ export function RecordDetailForm({
     return Object.values(sectionsMap);
   }, [fields]);
 
+  // Combined loading state
+  const isLoading = isLoadingObjectType || isLoadingFields || isLoadingRecord;
+
   return (
     <div className="p-6">
-      {isLoading || isLoadingRecord ? (
+      {isLoading ? (
         <div className="flex justify-center items-center h-64">
           <Loader2 className="h-8 w-8 animate-spin" />
         </div>
@@ -115,8 +129,11 @@ export function RecordDetailForm({
                 <InlineFieldCreator 
                   objectTypeId={objectTypeId}
                   onFieldCreated={() => {
-                    // Refresh fields when a new field is created
-                    refetchFields();
+                    // We'll trigger a custom event to refresh fields
+                    const event = new CustomEvent('refetch-fields', { 
+                      detail: { objectTypeId } 
+                    });
+                    window.dispatchEvent(event);
                   }}
                 />
                 <Button onClick={handleCancel} variant="outline">
@@ -219,43 +236,6 @@ export function RecordDetailForm({
           </Collapsible>
         </div>
       )}
-    </div>
-  );
-}
-
-interface FieldProps {
-  field: ObjectField;
-  value: any;
-  objectTypeId: string;
-  onChange?: (value: any) => void;
-}
-
-function EditField({ field, value, objectTypeId, onChange }: FieldProps) {
-  return (
-    <div>
-      {/* Implement editable field based on field type */}
-      <Input
-        type="text"
-        id={field.api_name}
-        value={value || ''}
-        onChange={(e) => onChange?.(e.target.value)}
-      />
-    </div>
-  );
-}
-
-function ViewField({ field, value, objectTypeId }: FieldProps) {
-  return (
-    <div>
-      {/* Implement viewable field based on field type */}
-      <Input
-        type="text"
-        id={field.api_name}
-        value={value || ''}
-        readOnly
-        disabled
-        className="cursor-not-allowed"
-      />
     </div>
   );
 }

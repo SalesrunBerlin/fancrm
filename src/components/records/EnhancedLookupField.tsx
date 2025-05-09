@@ -14,6 +14,7 @@ import { Check, ChevronsUpDown, Loader2, X } from "lucide-react";
 import { useObjectLookup } from "@/hooks/useObjectLookup";
 import { cn } from "@/lib/utils";
 import { QuickCreateLookup } from "./QuickCreateLookup";
+import { supabase } from "@/integrations/supabase/client";
 
 interface EnhancedLookupFieldProps {
   value: string | null;
@@ -34,8 +35,30 @@ export function EnhancedLookupField({
 }: EnhancedLookupFieldProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
-  const { records, isLoading, getLookupDisplayValue } = useObjectLookup(targetObjectTypeId);
+  const { records, isLoading } = useObjectLookup(targetObjectTypeId);
   const [selectedLabel, setSelectedLabel] = useState<string>("");
+
+  // Function to get display value for a lookup ID
+  const getLookupDisplayValue = async (lookupId: string): Promise<string | null> => {
+    try {
+      // Find record in already fetched records
+      const existingRecord = records?.find(r => r.id === lookupId);
+      if (existingRecord) return existingRecord.display_value;
+
+      // If not found, fetch from database
+      const { data: fieldValueData } = await supabase
+        .from("object_field_values")
+        .select("value")
+        .eq("record_id", lookupId)
+        .eq("field_api_name", "name")
+        .single();
+
+      return fieldValueData?.value || lookupId;
+    } catch (error) {
+      console.error("Error fetching lookup display value:", error);
+      return lookupId;
+    }
+  };
 
   useEffect(() => {
     // Get the display label for the current value when component mounts
@@ -46,7 +69,7 @@ export function EnhancedLookupField({
     } else {
       setSelectedLabel("");
     }
-  }, [value, getLookupDisplayValue]);
+  }, [value]);
 
   const handleSelect = (selectedValue: string) => {
     onChange(selectedValue);
@@ -55,7 +78,7 @@ export function EnhancedLookupField({
     // Update the selected label
     const selected = records?.find((record) => record.id === selectedValue);
     if (selected) {
-      setSelectedLabel(selected.displayName || selectedValue);
+      setSelectedLabel(selected.display_value || selectedValue);
     }
   };
 
@@ -72,7 +95,7 @@ export function EnhancedLookupField({
   };
 
   const filteredRecords = records?.filter((record) =>
-    record.displayName.toLowerCase().includes(search.toLowerCase())
+    record.display_value.toLowerCase().includes(search.toLowerCase())
   );
 
   return (
@@ -140,7 +163,7 @@ export function EnhancedLookupField({
                   onSelect={() => handleSelect(record.id)}
                   className="flex items-center"
                 >
-                  {record.displayName}
+                  {record.display_value}
                   {record.id === value && (
                     <Check className="ml-auto h-4 w-4" />
                   )}

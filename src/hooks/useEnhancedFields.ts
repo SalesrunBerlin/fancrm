@@ -3,17 +3,19 @@ import { useState, useEffect } from "react";
 import { useRecordFields } from "@/hooks/useRecordFields";
 import { useFieldPicklistValues } from "@/hooks/useFieldPicklistValues";
 import { ObjectField } from "@/hooks/useObjectTypes";
+import { useQueryClient } from "@tanstack/react-query";
 
 export function useEnhancedFields(objectTypeId: string) {
-  const { fields, isLoading: isLoadingFields } = useRecordFields(objectTypeId);
+  const { fields: originalFields, isLoading: isLoadingFields, refetch } = useRecordFields(objectTypeId);
   const [enhancedFields, setEnhancedFields] = useState<ObjectField[]>([]);
   const [picklistFieldsToProcess, setPicklistFieldsToProcess] = useState<string[]>([]);
   const [isEnhancing, setIsEnhancing] = useState(true);
+  const queryClient = useQueryClient();
 
   // First identify picklist fields that need enhancement
   useEffect(() => {
-    if (!isLoadingFields && fields) {
-      const picklistFields = fields
+    if (!isLoadingFields && originalFields) {
+      const picklistFields = originalFields
         .filter(field => field.data_type === 'picklist')
         .map(field => field.id);
       
@@ -21,11 +23,11 @@ export function useEnhancedFields(objectTypeId: string) {
       
       // If no picklist fields, we can skip enhancement
       if (picklistFields.length === 0) {
-        setEnhancedFields([...fields]);
+        setEnhancedFields([...originalFields]);
         setIsEnhancing(false);
       }
     }
-  }, [fields, isLoadingFields]);
+  }, [originalFields, isLoadingFields]);
 
   // Process each picklist field one by one
   const currentFieldId = picklistFieldsToProcess[0];
@@ -34,7 +36,7 @@ export function useEnhancedFields(objectTypeId: string) {
   // Process the next picklist field or finish enhancing
   useEffect(() => {
     if (picklistFieldsToProcess.length > 0 && currentFieldId && !isLoadingPicklistValues) {
-      const updatedFields = [...(enhancedFields.length ? enhancedFields : fields)];
+      const updatedFields = [...(enhancedFields.length ? enhancedFields : originalFields)];
       const fieldIndex = updatedFields.findIndex(field => field.id === currentFieldId);
       
       if (fieldIndex !== -1 && picklistValues) {
@@ -64,10 +66,28 @@ export function useEnhancedFields(objectTypeId: string) {
       // All picklist fields have been processed
       setIsEnhancing(false);
     }
-  }, [picklistValues, isLoadingPicklistValues, currentFieldId, picklistFieldsToProcess, fields, enhancedFields]);
+  }, [picklistValues, isLoadingPicklistValues, currentFieldId, picklistFieldsToProcess, originalFields, enhancedFields]);
+
+  // Listen for field refresh events
+  useEffect(() => {
+    const handleRefetchFields = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      if (customEvent.detail?.objectTypeId === objectTypeId) {
+        console.log("Refreshing fields for object type:", objectTypeId);
+        refetch();
+      }
+    };
+
+    window.addEventListener('refetch-fields', handleRefetchFields as EventListener);
+    
+    return () => {
+      window.removeEventListener('refetch-fields', handleRefetchFields as EventListener);
+    };
+  }, [objectTypeId, refetch]);
 
   return {
-    fields: enhancedFields.length > 0 ? enhancedFields : fields,
-    isLoading: isLoadingFields || isEnhancing
+    fields: enhancedFields.length > 0 ? enhancedFields : originalFields,
+    isLoading: isLoadingFields || isEnhancing,
+    refetch
   };
 }

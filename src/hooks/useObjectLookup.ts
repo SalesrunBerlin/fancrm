@@ -2,7 +2,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
-interface ObjectLookupRecord {
+export interface ObjectLookupRecord {
   id: string;
   display_value: string;
 }

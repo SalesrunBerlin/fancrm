@@ -1,4 +1,5 @@
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
@@ -48,8 +49,10 @@ export function RecordsTable({
   };
 
   // Notify parent component about selection changes
-  useState(() => {
-    onSelectionChange?.(selectedRecords);
+  useEffect(() => {
+    if (onSelectionChange) {
+      onSelectionChange(selectedRecords);
+    }
   }, [selectedRecords, onSelectionChange]);
 
   const handleCellValueChange = (recordId: string, fieldApiName: string, newValue: any) => {
