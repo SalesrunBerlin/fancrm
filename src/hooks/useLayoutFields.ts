@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -43,10 +42,10 @@ export function useLayoutFields(layoutId?: string, includeFields: boolean = fals
         return [];
       }
 
-      // Fix for the query that was causing the error
-      let query = supabase
+      // Use proper query format for including related tables
+      const query = supabase
         .from("layout_fields")
-        .select(includeFields ? `*, field:field_id(*)` : "*")
+        .select(includeFields ? "*, field_id(*)" : "*")
         .eq("layout_id", layoutId)
         .order("display_order");
 
@@ -57,7 +56,20 @@ export function useLayoutFields(layoutId?: string, includeFields: boolean = fals
         throw error;
       }
 
-      return data || [];
+      // Transform data to ensure proper field property structure
+      const transformedData = data?.map(item => {
+        // If we included fields, format the response to match expected structure
+        if (includeFields && item.field_id) {
+          return {
+            ...item,
+            field: item.field_id,
+            field_id: item.field_id.id
+          };
+        }
+        return item;
+      }) || [];
+
+      return transformedData as LayoutField[];
     },
     enabled: !!layoutId,
   });

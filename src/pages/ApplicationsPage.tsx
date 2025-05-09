@@ -12,11 +12,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { AppWindow, Plus, Settings } from "lucide-react";
+import { AppWindow, Plus, Settings, Download } from "lucide-react";
 import { toast } from "sonner";
 import { ThemedButton } from "@/components/ui/themed-button";
 import { useAuth } from "@/contexts/AuthContext";
 import { ActionColor } from "@/hooks/useActions";
+import { Button } from "@/components/ui/button";
 
 const formSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -68,64 +69,70 @@ export default function ApplicationsPage() {
         title="Applications"
         description="Manage your applications and object assignments"
         actions={
-          <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-              <ThemedButton variant={(favoriteColor as ActionColor) || "default"}>
-                <Plus className="mr-2 h-4 w-4" /> New Application
-              </ThemedButton>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Create New Application</DialogTitle>
-                <DialogDescription>
-                  Add a new application to organize your objects.
-                </DialogDescription>
-              </DialogHeader>
-              
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                  <FormField
-                    control={form.control}
-                    name="name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Name</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Application name" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="description"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Description (optional)</FormLabel>
-                        <FormControl>
-                          <Textarea placeholder="Describe what this application is for" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <DialogFooter>
-                    <ThemedButton 
-                      type="submit" 
-                      disabled={createApplication.isPending}
-                      variant={(favoriteColor as ActionColor) || "default"}
-                    >
-                      {createApplication.isPending ? "Creating..." : "Create Application"}
-                    </ThemedButton>
-                  </DialogFooter>
-                </form>
-              </Form>
-              
-            </DialogContent>
-          </Dialog>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => window.location.href = "/applications/import"}>
+              <Download className="mr-2 h-4 w-4" />
+              Import
+            </Button>
+            <Dialog open={open} onOpenChange={setOpen}>
+              <DialogTrigger asChild>
+                <ThemedButton variant={(favoriteColor as ActionColor) || "default"}>
+                  <Plus className="mr-2 h-4 w-4" /> New Application
+                </ThemedButton>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Create New Application</DialogTitle>
+                  <DialogDescription>
+                    Add a new application to organize your objects.
+                  </DialogDescription>
+                </DialogHeader>
+                
+                <Form {...form}>
+                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                    <FormField
+                      control={form.control}
+                      name="name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Name</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Application name" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="description"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Description (optional)</FormLabel>
+                          <FormControl>
+                            <Textarea placeholder="Describe what this application is for" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <DialogFooter>
+                      <ThemedButton 
+                        type="submit" 
+                        disabled={createApplication.isPending}
+                        variant={(favoriteColor as ActionColor) || "default"}
+                      >
+                        {createApplication.isPending ? "Creating..." : "Create Application"}
+                      </ThemedButton>
+                    </DialogFooter>
+                  </form>
+                </Form>
+                
+              </DialogContent>
+            </Dialog>
+          </div>
         }
       />
       

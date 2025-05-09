@@ -1,3 +1,4 @@
+
 import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { PageHeader } from "@/components/ui/page-header";
@@ -13,7 +14,8 @@ import {
   Plus, 
   X, 
   Star,
-  StarOff
+  StarOff,
+  Share
 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -37,6 +39,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { ObjectAssignmentDialog } from "@/components/settings/ObjectAssignmentDialog";
 import { useApplicationObjects } from "@/hooks/useApplicationObjects";
+import { PublishApplicationDialog } from "@/components/publishing/PublishApplicationDialog";
 
 const applicationFormSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -58,6 +61,7 @@ export default function ApplicationDetailPage() {
   const [currentApplication, setCurrentApplication] = useState<any>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showObjectAssignmentDialog, setShowObjectAssignmentDialog] = useState(false);
+  const [showPublishDialog, setShowPublishDialog] = useState(false);
   
   const form = useForm<ApplicationFormValues>({
     resolver: zodResolver(applicationFormSchema),
@@ -120,6 +124,13 @@ export default function ApplicationDetailPage() {
     }
   };
 
+  const handlePublish = (values: any) => {
+    // Navigate to the publish page with form values
+    navigate(`/applications/${applicationId}/publish`, { 
+      state: { publishingParams: values } 
+    });
+  };
+
   if (isLoading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -159,6 +170,10 @@ export default function ApplicationDetailPage() {
           )}
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setShowPublishDialog(true)}>
+            <Share className="mr-2 h-4 w-4" />
+            Publish
+          </Button>
           {!currentApplication.is_default && (
             <Button variant="outline" onClick={handleSetDefault}>
               <Star className="mr-2 h-4 w-4" />
@@ -255,6 +270,13 @@ export default function ApplicationDetailPage() {
         title="Delete Application"
         description="Are you sure you want to delete this application? This action cannot be undone."
         deleteButtonText="Delete Application"
+      />
+      
+      <PublishApplicationDialog
+        application={currentApplication}
+        open={showPublishDialog}
+        onOpenChange={setShowPublishDialog}
+        onProceed={handlePublish}
       />
     </div>
   );

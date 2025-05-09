@@ -140,6 +140,85 @@ export type Database = {
           },
         ]
       }
+      application_imports: {
+        Row: {
+          created_at: string
+          id: string
+          import_status: string
+          imported_actions_count: number
+          imported_by: string
+          imported_objects_count: number
+          published_application_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          import_status?: string
+          imported_actions_count?: number
+          imported_by: string
+          imported_objects_count?: number
+          published_application_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          import_status?: string
+          imported_actions_count?: number
+          imported_by?: string
+          imported_objects_count?: number
+          published_application_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "application_imports_published_application_id_fkey"
+            columns: ["published_application_id"]
+            isOneToOne: false
+            referencedRelation: "published_applications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      application_publishing_settings: {
+        Row: {
+          application_id: string
+          created_at: string
+          id: string
+          include_actions: boolean
+          include_objects: boolean
+          published_application_id: string
+          updated_at: string
+        }
+        Insert: {
+          application_id: string
+          created_at?: string
+          id?: string
+          include_actions?: boolean
+          include_objects?: boolean
+          published_application_id: string
+          updated_at?: string
+        }
+        Update: {
+          application_id?: string
+          created_at?: string
+          id?: string
+          include_actions?: boolean
+          include_objects?: boolean
+          published_application_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "application_publishing_settings_published_application_id_fkey"
+            columns: ["published_application_id"]
+            isOneToOne: false
+            referencedRelation: "published_applications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       applications: {
         Row: {
           created_at: string
@@ -1396,6 +1475,115 @@ export type Database = {
             referencedColumns: ["record_id"]
           },
         ]
+      }
+      published_application_actions: {
+        Row: {
+          action_id: string
+          created_at: string
+          id: string
+          is_included: boolean
+          published_application_id: string
+          updated_at: string
+        }
+        Insert: {
+          action_id: string
+          created_at?: string
+          id?: string
+          is_included?: boolean
+          published_application_id: string
+          updated_at?: string
+        }
+        Update: {
+          action_id?: string
+          created_at?: string
+          id?: string
+          is_included?: boolean
+          published_application_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "published_application_actions_published_application_id_fkey"
+            columns: ["published_application_id"]
+            isOneToOne: false
+            referencedRelation: "published_applications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      published_application_objects: {
+        Row: {
+          created_at: string
+          id: string
+          is_included: boolean
+          object_type_id: string
+          published_application_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_included?: boolean
+          object_type_id: string
+          published_application_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_included?: boolean
+          object_type_id?: string
+          published_application_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "published_application_objects_published_application_id_fkey"
+            columns: ["published_application_id"]
+            isOneToOne: false
+            referencedRelation: "published_applications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      published_applications: {
+        Row: {
+          application_id: string
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          is_public: boolean
+          name: string
+          published_by: string
+          updated_at: string
+          version: string | null
+        }
+        Insert: {
+          application_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          is_public?: boolean
+          name: string
+          published_by: string
+          updated_at?: string
+          version?: string | null
+        }
+        Update: {
+          application_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          is_public?: boolean
+          name?: string
+          published_by?: string
+          updated_at?: string
+          version?: string | null
+        }
+        Relationships: []
       }
       record_field_values: {
         Row: {
