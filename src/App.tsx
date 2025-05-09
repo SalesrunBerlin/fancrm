@@ -1,4 +1,3 @@
-
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { Toaster } from "sonner"; 
 import { Layout } from "@/components/layout/Layout";
@@ -52,6 +51,7 @@ import IconEditorPage from "./pages/IconEditorPage";
 import AdminWorkspacePage from "./pages/admin/AdminWorkspacePage";
 import SettingsUserManagementPage from "./pages/UserManagementPage";
 import TicketQueuePage from "./pages/TicketQueuePage";
+import TicketProcessorPage from "./pages/TicketProcessorPage";
 
 // Create a client
 const queryClient = new QueryClient({
@@ -149,6 +149,9 @@ function AppContent() {
         
         {/* Ticket Queue route */}
         <Route path="/ticket-queue" element={<TicketQueuePage />} />
+        
+        {/* Ticket Processor route */}
+        <Route path="/process-ticket" element={<TicketProcessorPage />} />
         
         {/* Report routes */}
         <Route path="/reports" element={<ReportsPage />} />
