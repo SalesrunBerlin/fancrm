@@ -80,9 +80,13 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
   const dragStartPositionY = useRef<number | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const draggedItemRef = useRef<HTMLElement | null>(null);
+  const pageRef = useRef<HTMLDivElement | null>(null);
 
   // State to track which button is currently being dragged over
   const [dragOverButtonId, setDragOverButtonId] = useState<string | null>(null);
+
+  // State to track mouse/touch position during drag
+  const [mousePosition, setMousePosition] = useState<{x: number, y: number} | null>(null);
 
   // Group records by the selected picklist value
   useEffect(() => {
@@ -138,9 +142,45 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
     }
   }, [records, selectedFieldApiName, picklistValues, isMobile, activeColumn, toggleColumnExpansion]);
 
+  // Set up event listeners to capture and control touch events during drag
+  useEffect(() => {
+    // Only add these listeners when dragging is active
+    if (!isDraggingRef.current) return;
+    
+    // Prevent default browser touch behaviors during drag
+    const preventDefaultTouchMove = (e: TouchEvent) => {
+      if (isDraggingRef.current) {
+        e.preventDefault();
+      }
+    };
+
+    // Add the event listeners
+    document.addEventListener('touchmove', preventDefaultTouchMove, { passive: false });
+    
+    // Reference to the main page element
+    if (!pageRef.current) {
+      pageRef.current = document.querySelector('main') || document.body;
+    }
+    
+    // When dragging starts, disable normal page scrolling
+    if (pageRef.current) {
+      pageRef.current.style.overflow = isDraggingRef.current ? 'hidden' : '';
+    }
+    
+    return () => {
+      // Clean up listeners when component unmounts or drag ends
+      document.removeEventListener('touchmove', preventDefaultTouchMove);
+      
+      // Re-enable normal page scrolling
+      if (pageRef.current) {
+        pageRef.current.style.overflow = '';
+      }
+    };
+  }, [isDraggingRef.current]);
+
   // Auto-scroll function that runs during drag operations
   const autoScroll = () => {
-    if (!scrolling.current || !containerRef.current || !scrollDirection.current) return;
+    if (!scrolling.current || !scrollDirection.current) return;
     
     if (scrollDirection.current === 'left' || scrollDirection.current === 'right') {
       // Horizontal scrolling for the ScrollArea
@@ -152,7 +192,7 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
       if (scrollDirection.current === 'right') {
         scrollContainer.scrollTo({
           left: currentScrollLeft + scrollSpeed.current,
-          behavior: 'auto'  // Use 'auto' for smoother continuous scrolling
+          behavior: 'auto'
         });
       } else if (scrollDirection.current === 'left') {
         scrollContainer.scrollTo({
@@ -192,10 +232,7 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
     };
   }, [isDraggingRef.current]);
 
-  // Track mouse position during drag
-  const [mousePosition, setMousePosition] = useState<{x: number, y: number} | null>(null);
-
-  // Set up mouse position tracking
+  // Set up mouse position tracking for auto-scrolling
   useEffect(() => {
     if (!isDraggingRef.current) return;
     
@@ -205,6 +242,11 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
     
     const handleTouchMove = (e: TouchEvent) => {
       if (e.touches.length > 0) {
+        // Prevent default browser scrolling during drag
+        if (isDraggingRef.current) {
+          e.preventDefault();
+        }
+        
         setMousePosition({ 
           x: e.touches[0].clientX, 
           y: e.touches[0].clientY 
@@ -227,7 +269,7 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
     isDraggingRef.current = true;
     setDragOverButtonId(null); // Reset drag over state
     
-    // Store initial Y position through event handlers, not relying on DragStart.client
+    // Store initial Y position through event handlers
     const handleInitialPosition = (e: MouseEvent | TouchEvent) => {
       if ('touches' in e && e.touches.length > 0) {
         dragStartPositionY.current = e.touches[0].clientY;
@@ -240,6 +282,12 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
       const draggedElement = document.querySelector(`[data-rbd-draggable-id="${draggedId}"]`);
       if (draggedElement instanceof HTMLElement) {
         draggedItemRef.current = draggedElement;
+        
+        // Apply styles to make drag and drop more touch-friendly
+        draggedElement.style.touchAction = 'none';
+        draggedElement.style.webkitUserSelect = 'none';
+        draggedElement.style.userSelect = 'none';
+        draggedElement.style.zIndex = '100';
       }
       
       // Only need this once
@@ -249,7 +297,7 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
     
     // Add these listeners to capture the initial position
     window.addEventListener('mousedown', handleInitialPosition);
-    window.addEventListener('touchstart', handleInitialPosition);
+    window.addEventListener('touchstart', handleInitialPosition, { passive: false });
     
     // Make buttons more visible during dragging
     document.querySelectorAll('[data-kanban-column-button]').forEach((button) => {
@@ -258,6 +306,12 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
         button.style.transform = 'scale(1.05)';
       }
     });
+
+    // Disable body scrolling during drag
+    document.body.style.overflow = 'hidden';
+    if (pageRef.current) {
+      pageRef.current.style.overflow = 'hidden';
+    }
   };
 
   // Handle drag update to detect if we need to auto-scroll
@@ -276,13 +330,13 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
     const containerRect = containerRef.current.getBoundingClientRect();
     
     // Define scroll hotspots
-    // Horizontal scroll thresholds (30% of container width on each edge)
-    const horizontalScrollThreshold = containerRect.width * 0.3;
+    // Horizontal scroll thresholds (25% of container width on each edge)
+    const horizontalScrollThreshold = containerRect.width * 0.25;
     const leftEdge = containerRect.left + horizontalScrollThreshold;
     const rightEdge = containerRect.right - horizontalScrollThreshold;
     
-    // Vertical scroll thresholds (20% of viewport height on each edge)
-    const verticalScrollThreshold = window.innerHeight * 0.2;
+    // Vertical scroll thresholds (15% of viewport height on each edge)
+    const verticalScrollThreshold = window.innerHeight * 0.15;
     const topEdge = verticalScrollThreshold;
     const bottomEdge = window.innerHeight - verticalScrollThreshold;
     
@@ -315,28 +369,32 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
       }
     });
     
-    // Always prioritize scrolling up when near buttons at the top
+    // Reset all scrolling directions first
+    scrolling.current = false;
+    scrollDirection.current = null;
+    
+    // Prioritize scrolling up when near buttons at the top
     // or when explicitly dragging upward
     if (clientY < topEdge || (isDraggingUpward && isNearColumnButton)) {
       scrollDirection.current = 'up';
-      scrollSpeed.current = Math.min(15, (topEdge - clientY) / 10 + 5);
+      scrollSpeed.current = Math.min(20, (topEdge - clientY) / 10 + 8);
       scrolling.current = true;
       return; // Exit early to prevent competing scroll directions
     }
     
-    // Check if cursor is in the horizontal scrolling hotspot areas
+    // Check horizontal edges for scrolling
     if (clientX < leftEdge) {
       const distance = leftEdge - clientX;
       scrollDirection.current = 'left';
-      scrollSpeed.current = Math.min(15, distance / 10 + 5); // Dynamic speed based on distance
+      scrollSpeed.current = Math.min(20, distance / 10 + 5); 
       scrolling.current = true;
     } else if (clientX > rightEdge) {
       const distance = clientX - rightEdge;
       scrollDirection.current = 'right';
-      scrollSpeed.current = Math.min(15, distance / 10 + 5);
+      scrollSpeed.current = Math.min(20, distance / 10 + 5);
       scrolling.current = true;
     }
-    // Check for bottom scroll - ONLY allow this if NOT dragging upward
+    // Only allow bottom scrolling if NOT dragging upward and NOT near column buttons
     else if (clientY > bottomEdge && !isDraggingUpward && !isNearColumnButton) {
       const distance = clientY - bottomEdge;
       scrollDirection.current = 'down';
@@ -367,6 +425,12 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
         button.classList.remove('ring-2', 'ring-primary', 'ring-offset-2');
       }
     });
+    
+    // Re-enable scrolling
+    document.body.style.overflow = '';
+    if (pageRef.current) {
+      pageRef.current.style.overflow = '';
+    }
     
     if (!result.destination || !selectedFieldApiName || !onUpdateRecord) return;
     
@@ -560,6 +624,7 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
                         className="relative"
                         onMouseEnter={() => handleDragEnterButton(columnValue)}
                         onMouseLeave={handleDragLeaveButton}
+                        data-column={columnValue}
                       >
                         <Button
                           variant={isActive ? "default" : isDraggedOver ? "secondary" : "outline"}
@@ -646,7 +711,7 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
                                 className={`h-full p-2 rounded-md min-h-[300px] flex flex-col gap-2 overflow-y-auto ${
                                   snapshot.isDraggingOver ? 'bg-primary/5 border-primary/20 border-dashed border-2' : ''
                                 }`}
-                                style={{ touchAction: 'pan-y' }}
+                                style={{ touchAction: isDraggingRef.current ? 'none' : 'pan-y' }}
                               >
                                 {columnRecords.length === 0 ? (
                                   <div className="text-center py-8 text-sm text-muted-foreground">
@@ -663,6 +728,7 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
                                           style={{
                                             ...provided.draggableProps.style,
                                             opacity: snapshot.isDragging ? 0.8 : 1,
+                                            touchAction: 'none', // Prevent browser touch actions
                                           }}
                                           className={snapshot.isDragging ? 'z-50' : ''}
                                         >
@@ -699,3 +765,4 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
     </div>
   );
 }
+
