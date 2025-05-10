@@ -37,11 +37,16 @@ export function useKanbanViewSettings(objectTypeId: string | undefined) {
     setSettings(prev => ({ ...prev, selectedRecords: recordIds }));
   };
 
+  const getSelectedRecords = (): string[] => {
+    return settings.selectedRecords || [];
+  };
+
   return {
     settings,
     updateFieldApiName,
     toggleColumnExpansion,
     isColumnExpanded,
-    updateSelectedRecords
+    updateSelectedRecords,
+    getSelectedRecords
   };
 }

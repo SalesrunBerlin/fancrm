@@ -41,11 +41,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       if (!user) return;
       
-      // Create a user_preferences table entry using RPC
-      const { error } = await supabase.rpc('set_user_color_preference', {
-        user_id_param: user.id,
-        color_param: color
-      });
+      // Create a user_preferences table entry using a direct SQL query instead of RPC
+      const { error } = await supabase
+        .from('user_color_preferences')
+        .upsert({ 
+          user_id: user.id, 
+          theme: 'color',
+          colors: { favorite_color: color } 
+        }, { onConflict: 'user_id' });
       
       if (error) throw error;
       
@@ -95,10 +98,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const checkUserRoles = async (userId: string) => {
     try {
-      // Use RPC to check user roles
-      const { data, error } = await supabase.rpc('get_user_roles', {
-        user_id_param: userId
-      });
+      // Use direct SQL query instead of RPC
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', userId)
+        .single();
       
       if (error) {
         console.error('Error fetching user roles:', error);
@@ -107,8 +112,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       // Set admin status based on roles
       if (data) {
-        setIsSuperAdmin(data.is_super_admin || false);
-        setIsAdmin(data.is_admin || data.is_super_admin || false);
+        const role = data.role;
+        setIsSuperAdmin(role === 'superadmin' || role === 'SuperAdmin');
+        setIsAdmin(role === 'admin' || role === 'superadmin' || role === 'SuperAdmin');
       }
     } catch (error) {
       console.error('Error checking user roles:', error);
@@ -117,18 +123,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const loadUserPreferences = async (userId: string) => {
     try {
-      // Use RPC to get user preferences
-      const { data, error } = await supabase.rpc('get_user_preferences', {
-        user_id_param: userId
-      });
+      // Use direct query instead of RPC
+      const { data, error } = await supabase
+        .from('user_color_preferences')
+        .select('colors')
+        .eq('user_id', userId)
+        .maybeSingle();
       
       if (error) {
         console.error('Error loading user preferences:', error);
         return;
       }
       
-      if (data) {
-        setFavoriteColorState(data.favorite_color || null);
+      if (data && data.colors) {
+        setFavoriteColorState(data.colors.favorite_color || null);
       }
     } catch (error) {
       console.error('Error loading user preferences:', error);
