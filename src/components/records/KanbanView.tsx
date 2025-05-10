@@ -185,7 +185,7 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
     
     // Reference to the main page element
     if (!pageRef.current) {
-      pageRef.current = document.querySelector('main') || document.body;
+      pageRef.current = document.querySelector('main');
     }
     
     // When dragging starts, disable normal page scrolling
@@ -195,7 +195,7 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
     
     // Hide original dragged element
     if (draggedItemRef.current) {
-      draggedItemRef.current.style.opacity = '0';
+      draggedItemRef.current.style.opacity = '0.05';
     }
     
     return () => {
@@ -299,20 +299,20 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
         const buttonRect = button.getBoundingClientRect();
         // Extended hit area for buttons - make it easier to drop on them
         const extendedRect = {
-          left: buttonRect.left - 20,
-          right: buttonRect.right + 20,
-          top: buttonRect.top - 40, // Much larger area above
-          bottom: buttonRect.bottom + 20
+          left: buttonRect.left - 40, // Much larger area on sides
+          right: buttonRect.right + 40,
+          top: buttonRect.top - 60, // Much larger area above
+          bottom: buttonRect.bottom + 40
         };
         
         if (mousePosition.x >= extendedRect.left && mousePosition.x <= extendedRect.right && 
             mousePosition.y >= extendedRect.top && mousePosition.y <= extendedRect.bottom) {
           isNearColumnButton = true;
-          // Highlight the button
-          button.classList.add('ring-2', 'ring-primary', 'ring-offset-2');
+          // Highlight the button with stronger visual feedback
+          button.classList.add('ring-4', 'ring-primary', 'ring-offset-2', 'scale-110');
           setDragOverButtonId(button.getAttribute('data-kanban-column-button') || null);
         } else {
-          button.classList.remove('ring-2', 'ring-primary', 'ring-offset-2');
+          button.classList.remove('ring-4', 'ring-primary', 'ring-offset-2', 'scale-110');
         }
       }
     });
@@ -329,7 +329,7 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
     // or when explicitly dragging upward
     if (mousePosition.y < topEdge || (isDraggingUpward && isNearColumnButton)) {
       scrollDirection.current = 'up';
-      scrollSpeed.current = Math.min(20, (topEdge - mousePosition.y) / 10 + 8);
+      scrollSpeed.current = Math.min(20, (topEdge - mousePosition.y) / 8 + 8);
       scrolling.current = true;
       return; // Exit early to prevent competing scroll directions
     }
@@ -405,7 +405,7 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
         if (draggedRecord) {
           setDraggedElement({
             id: draggedId,
-            element: <KanbanCard record={draggedRecord} objectTypeId={objectTypeId} isDragging={true} />,
+            element: <KanbanCard record={draggedRecord} objectTypeId={objectTypeId} isDragging={true} className="shadow-xl border-primary" />,
             position: mousePosition
           });
         }
@@ -438,10 +438,13 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
   // Handle drag update to detect if we need to auto-scroll
   const handleDragUpdate = (update: DragUpdate) => {
     // Everything is already handled in the useEffect that watches mousePosition
+    console.log("Drag update position:", mousePosition);
   };
 
   // Handle drag end - update record with new status
   const handleDragEnd = async (result: DropResult) => {
+    console.log("Drag ended", result);
+    
     // Reset drag-related refs
     isDraggingRef.current = false;
     scrolling.current = false;
@@ -457,7 +460,7 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
       if (button instanceof HTMLElement) {
         button.style.zIndex = '';
         button.style.transform = '';
-        button.classList.remove('ring-2', 'ring-primary', 'ring-offset-2');
+        button.classList.remove('ring-4', 'ring-primary', 'ring-offset-2', 'scale-110');
       }
     });
     
@@ -553,15 +556,16 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
 
   return (
     <div className="space-y-4" ref={containerRef}>
-      {/* Ghost card that follows cursor when dragging */}
+      {/* Ghost card that follows cursor when dragging - with improved visibility */}
       {isDraggingRef.current && draggedElement.element && mousePosition && (
         <div 
           className="fixed pointer-events-none z-[9999]"
           style={{
             top: mousePosition.y - 30, // Offset slightly above finger/cursor
             left: mousePosition.x - 100, // Center horizontally
-            width: '200px',
-            opacity: 0.9,
+            width: '220px',
+            opacity: 0.95,
+            filter: 'drop-shadow(0 0 10px rgba(0,0,0,0.3))'
           }}
         >
           {draggedElement.element}
@@ -689,9 +693,10 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
                             toggleColumnExpansion(columnValue, true);
                             scrollToColumn(columnValue);
                           }}
-                          className={`flex items-center gap-1 transition-all ${
-                            isDraggedOver ? 'ring-2 ring-primary ring-offset-2' : ''
-                          } ${snapshot.isDraggingOver ? 'bg-primary text-primary-foreground' : ''}`}
+                          className={`flex items-center gap-1 transition-all relative 
+                            ${isDraggedOver ? 'ring-4 ring-primary ring-offset-1 z-50 scale-110' : ''} 
+                            ${snapshot.isDraggingOver ? 'bg-primary text-primary-foreground scale-110' : ''}
+                          `}
                           data-kanban-column-button={columnValue}
                         >
                           {columnLabel} 
@@ -732,7 +737,7 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
               style={{ WebkitOverflowScrolling: 'touch' }}
             >
               <div 
-                ref={scrollAreaRef}
+                ref={(el) => { scrollAreaRef.current = el as HTMLDivElement; }}  
                 className="flex gap-3 min-w-full px-1 pb-4" 
               >
                 {Object.entries(groupedRecords).map(([columnValue, columnRecords]) => {

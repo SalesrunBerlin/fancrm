@@ -73,3 +73,8 @@ export function parseMultiFormatDate(dateString: string): string | null {
   return null;
 }
 
+// Helper for safely accessing HTML Element properties
+export function getSafeElement<T extends HTMLElement = HTMLElement>(selector: string): T | null {
+  const element = document.querySelector<T>(selector);
+  return element;
+}

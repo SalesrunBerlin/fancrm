@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
@@ -356,6 +355,17 @@ export default function ObjectRecordsList() {
                   records={allRecords}
                   fields={fields || []}
                   objectTypeId={objectTypeId!}
+                  onUpdateRecord={async (recordId, fieldValues) => {
+                    try {
+                      await updateRecord.mutateAsync({
+                        id: recordId,
+                        field_values: fieldValues
+                      });
+                    } catch (error) {
+                      console.error("Error updating record:", error);
+                      throw error;
+                    }
+                  }}
                 />
               </div>
             )}

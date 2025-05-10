@@ -16,9 +16,10 @@ interface KanbanCardProps {
   record: ObjectRecord;
   objectTypeId: string;
   isDragging?: boolean;
+  className?: string;
 }
 
-export function KanbanCard({ record, objectTypeId, isDragging = false }: KanbanCardProps) {
+export function KanbanCard({ record, objectTypeId, isDragging = false, className = "" }: KanbanCardProps) {
   const navigate = useNavigate();
   const [isHovered, setIsHovered] = useState(false);
 
@@ -77,7 +78,7 @@ export function KanbanCard({ record, objectTypeId, isDragging = false }: KanbanC
 
   return (
     <Card 
-      className={`mb-2 cursor-pointer ${isDragging ? 'shadow-lg' : ''}`}
+      className={`mb-2 cursor-pointer ${isDragging ? 'shadow-lg' : ''} ${className}`}
       onClick={handleCardClick}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
