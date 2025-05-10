@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Session, User, AuthError } from "@supabase/supabase-js";
@@ -63,6 +62,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             .single();
           
           if (!error && data && data.favorite_color) {
+            console.log("Loaded favorite color from database:", data.favorite_color);
             setFavoriteColorState(data.favorite_color);
           }
         } catch (err) {
@@ -97,6 +97,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           .single()
           .then(({ data, error }) => {
             if (!error && data && data.favorite_color) {
+              console.log("Loaded favorite color on auth change:", data.favorite_color);
               setFavoriteColorState(data.favorite_color);
             }
           })
@@ -225,7 +226,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const setFavoriteColor = async (color: string) => {
+  const setFavoriteColor = async (color: string): Promise<void> => {
     setFavoriteColorState(color);
     
     // Save the color preference to the database
@@ -239,12 +240,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (error) {
           console.error("Error saving favorite color:", error);
           toast.error("Failed to save color preference");
+          return Promise.reject(error);
         } else {
           console.log("Color preference saved successfully:", color);
+          return Promise.resolve();
         }
       } catch (err) {
         console.error("Error in setFavoriteColor:", err);
         toast.error("An error occurred while saving your color preference");
+        return Promise.reject(err);
       }
     }
     

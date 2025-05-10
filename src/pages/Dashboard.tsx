@@ -12,6 +12,7 @@ import { useState, useEffect } from "react";
 import { useObjectRecords } from "@/hooks/useObjectRecords";
 import { ExpandableActionButton } from "@/components/actions/ExpandableActionButton";
 import { useActions } from "@/hooks/useActions";
+import { SavedFiltersButtons } from "@/components/records/SavedFiltersButtons";
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -97,8 +98,11 @@ export default function Dashboard() {
                   </CardTitle>
                 </Link>
               </CardHeader>
-              <CardContent className="pt-3">
+              <CardContent className="pt-3 flex flex-col">
                 <DashboardObjectActions objectTypeId={objectType.id} />
+                
+                {/* Add SavedFiltersButtons component */}
+                <SavedFiltersButtons objectTypeId={objectType.id} maxToShow={3} />
               </CardContent>
             </Card>
           ))}
