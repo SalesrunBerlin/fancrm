@@ -44,6 +44,7 @@ export function SavedFiltersButtons({ objectTypeId, maxToShow = 3 }: SavedFilter
     const currentLastApplied = localStorage.getItem(lastAppliedStorageKey);
     const lastApplied = currentLastApplied ? JSON.parse(currentLastApplied) : {};
     
+    console.log("Saving filter to apply:", filter.conditions);
     lastApplied[objectTypeId] = filter.conditions;
     localStorage.setItem(lastAppliedStorageKey, JSON.stringify(lastApplied));
     
@@ -58,7 +59,7 @@ export function SavedFiltersButtons({ objectTypeId, maxToShow = 3 }: SavedFilter
         <Badge
           key={filter.id}
           variant="outline"
-          className="cursor-pointer hover:bg-accent/20 py-1.5 px-2.5 text-wrap whitespace-normal text-xs leading-tight"
+          className="cursor-pointer hover:bg-accent/20 py-2 px-3 text-wrap whitespace-normal text-sm leading-tight"
           onClick={() => handleFilterClick(filter)}
         >
           {filter.name}

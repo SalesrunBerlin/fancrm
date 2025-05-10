@@ -40,32 +40,47 @@ export function ObjectRecordsFilter({
   );
   const [filterName, setFilterName] = useState("");
   const [showSaveOptions, setShowSaveOptions] = useState(false);
+  const lastAppliedStorageKey = `last-applied-filters-${userId}`;
   const [lastAppliedFilter, setLastAppliedFilter] = useLocalStorage<Record<string, FilterCondition[]>>(
-    `last-applied-filters-${userId}`,
+    lastAppliedStorageKey,
     {}
   );
+
+  // Debug logging
+  useEffect(() => {
+    console.log("ObjectRecordsFilter mounted for objectTypeId:", objectTypeId);
+    console.log("Last applied filters in storage:", lastAppliedFilter);
+    console.log("Active filters passed in props:", activeFilters);
+  }, []);
 
   // Load saved filters for this object type
   useEffect(() => {
     if (activeFilters && activeFilters.length > 0) {
+      console.log("Using active filters from props:", activeFilters);
       setFilters(activeFilters);
     } else if (objectTypeId) {
       // Try to load last applied filter for this object
-      const lastFilter = lastAppliedFilter[objectTypeId];
+      const lastFilter = lastAppliedFilter?.[objectTypeId];
+      
       if (lastFilter && lastFilter.length > 0) {
+        console.log("Loading last applied filter:", lastFilter);
         setFilters(lastFilter);
         if (onFilterChange) {
+          console.log("Applying last filter via onFilterChange");
           onFilterChange(lastFilter);
         }
-      } else if (savedFilters[objectTypeId]?.length > 0) {
+      } else if (savedFilters?.[objectTypeId]?.length > 0) {
         // Otherwise try to load most recently saved filter
         const recentFilter = savedFilters[objectTypeId][0];
+        console.log("Loading most recent saved filter:", recentFilter);
         setFilters(recentFilter.conditions);
         if (onFilterChange) {
+          console.log("Applying recent filter via onFilterChange");
           onFilterChange(recentFilter.conditions);
         }
       } else if (filters.length === 0) {
         // Initialize with an empty filter if none exist
+        console.log("Initializing with empty filter");
         addFilterCondition();
       }
     }
@@ -136,15 +151,18 @@ export function ObjectRecordsFilter({
   };
 
   const loadSavedFilter = (savedFilter: SavedFilter) => {
+    console.log("Loading saved filter:", savedFilter);
     setFilters(savedFilter.conditions);
     
     // Update last applied filter
+    console.log("Updating last applied filter storage");
     setLastAppliedFilter({
       ...lastAppliedFilter,
       [objectTypeId]: savedFilter.conditions
     });
     
     if (onFilterChange) {
+      console.log("Applying saved filter via onFilterChange");
       onFilterChange(savedFilter.conditions);
     }
   };
@@ -187,6 +205,8 @@ export function ObjectRecordsFilter({
         f.operator === "isNull" || 
         f.operator === "isNotNull"
       );
+      
+      console.log("Applying filters and saving to lastApplied:", validFilters);
       
       // Save as last applied filter
       setLastAppliedFilter({

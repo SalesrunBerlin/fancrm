@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
@@ -28,17 +27,30 @@ export default function ObjectRecordsList() {
   const { objectTypeId } = useParams<{ objectTypeId: string }>();
   const { objectTypes } = useObjectTypes();
   const [activeFilters, setActiveFilters] = useState<FilterCondition[]>([]);
+  const { user } = useAuth();
+  const userId = user?.id || 'anonymous';
   const { records, isLoading, deleteRecord, updateRecord, cloneRecord } = useObjectRecords(objectTypeId, activeFilters);
   const { fields, isLoading: isLoadingFields } = useEnhancedFields(objectTypeId);
   const objectType = objectTypes?.find(type => type.id === objectTypeId);
-  const [allRecords, setAllRecords] = useState<any[]>([]);
-  const { visibleFields, updateVisibleFields } = useUserFieldSettings(objectTypeId);
-  const [selectedRecords, setSelectedRecords] = useState<string[]>([]);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [isCloneDialogOpen, setIsCloneDialogOpen] = useState(false);
-  const { favoriteColor } = useAuth();
-  const [isFilterExpanded, setIsFilterExpanded] = useState(false);
-  const [viewMode, setViewMode] = useState<"table" | "kanban">("table");
+  
+  // Load last applied filter on component mount
+  useEffect(() => {
+    if (objectTypeId) {
+      const lastAppliedStorageKey = `last-applied-filters-${userId}`;
+      try {
+        const lastAppliedStr = localStorage.getItem(lastAppliedStorageKey);
+        if (lastAppliedStr) {
+          const lastApplied = JSON.parse(lastAppliedStr);
+          if (lastApplied[objectTypeId] && lastApplied[objectTypeId].length > 0) {
+            console.log("ObjectRecordsList - Loading last applied filter:", lastApplied[objectTypeId]);
+            setActiveFilters(lastApplied[objectTypeId]);
+          }
+        }
+      } catch (error) {
+        console.error("Error loading last applied filter:", error);
+      }
+    }
+  }, [objectTypeId, userId]);
   
   // System fields definition
   const systemFields: EnhancedObjectField[] = [
@@ -143,7 +155,7 @@ export default function ObjectRecordsList() {
   };
 
   const handleFilterChange = (filters: FilterCondition[]) => {
-    console.log("Filters updated:", filters);
+    console.log("ObjectRecordsList - Filters updated:", filters);
     setActiveFilters(filters);
   };
 
