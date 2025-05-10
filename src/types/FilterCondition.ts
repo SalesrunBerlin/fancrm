@@ -19,3 +19,10 @@ export interface ObjectRecord {
   fieldValues: Record<string, any>;
   field_values: { field_api_name: string; value: any }[];
 }
+
+export interface SavedFilter {
+  id: string;
+  name: string;
+  conditions: FilterCondition[];
+  created_at: string;
+}

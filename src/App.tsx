@@ -1,3 +1,4 @@
+
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { Toaster } from "sonner"; 
 import { Layout } from "@/components/layout/Layout";
@@ -44,6 +45,9 @@ import HelpTabsManager from "./pages/admin/HelpTabsManager";
 import HelpTabContentEditor from "./pages/admin/HelpTabContentEditor";
 import UserManagementPage from "./pages/admin/UserManagementPage";
 import UserDetailPage from "./pages/admin/UserDetailPage";
+import UserAnalyticsPage from "./pages/admin/UserAnalyticsPage";
+import SessionActivitiesPage from "./pages/admin/SessionActivitiesPage";
+import UserSessionsPage from "./pages/admin/UserSessionsPage";
 import PublicActionPage from "./pages/PublicActionPage";
 import PublicRecordPage from "./pages/PublicRecordPage";
 import ReportsPage from "./pages/ReportsPage";
@@ -59,6 +63,7 @@ import AutoTicketProcessorPage from "./pages/AutoTicketProcessorPage";
 import TicketAnalysisPage from "./pages/TicketAnalysisPage";
 import LandingPage from "./pages/LandingPage";
 import Index from "./pages/Index";
+import { adminRoutes } from "./routes/adminRoutes";
 
 // Create a client
 const queryClient = new QueryClient({
@@ -187,6 +192,9 @@ function AppContent() {
         <Route path="/admin/help-content/:tabId" element={<SuperAdminRoute><HelpTabContentEditor /></SuperAdminRoute>} />
         <Route path="/admin/users" element={<SuperAdminRoute><UserManagementPage /></SuperAdminRoute>} />
         <Route path="/admin/users/:userId" element={<SuperAdminRoute><UserDetailPage /></SuperAdminRoute>} />
+        <Route path="/admin/analytics" element={<SuperAdminRoute><UserAnalyticsPage /></SuperAdminRoute>} />
+        <Route path="/admin/users/sessions/:userId" element={<SuperAdminRoute><UserSessionsPage /></SuperAdminRoute>} />
+        <Route path="/admin/sessions/:sessionId/activities" element={<SuperAdminRoute><SessionActivitiesPage /></SuperAdminRoute>} />
         <Route path="/admin/workspace" element={<SuperAdminRoute><AdminWorkspacePage /></SuperAdminRoute>} />
         <Route path="/admin/workspace/:workspaceId" element={<SuperAdminRoute><AdminWorkspacePage /></SuperAdminRoute>} />
       </Route>

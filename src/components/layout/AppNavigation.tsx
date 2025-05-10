@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Settings, LayoutDashboard, AppWindow, FileText, List, Play, BarChart3, Shield } from "lucide-react";
+import { Settings, LayoutDashboard, AppWindow, FileText, List, Play, BarChart3, Shield, Activity } from "lucide-react";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
 import { useCurrentApplicationData } from "@/hooks/useCurrentApplicationData";
 import { useAuth } from "@/contexts/AuthContext";
@@ -78,14 +78,25 @@ export function AppNavigation() {
             </Button>
 
             {isSuperAdmin && (
-              <Button
-                variant={isActive("/admin") ? "secondary" : "ghost"}
-                className="w-full justify-start"
-                onClick={() => navigate("/admin")}
-              >
-                <Shield className="mr-2 h-4 w-4" />
-                Admin-Bereich
-              </Button>
+              <>
+                <Button
+                  variant={isActive("/admin") ? "secondary" : "ghost"}
+                  className="w-full justify-start"
+                  onClick={() => navigate("/admin")}
+                >
+                  <Shield className="mr-2 h-4 w-4" />
+                  Admin-Bereich
+                </Button>
+                
+                <Button
+                  variant={isActive("/admin/analytics") ? "secondary" : "ghost"}
+                  className="w-full justify-start"
+                  onClick={() => navigate("/admin/analytics")}
+                >
+                  <Activity className="mr-2 h-4 w-4" />
+                  Benutzeranalysen
+                </Button>
+              </>
             )}
 
             <Button

@@ -1,3 +1,4 @@
+
 import {
   Sidebar,
   SidebarContent,
@@ -9,7 +10,17 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { LayoutDashboard, Box, BarChart3, Settings, Archive, Users, HelpCircle, Shield } from "lucide-react";
+import { 
+  LayoutDashboard, 
+  Box, 
+  BarChart3, 
+  Settings, 
+  Archive, 
+  Users, 
+  HelpCircle, 
+  Shield, 
+  Activity 
+} from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
 import { useApplications } from "@/hooks/useApplications";
@@ -214,6 +225,19 @@ export function AppSidebar() {
                       <Link to="/admin/users" onClick={handleNavClick}>
                         <Users className="h-4 w-4" />
                         <span>User Management</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={pathname === "/admin/analytics"}
+                      tooltip="User Analytics"
+                    >
+                      <Link to="/admin/analytics" onClick={handleNavClick}>
+                        <Activity className="h-4 w-4" />
+                        <span>Benutzeranalysen</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
