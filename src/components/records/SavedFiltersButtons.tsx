@@ -59,7 +59,7 @@ export function SavedFiltersButtons({ objectTypeId, maxToShow = 3 }: SavedFilter
         <Badge
           key={filter.id}
           variant="outline"
-          className="cursor-pointer hover:bg-accent/20 py-2 px-3 text-wrap whitespace-normal text-sm leading-tight"
+          className="cursor-pointer hover:bg-accent/20 py-3 px-4 text-wrap whitespace-normal text-base leading-normal"
           onClick={() => handleFilterClick(filter)}
         >
           {filter.name}

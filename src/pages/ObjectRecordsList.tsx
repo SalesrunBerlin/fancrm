@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
@@ -32,6 +33,16 @@ export default function ObjectRecordsList() {
   const { records, isLoading, deleteRecord, updateRecord, cloneRecord } = useObjectRecords(objectTypeId, activeFilters);
   const { fields, isLoading: isLoadingFields } = useEnhancedFields(objectTypeId);
   const objectType = objectTypes?.find(type => type.id === objectTypeId);
+  
+  // Add missing state variables
+  const [viewMode, setViewMode] = useState<"table" | "kanban">("table");
+  const [isFilterExpanded, setIsFilterExpanded] = useState(false);
+  const [allRecords, setAllRecords] = useState<any[]>([]);
+  const [selectedRecords, setSelectedRecords] = useState<string[]>([]);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isCloneDialogOpen, setIsCloneDialogOpen] = useState(false);
+  const { visibleFields, updateVisibleFields } = useUserFieldSettings(objectTypeId);
+  const { favoriteColor } = useAuth();
   
   // Load last applied filter on component mount
   useEffect(() => {

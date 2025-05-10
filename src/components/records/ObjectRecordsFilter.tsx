@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { ObjectField } from "@/hooks/useObjectTypes";
@@ -84,11 +85,11 @@ export function ObjectRecordsFilter({
         addFilterCondition();
       }
     }
-  }, [objectTypeId, user]);
+  }, [objectTypeId, user, activeFilters]);
 
   // Update parent component when filters change
   useEffect(() => {
-    if (onFilterChange) {
+    if (onFilterChange && filters.length > 0) {
       onFilterChange(filters);
     }
   }, [filters, onFilterChange]);
