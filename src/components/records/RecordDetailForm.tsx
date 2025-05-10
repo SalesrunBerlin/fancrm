@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { Button } from '@/components/ui/button';
 import { RecordField } from './RecordField';
@@ -22,6 +21,8 @@ interface RecordDetailFormProps {
   onFieldChange?: (fieldName: string, value: any) => void;
   editedValues?: Record<string, any>;
   isEditing?: boolean;
+  selectedLayoutId?: string;
+  hideEmptyFields?: boolean;
 }
 
 export function RecordDetailForm({
@@ -34,7 +35,9 @@ export function RecordDetailForm({
   fields: providedFields,
   onFieldChange,
   editedValues = {},
-  isEditing
+  isEditing,
+  selectedLayoutId,
+  hideEmptyFields = false
 }: RecordDetailFormProps) {
   const shouldFetchData = !providedRecord || !providedFields;
   const { fields: fetchedFields, isLoading: isLoadingFields } = useObjectFields(
@@ -51,7 +54,7 @@ export function RecordDetailForm({
   const { updateRecord } = useObjectRecords(objectTypeId);
   
   // Get layout configuration for this object type
-  const { applyLayout, isLoading: isLoadingLayout } = useObjectLayout(objectTypeId);
+  const { applyLayout, isLoading: isLoadingLayout } = useObjectLayout(objectTypeId, selectedLayoutId);
   
   // Make sure to cast the fields to the proper ObjectField type
   const unsortedFields = (providedFields || fetchedFields || []) as ObjectField[];
@@ -64,6 +67,22 @@ export function RecordDetailForm({
   
   // Determines if we're in edit mode based on either prop
   const actualEditMode = isEditMode || isEditing || false;
+
+  // Filter out empty fields if hideEmptyFields is true and we're not in edit mode
+  const displayFields = useMemo(() => {
+    if (!hideEmptyFields || actualEditMode || !record || !record.field_values) {
+      return fields;
+    }
+    
+    return fields.filter(field => {
+      const fieldValue = record.field_values[field.api_name];
+      // Keep fields that have a non-null, non-empty value
+      return fieldValue !== null && 
+             fieldValue !== undefined && 
+             fieldValue !== '' &&
+             fieldValue !== false;
+    });
+  }, [fields, hideEmptyFields, actualEditMode, record]);
   
   useEffect(() => {
     // Reset form when record data is loaded or edit mode changes
@@ -142,7 +161,7 @@ export function RecordDetailForm({
 
   return (
     <form onSubmit={methods.handleSubmit(onSubmit)} className="space-y-4 p-4">
-      {fields && fields.map((field) => (
+      {displayFields && displayFields.map((field) => (
         <RecordField
           key={field.id}
           field={field}

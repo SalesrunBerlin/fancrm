@@ -133,7 +133,7 @@ export function RecordField({
       case 'long_text':
         return readOnly ? (
           <div 
-            className="p-3 border rounded-md bg-background" 
+            className="p-3 border rounded-md bg-background text-foreground" 
             dangerouslySetInnerHTML={{ __html: currentValue || '' }}
           />
         ) : (
@@ -158,7 +158,7 @@ export function RecordField({
       case 'picklist':
         if (readOnly) {
           const selectedOption = picklistValues?.find(option => option.value === currentValue);
-          return <div className="py-2">{selectedOption?.label || currentValue || "-"}</div>;
+          return <div className="py-2 text-foreground">{selectedOption?.label || currentValue || "-"}</div>;
         }
         
         if (loadingPicklist) {
@@ -214,7 +214,7 @@ export function RecordField({
         );
       case 'date':
         if (readOnly) {
-          return <div className="py-2">{currentValue ? new Date(currentValue).toLocaleDateString() : "-"}</div>;
+          return <div className="py-2 text-foreground">{currentValue ? new Date(currentValue).toLocaleDateString() : "-"}</div>;
         }
         return (
           <DatePickerField
@@ -226,7 +226,7 @@ export function RecordField({
         );
       case 'datetime':
         if (readOnly) {
-          return <div className="py-2">
+          return <div className="py-2 text-foreground">
             {currentValue ? new Date(currentValue).toLocaleString() : "-"}
           </div>;
         }
@@ -241,7 +241,7 @@ export function RecordField({
       case 'lookup':
         if (readOnly) {
           return (
-            <div className="py-2">
+            <div className="py-2 text-foreground">
               {currentValue ? (
                 <LookupValueDisplay 
                   value={currentValue} 

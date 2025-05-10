@@ -1,92 +1,83 @@
-import { useEffect, useState } from "react";
-import { useObjectLayouts } from "@/hooks/useObjectLayouts";
-import { useLayoutFields } from "@/hooks/useLayoutFields";
+import { useCallback, useMemo } from "react";
+import { useObjectLayouts } from "./useObjectLayouts";
+import { useLayoutFields } from "./useLayoutFields";
 import { ObjectField } from "@/types/ObjectFieldTypes";
 
-interface LayoutFieldConfig {
-  fieldId: string;
-  displayOrder: number;
-  isVisible: boolean;
-}
-
-export function useObjectLayout(objectTypeId?: string) {
-  const { layouts, isLoading: isLoadingLayouts, getDefaultLayout } = useObjectLayouts(objectTypeId);
-  const [layoutId, setLayoutId] = useState<string | undefined>(undefined);
-  const [fieldConfigs, setFieldConfigs] = useState<Map<string, LayoutFieldConfig>>(new Map());
-
-  // Get layout fields for the default/active layout
+export function useObjectLayout(
+  objectTypeId: string | undefined,
+  selectedLayoutId?: string
+) {
+  // Get available layouts for this object
+  const { layouts, isLoading: isLayoutsLoading, getDefaultLayout } = useObjectLayouts(objectTypeId);
+  
+  // Determine which layout to use - selected, default, or first
+  const layoutId = useMemo(() => {
+    if (selectedLayoutId) {
+      return selectedLayoutId;
+    }
+    
+    if (!layouts || layouts.length === 0) {
+      return undefined;
+    }
+    
+    // Try to get the default layout
+    const defaultLayout = getDefaultLayout();
+    if (defaultLayout) {
+      return defaultLayout.id;
+    }
+    
+    // Fallback to the first layout
+    return layouts[0].id;
+  }, [selectedLayoutId, layouts, getDefaultLayout]);
+  
+  // Get layout fields for the active layout
   const { 
     layoutFields, 
-    isLoading: isLoadingLayoutFields 
-  } = useLayoutFields(layoutId);
-
-  // Find and set the default layout when layouts are loaded
-  useEffect(() => {
-    if (layouts && layouts.length > 0) {
-      const defaultLayout = getDefaultLayout();
-      if (defaultLayout) {
-        setLayoutId(defaultLayout.id);
-      }
-    } else {
-      setLayoutId(undefined);
+    isLoading: isLayoutFieldsLoading 
+  } = useLayoutFields(layoutId, true);
+  
+  const isLoading = isLayoutsLoading || isLayoutFieldsLoading;
+  
+  // Apply the layout configuration to the fields
+  const applyLayout = useCallback((fields: ObjectField[]): ObjectField[] => {
+    if (!layoutFields || layoutFields.length === 0 || !fields || fields.length === 0) {
+      return fields;
     }
-  }, [layouts, getDefaultLayout]);
-
-  // Update field configs when layout fields change
-  useEffect(() => {
-    if (layoutFields) {
-      const configs = new Map<string, LayoutFieldConfig>();
-      
-      layoutFields.forEach(layoutField => {
-        configs.set(layoutField.field_id, {
-          fieldId: layoutField.field_id,
-          displayOrder: layoutField.display_order,
-          isVisible: layoutField.is_visible
-        });
-      });
-      
-      setFieldConfigs(configs);
-    }
-  }, [layoutFields]);
-
-  /**
-   * Apply layout configuration to the fields
-   */
-  const applyLayout = (fields: ObjectField[]): ObjectField[] => {
-    if (!layoutId || fieldConfigs.size === 0) {
-      // If no layout is found, return fields in their natural order
-      return [...fields].sort((a, b) => a.display_order - b.display_order);
-    }
-
-    // Filter and sort fields according to layout configuration
-    return [...fields]
+    
+    // Create a map of field id to layout field info for quick lookup
+    const layoutFieldMap = new Map(
+      layoutFields.map(layoutField => [layoutField.field_id, layoutField])
+    );
+    
+    // Filter and sort fields according to the layout configuration
+    return fields
       .filter(field => {
-        const config = fieldConfigs.get(field.id);
-        // Show field if it's not in the layout or if it's visible in the layout
-        return !config || config.isVisible;
-      })
-      .sort((a, b) => {
-        const configA = fieldConfigs.get(a.id);
-        const configB = fieldConfigs.get(b.id);
-        
-        // If fields are in the layout, use layout order
-        if (configA && configB) {
-          return configA.displayOrder - configB.displayOrder;
+        // If there's no layout config for this field, keep it
+        if (!layoutFieldMap.has(field.id)) {
+          return true;
         }
         
-        // If only one field is in the layout, prioritize it
-        if (configA) return -1;
-        if (configB) return 1;
-        
-        // Otherwise, fall back to regular field order
-        return a.display_order - b.display_order;
+        // If there's a layout config, check if the field should be visible
+        const layoutField = layoutFieldMap.get(field.id);
+        return layoutField?.is_visible !== false;
+      })
+      .sort((a, b) => {
+        // Get the display order from layout if available
+        const aOrder = layoutFieldMap.has(a.id) 
+          ? layoutFieldMap.get(a.id)?.display_order || a.display_order 
+          : a.display_order;
+          
+        const bOrder = layoutFieldMap.has(b.id) 
+          ? layoutFieldMap.get(b.id)?.display_order || b.display_order 
+          : b.display_order;
+          
+        return aOrder - bOrder;
       });
-  };
-
+  }, [layoutFields]);
+  
   return {
     applyLayout,
-    layoutId,
-    layouts,
-    isLoading: isLoadingLayouts || isLoadingLayoutFields
+    isLoading,
+    activeLayoutId: layoutId
   };
 }

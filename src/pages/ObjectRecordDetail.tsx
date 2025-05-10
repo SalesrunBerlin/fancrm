@@ -1,9 +1,8 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Copy, Edit, Save, X } from 'lucide-react';
+import { ArrowLeft, Copy, Edit, Save, X, Layout } from 'lucide-react';
 import { toast } from 'sonner';
 import { useObjectType } from "@/hooks/useObjectType";
 import { useRecordDetail } from "@/hooks/useRecordDetail";
@@ -161,13 +160,6 @@ export default function ObjectRecordDetail() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {/* Layout Selector */}
-            <LayoutSelector
-              objectTypeId={objectTypeId || ""}
-              selectedLayoutId={selectedLayoutId}
-              onLayoutChange={handleLayoutChange}
-            />
-            
             {/* Clone Button */}
             <TooltipProvider>
               <Tooltip>
@@ -246,7 +238,7 @@ export default function ObjectRecordDetail() {
           </div>
         </div>
 
-        {/* Action buttons section - now with flex-wrap to display side by side */}
+        {/* Action buttons section */}
         <div className="mb-6">
           <ObjectActionsSection 
             objectTypeId={objectTypeId || ""} 
@@ -257,13 +249,36 @@ export default function ObjectRecordDetail() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList>
-          <TabsTrigger value="details">Details</TabsTrigger>
-          <TabsTrigger value="related">Related</TabsTrigger>
-          {isTicket && aiStatus === "Warteschlange" && (
-            <TabsTrigger value="process">Process Ticket</TabsTrigger>
-          )}
-        </TabsList>
+        <div className="flex items-center">
+          <TabsList>
+            <TabsTrigger value="details">Details</TabsTrigger>
+            <TabsTrigger value="related">Related</TabsTrigger>
+            {isTicket && aiStatus === "Warteschlange" && (
+              <TabsTrigger value="process">Process Ticket</TabsTrigger>
+            )}
+          </TabsList>
+          {/* Layout Selector moved here as an icon */}
+          <div className="ml-2">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="inline-flex">
+                    <LayoutSelector
+                      objectTypeId={objectTypeId || ""}
+                      selectedLayoutId={selectedLayoutId}
+                      onLayoutChange={handleLayoutChange}
+                      compact={true}
+                    />
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="top">
+                  <p>Change layout</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+        </div>
+        
         <TabsContent value="details">
           <Card>
             <CardContent className="p-0">
@@ -273,6 +288,8 @@ export default function ObjectRecordDetail() {
                 isEditMode={isEditing}
                 onSave={handleSaveRecord}
                 onCancel={() => setIsEditing(false)}
+                selectedLayoutId={selectedLayoutId}
+                hideEmptyFields={!isEditing}
               />
             </CardContent>
           </Card>
