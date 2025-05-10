@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -230,17 +229,30 @@ export default function TicketQueuePage() {
           <div className="flex gap-2">
             {tickets.length > 0 && (
               <>
-                <Button onClick={handleProcessAllTickets}>
-                  Process All Tickets
+                <Button 
+                  onClick={handleProcessAllTickets} 
+                  className="w-10 h-10 p-0 sm:w-auto sm:h-10 sm:px-4 sm:py-2"
+                >
+                  <span className="hidden sm:inline">Process All Tickets</span>
+                  <span className="inline sm:hidden">All</span>
                 </Button>
-                <Button onClick={handleAutoProcessTickets} variant="success">
-                  Auto Process Next
+                <Button 
+                  onClick={handleAutoProcessTickets} 
+                  variant="success" 
+                  className="w-10 h-10 p-0 sm:w-auto sm:h-10 sm:px-4 sm:py-2"
+                >
+                  <span className="hidden sm:inline">Auto Process Next</span>
+                  <span className="inline sm:hidden">Auto</span>
                 </Button>
               </>
             )}
-            <Button onClick={handleRefresh} variant="outline">
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Refresh Queue
+            <Button 
+              onClick={handleRefresh} 
+              variant="outline" 
+              className="w-10 h-10 p-0 sm:w-auto sm:h-10 sm:px-4 sm:py-2"
+            >
+              <RefreshCw className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Refresh Queue</span>
             </Button>
           </div>
         }
@@ -253,16 +265,16 @@ export default function TicketQueuePage() {
           onChange={(e) => setCommandInput(e.target.value)}
           className="flex-1"
         />
-        <Button type="submit">
-          <Search className="h-4 w-4 mr-2" />
-          Execute
+        <Button type="submit" className="w-10 h-10 p-0 sm:w-auto sm:h-10 sm:px-4 sm:py-2">
+          <Search className="h-4 w-4 sm:mr-2" />
+          <span className="hidden sm:inline">Execute</span>
         </Button>
       </form>
       
       <div className="grid gap-6">
         {tickets.map((ticket, index) => (
           <Card key={ticket.id} className="overflow-hidden">
-            <CardHeader className="bg-muted/30">
+            <CardHeader className="bg-muted/30 relative">
               <div className="flex justify-between items-center">
                 <div>
                   <CardTitle className="flex items-center gap-2">
@@ -276,11 +288,22 @@ export default function TicketQueuePage() {
                 <Button 
                   onClick={() => handleProcessTicket(ticket)} 
                   disabled={isProcessing}
+                  className="w-10 h-10 p-0 sm:w-auto sm:h-10 sm:px-4 sm:py-2"
                 >
-                  Process <ArrowRight className="ml-2 h-4 w-4" />
+                  <span className="hidden sm:inline">Process</span>
+                  <ArrowRight className="h-4 w-4 sm:ml-2" />
                 </Button>
               </div>
+              
+              {/* Add badge showing the total record count in top right */}
+              <Badge 
+                variant="outline" 
+                className="absolute top-2 right-2 bg-primary/10 text-primary"
+              >
+                {tickets.length}
+              </Badge>
             </CardHeader>
+            
             <CardContent className="pt-6">
               <div className="grid gap-4">
                 {Object.entries(ticket.field_values)

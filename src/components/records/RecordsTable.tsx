@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -18,6 +17,7 @@ import { format } from "date-fns";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ObjectActionsSection } from "../actions/ObjectActionsSection";
 import { formatWithLineBreaks } from "@/lib/utils/textFormatUtils";
+import { Badge } from "@/components/ui/badge";
 
 interface RecordsTableProps {
   records: ObjectRecord[];
@@ -166,7 +166,15 @@ export function RecordsTable({ records, fields, objectTypeId, selectable = false
   const allSelected = records.length > 0 && selectedRecords.length === records.length;
 
   return (
-    <div className="rounded-md border overflow-hidden overflow-x-auto">
+    <div className="rounded-md border overflow-hidden overflow-x-auto relative">
+      {/* Add badge showing the total record count in top right */}
+      <Badge 
+        variant="outline" 
+        className="absolute top-2 right-2 z-10 bg-primary/10 text-primary"
+      >
+        {records.length}
+      </Badge>
+      
       <Table>
         <TableHeader>
           <TableRow>

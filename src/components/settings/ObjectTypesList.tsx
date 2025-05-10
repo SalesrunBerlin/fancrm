@@ -16,6 +16,7 @@ import { ObjectType } from "@/hooks/useObjectTypes";
 import { ThemedButton } from "@/components/ui/themed-button";
 import { useAuth } from "@/contexts/AuthContext";
 import { ActionColor } from "@/hooks/useActions";
+import { ObjectCountBadge } from "@/components/dashboard/ObjectCountBadge";
 
 export function ObjectTypesList() {
   const { objectTypes, isLoading } = useObjectTypes();
@@ -72,7 +73,7 @@ export function ObjectTypesList() {
                 className="block"
               >
                 <div
-                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent hover:text-accent-foreground transition-colors"
+                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent hover:text-accent-foreground transition-colors relative"
                 >
                   <div className="flex items-center gap-3">
                     {getIconComponent(objectType.icon)}
@@ -83,7 +84,11 @@ export function ObjectTypesList() {
                       </p>
                     </div>
                   </div>
-                  <div className="flex gap-2">
+                  
+                  <div className="flex gap-2 items-center">
+                    {/* Add total record count badge */}
+                    <ObjectCountBadge objectTypeId={objectType.id} className="mr-2" />
+                    
                     {objectType.is_system && (
                       <Badge variant="secondary">System</Badge>
                     )}

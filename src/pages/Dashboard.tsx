@@ -13,6 +13,7 @@ import { useObjectRecords } from "@/hooks/useObjectRecords";
 import { ExpandableActionButton } from "@/components/actions/ExpandableActionButton";
 import { useActions } from "@/hooks/useActions";
 import { SavedFiltersButtons } from "@/components/records/SavedFiltersButtons";
+import { ObjectCountBadge } from "@/components/dashboard/ObjectCountBadge";
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -88,15 +89,22 @@ export default function Dashboard() {
 
           {filteredObjects?.filter(type => type.is_active).map((objectType) => (
             <Card key={objectType.id} className="flex flex-col">
-              <CardHeader className="pb-2">
+              <CardHeader className="pb-2 relative">
                 <Link to={`/objects/${objectType.id}`}>
                   <CardTitle className="flex items-center gap-2">
                     {getIconComponent(objectType.icon)}
-                    <div className="flex items-center">
-                      {objectType.name} (<ObjectRecordCount objectTypeId={objectType.id} />)
+                    <div className="flex items-center gap-1">
+                      {objectType.name}
+                      <span className="text-sm text-muted-foreground ml-2">
+                        (<ObjectRecordCount objectTypeId={objectType.id} />)
+                      </span>
                     </div>
                   </CardTitle>
                 </Link>
+                {/* Add record count badge in top right */}
+                <div className="absolute top-4 right-4">
+                  <ObjectCountBadge objectTypeId={objectType.id} />
+                </div>
               </CardHeader>
               <CardContent className="pt-3 flex flex-col">
                 <DashboardObjectActions objectTypeId={objectType.id} />
