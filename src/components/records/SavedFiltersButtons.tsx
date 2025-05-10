@@ -5,11 +5,14 @@ import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { useAuth } from "@/contexts/AuthContext";
 import { Badge } from "@/components/ui/badge";
 import { FilterCondition } from "@/hooks/useObjectRecords";
+import { useObjectRecords } from "@/hooks/useObjectRecords";
+import { Loader2 } from "lucide-react";
 
 interface SavedFilter {
   id: string;
   name: string;
   conditions: FilterCondition[];
+  recordCount?: number;
 }
 
 interface SavedFiltersButtonsProps {
@@ -56,15 +59,40 @@ export function SavedFiltersButtons({ objectTypeId, maxToShow = 3 }: SavedFilter
     <div className="flex flex-wrap gap-2 mt-3">
       <div className="w-full text-xs text-muted-foreground mb-1">Gespeicherte Filter:</div>
       {filters.map((filter) => (
-        <Badge
-          key={filter.id}
-          variant="outline"
-          className="cursor-pointer hover:bg-accent/20 py-3 px-4 text-wrap whitespace-normal text-base leading-normal"
+        <FilterBadgeWithCount 
+          key={filter.id} 
+          filter={filter} 
+          objectTypeId={objectTypeId}
           onClick={() => handleFilterClick(filter)}
-        >
-          {filter.name}
-        </Badge>
+        />
       ))}
     </div>
+  );
+}
+
+// Component to display a filter badge with a count of matching records
+function FilterBadgeWithCount({ 
+  filter, 
+  objectTypeId, 
+  onClick 
+}: { 
+  filter: SavedFilter; 
+  objectTypeId: string;
+  onClick: () => void;
+}) {
+  const { records, isLoading } = useObjectRecords(objectTypeId, filter.conditions);
+  const recordCount = records?.length || 0;
+  
+  return (
+    <Badge
+      variant="outline"
+      className="cursor-pointer hover:bg-accent/20 py-3 px-4 text-wrap whitespace-normal text-base leading-normal relative"
+      onClick={onClick}
+    >
+      {filter.name}
+      <span className="absolute -top-2 -right-2 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] text-primary-foreground">
+        {isLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : recordCount}
+      </span>
+    </Badge>
   );
 }

@@ -95,9 +95,6 @@ export default function Dashboard() {
                     {getIconComponent(objectType.icon)}
                     <div className="flex items-center gap-1">
                       {objectType.name}
-                      <span className="text-sm text-muted-foreground ml-2">
-                        (<ObjectRecordCount objectTypeId={objectType.id} />)
-                      </span>
                     </div>
                   </CardTitle>
                 </Link>
@@ -120,7 +117,7 @@ export default function Dashboard() {
   );
 }
 
-// Component to display the number of records for an object type
+// This function is no longer used in the CardTitle, but kept for other parts of the UI
 function ObjectRecordCount({ objectTypeId }: { objectTypeId: string }) {
   const { records, isLoading } = useObjectRecords(objectTypeId);
   

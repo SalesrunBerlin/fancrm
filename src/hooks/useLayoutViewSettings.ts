@@ -16,6 +16,22 @@ export function useLayoutViewSettings(objectTypeId: string | undefined) {
   const [serverViewMode, setServerViewMode] = useState<"table" | "kanban">("table");
   const [isLoading, setIsLoading] = useState(true);
   
+  // Function to safely parse JSON if needed
+  const safeParseJSON = (data: any): { viewMode?: "table" | "kanban" } => {
+    if (!data) return {};
+    
+    if (typeof data === 'string') {
+      try {
+        return JSON.parse(data);
+      } catch (e) {
+        console.error('Error parsing settings JSON:', e);
+        return {};
+      }
+    }
+    
+    return data as { viewMode?: "table" | "kanban" };
+  };
+  
   // Function to load settings from server if user is logged in
   const loadServerSettings = useCallback(async () => {
     if (!isLoggedIn || !objectTypeId || isAuthLoading) return;
@@ -33,9 +49,17 @@ export function useLayoutViewSettings(objectTypeId: string | undefined) {
       
       if (error) {
         console.error("Error loading layout settings:", error);
-      } else if (data?.settings_data?.viewMode) {
-        console.log("Loaded layout settings:", data.settings_data);
-        setServerViewMode(data.settings_data.viewMode);
+      } else if (data) {
+        const parsedSettings = safeParseJSON(data.settings_data);
+        
+        if (parsedSettings && parsedSettings.viewMode) {
+          console.log("Loaded layout settings:", parsedSettings);
+          setServerViewMode(parsedSettings.viewMode);
+        } else {
+          console.log("No valid layout settings found, using local settings:", localViewMode);
+          // If no settings found on server but we have local settings, let's use those
+          await updateViewMode(localViewMode);
+        }
       } else {
         console.log("No layout settings found, using local settings:", localViewMode);
         // If no settings found on server but we have local settings, let's use those
