@@ -78,6 +78,9 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
   const autoScrollIntervalRef = useRef<number | null>(null);
   const isDraggingRef = useRef<boolean>(false);
 
+  // State to track which button is currently being dragged over
+  const [dragOverButtonId, setDragOverButtonId] = useState<string | null>(null);
+
   // Group records by the selected picklist value
   useEffect(() => {
     if (!selectedFieldApiName || !records.length) {
@@ -169,6 +172,7 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
   // Handle drag start event
   const handleDragStart = (initial: DragStart) => {
     isDraggingRef.current = true;
+    setDragOverButtonId(null); // Reset drag over state
   };
 
   // Handle drag update to detect if we need to auto-scroll
@@ -178,10 +182,9 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
     const scrollContainer = scrollAreaRef.current;
     const containerRect = scrollContainer.getBoundingClientRect();
     
-    // Extract client coordinates from the event
-    // DragUpdate doesn't directly have clientX, need to access it from the source event
-    // Use optional chaining and type assertion to safely access these properties
-    const clientX = update.event?.client?.x;
+    // Access clientX from the correct location in the update object
+    // In @hello-pangea/dnd, the client coordinates are in a nested structure
+    const clientX = update.clientX;
 
     // If no client coordinates available, return
     if (typeof clientX !== 'number') return;
@@ -214,6 +217,7 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
     isDraggingRef.current = false;
     scrolling.current = false;
     scrollDirection.current = null;
+    setDragOverButtonId(null);
     
     if (!result.destination || !selectedFieldApiName || !onUpdateRecord) return;
     
@@ -271,6 +275,16 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
         behavior: 'smooth'
       });
     }
+  };
+
+  // Handler for when a droppable button is dragged over
+  const handleDragEnterButton = (columnId: string) => {
+    setDragOverButtonId(columnId);
+  };
+  
+  // Handler for when drag leaves a droppable button
+  const handleDragLeaveButton = () => {
+    setDragOverButtonId(null);
   };
 
   if (isLoadingPicklistValues) {
@@ -368,46 +382,70 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
         </DragDropContext>
       )}
 
-      {/* Mobile view - Horizontal scrollable Kanban board */}
+      {/* Mobile view - Horizontal scrollable Kanban board with droppable buttons */}
       {isMobile && (
         <div className="mb-4">
-          <div className="flex flex-wrap gap-2 mb-3">
-            {Object.entries(groupedRecords).map(([columnValue, columnRecords]) => {
-              const columnLabel = getColumnLabel(columnValue);
-              const isActive = activeColumn === columnValue;
-              
-              return (
-                <Button
-                  key={columnValue}
-                  variant={isActive ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => {
-                    setActiveColumn(columnValue);
-                    toggleColumnExpansion(columnValue, true);
-                    scrollToColumn(columnValue);
-                  }}
-                  className="flex items-center gap-1"
-                >
-                  {columnLabel} 
-                  <Badge variant="outline" className="ml-1">
-                    {columnRecords.length}
-                  </Badge>
-                </Button>
-              );
-            })}
-          </div>
-          
-          <div className="flex items-center justify-center space-x-2 mb-3 text-xs text-muted-foreground">
-            <ArrowLeft className="h-4 w-4" />
-            <span>Swipe horizontally to see all statuses</span>
-            <ArrowRight className="h-4 w-4" />
-          </div>
-          
           <DragDropContext 
             onDragStart={handleDragStart}
             onDragUpdate={handleDragUpdate}
             onDragEnd={handleDragEnd}
           >
+            {/* Status buttons row - now droppable */}
+            <div className="flex flex-wrap gap-2 mb-3">
+              {Object.entries(groupedRecords).map(([columnValue, columnRecords]) => {
+                const columnLabel = getColumnLabel(columnValue);
+                const isActive = activeColumn === columnValue;
+                const isDraggedOver = dragOverButtonId === columnValue;
+                
+                return (
+                  <Droppable 
+                    droppableId={columnValue} 
+                    key={`button-${columnValue}`}
+                    direction="horizontal"
+                    isDropDisabled={false}
+                  >
+                    {(provided, snapshot) => (
+                      <div
+                        ref={provided.innerRef}
+                        {...provided.droppableProps}
+                        className="relative"
+                        onMouseEnter={() => handleDragEnterButton(columnValue)}
+                        onMouseLeave={handleDragLeaveButton}
+                      >
+                        <Button
+                          variant={isActive ? "default" : isDraggedOver ? "secondary" : "outline"}
+                          size="sm"
+                          onClick={() => {
+                            setActiveColumn(columnValue);
+                            toggleColumnExpansion(columnValue, true);
+                            scrollToColumn(columnValue);
+                          }}
+                          className={`flex items-center gap-1 transition-all ${
+                            isDraggedOver ? 'ring-2 ring-primary ring-offset-2' : ''
+                          }`}
+                        >
+                          {columnLabel} 
+                          <Badge variant="outline" className="ml-1">
+                            {columnRecords.length}
+                          </Badge>
+                        </Button>
+                        {/* Hidden placeholder for the droppable area */}
+                        <div className="absolute top-0 left-0 right-0 bottom-0 opacity-0">
+                          {provided.placeholder}
+                        </div>
+                      </div>
+                    )}
+                  </Droppable>
+                );
+              })}
+            </div>
+            
+            <div className="flex items-center justify-center space-x-2 mb-3 text-xs text-muted-foreground">
+              <MoveVertical className="h-4 w-4" />
+              <span>Drag cards to buttons or columns to change status</span>
+            </div>
+            
+            {/* Scrollable columns */}
             <ScrollArea 
               className="w-full pb-6 touch-pan-y" 
               style={{ WebkitOverflowScrolling: 'touch' }}
