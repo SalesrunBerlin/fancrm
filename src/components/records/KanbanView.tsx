@@ -34,7 +34,8 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
     settings, 
     updateFieldApiName, 
     updateVisibleCardFields, 
-    getVisibleCardFields
+    getVisibleCardFields,
+    isLoading: isKanbanSettingsLoading
   } = useKanbanViewSettings(objectTypeId);
   
   const isMobile = useIsMobile();
@@ -68,6 +69,7 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
   // Set initial field API name if none is saved
   useEffect(() => {
     if (statusField && (!settings.fieldApiName || !fields.some(f => f.api_name === settings.fieldApiName))) {
+      console.log("Setting initial field API name:", statusField.api_name);
       updateFieldApiName(statusField.api_name);
     }
   }, [statusField, settings.fieldApiName, updateFieldApiName, fields]);
@@ -190,6 +192,7 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
 
   // Handle changing the selected field for Kanban view
   const handleFieldChange = (fieldApiName: string) => {
+    console.log("Updating field API name to:", fieldApiName);
     updateFieldApiName(fieldApiName);
   };
 
@@ -213,6 +216,7 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
 
   // Handle saving selected fields for card display
   const handleSaveVisibleFields = (selectedFields: string[]) => {
+    console.log("Saving visible fields:", selectedFields);
     updateVisibleCardFields(selectedFields);
   };
 
@@ -241,7 +245,7 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
     }
   };
 
-  if (isLoading || isLoadingPicklistValues) {
+  if (isLoading || isLoadingPicklistValues || isKanbanSettingsLoading) {
     return (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="h-8 w-8 animate-spin" />

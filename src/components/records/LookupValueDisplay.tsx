@@ -3,6 +3,9 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 
+// Global cache for storing lookup values to reduce duplicate requests
+const lookupValueCache: Record<string, string> = {};
+
 interface LookupValueDisplayProps {
   value: string;
   fieldOptions: {
@@ -16,10 +19,20 @@ export function LookupValueDisplay({ value, fieldOptions }: LookupValueDisplayPr
   const [isLoading, setIsLoading] = useState(true);
   const { target_object_type_id } = fieldOptions;
   
+  // Create a cache key from value and target_object_type_id
+  const cacheKey = `${value}:${target_object_type_id}`;
+
   useEffect(() => {
     const fetchLookupDisplayValue = async () => {
       if (!value || !target_object_type_id) {
         setDisplayValue(value || "-");
+        setIsLoading(false);
+        return;
+      }
+
+      // Check cache first
+      if (lookupValueCache[cacheKey]) {
+        setDisplayValue(lookupValueCache[cacheKey]);
         setIsLoading(false);
         return;
       }
@@ -43,8 +56,13 @@ export function LookupValueDisplay({ value, fieldOptions }: LookupValueDisplayPr
           .eq("record_id", value)
           .eq("field_api_name", displayFieldApiName)
           .single();
-          
-        setDisplayValue(fieldValue?.value || value);
+
+        const finalDisplayValue = fieldValue?.value || value;
+        
+        // Store in cache
+        lookupValueCache[cacheKey] = finalDisplayValue;
+        
+        setDisplayValue(finalDisplayValue);
       } catch (error) {
         console.error("Error fetching lookup display value:", error);
         setDisplayValue(value);
@@ -54,7 +72,7 @@ export function LookupValueDisplay({ value, fieldOptions }: LookupValueDisplayPr
     };
     
     fetchLookupDisplayValue();
-  }, [value, target_object_type_id, fieldOptions]);
+  }, [value, target_object_type_id, fieldOptions, cacheKey]);
   
   if (isLoading) {
     return <Skeleton className="h-4 w-24" />;

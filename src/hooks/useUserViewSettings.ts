@@ -50,6 +50,7 @@ export function useUserViewSettings(
     
     try {
       setIsLoading(true);
+      console.log(`Loading ${settingsType} settings for object: ${objectTypeId}`);
       
       const { data, error } = await supabase
         .from('user_view_settings')
@@ -60,18 +61,27 @@ export function useUserViewSettings(
         .maybeSingle();
       
       if (error) {
-        console.error('Error loading settings:', error);
+        console.error(`Error loading ${settingsType} settings:`, error);
       } else if (data) {
         // Safely parse the data if it's a string
         const parsedSettings = safeParseJSON(data.settings_data);
+        console.log(`Loaded ${settingsType} settings:`, parsedSettings);
         setServerSettings(parsedSettings);
+      } else {
+        console.log(`No ${settingsType} settings found for object: ${objectTypeId}`);
+        // If no settings found on server but we have local settings, let's use those
+        if (Object.keys(localSettings).length > 0) {
+          console.log(`Using local ${settingsType} settings:`, localSettings);
+          // Save local settings to server
+          await updateSettings(localSettings);
+        }
       }
     } catch (error) {
-      console.error('Failed to load settings:', error);
+      console.error(`Failed to load ${settingsType} settings:`, error);
     } finally {
       setIsLoading(false);
     }
-  }, [isLoggedIn, objectTypeId, user?.id, settingsType, isAuthLoading]);
+  }, [isLoggedIn, objectTypeId, user?.id, settingsType, isAuthLoading, localSettings]);
 
   // Load server settings on mount and when dependencies change
   useEffect(() => {
@@ -83,6 +93,8 @@ export function useUserViewSettings(
 
   // Function to update settings
   const updateSettings = useCallback(async (newSettings: UserViewSettings) => {
+    console.log(`Updating ${settingsType} settings:`, newSettings);
+    
     // First update local state for immediate feedback
     if (isLoggedIn) {
       setServerSettings(newSettings);
@@ -107,16 +119,20 @@ export function useUserViewSettings(
           });
         
         if (error) {
-          console.error('Error saving settings:', error);
+          console.error(`Error saving ${settingsType} settings:`, error);
           // Revert to previous settings on error
           loadServerSettings();
+        } else {
+          console.log(`Successfully saved ${settingsType} settings to server`);
         }
       } catch (error) {
-        console.error('Failed to save settings:', error);
+        console.error(`Failed to save ${settingsType} settings:`, error);
         loadServerSettings();
       } finally {
         setIsSaving(false);
       }
+    } else {
+      console.log(`Saved ${settingsType} settings to local storage`);
     }
   }, [isLoggedIn, objectTypeId, user?.id, settingsType, setLocalSettings, loadServerSettings]);
 

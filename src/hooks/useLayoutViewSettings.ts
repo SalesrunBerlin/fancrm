@@ -21,6 +21,7 @@ export function useLayoutViewSettings(objectTypeId: string | undefined) {
   };
 
   const updateViewMode = (viewMode: "table" | "kanban") => {
+    console.log("Updating view mode to:", viewMode);
     updateSettings({
       ...effectiveSettings,
       viewMode
