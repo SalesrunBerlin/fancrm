@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
@@ -23,45 +22,31 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { KanbanView } from "@/components/records/KanbanView";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useUserFilterSettings } from "@/hooks/useUserFilterSettings";
 
 export default function ObjectRecordsList() {
   const { objectTypeId } = useParams<{ objectTypeId: string }>();
   const { objectTypes } = useObjectTypes();
-  const [activeFilters, setActiveFilters] = useState<FilterCondition[]>([]);
+  const [isFilterExpanded, setIsFilterExpanded] = useState(false);
   const { user } = useAuth();
   const userId = user?.id || 'anonymous';
+  
+  // Use our new user filter settings hook
+  const { filters: activeFilters, updateFilters: setActiveFilters, isLoading: isLoadingFilters } = 
+    useUserFilterSettings(objectTypeId);
+    
   const { records, isLoading, deleteRecord, updateRecord, cloneRecord } = useObjectRecords(objectTypeId, activeFilters);
   const { fields, isLoading: isLoadingFields } = useEnhancedFields(objectTypeId);
   const objectType = objectTypes?.find(type => type.id === objectTypeId);
   
-  // Add missing state variables
+  // Update view mode to also be stored in user settings
   const [viewMode, setViewMode] = useState<"table" | "kanban">("table");
-  const [isFilterExpanded, setIsFilterExpanded] = useState(false);
   const [allRecords, setAllRecords] = useState<any[]>([]);
   const [selectedRecords, setSelectedRecords] = useState<string[]>([]);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isCloneDialogOpen, setIsCloneDialogOpen] = useState(false);
   const { visibleFields, updateVisibleFields } = useUserFieldSettings(objectTypeId);
   const { favoriteColor } = useAuth();
-  
-  // Load last applied filter on component mount
-  useEffect(() => {
-    if (objectTypeId) {
-      const lastAppliedStorageKey = `last-applied-filters-${userId}`;
-      try {
-        const lastAppliedStr = localStorage.getItem(lastAppliedStorageKey);
-        if (lastAppliedStr) {
-          const lastApplied = JSON.parse(lastAppliedStr);
-          if (lastApplied[objectTypeId] && lastApplied[objectTypeId].length > 0) {
-            console.log("ObjectRecordsList - Loading last applied filter:", lastApplied[objectTypeId]);
-            setActiveFilters(lastApplied[objectTypeId]);
-          }
-        }
-      } catch (error) {
-        console.error("Error loading last applied filter:", error);
-      }
-    }
-  }, [objectTypeId, userId]);
   
   // System fields definition
   const systemFields: EnhancedObjectField[] = [
@@ -341,7 +326,7 @@ export default function ObjectRecordsList() {
                   size="sm" 
                   className="h-4 w-4 p-0 ml-1" 
                   onClick={() => {
-                    setActiveFilters(prev => prev.filter(f => f.id !== filter.id));
+                    setActiveFilters(activeFilters.filter(f => f.id !== filter.id));
                   }}
                 >
                   <span className="sr-only">Remove</span>

@@ -1983,6 +1983,44 @@ export type Database = {
           },
         ]
       }
+      user_view_settings: {
+        Row: {
+          created_at: string
+          id: string
+          object_type_id: string
+          settings_data: Json
+          settings_type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          object_type_id: string
+          settings_data?: Json
+          settings_type: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          object_type_id?: string
+          settings_data?: Json
+          settings_type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_view_settings_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "auth_users_view"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workspace_invitations: {
         Row: {
           created_at: string

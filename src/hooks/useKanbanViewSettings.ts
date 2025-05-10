@@ -1,64 +1,87 @@
 
-import { useLocalStorage } from "./useLocalStorage";
+import { useUserViewSettings } from "./useUserViewSettings";
 
 interface KanbanViewSettings {
   fieldApiName: string;
   expandedColumns: string[];
   selectedRecords?: string[];
-  visibleCardFields?: string[]; // Add new property for visible fields
+  visibleCardFields?: string[];
 }
 
 export function useKanbanViewSettings(objectTypeId: string | undefined) {
-  const storageKey = objectTypeId ? `kanban-settings-${objectTypeId}` : '';
-  const [settings, setSettings] = useLocalStorage<KanbanViewSettings>(
-    storageKey,
-    { fieldApiName: '', expandedColumns: [], selectedRecords: [], visibleCardFields: [] }
-  );
+  const { settings, updateSettings, isLoading } = useUserViewSettings(objectTypeId, 'kanban');
+  
+  // Cast generic settings to our specific type
+  const kanbanSettings = settings as KanbanViewSettings;
+  
+  // Initialize with default values if properties are missing
+  const effectiveSettings: KanbanViewSettings = {
+    fieldApiName: kanbanSettings.fieldApiName || '',
+    expandedColumns: kanbanSettings.expandedColumns || [],
+    selectedRecords: kanbanSettings.selectedRecords || [],
+    visibleCardFields: kanbanSettings.visibleCardFields || []
+  };
 
   const updateFieldApiName = (fieldApiName: string) => {
-    setSettings(prev => ({ ...prev, fieldApiName }));
+    updateSettings({
+      ...effectiveSettings,
+      fieldApiName
+    });
   };
 
   const toggleColumnExpansion = (columnId: string, isExpanded: boolean) => {
-    setSettings(prev => {
-      if (isExpanded && !prev.expandedColumns.includes(columnId)) {
-        return { ...prev, expandedColumns: [...prev.expandedColumns, columnId] };
-      } else if (!isExpanded) {
-        return { ...prev, expandedColumns: prev.expandedColumns.filter(id => id !== columnId) };
+    const expandedColumns = [...effectiveSettings.expandedColumns];
+    
+    if (isExpanded && !expandedColumns.includes(columnId)) {
+      expandedColumns.push(columnId);
+    } else if (!isExpanded) {
+      const index = expandedColumns.indexOf(columnId);
+      if (index !== -1) {
+        expandedColumns.splice(index, 1);
       }
-      return prev;
+    }
+    
+    updateSettings({
+      ...effectiveSettings,
+      expandedColumns
     });
   };
 
   const isColumnExpanded = (columnId: string): boolean => {
-    return settings.expandedColumns.includes(columnId);
+    return effectiveSettings.expandedColumns.includes(columnId);
   };
 
   const updateSelectedRecords = (recordIds: string[]) => {
-    setSettings(prev => ({ ...prev, selectedRecords: recordIds }));
+    updateSettings({
+      ...effectiveSettings,
+      selectedRecords: recordIds
+    });
   };
 
   const getSelectedRecords = (): string[] => {
-    return settings.selectedRecords || [];
+    return effectiveSettings.selectedRecords || [];
   };
 
-  // Add new methods for visible card fields
   const updateVisibleCardFields = (fieldApiNames: string[]) => {
-    setSettings(prev => ({ ...prev, visibleCardFields: fieldApiNames }));
+    updateSettings({
+      ...effectiveSettings,
+      visibleCardFields: fieldApiNames
+    });
   };
 
   const getVisibleCardFields = (): string[] => {
-    return settings.visibleCardFields || [];
+    return effectiveSettings.visibleCardFields || [];
   };
 
   return {
-    settings,
+    settings: effectiveSettings,
     updateFieldApiName,
     toggleColumnExpansion,
     isColumnExpanded,
     updateSelectedRecords,
     getSelectedRecords,
     updateVisibleCardFields,
-    getVisibleCardFields
+    getVisibleCardFields,
+    isLoading
   };
 }

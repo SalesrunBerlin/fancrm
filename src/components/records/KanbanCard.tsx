@@ -13,7 +13,7 @@ interface KanbanCardProps {
   isSelected?: boolean;
   onSelect?: (recordId: string, selected: boolean) => void;
   selectionMode?: boolean;
-  visibleFields?: string[]; // New prop for visible fields
+  visibleFields?: string[]; // Prop for visible fields
   fields?: ObjectField[]; // All available fields for formatting
 }
 
@@ -140,19 +140,19 @@ export function KanbanCard({
           </div>
         </div>
 
-        {/* Display additional fields when selected */}
+        {/* Display additional fields when selected - NOW MORE COMPACT */}
         {visibleFields && visibleFields.length > 0 && record.field_values && (
-          <div className="mt-2 pt-2 border-t border-gray-100 text-xs space-y-1">
-            {visibleFields.map((fieldApiName) => (
-              <div key={fieldApiName} className="flex justify-between">
-                <span className="text-muted-foreground">
-                  {fields.find(f => f.api_name === fieldApiName)?.name || fieldApiName}:
-                </span>
-                <span className="font-medium">
-                  {formatFieldValue(fieldApiName, record.field_values?.[fieldApiName])}
-                </span>
-              </div>
-            ))}
+          <div className="mt-2 pt-2 border-t border-gray-100 text-xs">
+            <div className="flex flex-wrap gap-x-3 gap-y-1">
+              {visibleFields.map((fieldApiName) => {
+                const formattedValue = formatFieldValue(fieldApiName, record.field_values?.[fieldApiName]);
+                return (
+                  <span key={fieldApiName} className="text-muted-foreground">
+                    {formattedValue}
+                  </span>
+                );
+              })}
+            </div>
           </div>
         )}
       </CardContent>
