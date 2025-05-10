@@ -28,9 +28,14 @@ export function useKanbanViewSettings(objectTypeId: string | undefined) {
     });
   };
 
+  const isColumnExpanded = (columnId: string): boolean => {
+    return settings.expandedColumns.includes(columnId);
+  };
+
   return {
     settings,
     updateFieldApiName,
-    toggleColumnExpansion
+    toggleColumnExpansion,
+    isColumnExpanded
   };
 }

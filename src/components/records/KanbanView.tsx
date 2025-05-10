@@ -6,7 +6,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
-import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { KanbanCard } from "./KanbanCard";
 import { useObjectRecords } from "@/hooks/useObjectRecords";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -19,6 +18,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { ChevronDown, ChevronUp, MoveVertical } from "lucide-react";
+import { useFieldPicklistValues } from "@/hooks/useFieldPicklistValues";
+import { useKanbanViewSettings } from "@/hooks/useKanbanViewSettings";
 
 interface KanbanViewProps {
   records: ObjectRecord[];
@@ -34,50 +35,38 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
   // Find all picklist fields
   const picklistFields = fields.filter(field => field.data_type === "picklist");
   
+  // Use the kanban view settings hook to persist state
+  const { settings, updateFieldApiName, toggleColumnExpansion } = useKanbanViewSettings(objectTypeId);
+  
   // State for selected picklist field
-  const [selectedFieldApiName, setSelectedFieldApiName] = useLocalStorage<string>(
-    `kanban-field-${objectTypeId}`,
-    picklistFields.length > 0 ? picklistFields[0].api_name : ""
+  const [selectedFieldApiName, setSelectedFieldApiName] = useState<string>(
+    settings.fieldApiName || (picklistFields.length > 0 ? picklistFields[0].api_name : "")
   );
+
+  // Update the persisted settings when field changes
+  useEffect(() => {
+    if (selectedFieldApiName) {
+      updateFieldApiName(selectedFieldApiName);
+    }
+  }, [selectedFieldApiName, updateFieldApiName]);
 
   // Selected field object
   const selectedField = fields.find(field => field.api_name === selectedFieldApiName);
   
-  // Get possible values for the selected field
-  const [picklistOptions, setPicklistOptions] = useState<{label: string, value: string}[]>([]);
+  // Get field ID for picklist values query
+  const selectedFieldId = selectedField?.id || "";
+  
+  // Get picklist values from database using the hook
+  const { picklistValues, isLoading: isLoadingPicklistValues } = useFieldPicklistValues(selectedFieldId);
   
   // Group records by picklist value
   const [groupedRecords, setGroupedRecords] = useState<Record<string, ObjectRecord[]>>({});
 
   // Active accordion item for mobile view
-  const [activeColumn, setActiveColumn] = useState<string | null>(null);
+  const [activeColumn, setActiveColumn] = useState<string | null>(settings.expandedColumns[0] || null);
   
   // Get field values from our hook
   const { updateRecord } = useObjectRecords(objectTypeId);
-
-  // Load picklist values for the selected field
-  useEffect(() => {
-    if (selectedField?.data_type !== "picklist") return;
-
-    // Try to parse options from the field
-    try {
-      if (selectedField.options) {
-        const options = typeof selectedField.options === 'string' 
-          ? JSON.parse(selectedField.options)
-          : selectedField.options;
-        
-        if (Array.isArray(options)) {
-          setPicklistOptions(options.map(opt => ({
-            label: opt.label || opt.value,
-            value: opt.value
-          })));
-        }
-      }
-    } catch (e) {
-      console.error("Error parsing picklist options:", e);
-      setPicklistOptions([]);
-    }
-  }, [selectedField]);
 
   // Group records by the selected picklist value
   useEffect(() => {
@@ -88,23 +77,37 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
 
     const grouped: Record<string, ObjectRecord[]> = {};
     
-    // Initialize groups for all picklist options
-    picklistOptions.forEach(option => {
-      grouped[option.value] = [];
-    });
-    
-    // Add a group for empty/null values
-    grouped["none"] = [];
+    // Initialize groups for all picklist values from database
+    if (picklistValues && picklistValues.length > 0) {
+      picklistValues.forEach(option => {
+        grouped[option.value] = [];
+      });
+    } else {
+      // If no picklist values, create a default "none" group
+      grouped["none"] = [];
+    }
 
     // Group records
     records.forEach(record => {
-      const fieldValue = record.field_values?.[selectedFieldApiName] || "none";
+      const fieldValue = record.field_values?.[selectedFieldApiName];
       
-      if (grouped[fieldValue]) {
+      if (fieldValue && grouped[fieldValue]) {
         grouped[fieldValue].push(record);
       } else {
-        // If the value doesn't match a known option, put in "none" group
-        grouped["none"].push(record);
+        // If the value doesn't match a known option, create a group for it
+        // This ensures data integrity when values exist in records but not in picklist options
+        if (fieldValue) {
+          if (!grouped[fieldValue]) {
+            grouped[fieldValue] = [];
+          }
+          grouped[fieldValue].push(record);
+        } else {
+          // If no value, put in "none" group
+          if (!grouped["none"]) {
+            grouped["none"] = [];
+          }
+          grouped["none"].push(record);
+        }
       }
     });
     
@@ -115,8 +118,9 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
       // Find first column with records
       const firstColumnWithRecords = Object.keys(grouped).find(key => grouped[key].length > 0) || Object.keys(grouped)[0];
       setActiveColumn(firstColumnWithRecords);
+      toggleColumnExpansion(firstColumnWithRecords, true);
     }
-  }, [records, selectedFieldApiName, picklistOptions, isMobile, activeColumn]);
+  }, [records, selectedFieldApiName, picklistValues, isMobile, activeColumn, toggleColumnExpansion]);
 
   // Handle drag end - update record with new status
   const handleDragEnd = async (result: any) => {
@@ -128,33 +132,31 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
     
     // Update record
     try {
-      // Optimistically update UI
-      const recordToUpdate = records.find(r => r.id === recordId);
-      if (recordToUpdate) {
-        const updatedRecord = {
-          ...recordToUpdate,
-          field_values: {
-            ...recordToUpdate.field_values,
-            [selectedFieldApiName]: newValue,
-          }
-        };
-        
-        // Call the update function
-        await updateRecord.mutateAsync({
-          id: recordId,
-          field_values: {
-            [selectedFieldApiName]: newValue
-          }
-        });
-
-        // When on mobile, activate the destination column
-        if (isMobile) {
-          setActiveColumn(destination.droppableId);
+      // Call the update function
+      await updateRecord.mutateAsync({
+        id: recordId,
+        field_values: {
+          [selectedFieldApiName]: newValue
         }
+      });
+
+      // When on mobile, activate the destination column
+      if (isMobile) {
+        setActiveColumn(destination.droppableId);
+        toggleColumnExpansion(destination.droppableId, true);
       }
     } catch (error) {
       console.error("Error updating record:", error);
     }
+  };
+
+  // Function to get the display label for a column value
+  const getColumnLabel = (columnValue: string) => {
+    if (columnValue === "none") return "Not assigned";
+    
+    // Find the matching picklist value for this column
+    const picklistOption = picklistValues?.find(pv => pv.value === columnValue);
+    return picklistOption?.label || columnValue;
   };
 
   // Calculate total records across all columns
@@ -162,6 +164,14 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
     (total, records) => total + records.length, 
     0
   );
+
+  if (isLoadingPicklistValues) {
+    return (
+      <div className="p-4 text-center text-muted-foreground">
+        Loading Kanban columns...
+      </div>
+    );
+  }
 
   if (picklistFields.length === 0) {
     return (
@@ -178,7 +188,10 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
           <Label htmlFor="kanban-field">Group by</Label>
           <Select
             value={selectedFieldApiName}
-            onValueChange={setSelectedFieldApiName}
+            onValueChange={(value) => {
+              setSelectedFieldApiName(value);
+              setActiveColumn(null); // Reset active column when changing field
+            }}
           >
             <SelectTrigger id="kanban-field">
               <SelectValue placeholder="Select field" />
@@ -199,9 +212,7 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
         <DragDropContext onDragEnd={handleDragEnd}>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 overflow-x-auto pb-4">
             {Object.entries(groupedRecords).map(([columnValue, columnRecords]) => {
-              // Get the display label for this column
-              const columnOption = picklistOptions.find(opt => opt.value === columnValue);
-              const columnLabel = columnValue === "none" ? "Not assigned" : (columnOption?.label || columnValue);
+              const columnLabel = getColumnLabel(columnValue);
               
               return (
                 <div key={columnValue} className="flex flex-col min-w-[250px]">
@@ -256,13 +267,16 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
             type="single" 
             collapsible 
             value={activeColumn || undefined}
-            onValueChange={(value) => value && setActiveColumn(value)}
+            onValueChange={(value) => {
+              if (value) {
+                setActiveColumn(value);
+                toggleColumnExpansion(value, true);
+              }
+            }}
             className="w-full space-y-2"
           >
             {Object.entries(groupedRecords).map(([columnValue, columnRecords]) => {
-              // Get the display label for this column
-              const columnOption = picklistOptions.find(opt => opt.value === columnValue);
-              const columnLabel = columnValue === "none" ? "Not assigned" : (columnOption?.label || columnValue);
+              const columnLabel = getColumnLabel(columnValue);
               const recordCount = columnRecords.length;
               const countPercentage = totalRecords > 0 ? (recordCount / totalRecords) * 100 : 0;
               
