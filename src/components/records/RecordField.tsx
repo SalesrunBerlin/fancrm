@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import { ObjectField } from '@/types/ObjectFieldTypes';
 import { Input } from '@/components/ui/input';
@@ -133,7 +134,7 @@ export function RecordField({
       case 'long_text':
         return readOnly ? (
           <div 
-            className="p-3 border rounded-md bg-background text-foreground" 
+            className="p-3 border rounded-md bg-background text-black dark:text-white" 
             dangerouslySetInnerHTML={{ __html: currentValue || '' }}
           />
         ) : (
@@ -158,7 +159,7 @@ export function RecordField({
       case 'picklist':
         if (readOnly) {
           const selectedOption = picklistValues?.find(option => option.value === currentValue);
-          return <div className="py-2 text-foreground">{selectedOption?.label || currentValue || "-"}</div>;
+          return <div className="py-2 text-black dark:text-white">{selectedOption?.label || currentValue || "-"}</div>;
         }
         
         if (loadingPicklist) {
@@ -214,7 +215,7 @@ export function RecordField({
         );
       case 'date':
         if (readOnly) {
-          return <div className="py-2 text-foreground">{currentValue ? new Date(currentValue).toLocaleDateString() : "-"}</div>;
+          return <div className="py-2 text-black dark:text-white">{currentValue ? new Date(currentValue).toLocaleDateString() : "-"}</div>;
         }
         return (
           <DatePickerField
@@ -226,7 +227,7 @@ export function RecordField({
         );
       case 'datetime':
         if (readOnly) {
-          return <div className="py-2 text-foreground">
+          return <div className="py-2 text-black dark:text-white">
             {currentValue ? new Date(currentValue).toLocaleString() : "-"}
           </div>;
         }
@@ -241,7 +242,7 @@ export function RecordField({
       case 'lookup':
         if (readOnly) {
           return (
-            <div className="py-2 text-foreground">
+            <div className="py-2 text-black dark:text-white">
               {currentValue ? (
                 <LookupValueDisplay 
                   value={currentValue} 
