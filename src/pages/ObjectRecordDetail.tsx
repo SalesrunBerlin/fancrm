@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Edit, Save, X } from 'lucide-react';
+import { Copy, Edit, Save, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { useObjectType } from "@/hooks/useObjectType";
 import { useRecordDetail } from "@/hooks/useRecordDetail";
@@ -16,6 +16,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { TooltipProvider } from "@radix-ui/react-tooltip";
 import { TicketProcessor } from '@/components/tickets/TicketProcessor';
 import { LayoutSelector } from "@/components/records/LayoutSelector";
+import { useObjectRecords } from "@/hooks/useObjectRecords";
 
 export default function ObjectRecordDetail() {
   const { objectTypeId, recordId } = useParams<{ objectTypeId: string; recordId: string }>();
@@ -27,6 +28,7 @@ export default function ObjectRecordDetail() {
   const [isTicket, setIsTicket] = useState(false);
   const [aiStatus, setAiStatus] = useState<string | null>(null);
   const [selectedLayoutId, setSelectedLayoutId] = useState<string | undefined>(undefined);
+  const { cloneRecord } = useObjectRecords(objectTypeId);
 
   useEffect(() => {
     if (!objectTypeId || !recordId) {
@@ -60,6 +62,28 @@ export default function ObjectRecordDetail() {
 
   const handleLayoutChange = (layoutId: string) => {
     setSelectedLayoutId(layoutId);
+  };
+
+  const handleCloneRecord = async () => {
+    try {
+      if (!recordId) return;
+      
+      toast.loading("Cloning record...");
+      
+      const result = await cloneRecord.mutateAsync(recordId);
+      
+      toast.dismiss();
+      toast.success("Record cloned successfully!");
+      
+      // Navigate to the new record
+      if (result?.id) {
+        navigate(`/objects/${objectTypeId}/${result.id}`);
+      }
+    } catch (error) {
+      console.error("Error cloning record:", error);
+      toast.dismiss();
+      toast.error("Failed to clone record");
+    }
   };
 
   if (isLoadingObjectType || isLoadingRecord) {
@@ -119,6 +143,25 @@ export default function ObjectRecordDetail() {
               selectedLayoutId={selectedLayoutId}
               onLayoutChange={handleLayoutChange}
             />
+            
+            {/* Clone Button */}
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <ThemedButton
+                    variant="outline"
+                    onClick={handleCloneRecord}
+                    size="icon"
+                    disabled={cloneRecord.isPending}
+                  >
+                    <Copy className="h-4 w-4" />
+                  </ThemedButton>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  <p>Clone record</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
             
             {isEditing ? (
               <>

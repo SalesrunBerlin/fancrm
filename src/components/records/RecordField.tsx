@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { ObjectField } from '@/types/ObjectFieldTypes';
 import { Input } from '@/components/ui/input';
@@ -13,6 +12,7 @@ import { LookupValueDisplay } from './LookupValueDisplay';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { RichTextEditor } from '@/components/ui/rich-text-editor';
+import { DatePickerField } from '@/components/ui/date-picker-field';
 
 interface RecordFieldProps {
   field: ObjectField;
@@ -74,6 +74,11 @@ export function RecordField({
 
   // Handle rich text changes
   const handleRichTextChange = (value: string) => {
+    handleFieldChange(value);
+  };
+
+  // Handle date changes
+  const handleDateChange = (value: string | null) => {
     handleFieldChange(value);
   };
 
@@ -208,15 +213,27 @@ export function RecordField({
           </div>
         );
       case 'date':
+        if (readOnly) {
+          return <div className="py-2">{currentValue ? new Date(currentValue).toLocaleDateString() : "-"}</div>;
+        }
         return (
-          <Input
-            type="date"
-            id={field.api_name}
-            value={currentValue || ''}
-            onChange={handleInputChange}
-            readOnly={readOnly}
+          <DatePickerField
+            value={currentValue}
+            onChange={handleDateChange}
             disabled={readOnly}
-            {...registerField}
+          />
+        );
+      case 'datetime':
+        if (readOnly) {
+          return <div className="py-2">
+            {currentValue ? new Date(currentValue).toLocaleString() : "-"}
+          </div>;
+        }
+        return (
+          <DatePickerField
+            value={currentValue}
+            onChange={handleDateChange}
+            disabled={readOnly}
           />
         );
       case 'lookup':

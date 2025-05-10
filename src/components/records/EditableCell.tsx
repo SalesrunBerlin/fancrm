@@ -11,6 +11,7 @@ import { Loader2, X } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
+import { DatePickerField } from "@/components/ui/date-picker-field";
 
 interface EditableCellProps {
   value: any;
@@ -181,12 +182,18 @@ export function EditableCell({
           </Select>
         );
       case "date":
+        return (
+          <DatePickerField
+            value={editValue}
+            onChange={handleChange}
+            className={error ? "border-red-500" : ""}
+          />
+        );
       case "datetime":
         return (
-          <Input 
-            type={fieldType === "date" ? "date" : "datetime-local"}
-            value={editValue || ""}
-            onChange={(e) => handleChange(e.target.value)}
+          <DatePickerField
+            value={editValue}
+            onChange={handleChange}
             className={error ? "border-red-500" : ""}
           />
         );

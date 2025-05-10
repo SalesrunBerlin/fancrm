@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -176,6 +175,88 @@ export function useObjectRecords(
     }
   });
 
+  const cloneRecord = useMutation({
+    mutationFn: async (recordId: string) => {
+      if (!objectTypeId || !user) {
+        throw new Error("Missing objectTypeId or user");
+      }
+      
+      console.log("Cloning record:", recordId);
+      
+      // First, get the record to clone
+      const { data: recordData } = await supabase
+        .from("object_records")
+        .select("*")
+        .eq("id", recordId)
+        .single();
+        
+      if (!recordData) {
+        throw new Error("Record not found");
+      }
+      
+      // Get field values for the record
+      const { data: fieldValues, error: fieldValuesError } = await supabase
+        .from("object_field_values")
+        .select("*")
+        .eq("record_id", recordId);
+        
+      if (fieldValuesError) {
+        console.error("Error fetching field values:", fieldValuesError);
+        throw fieldValuesError;
+      }
+      
+      // Create new record
+      const { data: newRecord, error: recordError } = await supabase
+        .from("object_records")
+        .insert([{ 
+          object_type_id: objectTypeId,
+          owner_id: user.id
+        }])
+        .select()
+        .single();
+        
+      if (recordError) {
+        console.error("Error creating cloned record:", recordError);
+        throw recordError;
+      }
+      
+      // Create modified field values for the new record
+      // Handle the name field specially to append "_copy"
+      const nameFields = ["name", "title", "subject", "display_name"];
+      const newFieldValues = fieldValues.map(fv => {
+        let value = fv.value;
+        
+        // Add "_copy" suffix to name fields
+        if (fv.value && nameFields.includes(fv.field_api_name.toLowerCase())) {
+          value = `${fv.value}_copy`;
+        }
+        
+        return {
+          record_id: newRecord.id,
+          field_api_name: fv.field_api_name,
+          value
+        };
+      });
+      
+      // Insert the new field values
+      if (newFieldValues.length > 0) {
+        const { error: insertError } = await supabase
+          .from("object_field_values")
+          .insert(newFieldValues);
+          
+        if (insertError) {
+          console.error("Error creating cloned field values:", insertError);
+          throw insertError;
+        }
+      }
+      
+      return newRecord;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["object-records", objectTypeId] });
+    }
+  });
+
   const updateRecord = useMutation({
     mutationFn: async ({ id, field_values }: { id: string, field_values: RecordFormData }) => {
       if (!id || !user) {
@@ -269,7 +350,8 @@ export function useObjectRecords(
     refetch,
     createRecord,
     updateRecord,
-    deleteRecord
+    deleteRecord,
+    cloneRecord
   };
 }
 

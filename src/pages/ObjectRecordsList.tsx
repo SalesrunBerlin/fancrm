@@ -5,7 +5,7 @@ import { useObjectTypes } from "@/hooks/useObjectTypes";
 import { useObjectRecords, FilterCondition } from "@/hooks/useObjectRecords";
 import { useEnhancedFields } from "@/hooks/useEnhancedFields";
 import { PageHeader } from "@/components/ui/page-header";
-import { Loader2, Plus, Upload, Trash2, Filter, KanbanIcon, TableIcon } from "lucide-react";
+import { Loader2, Plus, Upload, Trash2, Filter, KanbanIcon, TableIcon, Copy } from "lucide-react";
 import { RecordsTable } from "@/components/records/RecordsTable";
 import { Card } from "@/components/ui/card";
 import { FieldsConfigDialog } from "@/components/records/FieldsConfigDialog";
@@ -21,7 +21,6 @@ import { ActionColor } from "@/hooks/useActions";
 import { ObjectRecordsFilter } from "@/components/records/ObjectRecordsFilter";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Toggle } from "@/components/ui/toggle";
 import { KanbanView } from "@/components/records/KanbanView";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -29,13 +28,14 @@ export default function ObjectRecordsList() {
   const { objectTypeId } = useParams<{ objectTypeId: string }>();
   const { objectTypes } = useObjectTypes();
   const [activeFilters, setActiveFilters] = useState<FilterCondition[]>([]);
-  const { records, isLoading, deleteRecord, updateRecord } = useObjectRecords(objectTypeId, activeFilters);
+  const { records, isLoading, deleteRecord, updateRecord, cloneRecord } = useObjectRecords(objectTypeId, activeFilters);
   const { fields, isLoading: isLoadingFields } = useEnhancedFields(objectTypeId);
   const objectType = objectTypes?.find(type => type.id === objectTypeId);
   const [allRecords, setAllRecords] = useState<any[]>([]);
   const { visibleFields, updateVisibleFields } = useUserFieldSettings(objectTypeId);
   const [selectedRecords, setSelectedRecords] = useState<string[]>([]);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isCloneDialogOpen, setIsCloneDialogOpen] = useState(false);
   const { favoriteColor } = useAuth();
   const [isFilterExpanded, setIsFilterExpanded] = useState(false);
   const [viewMode, setViewMode] = useState<"table" | "kanban">("table");
@@ -116,6 +116,29 @@ export default function ObjectRecordsList() {
     } catch (error) {
       console.error("Error deleting records:", error);
       toast.error("Failed to delete some records");
+    }
+  };
+
+  const handleBatchClone = async () => {
+    if (selectedRecords.length === 0) return;
+    
+    try {
+      toast.loading(`Cloning ${selectedRecords.length} record(s)...`);
+      
+      // Clone each selected record
+      await Promise.all(selectedRecords.map(id => cloneRecord.mutateAsync(id)));
+      
+      // Show success message
+      toast.dismiss();
+      toast.success(`${selectedRecords.length} record(s) cloned successfully`);
+      
+      // Clear selection
+      setSelectedRecords([]);
+      setIsCloneDialogOpen(false);
+    } catch (error) {
+      console.error("Error cloning records:", error);
+      toast.dismiss();
+      toast.error("Failed to clone some records");
     }
   };
 
@@ -225,13 +248,22 @@ export default function ObjectRecordsList() {
               </Link>
             </ThemedButton>
             {selectedRecords.length > 0 && (
-              <ThemedButton 
-                variant="destructive"
-                onClick={() => setIsDeleteDialogOpen(true)}
-              >
-                <Trash2 className="mr-1.5 h-4 w-4" />
-                Delete Selected ({selectedRecords.length})
-              </ThemedButton>
+              <>
+                <ThemedButton 
+                  variant="outline"
+                  onClick={() => setIsCloneDialogOpen(true)}
+                >
+                  <Copy className="mr-1.5 h-4 w-4" />
+                  Clone ({selectedRecords.length})
+                </ThemedButton>
+                <ThemedButton 
+                  variant="destructive"
+                  onClick={() => setIsDeleteDialogOpen(true)}
+                >
+                  <Trash2 className="mr-1.5 h-4 w-4" />
+                  Delete ({selectedRecords.length})
+                </ThemedButton>
+              </>
             )}
             <ThemedButton 
               variant={(favoriteColor as ActionColor) || "default"}
@@ -374,12 +406,25 @@ export default function ObjectRecordsList() {
         )}
       </Card>
 
+      {/* Delete Dialog */}
       <DeleteDialog
         open={isDeleteDialogOpen}
         onOpenChange={setIsDeleteDialogOpen}
         onConfirm={handleBatchDelete}
         title={`Delete ${selectedRecords.length} Records`}
         description={`Are you sure you want to delete ${selectedRecords.length} records? This action cannot be undone.`}
+      />
+
+      {/* Clone Dialog */}
+      <DeleteDialog
+        open={isCloneDialogOpen}
+        onOpenChange={setIsCloneDialogOpen}
+        onConfirm={handleBatchClone}
+        title={`Clone ${selectedRecords.length} Records`}
+        description={`Are you sure you want to clone the selected ${selectedRecords.length} record(s)? This will create new copies with "_copy" added to their name fields.`}
+        confirmText="Clone"
+        confirmVariant="success"
+        icon={<Copy className="h-6 w-6 text-primary" />}
       />
     </div>
   );
