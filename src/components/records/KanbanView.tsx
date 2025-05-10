@@ -17,9 +17,10 @@ import {
 } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { ChevronDown, ChevronUp, MoveVertical } from "lucide-react";
+import { ChevronDown, ChevronUp, MoveVertical, MoveHorizontal } from "lucide-react";
 import { useFieldPicklistValues } from "@/hooks/useFieldPicklistValues";
 import { useKanbanViewSettings } from "@/hooks/useKanbanViewSettings";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface KanbanViewProps {
   records: ObjectRecord[];
@@ -260,105 +261,85 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
         </DragDropContext>
       )}
 
-      {/* Mobile view - Accordion layout for vertical scrolling */}
+      {/* Mobile view - Horizontal scrollable Kanban board */}
       {isMobile && (
-        <DragDropContext onDragEnd={handleDragEnd}>
-          <Accordion 
-            type="single" 
-            collapsible 
-            value={activeColumn || undefined}
-            onValueChange={(value) => {
-              if (value) {
-                setActiveColumn(value);
-                toggleColumnExpansion(value, true);
-              }
-            }}
-            className="w-full space-y-2"
-          >
-            {Object.entries(groupedRecords).map(([columnValue, columnRecords]) => {
-              const columnLabel = getColumnLabel(columnValue);
-              const recordCount = columnRecords.length;
-              const countPercentage = totalRecords > 0 ? (recordCount / totalRecords) * 100 : 0;
-              
-              return (
-                <Card key={columnValue} className="border shadow-sm">
-                  <AccordionItem value={columnValue} className="border-none">
-                    <AccordionTrigger className="px-4 py-3 hover:no-underline">
-                      <div className="flex flex-1 justify-between items-center">
-                        <div className="flex items-center space-x-2">
-                          <span className="font-medium">{columnLabel}</span>
-                          <Badge variant="outline">{columnRecords.length}</Badge>
+        <div className="mb-2">
+          <div className="text-xs text-center text-muted-foreground mb-2">
+            Swipe horizontally to see all statuses
+          </div>
+          
+          <DragDropContext onDragEnd={handleDragEnd}>
+            <ScrollArea className="w-full pb-4" orientation="horizontal">
+              <div className="flex gap-3 min-w-full pb-2 px-1">
+                {Object.entries(groupedRecords).map(([columnValue, columnRecords]) => {
+                  const columnLabel = getColumnLabel(columnValue);
+                  const recordCount = columnRecords.length;
+                  
+                  return (
+                    <div 
+                      key={columnValue} 
+                      className="flex-shrink-0 w-[85%] max-w-[300px]"
+                    >
+                      <Card className="h-full border shadow-sm flex flex-col">
+                        <div className="bg-muted/50 px-3 py-2 border-b flex justify-between items-center">
+                          <div className="flex items-center">
+                            <span className="font-medium text-sm mr-2">{columnLabel}</span>
+                            <Badge variant="outline">{recordCount}</Badge>
+                          </div>
+                          <MoveHorizontal className="h-4 w-4 text-muted-foreground" />
                         </div>
-                        <div className="flex items-center space-x-1">
-                          {activeColumn === columnValue ? (
-                            <ChevronUp className="h-4 w-4 text-muted-foreground" />
-                          ) : (
-                            <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                          )}
-                        </div>
-                      </div>
-                    </AccordionTrigger>
-                    <AccordionContent>
-                      <div className="px-1 pb-2">
-                        <Droppable droppableId={columnValue}>
-                          {(provided, snapshot) => (
-                            <div
-                              ref={provided.innerRef}
-                              {...provided.droppableProps}
-                              className={`rounded-md min-h-[100px] flex flex-col gap-2 ${
-                                snapshot.isDraggingOver ? 'bg-muted/60' : ''
-                              }`}
-                            >
-                              {columnRecords.length === 0 ? (
-                                <div className="text-center py-8 text-sm text-muted-foreground">
-                                  No records in this status
-                                </div>
-                              ) : (
-                                columnRecords.map((record, index) => (
-                                  <Draggable key={record.id} draggableId={record.id} index={index}>
-                                    {(provided, snapshot) => (
-                                      <div
-                                        ref={provided.innerRef}
-                                        {...provided.draggableProps}
-                                        className="relative"
-                                      >
+                        <div className="flex-grow overflow-hidden">
+                          <Droppable droppableId={columnValue}>
+                            {(provided, snapshot) => (
+                              <div
+                                ref={provided.innerRef}
+                                {...provided.droppableProps}
+                                className={`h-full p-2 rounded-md min-h-[300px] flex flex-col gap-2 overflow-y-auto ${
+                                  snapshot.isDraggingOver ? 'bg-muted/60' : ''
+                                }`}
+                              >
+                                {columnRecords.length === 0 ? (
+                                  <div className="text-center py-8 text-sm text-muted-foreground">
+                                    No records in this status
+                                  </div>
+                                ) : (
+                                  columnRecords.map((record, index) => (
+                                    <Draggable key={record.id} draggableId={record.id} index={index}>
+                                      {(provided, snapshot) => (
                                         <div
-                                          className="absolute top-1/2 -translate-y-1/2 left-1 p-1 rounded-md z-10"
+                                          ref={provided.innerRef}
+                                          {...provided.draggableProps}
                                           {...provided.dragHandleProps}
                                         >
-                                          <MoveVertical className="h-4 w-4 text-muted-foreground" />
-                                        </div>
-                                        <div className="pl-6">
                                           <KanbanCard
                                             record={record}
                                             objectTypeId={objectTypeId}
                                             isDragging={snapshot.isDragging}
                                           />
                                         </div>
-                                      </div>
-                                    )}
-                                  </Draggable>
-                                ))
-                              )}
-                              {provided.placeholder}
-                            </div>
-                          )}
-                        </Droppable>
-                      </div>
-                    </AccordionContent>
-                  </AccordionItem>
-                  <div className="px-4 pb-1">
-                    <Progress value={countPercentage} className="h-1" />
-                  </div>
-                </Card>
-              );
-            })}
-          </Accordion>
+                                      )}
+                                    </Draggable>
+                                  ))
+                                )}
+                                {provided.placeholder}
+                              </div>
+                            )}
+                          </Droppable>
+                        </div>
+                      </Card>
+                    </div>
+                  );
+                })}
+              </div>
+            </ScrollArea>
+          </DragDropContext>
+          
           <div className="text-xs text-center text-muted-foreground mt-2">
-            Drag cards vertically to change status
+            Drag cards horizontally between columns to change status
           </div>
-        </DragDropContext>
+        </div>
       )}
     </div>
   );
 }
+

@@ -6,11 +6,17 @@ export function useIsMobile() {
   const [isMobile, setIsMobile] = useState<boolean | null>(null);
 
   useEffect(() => {
+    // Function to check if we're on mobile
+    const checkMobile = () => {
+      // Using 768px as the breakpoint for mobile devices (md in Tailwind)
+      return window.innerWidth < 768;
+    };
+    
     // Set initial value once we're in the browser
-    setIsMobile(window.innerWidth < 768);
+    setIsMobile(checkMobile());
 
     function handleResize() {
-      setIsMobile(window.innerWidth < 768);
+      setIsMobile(checkMobile());
     }
 
     window.addEventListener("resize", handleResize);
