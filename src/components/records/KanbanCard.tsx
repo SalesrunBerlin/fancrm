@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { ObjectRecord } from "@/types/ObjectFieldTypes";
+import { ObjectRecord, ObjectField } from "@/types/ObjectFieldTypes";
 import { Card, CardContent } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -13,6 +13,8 @@ interface KanbanCardProps {
   isSelected?: boolean;
   onSelect?: (recordId: string, selected: boolean) => void;
   selectionMode?: boolean;
+  visibleFields?: string[]; // New prop for visible fields
+  fields?: ObjectField[]; // All available fields for formatting
 }
 
 export function KanbanCard({ 
@@ -22,7 +24,9 @@ export function KanbanCard({
   className = "",
   isSelected = false,
   onSelect,
-  selectionMode = false
+  selectionMode = false,
+  visibleFields = [],
+  fields = []
 }: KanbanCardProps) {
   const navigate = useNavigate();
   const [isHovered, setIsHovered] = useState(false);
@@ -52,6 +56,34 @@ export function KanbanCard({
     
     // Fallback to record ID
     return `Record ${record.id.slice(0, 8)}`;
+  };
+
+  // Format field value based on field type
+  const formatFieldValue = (apiName: string, value: any) => {
+    if (value === null || value === undefined) return "-";
+    
+    // Find field definition for proper formatting
+    const field = fields.find(f => f.api_name === apiName);
+    
+    if (!field) return String(value);
+    
+    switch(field.data_type) {
+      case 'date':
+      case 'datetime':
+        try {
+          const date = new Date(value);
+          return date.toLocaleDateString();
+        } catch (e) {
+          return String(value);
+        }
+      case 'number':
+      case 'currency':
+        return typeof value === 'number' ? value.toLocaleString() : value;
+      case 'boolean':
+        return value === true ? 'Yes' : 'No';
+      default:
+        return String(value);
+    }
   };
 
   const handleCardClick = (e: React.MouseEvent) => {
@@ -103,12 +135,26 @@ export function KanbanCard({
               className="mr-2"
             />
           )}
-          <div className="text-sm flex-1">
+          <div className="text-sm font-medium flex-1">
             {formatDisplayName(recordName)}
           </div>
         </div>
-        
-        {/* Action buttons have been removed as requested */}
+
+        {/* Display additional fields when selected */}
+        {visibleFields && visibleFields.length > 0 && record.field_values && (
+          <div className="mt-2 pt-2 border-t border-gray-100 text-xs space-y-1">
+            {visibleFields.map((fieldApiName) => (
+              <div key={fieldApiName} className="flex justify-between">
+                <span className="text-muted-foreground">
+                  {fields.find(f => f.api_name === fieldApiName)?.name || fieldApiName}:
+                </span>
+                <span className="font-medium">
+                  {formatFieldValue(fieldApiName, record.field_values?.[fieldApiName])}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
       </CardContent>
     </Card>
   );

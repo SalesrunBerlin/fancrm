@@ -5,13 +5,14 @@ interface KanbanViewSettings {
   fieldApiName: string;
   expandedColumns: string[];
   selectedRecords?: string[];
+  visibleCardFields?: string[]; // Add new property for visible fields
 }
 
 export function useKanbanViewSettings(objectTypeId: string | undefined) {
   const storageKey = objectTypeId ? `kanban-settings-${objectTypeId}` : '';
   const [settings, setSettings] = useLocalStorage<KanbanViewSettings>(
     storageKey,
-    { fieldApiName: '', expandedColumns: [], selectedRecords: [] }
+    { fieldApiName: '', expandedColumns: [], selectedRecords: [], visibleCardFields: [] }
   );
 
   const updateFieldApiName = (fieldApiName: string) => {
@@ -41,12 +42,23 @@ export function useKanbanViewSettings(objectTypeId: string | undefined) {
     return settings.selectedRecords || [];
   };
 
+  // Add new methods for visible card fields
+  const updateVisibleCardFields = (fieldApiNames: string[]) => {
+    setSettings(prev => ({ ...prev, visibleCardFields: fieldApiNames }));
+  };
+
+  const getVisibleCardFields = (): string[] => {
+    return settings.visibleCardFields || [];
+  };
+
   return {
     settings,
     updateFieldApiName,
     toggleColumnExpansion,
     isColumnExpanded,
     updateSelectedRecords,
-    getSelectedRecords
+    getSelectedRecords,
+    updateVisibleCardFields,
+    getVisibleCardFields
   };
 }

@@ -5,11 +5,12 @@ import { Button } from "@/components/ui/button";
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { ObjectField, ObjectRecord } from '@/types/ObjectFieldTypes';
 import { KanbanCard } from './KanbanCard';
-import { Loader2, PlusCircle, Check } from 'lucide-react';
+import { Loader2, PlusCircle, Check, Settings, PenLine } from 'lucide-react'; 
 import { useKanbanViewSettings } from "@/hooks/useKanbanViewSettings";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { toast } from "sonner";
+import { KanbanFieldsDialog } from './KanbanFieldsDialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -29,8 +30,20 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
   // Find all suitable picklist fields for the Kanban view
   const picklistFields = fields.filter(field => field.data_type === 'picklist');
   
-  const { settings, updateFieldApiName } = useKanbanViewSettings(objectTypeId);
+  const { 
+    settings, 
+    updateFieldApiName, 
+    updateVisibleCardFields, 
+    getVisibleCardFields
+  } = useKanbanViewSettings(objectTypeId);
+  
   const isMobile = useIsMobile();
+  
+  // Get visible card fields from settings
+  const visibleCardFields = getVisibleCardFields();
+  
+  // State for field editor dialog
+  const [showFieldEditor, setShowFieldEditor] = useState(false);
   
   // State for selected records (for batch operations)
   const [selectedRecords, setSelectedRecords] = useState<string[]>([]);
@@ -198,6 +211,11 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
     }
   };
 
+  // Handle saving selected fields for card display
+  const handleSaveVisibleFields = (selectedFields: string[]) => {
+    updateVisibleCardFields(selectedFields);
+  };
+
   // Handle batch update of selected records
   const handleBatchUpdate = async (newStatus: string) => {
     if (selectedRecords.length === 0 || !statusField) return;
@@ -243,6 +261,12 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
 
   // Get all column IDs for display
   const allColumnIds = Object.keys(columns);
+  
+  // Move "uncategorized" to the end
+  const sortedColumnIds = allColumnIds.filter(id => id !== "uncategorized");
+  if (allColumnIds.includes("uncategorized")) {
+    sortedColumnIds.push("uncategorized");
+  }
 
   return (
     <div className="flex flex-col gap-4">
@@ -272,6 +296,17 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
             className="ml-2"
           >
             {selectionMode ? "Cancel Selection" : "Select Items"}
+          </Button>
+
+          {/* Add Edit button for fields selection */}
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => setShowFieldEditor(true)}
+            className="ml-1"
+            title="Edit card fields"
+          >
+            <PenLine className="h-4 w-4" />
           </Button>
         </div>
 
@@ -312,6 +347,15 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
         )}
       </div>
         
+      {/* Fields selection dialog */}
+      <KanbanFieldsDialog
+        isOpen={showFieldEditor}
+        onOpenChange={setShowFieldEditor}
+        fields={fields}
+        selectedFields={visibleCardFields}
+        onSave={handleSaveVisibleFields}
+      />
+
       {/* Kanban board */}
       <div className="overflow-auto pb-4">
         <DragDropContext
@@ -319,7 +363,7 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
           onDragEnd={handleDragEnd}
         >
           <div className="flex gap-4 overflow-x-auto pb-4 min-h-[70vh]">
-            {allColumnIds.map((columnId) => (
+            {sortedColumnIds.map((columnId) => (
               <div 
                 key={columnId}
                 className={`flex-shrink-0 w-72 bg-card rounded-md border shadow-sm flex flex-col ${
@@ -368,6 +412,8 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
                                 isSelected={selectedRecords.includes(record.id)}
                                 onSelect={handleRecordSelection}
                                 selectionMode={selectionMode}
+                                visibleFields={visibleCardFields}
+                                fields={fields}
                               />
                             </div>
                           )}
