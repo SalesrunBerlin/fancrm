@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { ObjectRecord } from "@/types/ObjectFieldTypes";
 import { ObjectField } from "@/hooks/useObjectTypes";
@@ -71,7 +70,7 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
   const { updateRecord } = useObjectRecords(objectTypeId);
 
   // Refs for auto-scrolling during drag
-  const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const scrollAreaRef = useRef<HTMLDivElement | null>(null);
   const scrolling = useRef<boolean>(false);
   const scrollSpeed = useRef<number>(0);
   const scrollDirection = useRef<'left' | 'right' | 'up' | 'down' | null>(null);
@@ -89,7 +88,7 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
     position: {x: number, y: number} | null;
   }>({id: '', element: null, position: null});
 
-  // State to track which button is currently being dragged over
+  // State to track which button is currently being dragged over - changed to only allow one at a time
   const [dragOverButtonId, setDragOverButtonId] = useState<string | null>(null);
 
   // State to track mouse/touch position during drag
@@ -293,7 +292,17 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
     // Find all column buttons to check if we're near any
     const columnButtons = document.querySelectorAll('[data-kanban-column-button]');
     let isNearColumnButton = false;
+    let nearestButtonId: string | null = null;
+    let shortestDistance = Infinity;
     
+    // Reset all button styles first to ensure only one gets highlighted
+    columnButtons.forEach((button) => {
+      if (button instanceof HTMLElement) {
+        button.classList.remove('ring-4', 'ring-primary', 'ring-offset-2', 'scale-110');
+      }
+    });
+    
+    // Find the nearest button to highlight
     columnButtons.forEach(button => {
       if (button instanceof HTMLElement) {
         const buttonRect = button.getBoundingClientRect();
@@ -308,18 +317,29 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
         if (mousePosition.x >= extendedRect.left && mousePosition.x <= extendedRect.right && 
             mousePosition.y >= extendedRect.top && mousePosition.y <= extendedRect.bottom) {
           isNearColumnButton = true;
-          // Highlight the button with stronger visual feedback
-          button.classList.add('ring-4', 'ring-primary', 'ring-offset-2', 'scale-110');
-          setDragOverButtonId(button.getAttribute('data-kanban-column-button') || null);
-        } else {
-          button.classList.remove('ring-4', 'ring-primary', 'ring-offset-2', 'scale-110');
+          
+          // Calculate distance to center of button
+          const buttonCenterX = (buttonRect.left + buttonRect.right) / 2;
+          const buttonCenterY = (buttonRect.top + buttonRect.bottom) / 2;
+          const distance = Math.sqrt(
+            Math.pow(mousePosition.x - buttonCenterX, 2) + 
+            Math.pow(mousePosition.y - buttonCenterY, 2)
+          );
+          
+          // Keep track of the nearest button
+          if (distance < shortestDistance) {
+            shortestDistance = distance;
+            nearestButtonId = button.getAttribute('data-kanban-column-button');
+            
+            // Only highlight the nearest button
+            button.classList.add('ring-4', 'ring-primary', 'ring-offset-2', 'scale-110');
+          }
         }
       }
     });
     
-    if (!isNearColumnButton) {
-      setDragOverButtonId(null);
-    }
+    // Update the state to reflect the nearest button
+    setDragOverButtonId(nearestButtonId);
     
     // Reset all scrolling directions first
     scrolling.current = false;
@@ -470,21 +490,35 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
       pageRef.current.style.overflow = '';
     }
     
-    if (!result.destination || !selectedFieldApiName || !onUpdateRecord) return;
+    if (!result.destination || !selectedFieldApiName) return;
     
     const { draggableId, destination } = result;
     const recordId = draggableId;
     const newValue = destination.droppableId === "none" ? null : destination.droppableId;
     
+    console.log(`Updating record ${recordId} with new value for ${selectedFieldApiName}: ${newValue}`);
+    
     // Update record
     try {
-      // Call the update function
-      await updateRecord.mutateAsync({
-        id: recordId,
-        field_values: {
+      // If using the passed onUpdateRecord prop, use that
+      if (onUpdateRecord) {
+        await onUpdateRecord(recordId, {
           [selectedFieldApiName]: newValue
-        }
-      });
+        });
+        console.log("Record updated successfully using onUpdateRecord");
+      } 
+      // Otherwise fallback to the hook method
+      else if (updateRecord && updateRecord.mutateAsync) {
+        await updateRecord.mutateAsync({
+          id: recordId,
+          field_values: {
+            [selectedFieldApiName]: newValue
+          }
+        });
+        console.log("Record updated successfully using updateRecord from hook");
+      } else {
+        console.error("No update method available");
+      }
 
       // When on mobile, activate the destination column
       if (isMobile) {
@@ -528,7 +562,7 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
     }
   };
 
-  // Handler for when a droppable button is dragged over
+  // Handler for when a droppable button is dragged over - now ensures only one button is highlighted
   const handleDragEnterButton = (columnId: string) => {
     setDragOverButtonId(columnId);
   };
@@ -737,7 +771,7 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
               style={{ WebkitOverflowScrolling: 'touch' }}
             >
               <div 
-                ref={(el) => { scrollAreaRef.current = el as HTMLDivElement; }}  
+                ref={el => { scrollAreaRef.current = el; }}  
                 className="flex gap-3 min-w-full px-1 pb-4" 
               >
                 {Object.entries(groupedRecords).map(([columnValue, columnRecords]) => {
