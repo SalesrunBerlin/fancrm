@@ -1,6 +1,6 @@
 
 import * as React from "react";
-import { format, parse, setHours, setMinutes } from "date-fns";
+import { format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
@@ -94,11 +94,12 @@ export function DatePickerField({
     if (dateToSave) {
       // For datetime fields, apply the selected hours and minutes
       if (isDateTime) {
-        dateToSave = setHours(dateToSave, parseInt(hours, 10));
-        dateToSave = setMinutes(dateToSave, parseInt(minutes, 10));
+        const dateWithHours = new Date(dateToSave);
+        dateWithHours.setHours(parseInt(hours, 10));
+        dateWithHours.setMinutes(parseInt(minutes, 10));
         
         // Format as ISO string for storing with time
-        const formattedDate = dateToSave.toISOString();
+        const formattedDate = dateWithHours.toISOString();
         onChange(formattedDate);
       } else {
         // For date-only fields, format as YYYY-MM-DD

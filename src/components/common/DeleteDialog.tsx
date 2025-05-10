@@ -54,6 +54,7 @@ export function DeleteDialog({
   const handleConfirm = async () => {
     if (onConfirm) await onConfirm();
     if (onDelete) await onDelete();
+    if (onOpenChange) onOpenChange(false);
   };
 
   // Use confirmText if provided, otherwise use deleteButtonText
@@ -81,7 +82,9 @@ export function DeleteDialog({
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Processing...
               </>
-            ) : buttonText}
+            ) : (
+              buttonText
+            )}
             {children}
           </ThemedButton>
         </AlertDialogFooter>

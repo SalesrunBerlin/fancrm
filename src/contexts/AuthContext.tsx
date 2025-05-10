@@ -52,6 +52,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(session?.user || null);
       setSession(session || null);
       setIsAuthenticated(!!session?.user);
+      
+      if (session?.user) {
+        // Load favorite color from database
+        try {
+          const { data, error } = await supabase
+            .from('profiles')
+            .select('favorite_color')
+            .eq('id', session.user.id)
+            .single();
+          
+          if (!error && data && data.favorite_color) {
+            setFavoriteColorState(data.favorite_color);
+          }
+        } catch (err) {
+          console.error("Error loading favorite color:", err);
+        }
+      }
+      
       setIsLoading(false);
     };
 
@@ -69,6 +87,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       setIsSuperAdmin(session?.user?.app_metadata?.is_super_admin === true);
       setIsAdmin(session?.user?.app_metadata?.is_admin === true || session?.user?.app_metadata?.is_super_admin === true);
+      
+      if (session?.user) {
+        // Load favorite color on auth state change 
+        supabase
+          .from('profiles')
+          .select('favorite_color')
+          .eq('id', session.user.id)
+          .single()
+          .then(({ data, error }) => {
+            if (!error && data && data.favorite_color) {
+              setFavoriteColorState(data.favorite_color);
+            }
+          })
+          .catch(err => {
+            console.error("Error loading favorite color on auth change:", err);
+          });
+      }
+      
       setIsLoading(false);
     });
   }, []);
@@ -98,7 +134,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         try {
           const { data, error } = await supabase
             .from('profiles')
-            .select('role')
+            .select('role, favorite_color')
             .eq('id', user.id)
             .single();
             
@@ -109,6 +145,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             
             setIsAdmin(isAdminRole);
             setIsSuperAdmin(isSuperAdminRole);
+            
+            // Set favorite color from profile data
+            if (data.favorite_color) {
+              setFavoriteColorState(data.favorite_color);
+            }
           }
         } catch (error) {
           console.error("Error checking admin status:", error);
@@ -186,8 +227,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const setFavoriteColor = async (color: string) => {
     setFavoriteColorState(color);
-    // Here you would typically save this to a database or local storage
-    // For now, we're just updating the state
+    
+    // Save the color preference to the database
+    if (user) {
+      try {
+        const { error } = await supabase
+          .from('profiles')
+          .update({ favorite_color: color })
+          .eq('id', user.id);
+        
+        if (error) {
+          console.error("Error saving favorite color:", error);
+          toast.error("Failed to save color preference");
+        } else {
+          console.log("Color preference saved successfully:", color);
+        }
+      } catch (err) {
+        console.error("Error in setFavoriteColor:", err);
+        toast.error("An error occurred while saving your color preference");
+      }
+    }
+    
     return Promise.resolve();
   };
 

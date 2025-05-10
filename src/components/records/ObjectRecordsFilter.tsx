@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { ObjectField } from "@/hooks/useObjectTypes";
@@ -9,6 +8,7 @@ import { FilterCondition } from "@/hooks/useObjectRecords";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface SavedFilter {
   id: string;
@@ -30,29 +30,46 @@ export function ObjectRecordsFilter({
   activeFilters = []
 }: ObjectRecordsFilterProps) {
   const [filters, setFilters] = useState<FilterCondition[]>(activeFilters);
+  const { user } = useAuth();
+  const userId = user?.id || 'anonymous';
+  const storageKey = `object-filters-${userId}`;
+  
   const [savedFilters, setSavedFilters] = useLocalStorage<Record<string, SavedFilter[]>>(
-    `object-filters`,
+    storageKey,
     {}
   );
   const [filterName, setFilterName] = useState("");
   const [showSaveOptions, setShowSaveOptions] = useState(false);
+  const [lastAppliedFilter, setLastAppliedFilter] = useLocalStorage<Record<string, FilterCondition[]>>(
+    `last-applied-filters-${userId}`,
+    {}
+  );
 
   // Load saved filters for this object type
   useEffect(() => {
     if (activeFilters && activeFilters.length > 0) {
       setFilters(activeFilters);
-    } else if (objectTypeId && savedFilters[objectTypeId]?.length > 0) {
-      // Only auto-load if no active filters are already set
-      const lastUsedFilter = savedFilters[objectTypeId][0];
-      setFilters(lastUsedFilter.conditions);
-      if (onFilterChange) {
-        onFilterChange(lastUsedFilter.conditions);
+    } else if (objectTypeId) {
+      // Try to load last applied filter for this object
+      const lastFilter = lastAppliedFilter[objectTypeId];
+      if (lastFilter && lastFilter.length > 0) {
+        setFilters(lastFilter);
+        if (onFilterChange) {
+          onFilterChange(lastFilter);
+        }
+      } else if (savedFilters[objectTypeId]?.length > 0) {
+        // Otherwise try to load most recently saved filter
+        const recentFilter = savedFilters[objectTypeId][0];
+        setFilters(recentFilter.conditions);
+        if (onFilterChange) {
+          onFilterChange(recentFilter.conditions);
+        }
+      } else if (filters.length === 0) {
+        // Initialize with an empty filter if none exist
+        addFilterCondition();
       }
-    } else if (filters.length === 0) {
-      // Initialize with an empty filter if none exist
-      addFilterCondition();
     }
-  }, [objectTypeId]);
+  }, [objectTypeId, user]);
 
   // Update parent component when filters change
   useEffect(() => {
@@ -108,11 +125,25 @@ export function ObjectRecordsFilter({
     setSavedFilters(updatedSavedFilters);
     setFilterName("");
     setShowSaveOptions(false);
+    
+    // Save as last applied filter too
+    setLastAppliedFilter({
+      ...lastAppliedFilter,
+      [objectTypeId]: filters
+    });
+    
     toast.success("Filter saved successfully");
   };
 
   const loadSavedFilter = (savedFilter: SavedFilter) => {
     setFilters(savedFilter.conditions);
+    
+    // Update last applied filter
+    setLastAppliedFilter({
+      ...lastAppliedFilter,
+      [objectTypeId]: savedFilter.conditions
+    });
+    
     if (onFilterChange) {
       onFilterChange(savedFilter.conditions);
     }
@@ -128,10 +159,22 @@ export function ObjectRecordsFilter({
   };
 
   const clearFilters = () => {
-    setFilters([]);
+    const emptyFilter = [];
+    setFilters(emptyFilter);
+    
+    // Clear the last applied filter
+    const updatedLastApplied = { ...lastAppliedFilter };
+    delete updatedLastApplied[objectTypeId];
+    setLastAppliedFilter(updatedLastApplied);
+    
     if (onFilterChange) {
-      onFilterChange([]);
+      onFilterChange(emptyFilter);
     }
+    
+    // Add a single empty condition after clearing
+    setTimeout(() => {
+      addFilterCondition();
+    }, 0);
   };
 
   const applyFilters = () => {
@@ -144,6 +187,12 @@ export function ObjectRecordsFilter({
         f.operator === "isNull" || 
         f.operator === "isNotNull"
       );
+      
+      // Save as last applied filter
+      setLastAppliedFilter({
+        ...lastAppliedFilter,
+        [objectTypeId]: validFilters
+      });
       
       onFilterChange(validFilters);
       toast.success("Filters applied");

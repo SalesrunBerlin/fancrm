@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Copy, Edit, Save, X } from 'lucide-react';
+import { ArrowLeft, Copy, Edit, Save, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { useObjectType } from "@/hooks/useObjectType";
 import { useRecordDetail } from "@/hooks/useRecordDetail";
@@ -86,6 +86,10 @@ export default function ObjectRecordDetail() {
     }
   };
 
+  const handleGoBack = () => {
+    navigate(-1);
+  };
+
   if (isLoadingObjectType || isLoadingRecord) {
     return (
       <div className="container mx-auto py-10">
@@ -125,16 +129,36 @@ export default function ObjectRecordDetail() {
     <div className="container mx-auto py-10">
       <div className="mb-6">
         <div className="mb-4 flex justify-between items-center">
-          <div>
-            <h1 className="text-2xl font-bold">{recordTitle}</h1>
-            <p className="text-gray-500">{objectType.name}</p>
-            {isTicket && aiStatus && (
-              <div className="mt-1">
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                  AI Status: {aiStatus}
-                </span>
-              </div>
-            )}
+          <div className="flex items-center gap-3">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <ThemedButton
+                    variant="outline"
+                    onClick={handleGoBack}
+                    size="icon"
+                    className="mr-2"
+                  >
+                    <ArrowLeft className="h-4 w-4" />
+                  </ThemedButton>
+                </TooltipTrigger>
+                <TooltipContent side="right">
+                  <p>Go back</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            
+            <div>
+              <h1 className="text-2xl font-bold">{recordTitle}</h1>
+              <p className="text-gray-500">{objectType.name}</p>
+              {isTicket && aiStatus && (
+                <div className="mt-1">
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                    AI Status: {aiStatus}
+                  </span>
+                </div>
+              )}
+            </div>
           </div>
           <div className="flex items-center gap-2">
             {/* Layout Selector */}
