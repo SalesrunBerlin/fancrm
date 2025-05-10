@@ -8,18 +8,25 @@ interface KanbanViewSettings {
   visibleCardFields?: string[];
 }
 
+const DEFAULT_SETTINGS: KanbanViewSettings = {
+  fieldApiName: '',
+  expandedColumns: [],
+  selectedRecords: [],
+  visibleCardFields: []
+};
+
 export function useKanbanViewSettings(objectTypeId: string | undefined) {
   const { settings, updateSettings, isLoading } = useUserViewSettings(objectTypeId, 'kanban');
   
-  // Cast generic settings to our specific type
-  const kanbanSettings = settings as KanbanViewSettings;
+  // Ensure settings are properly typed and have default values
+  const kanbanSettings = settings as Partial<KanbanViewSettings>;
   
   // Initialize with default values if properties are missing
   const effectiveSettings: KanbanViewSettings = {
-    fieldApiName: kanbanSettings.fieldApiName || '',
-    expandedColumns: kanbanSettings.expandedColumns || [],
-    selectedRecords: kanbanSettings.selectedRecords || [],
-    visibleCardFields: kanbanSettings.visibleCardFields || []
+    fieldApiName: kanbanSettings?.fieldApiName || DEFAULT_SETTINGS.fieldApiName,
+    expandedColumns: kanbanSettings?.expandedColumns || DEFAULT_SETTINGS.expandedColumns,
+    selectedRecords: kanbanSettings?.selectedRecords || DEFAULT_SETTINGS.selectedRecords,
+    visibleCardFields: kanbanSettings?.visibleCardFields || DEFAULT_SETTINGS.visibleCardFields
   };
 
   const updateFieldApiName = (fieldApiName: string) => {

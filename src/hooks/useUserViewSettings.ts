@@ -28,6 +28,22 @@ export function useUserViewSettings(
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
+  // Function to safely parse JSON if needed
+  const safeParseJSON = (data: any): UserViewSettings => {
+    if (!data) return {};
+    
+    if (typeof data === 'string') {
+      try {
+        return JSON.parse(data);
+      } catch (e) {
+        console.error('Error parsing settings JSON:', e);
+        return {};
+      }
+    }
+    
+    return data as UserViewSettings;
+  };
+
   // Function to load settings from server if user is logged in
   const loadServerSettings = useCallback(async () => {
     if (!isLoggedIn || !objectTypeId || isAuthLoading) return;
@@ -46,7 +62,9 @@ export function useUserViewSettings(
       if (error) {
         console.error('Error loading settings:', error);
       } else if (data) {
-        setServerSettings(data.settings_data);
+        // Safely parse the data if it's a string
+        const parsedSettings = safeParseJSON(data.settings_data);
+        setServerSettings(parsedSettings);
       }
     } catch (error) {
       console.error('Failed to load settings:', error);

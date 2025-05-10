@@ -102,7 +102,7 @@ export function KanbanCard({
 
   // Format record name for display with line break if it's too long
   const recordName = getRecordName();
-  const formatDisplayName = (name: string) => {
+  const formatDisplayName = (name: string | any) => {
     if (typeof name !== 'string') {
       return String(name);
     }
@@ -116,6 +116,9 @@ export function KanbanCard({
     }
     return name;
   };
+
+  // Safety check for visibleFields
+  const safeVisibleFields = Array.isArray(visibleFields) ? visibleFields : [];
 
   return (
     <Card 
@@ -141,10 +144,10 @@ export function KanbanCard({
         </div>
 
         {/* Display additional fields when selected - NOW MORE COMPACT */}
-        {visibleFields && visibleFields.length > 0 && record.field_values && (
+        {safeVisibleFields.length > 0 && record.field_values && (
           <div className="mt-2 pt-2 border-t border-gray-100 text-xs">
             <div className="flex flex-wrap gap-x-3 gap-y-1">
-              {visibleFields.map((fieldApiName) => {
+              {safeVisibleFields.map((fieldApiName) => {
                 const formattedValue = formatFieldValue(fieldApiName, record.field_values?.[fieldApiName]);
                 return (
                   <span key={fieldApiName} className="text-muted-foreground">
