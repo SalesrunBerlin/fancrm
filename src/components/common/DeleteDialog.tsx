@@ -20,11 +20,14 @@ export interface DeleteDialogProps {
   description: string;
   deleteButtonText?: string | React.ReactNode;
   cancelButtonText?: string;
+  confirmText?: string;
+  confirmVariant?: string;
   isDeleting?: boolean;
   onCancel?: () => void;
   onConfirm?: () => void | Promise<void>;
   onDelete?: () => void | Promise<void>;
   children?: React.ReactNode;
+  icon?: React.ReactNode;
 }
 
 export function DeleteDialog({
@@ -34,11 +37,14 @@ export function DeleteDialog({
   description,
   deleteButtonText = "Delete",
   cancelButtonText = "Cancel",
+  confirmText,
+  confirmVariant = "destructive",
   isDeleting = false,
   onCancel,
   onConfirm,
   onDelete,
   children,
+  icon,
 }: DeleteDialogProps) {
   const handleCancel = () => {
     if (onCancel) onCancel();
@@ -50,15 +56,14 @@ export function DeleteDialog({
     if (onDelete) await onDelete();
   };
 
-  // Ensure the deleteButtonText is always a React node (string or element)
-  const buttonText = typeof deleteButtonText === 'string' 
-    ? deleteButtonText 
-    : deleteButtonText;
+  // Use confirmText if provided, otherwise use deleteButtonText
+  const buttonText = confirmText || deleteButtonText;
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
+          {icon && <div className="mx-auto mb-4">{icon}</div>}
           <AlertDialogTitle>{title}</AlertDialogTitle>
           <AlertDialogDescription>{description}</AlertDialogDescription>
         </AlertDialogHeader>
@@ -67,14 +72,14 @@ export function DeleteDialog({
             {cancelButtonText}
           </AlertDialogCancel>
           <ThemedButton
-            variant="destructive"
+            variant={confirmVariant as any}
             onClick={handleConfirm}
             disabled={isDeleting}
           >
             {isDeleting ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Deleting...
+                Processing...
               </>
             ) : buttonText}
             {children}

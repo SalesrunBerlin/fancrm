@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { TableCell } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
@@ -187,6 +186,7 @@ export function EditableCell({
             value={editValue}
             onChange={handleChange}
             className={error ? "border-red-500" : ""}
+            isDateTime={false}
           />
         );
       case "datetime":
@@ -195,6 +195,7 @@ export function EditableCell({
             value={editValue}
             onChange={handleChange}
             className={error ? "border-red-500" : ""}
+            isDateTime={true}
           />
         );
       case "number":

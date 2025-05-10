@@ -221,6 +221,7 @@ export function RecordField({
             value={currentValue}
             onChange={handleDateChange}
             disabled={readOnly}
+            isDateTime={false}
           />
         );
       case 'datetime':
@@ -234,6 +235,7 @@ export function RecordField({
             value={currentValue}
             onChange={handleDateChange}
             disabled={readOnly}
+            isDateTime={true}
           />
         );
       case 'lookup':
