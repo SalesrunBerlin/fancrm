@@ -1,11 +1,11 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { ObjectRecord } from "@/types/ObjectFieldTypes";
 import { ObjectField } from "@/hooks/useObjectTypes";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
+import { DragDropContext, Droppable, Draggable, DropResult, DragStart, DragUpdate } from "@hello-pangea/dnd";
 import { KanbanCard } from "./KanbanCard";
 import { useObjectRecords } from "@/hooks/useObjectRecords";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -21,6 +21,7 @@ import { ChevronDown, ChevronUp, MoveVertical, MoveHorizontal, ArrowLeft, ArrowR
 import { useFieldPicklistValues } from "@/hooks/useFieldPicklistValues";
 import { useKanbanViewSettings } from "@/hooks/useKanbanViewSettings";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { Button } from "@/components/ui/button";
 
 interface KanbanViewProps {
   records: ObjectRecord[];
@@ -68,6 +69,14 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
   
   // Get field values from our hook
   const { updateRecord } = useObjectRecords(objectTypeId);
+
+  // Refs for auto-scrolling during drag
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const scrolling = useRef<boolean>(false);
+  const scrollSpeed = useRef<number>(0);
+  const scrollDirection = useRef<'left' | 'right' | null>(null);
+  const autoScrollIntervalRef = useRef<number | null>(null);
+  const isDraggingRef = useRef<boolean>(false);
 
   // Group records by the selected picklist value
   useEffect(() => {
@@ -123,8 +132,84 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
     }
   }, [records, selectedFieldApiName, picklistValues, isMobile, activeColumn, toggleColumnExpansion]);
 
+  // Auto-scroll function that runs during drag operations
+  const autoScroll = () => {
+    if (!scrolling.current || !scrollAreaRef.current || !scrollDirection.current) return;
+    
+    const scrollContainer = scrollAreaRef.current;
+    const currentScrollLeft = scrollContainer.scrollLeft;
+    
+    if (scrollDirection.current === 'right') {
+      scrollContainer.scrollTo({
+        left: currentScrollLeft + scrollSpeed.current,
+        behavior: 'auto'  // Use 'auto' for smoother continuous scrolling
+      });
+    } else if (scrollDirection.current === 'left') {
+      scrollContainer.scrollTo({
+        left: currentScrollLeft - scrollSpeed.current,
+        behavior: 'auto'
+      });
+    }
+  };
+
+  // Setup auto-scroll interval when dragging starts
+  useEffect(() => {
+    if (isDraggingRef.current && !autoScrollIntervalRef.current) {
+      autoScrollIntervalRef.current = window.setInterval(autoScroll, 16); // ~60fps
+    }
+    
+    return () => {
+      if (autoScrollIntervalRef.current) {
+        window.clearInterval(autoScrollIntervalRef.current);
+        autoScrollIntervalRef.current = null;
+      }
+    };
+  }, [isDraggingRef.current]);
+
+  // Handle drag start event
+  const handleDragStart = (initial: DragStart) => {
+    isDraggingRef.current = true;
+  };
+
+  // Handle drag update to detect if we need to auto-scroll
+  const handleDragUpdate = (update: DragUpdate) => {
+    if (!isMobile || !scrollAreaRef.current) return;
+
+    const scrollContainer = scrollAreaRef.current;
+    const containerRect = scrollContainer.getBoundingClientRect();
+    
+    // If no client coordinates in the update, return
+    if (!update.clientX) return;
+    
+    // Define scroll hotspots (30% of container width on each edge)
+    const scrollThreshold = containerRect.width * 0.3;
+    const leftEdge = containerRect.left + scrollThreshold;
+    const rightEdge = containerRect.right - scrollThreshold;
+    
+    // Check if cursor is in the scrolling hotspot areas
+    if (update.clientX < leftEdge) {
+      const distance = leftEdge - update.clientX;
+      scrollDirection.current = 'left';
+      scrollSpeed.current = Math.min(15, distance / 10 + 5); // Dynamic speed based on distance
+      scrolling.current = true;
+    } else if (update.clientX > rightEdge) {
+      const distance = update.clientX - rightEdge;
+      scrollDirection.current = 'right';
+      scrollSpeed.current = Math.min(15, distance / 10 + 5);
+      scrolling.current = true;
+    } else {
+      scrolling.current = false;
+      scrollDirection.current = null;
+    }
+  };
+
   // Handle drag end - update record with new status
-  const handleDragEnd = async (result: any) => {
+  const handleDragEnd = async (result: DropResult) => {
+    // Reset drag-related refs
+    isDraggingRef.current = false;
+    scrolling.current = false;
+    scrollDirection.current = null;
+    
     if (!result.destination || !selectedFieldApiName || !onUpdateRecord) return;
     
     const { draggableId, destination } = result;
@@ -165,6 +250,23 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
     (total, records) => total + records.length, 
     0
   );
+
+  // Helper function to scroll container to a column
+  const scrollToColumn = (columnId: string) => {
+    if (!scrollAreaRef.current) return;
+    
+    const columnElement = document.getElementById(`kanban-column-${columnId}`);
+    if (columnElement) {
+      const containerLeft = scrollAreaRef.current.getBoundingClientRect().left;
+      const columnLeft = columnElement.getBoundingClientRect().left;
+      const offset = columnLeft - containerLeft - 16; // 16px padding
+      
+      scrollAreaRef.current.scrollTo({
+        left: scrollAreaRef.current.scrollLeft + offset,
+        behavior: 'smooth'
+      });
+    }
+  };
 
   if (isLoadingPicklistValues) {
     return (
@@ -264,14 +366,48 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
       {/* Mobile view - Horizontal scrollable Kanban board */}
       {isMobile && (
         <div className="mb-4">
+          <div className="flex flex-wrap gap-2 mb-3">
+            {Object.entries(groupedRecords).map(([columnValue, columnRecords]) => {
+              const columnLabel = getColumnLabel(columnValue);
+              const isActive = activeColumn === columnValue;
+              
+              return (
+                <Button
+                  key={columnValue}
+                  variant={isActive ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => {
+                    setActiveColumn(columnValue);
+                    toggleColumnExpansion(columnValue, true);
+                    scrollToColumn(columnValue);
+                  }}
+                  className="flex items-center gap-1"
+                >
+                  {columnLabel} 
+                  <Badge variant="outline" className="ml-1">
+                    {columnRecords.length}
+                  </Badge>
+                </Button>
+              );
+            })}
+          </div>
+          
           <div className="flex items-center justify-center space-x-2 mb-3 text-xs text-muted-foreground">
             <ArrowLeft className="h-4 w-4" />
             <span>Swipe horizontally to see all statuses</span>
             <ArrowRight className="h-4 w-4" />
           </div>
           
-          <DragDropContext onDragEnd={handleDragEnd}>
-            <ScrollArea className="w-full overflow-x-auto pb-6">
+          <DragDropContext 
+            onDragStart={handleDragStart}
+            onDragUpdate={handleDragUpdate}
+            onDragEnd={handleDragEnd}
+          >
+            <div 
+              ref={scrollAreaRef} 
+              className="w-full overflow-x-auto pb-6 touch-pan-y" 
+              style={{ WebkitOverflowScrolling: 'touch' }}
+            >
               <div className="flex gap-3 min-w-full pb-4 px-1">
                 {Object.entries(groupedRecords).map(([columnValue, columnRecords]) => {
                   const columnLabel = getColumnLabel(columnValue);
@@ -279,11 +415,16 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
                   
                   return (
                     <div 
-                      key={columnValue} 
+                      key={columnValue}
+                      id={`kanban-column-${columnValue}`}
                       className="flex-shrink-0 w-[85%] max-w-[300px] min-w-[250px]"
                     >
                       <Card className="h-full border shadow-sm flex flex-col">
-                        <div className="bg-muted/50 px-3 py-2 border-b flex justify-between items-center">
+                        <div 
+                          className={`px-3 py-2 border-b flex justify-between items-center ${
+                            activeColumn === columnValue ? 'bg-primary/10' : 'bg-muted/50'
+                          }`}
+                        >
                           <div className="flex items-center">
                             <span className="font-medium text-sm mr-2">{columnLabel}</span>
                             <Badge variant="outline">{recordCount}</Badge>
@@ -297,8 +438,9 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
                                 ref={provided.innerRef}
                                 {...provided.droppableProps}
                                 className={`h-full p-2 rounded-md min-h-[300px] flex flex-col gap-2 overflow-y-auto ${
-                                  snapshot.isDraggingOver ? 'bg-muted/60' : ''
+                                  snapshot.isDraggingOver ? 'bg-primary/5 border-primary/20 border-dashed border-2' : ''
                                 }`}
+                                style={{ touchAction: 'pan-y' }}
                               >
                                 {columnRecords.length === 0 ? (
                                   <div className="text-center py-8 text-sm text-muted-foreground">
@@ -312,6 +454,11 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
                                           ref={provided.innerRef}
                                           {...provided.draggableProps}
                                           {...provided.dragHandleProps}
+                                          style={{
+                                            ...provided.draggableProps.style,
+                                            opacity: snapshot.isDragging ? 0.8 : 1,
+                                          }}
+                                          className={snapshot.isDragging ? 'z-50' : ''}
                                         >
                                           <KanbanCard
                                             record={record}
@@ -334,7 +481,7 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
                 })}
               </div>
               <ScrollBar orientation="horizontal" />
-            </ScrollArea>
+            </div>
           </DragDropContext>
           
           <div className="flex items-center justify-center mt-3 text-xs text-muted-foreground">
