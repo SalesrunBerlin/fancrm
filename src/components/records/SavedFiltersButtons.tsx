@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { FilterCondition } from "@/hooks/useObjectRecords";
 import { useObjectRecords } from "@/hooks/useObjectRecords";
 import { Loader2 } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface SavedFilter {
   id: string;
@@ -27,15 +28,18 @@ export function SavedFiltersButtons({ objectTypeId, maxToShow = 3 }: SavedFilter
   const storageKey = `object-filters-${userId}`;
   const [savedFilters] = useLocalStorage<Record<string, SavedFilter[]>>(storageKey, {});
   const [filters, setFilters] = useState<SavedFilter[]>([]);
+  const isMobile = useIsMobile();
   
   useEffect(() => {
     if (savedFilters && savedFilters[objectTypeId]) {
       // Show only the first maxToShow filters
-      setFilters(savedFilters[objectTypeId].slice(0, maxToShow));
+      // On mobile, show fewer filters to prevent overcrowding
+      const mobileMaxToShow = isMobile ? 2 : maxToShow;
+      setFilters(savedFilters[objectTypeId].slice(0, mobileMaxToShow));
     } else {
       setFilters([]);
     }
-  }, [savedFilters, objectTypeId, maxToShow]);
+  }, [savedFilters, objectTypeId, maxToShow, isMobile]);
 
   if (filters.length === 0) {
     return null;
@@ -56,8 +60,8 @@ export function SavedFiltersButtons({ objectTypeId, maxToShow = 3 }: SavedFilter
   };
 
   return (
-    <div className="flex flex-wrap gap-2 mt-3">
-      <div className="w-full text-xs text-muted-foreground mb-1">Gespeicherte Filter:</div>
+    <div className="flex flex-wrap gap-1 sm:gap-2 mt-2 sm:mt-3 w-full">
+      <div className="w-full text-xs text-muted-foreground mb-0 sm:mb-1">Gespeicherte Filter:</div>
       {filters.map((filter) => (
         <FilterBadgeWithCount 
           key={filter.id} 
@@ -82,16 +86,19 @@ function FilterBadgeWithCount({
 }) {
   const { records, isLoading } = useObjectRecords(objectTypeId, filter.conditions);
   const recordCount = records?.length || 0;
+  const isMobile = useIsMobile();
   
   return (
     <Badge
       variant="outline"
-      className="cursor-pointer hover:bg-accent/20 py-3 px-4 text-wrap whitespace-normal text-base leading-normal relative"
+      className={`cursor-pointer hover:bg-accent/20 text-wrap whitespace-normal text-xs sm:text-base leading-normal relative ${
+        isMobile ? 'py-2 px-3 max-w-full' : 'py-3 px-4'
+      }`}
       onClick={onClick}
     >
       {filter.name}
-      <span className="absolute -top-2 -right-2 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] text-primary-foreground">
-        {isLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : recordCount}
+      <span className="absolute -top-2 -right-2 flex h-4 w-4 sm:h-5 sm:w-5 items-center justify-center rounded-full bg-primary text-[9px] sm:text-[10px] text-primary-foreground">
+        {isLoading ? <Loader2 className="h-2 w-2 sm:h-3 sm:w-3 animate-spin" /> : recordCount}
       </span>
     </Badge>
   );

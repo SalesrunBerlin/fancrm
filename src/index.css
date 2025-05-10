@@ -192,6 +192,20 @@ html, body {
     top: 70px !important;
     left: 10px !important;
   }
+  
+  /* Enhanced saved filter styling */
+  .saved-filter-badge {
+    font-size: 11px !important;
+    padding: 2px 6px !important;
+    margin: 1px !important;
+  }
+  
+  /* Make badges more visible on mobile */
+  [role="status"],
+  .badge {
+    font-size: 0.7rem !important;
+    padding: 0.15rem 0.5rem !important;
+  }
 }
 
 /* Ensure proper layout in portrait orientation */
@@ -231,21 +245,6 @@ html, body {
   }
 }
 
-/* Adjustments for landscape orientation */
-@media screen and (max-width: 915px) and (orientation: landscape) {
-  /* Keep tables visible but scrollable */
-  .table-container {
-    overflow-x: auto;
-    max-width: 100vw;
-  }
-  
-  /* Make sure navigation toggle is in a good position */
-  .fixed.rounded-full.z-50 {
-    top: 70px !important;
-    left: 10px !important;
-  }
-}
-
 /* Ensure tables are always scrollable rather than breaking layout */
 .overflow-x-auto table {
   min-width: max-content;
@@ -259,5 +258,20 @@ html, body {
   
   main {
     padding: 1rem !important;
+  }
+}
+
+/* Adjustments for landscape orientation */
+@media screen and (max-width: 915px) and (orientation: landscape) {
+  /* Keep tables visible but scrollable */
+  .table-container {
+    overflow-x: auto;
+    max-width: 100vw;
+  }
+  
+  /* Make sure navigation toggle is in a good position */
+  .fixed.rounded-full.z-50 {
+    top: 70px !important;
+    left: 10px !important;
   }
 }
