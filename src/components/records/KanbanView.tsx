@@ -178,8 +178,13 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
     const scrollContainer = scrollAreaRef.current;
     const containerRect = scrollContainer.getBoundingClientRect();
     
-    // If no client coordinates in the update, return
-    if (!update.clientX) return;
+    // Extract client coordinates from the event
+    // DragUpdate doesn't directly have clientX, need to access it from the source event
+    // Use optional chaining and type assertion to safely access these properties
+    const clientX = update.event?.client?.x;
+
+    // If no client coordinates available, return
+    if (typeof clientX !== 'number') return;
     
     // Define scroll hotspots (30% of container width on each edge)
     const scrollThreshold = containerRect.width * 0.3;
@@ -187,13 +192,13 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
     const rightEdge = containerRect.right - scrollThreshold;
     
     // Check if cursor is in the scrolling hotspot areas
-    if (update.clientX < leftEdge) {
-      const distance = leftEdge - update.clientX;
+    if (clientX < leftEdge) {
+      const distance = leftEdge - clientX;
       scrollDirection.current = 'left';
       scrollSpeed.current = Math.min(15, distance / 10 + 5); // Dynamic speed based on distance
       scrolling.current = true;
-    } else if (update.clientX > rightEdge) {
-      const distance = update.clientX - rightEdge;
+    } else if (clientX > rightEdge) {
+      const distance = clientX - rightEdge;
       scrollDirection.current = 'right';
       scrollSpeed.current = Math.min(15, distance / 10 + 5);
       scrolling.current = true;
@@ -403,12 +408,14 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
             onDragUpdate={handleDragUpdate}
             onDragEnd={handleDragEnd}
           >
-            <div 
-              ref={scrollAreaRef} 
-              className="w-full overflow-x-auto pb-6 touch-pan-y" 
+            <ScrollArea 
+              className="w-full pb-6 touch-pan-y" 
               style={{ WebkitOverflowScrolling: 'touch' }}
             >
-              <div className="flex gap-3 min-w-full pb-4 px-1">
+              <div 
+                ref={scrollAreaRef}
+                className="flex gap-3 min-w-full px-1 pb-4" 
+              >
                 {Object.entries(groupedRecords).map(([columnValue, columnRecords]) => {
                   const columnLabel = getColumnLabel(columnValue);
                   const recordCount = columnRecords.length;
@@ -481,7 +488,7 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
                 })}
               </div>
               <ScrollBar orientation="horizontal" />
-            </div>
+            </ScrollArea>
           </DragDropContext>
           
           <div className="flex items-center justify-center mt-3 text-xs text-muted-foreground">
