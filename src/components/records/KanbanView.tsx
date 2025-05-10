@@ -74,9 +74,11 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const scrolling = useRef<boolean>(false);
   const scrollSpeed = useRef<number>(0);
-  const scrollDirection = useRef<'left' | 'right' | null>(null);
+  const scrollDirection = useRef<'left' | 'right' | 'up' | 'down' | null>(null);
   const autoScrollIntervalRef = useRef<number | null>(null);
   const isDraggingRef = useRef<boolean>(false);
+  const dragStartPositionY = useRef<number | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // State to track which button is currently being dragged over
   const [dragOverButtonId, setDragOverButtonId] = useState<string | null>(null);
@@ -137,21 +139,41 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
 
   // Auto-scroll function that runs during drag operations
   const autoScroll = () => {
-    if (!scrolling.current || !scrollAreaRef.current || !scrollDirection.current) return;
+    if (!scrolling.current || !containerRef.current || !scrollDirection.current) return;
     
-    const scrollContainer = scrollAreaRef.current;
-    const currentScrollLeft = scrollContainer.scrollLeft;
-    
-    if (scrollDirection.current === 'right') {
-      scrollContainer.scrollTo({
-        left: currentScrollLeft + scrollSpeed.current,
-        behavior: 'auto'  // Use 'auto' for smoother continuous scrolling
-      });
-    } else if (scrollDirection.current === 'left') {
-      scrollContainer.scrollTo({
-        left: currentScrollLeft - scrollSpeed.current,
-        behavior: 'auto'
-      });
+    if (scrollDirection.current === 'left' || scrollDirection.current === 'right') {
+      // Horizontal scrolling for the ScrollArea
+      if (!scrollAreaRef.current) return;
+      
+      const scrollContainer = scrollAreaRef.current;
+      const currentScrollLeft = scrollContainer.scrollLeft;
+      
+      if (scrollDirection.current === 'right') {
+        scrollContainer.scrollTo({
+          left: currentScrollLeft + scrollSpeed.current,
+          behavior: 'auto'  // Use 'auto' for smoother continuous scrolling
+        });
+      } else if (scrollDirection.current === 'left') {
+        scrollContainer.scrollTo({
+          left: currentScrollLeft - scrollSpeed.current,
+          behavior: 'auto'
+        });
+      }
+    } else if (scrollDirection.current === 'up' || scrollDirection.current === 'down') {
+      // Vertical scrolling for the page
+      const currentScrollTop = window.scrollY;
+      
+      if (scrollDirection.current === 'up') {
+        window.scrollTo({
+          top: currentScrollTop - scrollSpeed.current,
+          behavior: 'auto'
+        });
+      } else if (scrollDirection.current === 'down') {
+        window.scrollTo({
+          top: currentScrollTop + scrollSpeed.current,
+          behavior: 'auto'
+        });
+      }
     }
   };
 
@@ -173,28 +195,42 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
   const handleDragStart = (initial: DragStart) => {
     isDraggingRef.current = true;
     setDragOverButtonId(null); // Reset drag over state
+    
+    // Store the initial Y position of the drag
+    if (initial.client) {
+      dragStartPositionY.current = initial.client.y;
+    }
   };
 
   // Handle drag update to detect if we need to auto-scroll
   const handleDragUpdate = (update: DragUpdate) => {
-    if (!isMobile || !scrollAreaRef.current) return;
+    if (!isMobile || !containerRef.current) return;
 
-    const scrollContainer = scrollAreaRef.current;
-    const containerRect = scrollContainer.getBoundingClientRect();
-    
-    // Access clientX from the correct location in the update object
-    // In @hello-pangea/dnd, the client coordinates are in a nested structure
-    const clientX = update.clientX;
+    // Access the client coordinates correctly from the update object
+    // The DragUpdate type in @hello-pangea/dnd has the client coords in .client
+    const clientX = update.client?.x;
+    const clientY = update.client?.y;
 
     // If no client coordinates available, return
-    if (typeof clientX !== 'number') return;
+    if (typeof clientX !== 'number' || typeof clientY !== 'number') return;
     
-    // Define scroll hotspots (30% of container width on each edge)
-    const scrollThreshold = containerRect.width * 0.3;
-    const leftEdge = containerRect.left + scrollThreshold;
-    const rightEdge = containerRect.right - scrollThreshold;
+    const containerRect = containerRef.current.getBoundingClientRect();
     
-    // Check if cursor is in the scrolling hotspot areas
+    // Define scroll hotspots
+    // Horizontal scroll thresholds (30% of container width on each edge)
+    const horizontalScrollThreshold = containerRect.width * 0.3;
+    const leftEdge = containerRect.left + horizontalScrollThreshold;
+    const rightEdge = containerRect.right - horizontalScrollThreshold;
+    
+    // Vertical scroll thresholds (20% of viewport height on each edge)
+    const verticalScrollThreshold = window.innerHeight * 0.2;
+    const topEdge = verticalScrollThreshold;
+    const bottomEdge = window.innerHeight - verticalScrollThreshold;
+    
+    // Check if dragging upward from starting point (initial Y position)
+    const isDraggingUpward = dragStartPositionY.current !== null && clientY < dragStartPositionY.current;
+    
+    // Check if cursor is in the horizontal scrolling hotspot areas
     if (clientX < leftEdge) {
       const distance = leftEdge - clientX;
       scrollDirection.current = 'left';
@@ -205,6 +241,24 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
       scrollDirection.current = 'right';
       scrollSpeed.current = Math.min(15, distance / 10 + 5);
       scrolling.current = true;
+    } 
+    // Check if cursor is in the vertical scrolling hotspot areas
+    else if (clientY < topEdge && isDraggingUpward) {
+      // Only scroll up if we're actually dragging upward
+      const distance = topEdge - clientY;
+      scrollDirection.current = 'up';
+      scrollSpeed.current = Math.min(15, distance / 10 + 5);
+      scrolling.current = true;
+    } else if (clientY > bottomEdge) {
+      // Don't scroll down if we're trying to drag upward
+      if (!isDraggingUpward) {
+        const distance = clientY - bottomEdge;
+        scrollDirection.current = 'down';
+        scrollSpeed.current = Math.min(15, distance / 10 + 5);
+        scrolling.current = true;
+      } else {
+        scrolling.current = false;
+      }
     } else {
       scrolling.current = false;
       scrollDirection.current = null;
@@ -217,6 +271,7 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
     isDraggingRef.current = false;
     scrolling.current = false;
     scrollDirection.current = null;
+    dragStartPositionY.current = null;
     setDragOverButtonId(null);
     
     if (!result.destination || !selectedFieldApiName || !onUpdateRecord) return;
@@ -304,7 +359,7 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" ref={containerRef}>
       <div className="flex items-center space-x-4 mb-4">
         <div className="grid gap-2 w-64">
           <Label htmlFor="kanban-field">Group by</Label>
@@ -390,7 +445,7 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
             onDragUpdate={handleDragUpdate}
             onDragEnd={handleDragEnd}
           >
-            {/* Status buttons row - now droppable */}
+            {/* Status buttons row - improved droppable targets */}
             <div className="flex flex-wrap gap-2 mb-3">
               {Object.entries(groupedRecords).map(([columnValue, columnRecords]) => {
                 const columnLabel = getColumnLabel(columnValue);
@@ -422,15 +477,26 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
                           }}
                           className={`flex items-center gap-1 transition-all ${
                             isDraggedOver ? 'ring-2 ring-primary ring-offset-2' : ''
-                          }`}
+                          } ${snapshot.isDraggingOver ? 'bg-primary text-primary-foreground' : ''}`}
                         >
                           {columnLabel} 
                           <Badge variant="outline" className="ml-1">
                             {columnRecords.length}
                           </Badge>
                         </Button>
-                        {/* Hidden placeholder for the droppable area */}
-                        <div className="absolute top-0 left-0 right-0 bottom-0 opacity-0">
+                        
+                        {/* Enhanced drop target area - larger hit area when dragging */}
+                        <div 
+                          className={`absolute top-0 left-0 right-0 bottom-0 ${
+                            isDraggingRef.current ? 
+                              'bg-primary/10 border-2 border-dashed border-primary/40 rounded-md -m-1' : 
+                              'opacity-0'
+                          }`}
+                          style={{ 
+                            height: isDraggingRef.current ? '200%' : '100%', 
+                            zIndex: isDraggedOver ? 5 : -1,
+                          }}
+                        >
                           {provided.placeholder}
                         </div>
                       </div>
@@ -442,7 +508,7 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
             
             <div className="flex items-center justify-center space-x-2 mb-3 text-xs text-muted-foreground">
               <MoveVertical className="h-4 w-4" />
-              <span>Drag cards to buttons or columns to change status</span>
+              <span>Drag cards to buttons above or columns below to change status</span>
             </div>
             
             {/* Scrollable columns */}
