@@ -52,13 +52,13 @@ export function SavedFiltersButtons({ objectTypeId, maxToShow = 3 }: SavedFilter
   };
 
   return (
-    <div className="flex flex-wrap gap-1 mt-2">
+    <div className="flex flex-wrap gap-2 mt-3">
       <div className="w-full text-xs text-muted-foreground mb-1">Gespeicherte Filter:</div>
       {filters.map((filter) => (
         <Badge
           key={filter.id}
           variant="outline"
-          className="cursor-pointer hover:bg-accent/20"
+          className="cursor-pointer hover:bg-accent/20 py-1.5 px-2.5 text-wrap whitespace-normal text-xs leading-tight"
           onClick={() => handleFilterClick(filter)}
         >
           {filter.name}
