@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { startUserSession, endUserSession, trackActivity, setupActivityHeartbeat } from '@/services/ActivityTrackingService';
 
 interface UserPreferences {
   favorite_color: string | null;
@@ -62,9 +63,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     // Set up auth state listener first
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+      async (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
+        
+        // Track login and logout events
+        if (event === 'SIGNED_IN' && session?.user) {
+          console.log('User signed in, starting session tracking');
+          const sessionId = await startUserSession(session.user.id);
+          if (sessionId) {
+            // Start the heartbeat to update last activity
+            setupActivityHeartbeat();
+            // Track the login activity
+            trackActivity(
+              session.user.id, 
+              'login', 
+              'User logged in',
+              undefined,
+              undefined,
+              { email: session.user.email }
+            );
+          }
+        } else if (event === 'SIGNED_OUT') {
+          console.log('User signed out, ending session tracking');
+          await endUserSession();
+        }
         
         // When auth state changes, check for user roles
         if (session?.user) {
@@ -79,7 +102,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     );
 
     // Then check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
       
@@ -87,12 +110,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (session?.user) {
         checkUserRoles(session.user.id);
         loadUserPreferences(session.user.id);
+        
+        // If there's an active session but we're just loading the page,
+        // make sure we have tracking in place
+        const sessionId = await startUserSession(session.user.id);
+        if (sessionId) {
+          setupActivityHeartbeat();
+          
+          // Track page load as an activity
+          trackActivity(
+            session.user.id,
+            'view_page',
+            'Page loaded',
+            undefined,
+            undefined,
+            { path: window.location.pathname }
+          );
+        }
       }
       
       setIsLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   const checkUserRoles = async (userId: string) => {
@@ -153,6 +195,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const signOut = async () => {
+    // Track logout before actually signing out
+    if (user) {
+      await trackActivity(
+        user.id,
+        'logout',
+        'User logged out'
+      );
+      await endUserSession();
+    }
+    
     await supabase.auth.signOut();
     setUser(null);
     setSession(null);

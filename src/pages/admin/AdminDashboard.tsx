@@ -2,7 +2,7 @@
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Settings, HelpCircle, Users, BookOpen, Briefcase } from "lucide-react";
+import { Settings, HelpCircle, Users, BookOpen, Briefcase, Activity } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -88,6 +88,25 @@ export default function AdminDashboard() {
             <CardContent>
               <p className="text-sm text-muted-foreground">
                 Configure workspace settings, add and manage users, customize login experience.
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
+        
+        <Link to="/admin/analytics">
+          <Card className="h-full hover:bg-accent/5 transition-colors">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Activity className="h-5 w-5" />
+                User Analytics
+              </CardTitle>
+              <CardDescription>
+                Track user activity and usage patterns
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                View session statistics, user engagement metrics, and activity logs.
               </p>
             </CardContent>
           </Card>

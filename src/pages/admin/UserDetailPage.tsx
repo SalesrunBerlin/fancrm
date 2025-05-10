@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { PageHeader } from "@/components/ui/page-header";
@@ -19,6 +18,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { Table, TableHeader, TableRow, TableBody, TableCell } from "@/components/ui/table";
+import { useUserSessions } from "@/hooks/useUserSessions";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 interface WorkspaceInfo {
   id: string;
@@ -41,6 +43,9 @@ export default function UserDetailPage() {
   const [selectedWorkspace, setSelectedWorkspace] = useState<string>('');
   const [selectedRole, setSelectedRole] = useState<string>('user');
   const { userEmails, isLoading: isLoadingEmails } = useUserEmails();
+  const { getUserSessions, getUserActivities } = useUserSessions();
+  const { data: userSessions, isLoading: isLoadingSessions } = getUserSessions(userId);
+  const { data: userActivities, isLoading: isLoadingActivities } = getUserActivities(userId);
 
   useEffect(() => {
     // Redirect if not a Super Admin
@@ -389,6 +394,30 @@ export default function UserDetailPage() {
     return `${firstName?.[0] || ""}${lastName?.[0] || ""}`.toUpperCase();
   };
 
+  // Prepare activity chart data
+  const getActivityChartData = () => {
+    if (!userActivities || userActivities.length === 0) return [];
+    
+    // Group activities by day
+    const activityByDay = userActivities.reduce((days, activity) => {
+      const date = new Date(activity.timestamp);
+      const dayKey = new Date(date.getFullYear(), date.getMonth(), date.getDate()).toISOString().split('T')[0];
+      
+      if (!days[dayKey]) {
+        days[dayKey] = { date: dayKey, count: 0 };
+      }
+      days[dayKey].count += 1;
+      return days;
+    }, {} as Record<string, { date: string; count: number }>);
+    
+    // Convert to array and sort by date
+    return Object.values(activityByDay)
+      .sort((a, b) => a.date.localeCompare(b.date))
+      .slice(-14); // Last 14 days
+  };
+  
+  const activityChartData = getActivityChartData();
+
   return (
     <div className="space-y-6">
       <PageHeader 
@@ -488,6 +517,107 @@ export default function UserDetailPage() {
           </CardContent>
         </Card>
       </div>
+      
+      {/* User Sessions Card */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle>User Sessions</CardTitle>
+            <CardDescription>Recent login sessions for this user</CardDescription>
+          </div>
+          <Button 
+            variant="outline"
+            size="sm"
+            onClick={() => navigate(`/admin/users/sessions/${userId}`)}
+          >
+            View All Sessions
+          </Button>
+        </CardHeader>
+        <CardContent>
+          {isLoadingSessions ? (
+            <div className="flex justify-center py-4">
+              <Loader2 className="h-6 w-6 animate-spin text-primary" />
+            </div>
+          ) : !userSessions || userSessions.length === 0 ? (
+            <div className="text-center py-4 text-muted-foreground">
+              No sessions recorded for this user
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Login Time</TableHead>
+                      <TableHead>Duration</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {userSessions.slice(0, 5).map((session) => (
+                      <TableRow key={session.id}>
+                        <TableCell>
+                          {new Date(session.login_time).toLocaleString()}
+                        </TableCell>
+                        <TableCell>
+                          {session.session_duration_seconds
+                            ? `${Math.floor(session.session_duration_seconds / 60)} minutes`
+                            : "Active"}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={session.is_active ? "default" : "secondary"}>
+                            {session.is_active ? "Active" : "Ended"}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+      
+      {/* User Activity Chart */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Activity Over Time</CardTitle>
+          <CardDescription>User activity frequency in the last 14 days</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {isLoadingActivities ? (
+            <div className="flex justify-center py-4">
+              <Loader2 className="h-6 w-6 animate-spin text-primary" />
+            </div>
+          ) : activityChartData.length === 0 ? (
+            <div className="text-center py-4 text-muted-foreground">
+              No activity data available
+            </div>
+          ) : (
+            <div className="h-[300px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart
+                  data={activityChartData}
+                  margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="date" />
+                  <YAxis />
+                  <Tooltip />
+                  <Line 
+                    type="monotone" 
+                    dataKey="count" 
+                    name="Activities" 
+                    stroke="#8884d8" 
+                    activeDot={{ r: 8 }} 
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+        </CardContent>
+      </Card>
       
       {/* User Workspaces Card */}
       <Card>
