@@ -3,6 +3,15 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
+interface UserPreferences {
+  favorite_color: string | null;
+}
+
+interface UserRoles {
+  is_super_admin: boolean;
+  is_admin: boolean;
+}
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
@@ -14,6 +23,7 @@ interface AuthContextType {
   isAdmin: boolean;
   favoriteColor: string | null;
   setFavoriteColor: (color: string) => Promise<void>;
+  isLoggedIn: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -31,9 +41,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       if (!user) return;
       
-      const { error } = await supabase
-        .from('user_preferences')
-        .upsert({ user_id: user.id, favorite_color: color }, { onConflict: 'user_id' });
+      // Create a user_preferences table entry using RPC
+      const { error } = await supabase.rpc('set_user_color_preference', {
+        user_id_param: user.id,
+        color_param: color
+      });
       
       if (error) throw error;
       
@@ -83,20 +95,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const checkUserRoles = async (userId: string) => {
     try {
-      const { data, error } = await supabase
-        .from('user_roles')
-        .select('*')
-        .eq('user_id', userId)
-        .single();
+      // Use RPC to check user roles
+      const { data, error } = await supabase.rpc('get_user_roles', {
+        user_id_param: userId
+      });
       
-      if (error && error.code !== 'PGRST116') {
+      if (error) {
         console.error('Error fetching user roles:', error);
         return;
       }
       
       // Set admin status based on roles
-      setIsSuperAdmin(data?.is_super_admin || false);
-      setIsAdmin(data?.is_admin || data?.is_super_admin || false);
+      if (data) {
+        setIsSuperAdmin(data.is_super_admin || false);
+        setIsAdmin(data.is_admin || data.is_super_admin || false);
+      }
     } catch (error) {
       console.error('Error checking user roles:', error);
     }
@@ -104,18 +117,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const loadUserPreferences = async (userId: string) => {
     try {
-      const { data, error } = await supabase
-        .from('user_preferences')
-        .select('favorite_color')
-        .eq('user_id', userId)
-        .single();
+      // Use RPC to get user preferences
+      const { data, error } = await supabase.rpc('get_user_preferences', {
+        user_id_param: userId
+      });
       
-      if (error && error.code !== 'PGRST116') {
+      if (error) {
         console.error('Error loading user preferences:', error);
         return;
       }
       
-      setFavoriteColorState(data?.favorite_color || null);
+      if (data) {
+        setFavoriteColorState(data.favorite_color || null);
+      }
     } catch (error) {
       console.error('Error loading user preferences:', error);
     }
@@ -137,6 +151,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsAdmin(false);
   };
 
+  const isLoggedIn = !!user;
+
   const value = {
     user,
     session,
@@ -147,7 +163,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     isSuperAdmin,
     isAdmin,
     favoriteColor,
-    setFavoriteColor
+    setFavoriteColor,
+    isLoggedIn
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

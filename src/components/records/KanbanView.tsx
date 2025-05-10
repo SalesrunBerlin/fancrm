@@ -5,7 +5,17 @@ import { Button } from "@/components/ui/button";
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { ObjectField, ObjectRecord } from '@/types/ObjectFieldTypes';
 import { KanbanCard } from './KanbanCard';
-import { Loader2, PlusCircle } from 'lucide-react';
+import { Loader2, PlusCircle, Check } from 'lucide-react';
+import { useKanbanViewSettings } from "@/hooks/useKanbanViewSettings";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { toast } from "sonner";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface KanbanViewProps {
   records: ObjectRecord[];
@@ -15,16 +25,33 @@ interface KanbanViewProps {
 }
 
 export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: KanbanViewProps) {
-  // Find a suitable status field for the Kanban view
+  // Find all suitable picklist fields for the Kanban view
+  const picklistFields = fields.filter(field => field.data_type === 'picklist');
+  
+  const { settings, updateFieldApiName } = useKanbanViewSettings(objectTypeId);
+  const isMobile = useIsMobile();
+  
+  // State for selected records (for batch operations)
+  const [selectedRecords, setSelectedRecords] = useState<string[]>([]);
+  const [selectionMode, setSelectionMode] = useState(false);
+  
+  // Find the status field based on settings or default to first picklist field
   const statusField = fields.find(field => 
-    field.api_name.toLowerCase().includes('status') && field.data_type === 'picklist'
-  ) || fields.find(field => field.data_type === 'picklist');
+    field.api_name === settings.fieldApiName
+  ) || picklistFields[0] || fields.find(field => field.data_type === 'picklist');
   
   const [columns, setColumns] = useState<{[key: string]: ObjectRecord[]}>({});
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [draggedElement, setDraggedElement] = useState<string | null>(null);
   const [activeDroppable, setActiveDroppable] = useState<string | null>(null);
   const buttonsRef = useRef<{[key: string]: HTMLDivElement | null}>({});
+
+  // Set initial field API name if none is saved
+  useEffect(() => {
+    if (statusField && (!settings.fieldApiName || !fields.some(f => f.api_name === settings.fieldApiName))) {
+      updateFieldApiName(statusField.api_name);
+    }
+  }, [statusField, settings.fieldApiName, updateFieldApiName, fields]);
 
   useEffect(() => {
     if (!statusField || records.length === 0) {
@@ -136,6 +163,54 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
     }
   };
 
+  // Handle changing the selected field for Kanban view
+  const handleFieldChange = (fieldApiName: string) => {
+    updateFieldApiName(fieldApiName);
+  };
+
+  // Handle toggling selection mode
+  const toggleSelectionMode = () => {
+    setSelectionMode(!selectionMode);
+    // Clear selections when exiting selection mode
+    if (selectionMode) {
+      setSelectedRecords([]);
+    }
+  };
+
+  // Handle selection of a record
+  const handleRecordSelection = (recordId: string, selected: boolean) => {
+    if (selected) {
+      setSelectedRecords(prev => [...prev, recordId]);
+    } else {
+      setSelectedRecords(prev => prev.filter(id => id !== recordId));
+    }
+  };
+
+  // Handle batch update of selected records
+  const handleBatchUpdate = async (newStatus: string) => {
+    if (selectedRecords.length === 0 || !statusField) return;
+
+    try {
+      toast.loading(`Updating ${selectedRecords.length} records...`);
+      
+      // Update each selected record with the new status
+      await Promise.all(selectedRecords.map(recordId => 
+        onUpdateRecord(recordId, { [statusField.api_name]: newStatus })
+      ));
+      
+      toast.dismiss();
+      toast.success(`Updated ${selectedRecords.length} records to "${newStatus}"`);
+      
+      // Clear selections after successful update
+      setSelectedRecords([]);
+      setSelectionMode(false);
+    } catch (error) {
+      console.error("Failed to update records:", error);
+      toast.dismiss();
+      toast.error("Failed to update some records");
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -155,77 +230,145 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
   }
 
   return (
-    <div className="overflow-auto pb-4">
-      <DragDropContext
-        onDragStart={handleDragStart}
-        onDragEnd={handleDragEnd}
-      >
-        <div className="flex gap-4 overflow-x-auto pb-4 min-h-[70vh]">
-          {Object.keys(columns).map((columnId) => (
-            <div 
-              key={columnId}
-              className={`flex-shrink-0 w-72 bg-card rounded-md border shadow-sm flex flex-col ${
-                activeDroppable === columnId ? 'border-primary border-2' : ''
-              }`}
-              ref={(el) => {
-                // Use a proper type assertion for the current element
-                if (el) {
-                  buttonsRef.current[columnId] = el;
-                }
-              }}
-              onMouseEnter={() => draggedElement && handleDragEnterButton(columnId)}
-              onMouseLeave={() => draggedElement && handleDragLeaveButton()}
-            >
-              <CardHeader className="py-3 px-4 border-b bg-muted/50">
-                <h3 className="text-sm font-medium">{columnId === "uncategorized" ? "Uncategorized" : columnId}</h3>
-                <div className="text-xs text-muted-foreground">{columns[columnId].length} records</div>
-              </CardHeader>
-              <Droppable droppableId={columnId}>
-                {(provided) => (
-                  <div
-                    {...provided.droppableProps}
-                    ref={provided.innerRef}
-                    className="flex-1 p-2 overflow-y-auto"
-                    style={{ minHeight: '200px' }}
-                  >
-                    {columns[columnId].map((record, index) => (
-                      <Draggable key={record.id} draggableId={record.id} index={index}>
-                        {(provided, snapshot) => (
-                          <div
-                            ref={provided.innerRef}
-                            {...provided.draggableProps}
-                            {...provided.dragHandleProps}
-                          >
-                            <KanbanCard
-                              record={record}
-                              objectTypeId={objectTypeId}
-                              isDragging={snapshot.isDragging}
-                            />
-                          </div>
-                        )}
-                      </Draggable>
-                    ))}
-                    {provided.placeholder}
-                  </div>
-                )}
-              </Droppable>
-              <div className="p-2 border-t">
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="w-full justify-start text-muted-foreground"
-                  onClick={() => {
-                    // Implement add new record functionality
-                  }}
-                >
-                  <PlusCircle className="mr-1 h-4 w-4" />
-                  Add Record
-                </Button>
-              </div>
-            </div>
-          ))}
+    <div className="flex flex-col gap-4">
+      {/* Kanban view controls for mobile and desktop */}
+      <div className="flex flex-col sm:flex-row justify-between gap-2 mb-2">
+        <div className="flex items-center gap-2">
+          <Select 
+            value={statusField.api_name} 
+            onValueChange={handleFieldChange}
+          >
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Select field" />
+            </SelectTrigger>
+            <SelectContent>
+              {picklistFields.map(field => (
+                <SelectItem key={field.api_name} value={field.api_name}>
+                  {field.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          
+          <Button
+            variant={selectionMode ? "default" : "outline"}
+            size="sm"
+            onClick={toggleSelectionMode}
+            className="ml-2"
+          >
+            {selectionMode ? "Cancel Selection" : "Select Items"}
+          </Button>
         </div>
-      </DragDropContext>
+
+        {/* Batch update dropdown - only visible when records are selected */}
+        {selectedRecords.length > 0 && (
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium">
+              {selectedRecords.length} selected
+            </span>
+            
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button size="sm">
+                  Move To...
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {Object.keys(columns).map((columnId) => (
+                  <DropdownMenuItem 
+                    key={columnId}
+                    onClick={() => handleBatchUpdate(columnId === "uncategorized" ? "" : columnId)}
+                  >
+                    {columnId === "uncategorized" ? "Uncategorized" : columnId}
+                    {columnId === statusField.api_name && <Check className="ml-2 h-4 w-4" />}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        )}
+      </div>
+        
+      {/* Kanban board */}
+      <div className="overflow-auto pb-4">
+        <DragDropContext
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+        >
+          <div className="flex gap-4 overflow-x-auto pb-4 min-h-[70vh]">
+            {Object.keys(columns).map((columnId) => (
+              <div 
+                key={columnId}
+                className={`flex-shrink-0 w-72 bg-card rounded-md border shadow-sm flex flex-col ${
+                  activeDroppable === columnId ? 'border-primary border-2' : ''
+                }`}
+                ref={(el) => {
+                  if (el) {
+                    buttonsRef.current[columnId] = el;
+                  }
+                }}
+                onMouseEnter={() => draggedElement && handleDragEnterButton(columnId)}
+                onMouseLeave={() => draggedElement && handleDragLeaveButton()}
+              >
+                <CardHeader className="py-3 px-4 border-b bg-muted/50">
+                  <h3 className="text-sm font-medium">{columnId === "uncategorized" ? "Uncategorized" : columnId}</h3>
+                  <div className="text-xs text-muted-foreground">{columns[columnId].length} records</div>
+                </CardHeader>
+                <Droppable droppableId={columnId}>
+                  {(provided) => (
+                    <div
+                      {...provided.droppableProps}
+                      ref={provided.innerRef}
+                      className="flex-1 p-2 overflow-y-auto"
+                      style={{ minHeight: '200px' }}
+                    >
+                      {columns[columnId].map((record, index) => (
+                        <Draggable 
+                          key={record.id} 
+                          draggableId={record.id} 
+                          index={index}
+                          isDragDisabled={selectionMode}
+                        >
+                          {(provided, snapshot) => (
+                            <div
+                              ref={provided.innerRef}
+                              {...provided.draggableProps}
+                              {...provided.dragHandleProps}
+                            >
+                              <KanbanCard
+                                record={record}
+                                objectTypeId={objectTypeId}
+                                isDragging={snapshot.isDragging}
+                                isSelected={selectedRecords.includes(record.id)}
+                                onSelect={handleRecordSelection}
+                                selectionMode={selectionMode}
+                              />
+                            </div>
+                          )}
+                        </Draggable>
+                      ))}
+                      {provided.placeholder}
+                    </div>
+                  )}
+                </Droppable>
+                <div className="p-2 border-t">
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="w-full justify-start text-muted-foreground"
+                    onClick={() => {
+                      // Implement add new record functionality
+                    }}
+                  >
+                    <PlusCircle className="mr-1 h-4 w-4" />
+                    Add Record
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </DragDropContext>
+      </div>
     </div>
   );
 }

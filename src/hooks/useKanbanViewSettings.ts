@@ -4,13 +4,14 @@ import { useLocalStorage } from "./useLocalStorage";
 interface KanbanViewSettings {
   fieldApiName: string;
   expandedColumns: string[];
+  selectedRecords?: string[];
 }
 
 export function useKanbanViewSettings(objectTypeId: string | undefined) {
   const storageKey = objectTypeId ? `kanban-settings-${objectTypeId}` : '';
   const [settings, setSettings] = useLocalStorage<KanbanViewSettings>(
     storageKey,
-    { fieldApiName: '', expandedColumns: [] }
+    { fieldApiName: '', expandedColumns: [], selectedRecords: [] }
   );
 
   const updateFieldApiName = (fieldApiName: string) => {
@@ -32,10 +33,15 @@ export function useKanbanViewSettings(objectTypeId: string | undefined) {
     return settings.expandedColumns.includes(columnId);
   };
 
+  const updateSelectedRecords = (recordIds: string[]) => {
+    setSettings(prev => ({ ...prev, selectedRecords: recordIds }));
+  };
+
   return {
     settings,
     updateFieldApiName,
     toggleColumnExpansion,
-    isColumnExpanded
+    isColumnExpanded,
+    updateSelectedRecords
   };
 }

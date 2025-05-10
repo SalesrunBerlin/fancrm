@@ -11,17 +11,31 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface KanbanCardProps {
   record: ObjectRecord;
   objectTypeId: string;
   isDragging?: boolean;
   className?: string;
+  isSelected?: boolean;
+  onSelect?: (recordId: string, selected: boolean) => void;
+  selectionMode?: boolean;
 }
 
-export function KanbanCard({ record, objectTypeId, isDragging = false, className = "" }: KanbanCardProps) {
+export function KanbanCard({ 
+  record, 
+  objectTypeId, 
+  isDragging = false, 
+  className = "",
+  isSelected = false,
+  onSelect,
+  selectionMode = false
+}: KanbanCardProps) {
   const navigate = useNavigate();
   const [isHovered, setIsHovered] = useState(false);
+  const isMobile = useIsMobile();
 
   // For the record name/title, we'll look for common naming fields
   const getRecordName = () => {
@@ -50,13 +64,23 @@ export function KanbanCard({ record, objectTypeId, isDragging = false, className
     return `Record ${record.id.slice(0, 8)}`;
   };
 
-  const handleCardClick = () => {
+  const handleCardClick = (e: React.MouseEvent) => {
+    // If we're in selection mode or clicked on checkbox, don't navigate
+    if (selectionMode || e.target instanceof HTMLInputElement) {
+      return;
+    }
     navigate(`/objects/${objectTypeId}/${record.id}`);
   };
 
   const handleEditClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     navigate(`/objects/${objectTypeId}/${record.id}/edit`);
+  };
+  
+  const handleCheckboxChange = (checked: boolean) => {
+    if (onSelect) {
+      onSelect(record.id, checked);
+    }
   };
 
   // Format record name for display with line break if it's too long
@@ -78,18 +102,29 @@ export function KanbanCard({ record, objectTypeId, isDragging = false, className
 
   return (
     <Card 
-      className={`mb-2 cursor-pointer ${isDragging ? 'shadow-lg' : ''} ${className}`}
+      className={`mb-2 cursor-pointer ${isDragging ? 'shadow-lg' : ''} ${isSelected ? 'ring-2 ring-primary' : ''} ${className}`}
       onClick={handleCardClick}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
       <CardContent className="p-3 relative">
-        <div className="text-sm">
-          {formatDisplayName(recordName)}
+        <div className="flex items-center gap-2">
+          {/* Show checkbox when in selection mode or on mobile */}
+          {(selectionMode || isMobile) && (
+            <Checkbox 
+              checked={isSelected}
+              onCheckedChange={handleCheckboxChange}
+              onClick={(e) => e.stopPropagation()}
+              className="mr-2"
+            />
+          )}
+          <div className="text-sm flex-1">
+            {formatDisplayName(recordName)}
+          </div>
         </div>
         
-        {/* Action buttons only show on hover */}
-        <div className={`absolute top-2 right-2 flex space-x-1 ${isHovered ? 'opacity-100' : 'opacity-0'} transition-opacity`}>
+        {/* Action buttons only show on hover or on mobile */}
+        <div className={`absolute top-2 right-2 flex space-x-1 ${(isHovered || isMobile) ? 'opacity-100' : 'opacity-0'} transition-opacity`}>
           <Button
             variant="ghost" 
             size="icon" 
