@@ -10,7 +10,7 @@ export interface UserViewSettings {
   [key: string]: any;
 }
 
-export type SettingsType = 'kanban' | 'filter' | 'layout';
+export type SettingsType = 'kanban' | 'filter' | 'layout' | 'fields';
 
 export function useUserViewSettings(
   objectTypeId: string | undefined, 
