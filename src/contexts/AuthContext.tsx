@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -135,8 +134,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return;
       }
       
-      if (data && data.colors) {
-        setFavoriteColorState(data.colors.favorite_color || null);
+      if (data && data.colors && typeof data.colors === 'object') {
+        // Make sure we're accessing the favorite_color property safely
+        const colorPreference = data.colors as { favorite_color?: string };
+        setFavoriteColorState(colorPreference.favorite_color || null);
       }
     } catch (error) {
       console.error('Error loading user preferences:', error);

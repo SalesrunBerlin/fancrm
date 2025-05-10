@@ -16,6 +16,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useFieldPicklistValues } from "@/hooks/useFieldPicklistValues";
 
 interface KanbanViewProps {
   records: ObjectRecord[];
@@ -40,6 +41,11 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
     field.api_name === settings.fieldApiName
   ) || picklistFields[0] || fields.find(field => field.data_type === 'picklist');
   
+  // Get all available picklist values for the selected field
+  const { picklistValues, isLoading: isLoadingPicklistValues } = useFieldPicklistValues(
+    statusField?.id || ''
+  );
+  
   const [columns, setColumns] = useState<{[key: string]: ObjectRecord[]}>({});
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [draggedElement, setDraggedElement] = useState<string | null>(null);
@@ -54,30 +60,36 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
   }, [statusField, settings.fieldApiName, updateFieldApiName, fields]);
 
   useEffect(() => {
-    if (!statusField || records.length === 0) {
+    if (!statusField || records.length === 0 && !picklistValues?.length) {
       setIsLoading(false);
       return;
     }
 
-    // Organize records into columns based on status field
+    // Organize records into columns based on status field and all available picklist values
     const kanbanColumns: {[key: string]: ObjectRecord[]} = {};
     
-    // First, create columns for all possible status values
-    const statusValues = new Set<string>();
-    records.forEach(record => {
-      const status = record.field_values?.[statusField.api_name];
-      if (status) {
-        statusValues.add(status);
-      }
-    });
-    
-    // Create an "Uncategorized" column for records without a status
+    // First, create an "Uncategorized" column for records without a status
     kanbanColumns["uncategorized"] = [];
     
-    // Create columns for each status value
-    statusValues.forEach(status => {
-      kanbanColumns[status] = [];
-    });
+    // Create columns for all available picklist values from the database
+    if (picklistValues && picklistValues.length > 0) {
+      picklistValues.forEach(option => {
+        kanbanColumns[option.value] = [];
+      });
+    } else {
+      // If no picklist values are defined yet, create columns from record values
+      const statusValues = new Set<string>();
+      records.forEach(record => {
+        const status = record.field_values?.[statusField.api_name];
+        if (status) {
+          statusValues.add(status);
+        }
+      });
+      
+      statusValues.forEach(status => {
+        kanbanColumns[status] = [];
+      });
+    }
     
     // Put records in their respective columns
     records.forEach(record => {
@@ -91,7 +103,7 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
     
     setColumns(kanbanColumns);
     setIsLoading(false);
-  }, [records, statusField]);
+  }, [records, statusField, picklistValues]);
 
   const handleDragStart = (result: any) => {
     setDraggedElement(result.draggableId);
@@ -211,7 +223,7 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
     }
   };
 
-  if (isLoading) {
+  if (isLoading || isLoadingPicklistValues) {
     return (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -228,6 +240,9 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
       </div>
     );
   }
+
+  // Get all column IDs for display
+  const allColumnIds = Object.keys(columns);
 
   return (
     <div className="flex flex-col gap-4">
@@ -274,13 +289,21 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                {Object.keys(columns).map((columnId) => (
+                {/* Show "uncategorized" option */}
+                <DropdownMenuItem 
+                  onClick={() => handleBatchUpdate("")}
+                >
+                  Uncategorized
+                </DropdownMenuItem>
+                
+                {/* Show all picklist values from the database, not just those with records */}
+                {picklistValues && picklistValues.map((option) => (
                   <DropdownMenuItem 
-                    key={columnId}
-                    onClick={() => handleBatchUpdate(columnId === "uncategorized" ? "" : columnId)}
+                    key={option.id}
+                    onClick={() => handleBatchUpdate(option.value)}
                   >
-                    {columnId === "uncategorized" ? "Uncategorized" : columnId}
-                    {columnId === statusField.api_name && <Check className="ml-2 h-4 w-4" />}
+                    {option.label}
+                    {option.value === statusField.api_name && <Check className="ml-2 h-4 w-4" />}
                   </DropdownMenuItem>
                 ))}
               </DropdownMenuContent>
@@ -296,7 +319,7 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
           onDragEnd={handleDragEnd}
         >
           <div className="flex gap-4 overflow-x-auto pb-4 min-h-[70vh]">
-            {Object.keys(columns).map((columnId) => (
+            {allColumnIds.map((columnId) => (
               <div 
                 key={columnId}
                 className={`flex-shrink-0 w-72 bg-card rounded-md border shadow-sm flex flex-col ${
@@ -311,7 +334,10 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
                 onMouseLeave={() => draggedElement && handleDragLeaveButton()}
               >
                 <CardHeader className="py-3 px-4 border-b bg-muted/50">
-                  <h3 className="text-sm font-medium">{columnId === "uncategorized" ? "Uncategorized" : columnId}</h3>
+                  <h3 className="text-sm font-medium">
+                    {columnId === "uncategorized" ? "Uncategorized" : 
+                     picklistValues?.find(pv => pv.value === columnId)?.label || columnId}
+                  </h3>
                   <div className="text-xs text-muted-foreground">{columns[columnId].length} records</div>
                 </CardHeader>
                 <Droppable droppableId={columnId}>
