@@ -78,12 +78,12 @@ export function ExpandableActionButton({
       <ThemedButton 
         variant={color}
         size="sm"
-        className={`h-7 p-0 ${wideButton ? "w-full min-w-[120px]" : ""}`}
+        className={`h-7 p-0 ${wideButton ? "w-full min-w-[120px]" : ""} text-xs flex items-center`}
         onClick={onExecute}
         title={actionName}
         useUserColor={false}
       >
-        <Play className="h-3.5 w-3.5 mr-1" />
+        <Play className="h-3.5 w-3.5 mr-2" />
         {wideButton && <span className="truncate">{actionName}</span>}
       </ThemedButton>
     );
@@ -100,7 +100,7 @@ export function ExpandableActionButton({
         <ThemedButton 
           variant={color}
           size="icon"
-          className="h-8 transition-all"
+          className="h-8 transition-all text-xs"
           onClick={handleButtonClick}
           title={actionName}
           useUserColor={false}
@@ -113,7 +113,7 @@ export function ExpandableActionButton({
         <ThemedButton 
           variant={color}
           size="default"
-          className="h-8 transition-all whitespace-nowrap"
+          className="h-8 transition-all whitespace-nowrap text-xs"
           onClick={handleNameClick}
           useUserColor={false}
         >
