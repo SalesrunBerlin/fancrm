@@ -4,6 +4,7 @@ import { ObjectRecord, ObjectField } from "@/types/ObjectFieldTypes";
 import { Card, CardContent } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
 import { Checkbox } from "@/components/ui/checkbox";
+import { LookupValueDisplay } from "./LookupValueDisplay";
 
 interface KanbanCardProps {
   record: ObjectRecord;
@@ -30,6 +31,8 @@ export function KanbanCard({
 }: KanbanCardProps) {
   const navigate = useNavigate();
   const [isHovered, setIsHovered] = useState(false);
+  // Cache for lookup values to avoid redundant renders
+  const [lookupCache] = useState<Record<string, boolean>>({});
 
   // For the record name/title, we'll look for common naming fields
   const getRecordName = () => {
@@ -68,6 +71,12 @@ export function KanbanCard({
     if (!field) return String(value);
     
     switch(field.data_type) {
+      case 'lookup':
+        // Return a special component for lookup fields
+        const targetObjectTypeId = field.options?.target_object_type_id;
+        // Mark this field as a lookup in the cache
+        lookupCache[apiName] = true;
+        return { isLookup: true, value, targetObjectTypeId, displayFieldApiName: field.options?.display_field_api_name };
       case 'date':
       case 'datetime':
         try {
@@ -149,6 +158,22 @@ export function KanbanCard({
             <div className="flex flex-wrap gap-x-3 gap-y-1">
               {safeVisibleFields.map((fieldApiName) => {
                 const formattedValue = formatFieldValue(fieldApiName, record.field_values?.[fieldApiName]);
+                
+                // Special handling for lookup fields
+                if (formattedValue && typeof formattedValue === 'object' && formattedValue.isLookup) {
+                  return (
+                    <span key={fieldApiName} className="text-muted-foreground">
+                      <LookupValueDisplay 
+                        value={formattedValue.value} 
+                        fieldOptions={{
+                          target_object_type_id: formattedValue.targetObjectTypeId,
+                          display_field_api_name: formattedValue.displayFieldApiName
+                        }}
+                      />
+                    </span>
+                  );
+                }
+                
                 return (
                   <span key={fieldApiName} className="text-muted-foreground">
                     {formattedValue}

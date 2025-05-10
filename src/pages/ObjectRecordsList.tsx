@@ -23,6 +23,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { KanbanView } from "@/components/records/KanbanView";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useUserFilterSettings } from "@/hooks/useUserFilterSettings";
+import { useLayoutViewSettings } from "@/hooks/useLayoutViewSettings";
 
 export default function ObjectRecordsList() {
   const { objectTypeId } = useParams<{ objectTypeId: string }>();
@@ -35,12 +36,14 @@ export default function ObjectRecordsList() {
   const { filters: activeFilters, updateFilters: setActiveFilters, isLoading: isLoadingFilters } = 
     useUserFilterSettings(objectTypeId);
     
+  // Use layout settings hook for view mode persistence
+  const { viewMode, updateViewMode, isLoading: isLoadingLayout } = useLayoutViewSettings(objectTypeId);
+  
   const { records, isLoading, deleteRecord, updateRecord, cloneRecord } = useObjectRecords(objectTypeId, activeFilters);
   const { fields, isLoading: isLoadingFields } = useEnhancedFields(objectTypeId);
   const objectType = objectTypes?.find(type => type.id === objectTypeId);
   
   // Update view mode to also be stored in user settings
-  const [viewMode, setViewMode] = useState<"table" | "kanban">("table");
   const [allRecords, setAllRecords] = useState<any[]>([]);
   const [selectedRecords, setSelectedRecords] = useState<string[]>([]);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -100,6 +103,10 @@ export default function ObjectRecordsList() {
       setAllRecords(records);
     }
   }, [records]);
+
+  const handleViewModeChange = (newMode: "table" | "kanban") => {
+    updateViewMode(newMode);
+  };
 
   const handleVisibilityChange = (fieldApiNames: string[]) => {
     updateVisibleFields(fieldApiNames);
@@ -203,7 +210,7 @@ export default function ObjectRecordsList() {
               <Button
                 variant={viewMode === "table" ? "default" : "ghost"}
                 size="sm"
-                onClick={() => setViewMode("table")}
+                onClick={() => handleViewModeChange("table")}
                 className="rounded-none border-0"
               >
                 <TableIcon className="h-4 w-4 mr-2" />
@@ -212,7 +219,7 @@ export default function ObjectRecordsList() {
               <Button
                 variant={viewMode === "kanban" ? "default" : "ghost"}
                 size="sm"
-                onClick={() => setViewMode("kanban")}
+                onClick={() => handleViewModeChange("kanban")}
                 className="rounded-none border-0"
               >
                 <KanbanIcon className="h-4 w-4 mr-2" />
@@ -368,9 +375,9 @@ export default function ObjectRecordsList() {
         </div>
       )}
 
-      {/* Main content area with tabs for table and kanban views */}
+      {/* Main content area */}
       <Card className="overflow-hidden">
-        {isLoading || isLoadingFields ? (
+        {isLoading || isLoadingFields || isLoadingLayout ? (
           <div className="flex justify-center py-8">
             <Loader2 className="h-8 w-8 animate-spin" />
           </div>
