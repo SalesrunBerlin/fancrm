@@ -18,6 +18,7 @@ interface ExpandableActionButtonProps {
   compact?: boolean; // Add compact mode for table cells
   dropdown?: boolean; // Add dropdown mode for table rows
   actions?: Array<{ name: string; color: ActionColor; onClick: () => void }>; // Multiple actions for dropdown
+  wideButton?: boolean; // New prop for wider buttons
 }
 
 export function ExpandableActionButton({ 
@@ -26,7 +27,8 @@ export function ExpandableActionButton({
   onExecute,
   compact = false,
   dropdown = false,
-  actions = []
+  actions = [],
+  wideButton = false
 }: ExpandableActionButtonProps) {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -76,12 +78,13 @@ export function ExpandableActionButton({
       <ThemedButton 
         variant={color}
         size="sm"
-        className="h-7 p-0"
+        className={`h-7 p-0 ${wideButton ? "w-full min-w-[120px]" : ""}`}
         onClick={onExecute}
         title={actionName}
         useUserColor={false}
       >
-        <Play className="h-3.5 w-3.5" />
+        <Play className="h-3.5 w-3.5 mr-1" />
+        {wideButton && <span className="truncate">{actionName}</span>}
       </ThemedButton>
     );
   }

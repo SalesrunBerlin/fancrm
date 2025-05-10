@@ -153,19 +153,22 @@ function DashboardObjectActions({ objectTypeId }: { objectTypeId: string }) {
     return null;
   }
   
-  // Display actions in a single horizontal row, spread across the full width
+  // Display actions in a flex row with gap, wrapping as needed
   return (
-    <div className="flex flex-row justify-between w-full gap-2">
+    <div className="flex flex-wrap gap-2 w-full mb-4">
       {actions.map((action) => (
-        <ExpandableActionButton
-          key={action.id}
-          actionName={action.name}
-          color={action.color}
-          compact={true}
-          onExecute={() => {
-            window.location.href = `/actions/execute/${action.id}`;
-          }}
-        />
+        <div key={action.id} className="w-[calc(50%-4px)]"> {/* Set width to half minus gap */}
+          <ExpandableActionButton
+            key={action.id}
+            actionName={action.name}
+            color={action.color}
+            compact={true}
+            wideButton={true}
+            onExecute={() => {
+              window.location.href = `/actions/execute/${action.id}`;
+            }}
+          />
+        </div>
       ))}
     </div>
   );
