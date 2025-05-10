@@ -82,6 +82,13 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
   const draggedItemRef = useRef<HTMLElement | null>(null);
   const pageRef = useRef<HTMLDivElement | null>(null);
 
+  // The dragged element's clone to maintain visibility
+  const [draggedElement, setDraggedElement] = useState<{
+    id: string;
+    element: JSX.Element | null;
+    position: {x: number, y: number} | null;
+  }>({id: '', element: null, position: null});
+
   // State to track which button is currently being dragged over
   const [dragOverButtonId, setDragOverButtonId] = useState<string | null>(null);
 
@@ -154,8 +161,27 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
       }
     };
 
+    // Track mouse/touch position for ghost card
+    const trackMousePosition = (e: MouseEvent | TouchEvent) => {
+      if (!isDraggingRef.current) return;
+      
+      if ('touches' in e && e.touches.length > 0) {
+        setMousePosition({
+          x: e.touches[0].clientX,
+          y: e.touches[0].clientY
+        });
+      } else if ('clientX' in e) {
+        setMousePosition({
+          x: e.clientX,
+          y: e.clientY
+        });
+      }
+    };
+
     // Add the event listeners
     document.addEventListener('touchmove', preventDefaultTouchMove, { passive: false });
+    document.addEventListener('mousemove', trackMousePosition as any);
+    document.addEventListener('touchmove', trackMousePosition as any);
     
     // Reference to the main page element
     if (!pageRef.current) {
@@ -167,13 +193,25 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
       pageRef.current.style.overflow = isDraggingRef.current ? 'hidden' : '';
     }
     
+    // Hide original dragged element
+    if (draggedItemRef.current) {
+      draggedItemRef.current.style.opacity = '0';
+    }
+    
     return () => {
       // Clean up listeners when component unmounts or drag ends
       document.removeEventListener('touchmove', preventDefaultTouchMove);
+      document.removeEventListener('mousemove', trackMousePosition as any);
+      document.removeEventListener('touchmove', trackMousePosition as any);
       
       // Re-enable normal page scrolling
       if (pageRef.current) {
         pageRef.current.style.overflow = '';
+      }
+      
+      // Show original dragged element again
+      if (draggedItemRef.current) {
+        draggedItemRef.current.style.opacity = '1';
       }
     };
   }, [isDraggingRef.current]);
@@ -232,36 +270,93 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
     };
   }, [isDraggingRef.current]);
 
-  // Set up mouse position tracking for auto-scrolling
+  // Update auto-scroll based on mouse position
   useEffect(() => {
-    if (!isDraggingRef.current) return;
+    if (!isDraggingRef.current || !mousePosition || !containerRef.current) return;
     
-    const handleMouseMove = (e: MouseEvent) => {
-      setMousePosition({ x: e.clientX, y: e.clientY });
-    };
+    const containerRect = containerRef.current.getBoundingClientRect();
     
-    const handleTouchMove = (e: TouchEvent) => {
-      if (e.touches.length > 0) {
-        // Prevent default browser scrolling during drag
-        if (isDraggingRef.current) {
-          e.preventDefault();
-        }
+    // Define scroll hotspots
+    // Horizontal scroll thresholds (25% of container width on each edge)
+    const horizontalScrollThreshold = containerRect.width * 0.25;
+    const leftEdge = containerRect.left + horizontalScrollThreshold;
+    const rightEdge = containerRect.right - horizontalScrollThreshold;
+    
+    // Vertical scroll thresholds (15% of viewport height on each edge)
+    const verticalScrollThreshold = window.innerHeight * 0.15;
+    const topEdge = verticalScrollThreshold;
+    const bottomEdge = window.innerHeight - verticalScrollThreshold;
+    
+    // Check if dragging upward from starting point (initial Y position)
+    const isDraggingUpward = dragStartPositionY.current !== null && mousePosition.y < dragStartPositionY.current;
+    
+    // Find all column buttons to check if we're near any
+    const columnButtons = document.querySelectorAll('[data-kanban-column-button]');
+    let isNearColumnButton = false;
+    
+    columnButtons.forEach(button => {
+      if (button instanceof HTMLElement) {
+        const buttonRect = button.getBoundingClientRect();
+        // Extended hit area for buttons - make it easier to drop on them
+        const extendedRect = {
+          left: buttonRect.left - 20,
+          right: buttonRect.right + 20,
+          top: buttonRect.top - 40, // Much larger area above
+          bottom: buttonRect.bottom + 20
+        };
         
-        setMousePosition({ 
-          x: e.touches[0].clientX, 
-          y: e.touches[0].clientY 
-        });
+        if (mousePosition.x >= extendedRect.left && mousePosition.x <= extendedRect.right && 
+            mousePosition.y >= extendedRect.top && mousePosition.y <= extendedRect.bottom) {
+          isNearColumnButton = true;
+          // Highlight the button
+          button.classList.add('ring-2', 'ring-primary', 'ring-offset-2');
+          setDragOverButtonId(button.getAttribute('data-kanban-column-button') || null);
+        } else {
+          button.classList.remove('ring-2', 'ring-primary', 'ring-offset-2');
+        }
       }
-    };
+    });
     
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('touchmove', handleTouchMove, { passive: false });
+    if (!isNearColumnButton) {
+      setDragOverButtonId(null);
+    }
     
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('touchmove', handleTouchMove);
-    };
-  }, [isDraggingRef.current]);
+    // Reset all scrolling directions first
+    scrolling.current = false;
+    scrollDirection.current = null;
+    
+    // Prioritize scrolling up when near buttons at the top
+    // or when explicitly dragging upward
+    if (mousePosition.y < topEdge || (isDraggingUpward && isNearColumnButton)) {
+      scrollDirection.current = 'up';
+      scrollSpeed.current = Math.min(20, (topEdge - mousePosition.y) / 10 + 8);
+      scrolling.current = true;
+      return; // Exit early to prevent competing scroll directions
+    }
+    
+    // Check horizontal edges for scrolling
+    if (mousePosition.x < leftEdge) {
+      const distance = leftEdge - mousePosition.x;
+      scrollDirection.current = 'left';
+      scrollSpeed.current = Math.min(20, distance / 10 + 5); 
+      scrolling.current = true;
+    } else if (mousePosition.x > rightEdge) {
+      const distance = mousePosition.x - rightEdge;
+      scrollDirection.current = 'right';
+      scrollSpeed.current = Math.min(20, distance / 10 + 5);
+      scrolling.current = true;
+    }
+    // Only allow bottom scrolling if NOT dragging upward and NOT near column buttons
+    else if (mousePosition.y > bottomEdge && !isDraggingUpward && !isNearColumnButton) {
+      const distance = mousePosition.y - bottomEdge;
+      scrollDirection.current = 'down';
+      scrollSpeed.current = Math.min(15, distance / 10 + 5);
+      scrolling.current = true;
+    } else {
+      scrolling.current = false;
+      scrollDirection.current = null;
+    }
+  }, [mousePosition, isDraggingRef.current]);
 
   // Handle drag start event
   const handleDragStart = (initial: DragStart) => {
@@ -269,16 +364,33 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
     isDraggingRef.current = true;
     setDragOverButtonId(null); // Reset drag over state
     
+    // Save the record ID of the dragged item
+    const draggedId = initial.draggableId;
+    
+    // Find the record by ID
+    let draggedRecord: ObjectRecord | undefined;
+    Object.values(groupedRecords).forEach(records => {
+      const found = records.find(r => r.id === draggedId);
+      if (found) draggedRecord = found;
+    });
+    
     // Store initial Y position through event handlers
     const handleInitialPosition = (e: MouseEvent | TouchEvent) => {
       if ('touches' in e && e.touches.length > 0) {
         dragStartPositionY.current = e.touches[0].clientY;
+        setMousePosition({ 
+          x: e.touches[0].clientX, 
+          y: e.touches[0].clientY 
+        });
       } else if ('clientY' in e) {
         dragStartPositionY.current = e.clientY;
+        setMousePosition({ 
+          x: e.clientX, 
+          y: e.clientY 
+        });
       }
       
       // Save dragged element reference
-      const draggedId = initial.draggableId;
       const draggedElement = document.querySelector(`[data-rbd-draggable-id="${draggedId}"]`);
       if (draggedElement instanceof HTMLElement) {
         draggedItemRef.current = draggedElement;
@@ -288,6 +400,15 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
         draggedElement.style.webkitUserSelect = 'none';
         draggedElement.style.userSelect = 'none';
         draggedElement.style.zIndex = '100';
+        
+        // Create ghost element for persistent visibility
+        if (draggedRecord) {
+          setDraggedElement({
+            id: draggedId,
+            element: <KanbanCard record={draggedRecord} objectTypeId={objectTypeId} isDragging={true} />,
+            position: mousePosition
+          });
+        }
       }
       
       // Only need this once
@@ -316,94 +437,7 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
 
   // Handle drag update to detect if we need to auto-scroll
   const handleDragUpdate = (update: DragUpdate) => {
-    if (!isMobile || !containerRef.current) return;
-
-    // Get current mouse/touch position from state
-    if (!mousePosition) return;
-    
-    const clientX = mousePosition.x;
-    const clientY = mousePosition.y;
-    
-    // If no client coordinates available, return
-    if (typeof clientX !== 'number' || typeof clientY !== 'number') return;
-    
-    const containerRect = containerRef.current.getBoundingClientRect();
-    
-    // Define scroll hotspots
-    // Horizontal scroll thresholds (25% of container width on each edge)
-    const horizontalScrollThreshold = containerRect.width * 0.25;
-    const leftEdge = containerRect.left + horizontalScrollThreshold;
-    const rightEdge = containerRect.right - horizontalScrollThreshold;
-    
-    // Vertical scroll thresholds (15% of viewport height on each edge)
-    const verticalScrollThreshold = window.innerHeight * 0.15;
-    const topEdge = verticalScrollThreshold;
-    const bottomEdge = window.innerHeight - verticalScrollThreshold;
-    
-    // Check if dragging upward from starting point (initial Y position)
-    const isDraggingUpward = dragStartPositionY.current !== null && clientY < dragStartPositionY.current;
-    
-    // Find all column buttons to check if we're near any
-    const columnButtons = document.querySelectorAll('[data-kanban-column-button]');
-    let isNearColumnButton = false;
-    
-    columnButtons.forEach(button => {
-      if (button instanceof HTMLElement) {
-        const buttonRect = button.getBoundingClientRect();
-        // Extended hit area for buttons - make it easier to drop on them
-        const extendedRect = {
-          left: buttonRect.left - 20,
-          right: buttonRect.right + 20,
-          top: buttonRect.top - 40, // Much larger area above
-          bottom: buttonRect.bottom + 20
-        };
-        
-        if (clientX >= extendedRect.left && clientX <= extendedRect.right && 
-            clientY >= extendedRect.top && clientY <= extendedRect.bottom) {
-          isNearColumnButton = true;
-          // Highlight the button
-          button.classList.add('ring-2', 'ring-primary', 'ring-offset-2');
-        } else {
-          button.classList.remove('ring-2', 'ring-primary', 'ring-offset-2');
-        }
-      }
-    });
-    
-    // Reset all scrolling directions first
-    scrolling.current = false;
-    scrollDirection.current = null;
-    
-    // Prioritize scrolling up when near buttons at the top
-    // or when explicitly dragging upward
-    if (clientY < topEdge || (isDraggingUpward && isNearColumnButton)) {
-      scrollDirection.current = 'up';
-      scrollSpeed.current = Math.min(20, (topEdge - clientY) / 10 + 8);
-      scrolling.current = true;
-      return; // Exit early to prevent competing scroll directions
-    }
-    
-    // Check horizontal edges for scrolling
-    if (clientX < leftEdge) {
-      const distance = leftEdge - clientX;
-      scrollDirection.current = 'left';
-      scrollSpeed.current = Math.min(20, distance / 10 + 5); 
-      scrolling.current = true;
-    } else if (clientX > rightEdge) {
-      const distance = clientX - rightEdge;
-      scrollDirection.current = 'right';
-      scrollSpeed.current = Math.min(20, distance / 10 + 5);
-      scrolling.current = true;
-    }
-    // Only allow bottom scrolling if NOT dragging upward and NOT near column buttons
-    else if (clientY > bottomEdge && !isDraggingUpward && !isNearColumnButton) {
-      const distance = clientY - bottomEdge;
-      scrollDirection.current = 'down';
-      scrollSpeed.current = Math.min(15, distance / 10 + 5);
-      scrolling.current = true;
-    } else {
-      scrolling.current = false;
-      scrollDirection.current = null;
-    }
+    // Everything is already handled in the useEffect that watches mousePosition
   };
 
   // Handle drag end - update record with new status
@@ -416,6 +450,7 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
     draggedItemRef.current = null;
     setDragOverButtonId(null);
     setMousePosition(null);
+    setDraggedElement({id: '', element: null, position: null});
     
     // Reset button styles
     document.querySelectorAll('[data-kanban-column-button]').forEach((button) => {
@@ -518,6 +553,21 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
 
   return (
     <div className="space-y-4" ref={containerRef}>
+      {/* Ghost card that follows cursor when dragging */}
+      {isDraggingRef.current && draggedElement.element && mousePosition && (
+        <div 
+          className="fixed pointer-events-none z-[9999]"
+          style={{
+            top: mousePosition.y - 30, // Offset slightly above finger/cursor
+            left: mousePosition.x - 100, // Center horizontally
+            width: '200px',
+            opacity: 0.9,
+          }}
+        >
+          {draggedElement.element}
+        </div>
+      )}
+      
       <div className="flex items-center space-x-4 mb-4">
         <div className="grid gap-2 w-64">
           <Label htmlFor="kanban-field">Group by</Label>
@@ -544,7 +594,11 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
 
       {/* Kanban Board - Desktop view (horizontal columns) */}
       {!isMobile && (
-        <DragDropContext onDragEnd={handleDragEnd}>
+        <DragDropContext 
+          onDragStart={handleDragStart}
+          onDragUpdate={handleDragUpdate}
+          onDragEnd={handleDragEnd}
+        >
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 overflow-x-auto pb-4">
             {Object.entries(groupedRecords).map(([columnValue, columnRecords]) => {
               const columnLabel = getColumnLabel(columnValue);
@@ -569,6 +623,7 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
                                 ref={provided.innerRef}
                                 {...provided.draggableProps}
                                 {...provided.dragHandleProps}
+                                data-rbd-draggable-id={record.id}
                               >
                                 <KanbanCard 
                                   record={record} 
@@ -727,10 +782,10 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
                                           {...provided.dragHandleProps}
                                           style={{
                                             ...provided.draggableProps.style,
-                                            opacity: snapshot.isDragging ? 0.8 : 1,
                                             touchAction: 'none', // Prevent browser touch actions
                                           }}
                                           className={snapshot.isDragging ? 'z-50' : ''}
+                                          data-rbd-draggable-id={record.id}
                                         >
                                           <KanbanCard
                                             record={record}
@@ -765,4 +820,3 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
     </div>
   );
 }
-
