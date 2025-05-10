@@ -132,8 +132,8 @@ function DashboardObjectActions({ objectTypeId }: { objectTypeId: string }) {
     const loadActions = async () => {
       try {
         const objectActions = await getActionsByObjectId(objectTypeId);
-        // Limit to 3 actions max for better spacing
-        setActions(objectActions.slice(0, 3));
+        // Limit to 5 actions max now
+        setActions(objectActions.slice(0, 5));
       } catch (error) {
         console.error("Error loading actions for dashboard:", error);
       }
@@ -148,14 +148,15 @@ function DashboardObjectActions({ objectTypeId }: { objectTypeId: string }) {
     return null;
   }
   
-  // Display actions in a grid with equal width buttons
+  // Display actions in a single horizontal row, spread across the full width
   return (
-    <div className="grid grid-cols-3 gap-2 w-full mb-4">
+    <div className="flex flex-row justify-between w-full gap-2">
       {actions.map((action) => (
         <ExpandableActionButton
           key={action.id}
           actionName={action.name}
           color={action.color}
+          compact={true}
           onExecute={() => {
             window.location.href = `/actions/execute/${action.id}`;
           }}
