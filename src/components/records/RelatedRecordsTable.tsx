@@ -6,7 +6,7 @@ import { RelatedFieldValue } from "./RelatedFieldValue";
 import { RelatedSection } from "@/hooks/useRelatedRecords";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
-import { Edit, Play } from "lucide-react";
+import { Edit, Play, ArrowUp, ArrowDown } from "lucide-react";
 import { useActions } from "@/hooks/useActions";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Action } from "@/hooks/useActions";
@@ -20,6 +20,8 @@ export function RelatedRecordsTable({ section }: RelatedRecordsTableProps) {
   const { getActionsByObjectId } = useActions();
   const [recordActions, setRecordActions] = useState<{[key: string]: Action[]}>({});
   const navigate = useNavigate();
+  const [sortField, setSortField] = useState<string | null>(null);
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
   // Function to toggle the action dropdown for a specific record
   const toggleActionDropdown = async (recordId: string) => {
@@ -59,6 +61,48 @@ export function RelatedRecordsTable({ section }: RelatedRecordsTableProps) {
     navigate(`/objects/${section.objectType.id}/${recordId}`);
   };
 
+  const handleSort = (fieldApiName: string) => {
+    if (sortField === fieldApiName) {
+      // Toggle direction if same field
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      // Set new field and default to ascending
+      setSortField(fieldApiName);
+      setSortDirection('asc');
+    }
+  };
+
+  // Sort records
+  let sortedRecords = [...section.records];
+  if (sortField) {
+    sortedRecords.sort((a, b) => {
+      const aValue = sortField === 'created_at' ? a.created_at : 
+                     sortField === 'updated_at' ? a.updated_at :
+                     a.field_values?.[sortField];
+                     
+      const bValue = sortField === 'created_at' ? b.created_at :
+                     sortField === 'updated_at' ? b.updated_at :
+                     b.field_values?.[sortField];
+
+      // Handle null/undefined values
+      if (aValue === null || aValue === undefined) return sortDirection === 'asc' ? 1 : -1;
+      if (bValue === null || bValue === undefined) return sortDirection === 'asc' ? -1 : 1;
+
+      // Date comparison for created_at and updated_at
+      if (sortField === 'created_at' || sortField === 'updated_at') {
+        const aDate = new Date(aValue).getTime();
+        const bDate = new Date(bValue).getTime();
+        return sortDirection === 'asc' ? aDate - bDate : bDate - aDate;
+      }
+
+      // Convert to string for comparison of other fields
+      const aString = String(aValue).toLowerCase();
+      const bString = String(bValue).toLowerCase();
+      
+      return sortDirection === 'asc' ? aString.localeCompare(bString) : bString.localeCompare(aString);
+    });
+  }
+
   return (
     <div className="overflow-hidden rounded-md border w-full max-w-full">
       {/* Add a container with horizontal scroll for mobile */}
@@ -71,14 +115,63 @@ export function RelatedRecordsTable({ section }: RelatedRecordsTableProps) {
               
               {/* Original Fields */}
               {section.fields.map((field) => (
-                <TableHead key={field.api_name} className="whitespace-nowrap font-medium">{field.name}</TableHead>
+                <TableHead 
+                  key={field.api_name} 
+                  className="whitespace-nowrap font-medium cursor-pointer hover:bg-muted/50 transition-colors"
+                  onClick={() => handleSort(field.api_name)}
+                >
+                  <div className="flex items-center">
+                    <span>{field.name}</span>
+                    {sortField === field.api_name && (
+                      <span className="ml-1">
+                        {sortDirection === 'asc' ? (
+                          <ArrowUp className="h-4 w-4" />
+                        ) : (
+                          <ArrowDown className="h-4 w-4" />
+                        )}
+                      </span>
+                    )}
+                  </div>
+                </TableHead>
               ))}
-              <TableHead className="whitespace-nowrap font-medium">Erstellt am</TableHead>
-              <TableHead className="whitespace-nowrap font-medium">Zuletzt geändert</TableHead>
+              <TableHead 
+                className="whitespace-nowrap font-medium cursor-pointer hover:bg-muted/50 transition-colors"
+                onClick={() => handleSort('created_at')}
+              >
+                <div className="flex items-center">
+                  <span>Erstellt am</span>
+                  {sortField === 'created_at' && (
+                    <span className="ml-1">
+                      {sortDirection === 'asc' ? (
+                        <ArrowUp className="h-4 w-4" />
+                      ) : (
+                        <ArrowDown className="h-4 w-4" />
+                      )}
+                    </span>
+                  )}
+                </div>
+              </TableHead>
+              <TableHead 
+                className="whitespace-nowrap font-medium cursor-pointer hover:bg-muted/50 transition-colors"
+                onClick={() => handleSort('updated_at')}
+              >
+                <div className="flex items-center">
+                  <span>Zuletzt geändert</span>
+                  {sortField === 'updated_at' && (
+                    <span className="ml-1">
+                      {sortDirection === 'asc' ? (
+                        <ArrowUp className="h-4 w-4" />
+                      ) : (
+                        <ArrowDown className="h-4 w-4" />
+                      )}
+                    </span>
+                  )}
+                </div>
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {section.records.map((record) => (
+            {sortedRecords.map((record) => (
               <TableRow 
                 key={record.id}
                 className="hover:bg-muted/50 transition-colors cursor-pointer"
@@ -134,7 +227,7 @@ export function RelatedRecordsTable({ section }: RelatedRecordsTableProps) {
                 {section.fields.map((field) => (
                   <TableCell 
                     key={`${record.id}-${field.api_name}`} 
-                    className="whitespace-nowrap"
+                    className="whitespace-pre-line"
                     onClick={() => handleRowClick(record.id)}
                   >
                     <RelatedFieldValue 

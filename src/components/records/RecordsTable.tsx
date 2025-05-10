@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -11,11 +12,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { ObjectField } from "@/hooks/useObjectTypes";
 import { ObjectRecord } from "@/hooks/useObjectRecords";
-import { Edit } from "lucide-react";
+import { Edit, ArrowUp, ArrowDown } from "lucide-react";
 import { LookupValueDisplay } from "./LookupValueDisplay";
 import { format } from "date-fns";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ObjectActionsSection } from "../actions/ObjectActionsSection";
+import { formatWithLineBreaks } from "@/lib/utils/textFormatUtils";
 
 interface RecordsTableProps {
   records: ObjectRecord[];
@@ -27,6 +29,8 @@ interface RecordsTableProps {
 
 export function RecordsTable({ records, fields, objectTypeId, selectable = false, onSelectionChange }: RecordsTableProps) {
   const [selectedRecords, setSelectedRecords] = useState<string[]>([]);
+  const [sortField, setSortField] = useState<string | null>(null);
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const navigate = useNavigate();
 
   if (records.length === 0) {
@@ -65,10 +69,30 @@ export function RecordsTable({ records, fields, objectTypeId, selectable = false
     
     // Handle regular fields
     if (record.field_values && record.field_values[field.api_name] !== null) {
-      return String(record.field_values[field.api_name]);
+      const rawValue = String(record.field_values[field.api_name]);
+      return formatWithLineBreaks(rawValue);
     }
     
     return "—";
+  };
+
+  // Get raw field value for sorting
+  const getRawFieldValue = (record: ObjectRecord, fieldApiName: string): any => {
+    if (fieldApiName === "created_at") {
+      return record.created_at;
+    }
+    if (fieldApiName === "updated_at") {
+      return record.updated_at;
+    }
+    if (fieldApiName === "record_id") {
+      return record.record_id;
+    }
+    
+    if (record.field_values && record.field_values[fieldApiName] !== null) {
+      return record.field_values[fieldApiName];
+    }
+    
+    return null;
   };
 
   const handleSelectAll = (checked: boolean) => {
@@ -99,6 +123,46 @@ export function RecordsTable({ records, fields, objectTypeId, selectable = false
     navigate(`/objects/${objectTypeId}/${recordId}`);
   };
 
+  const handleSort = (fieldApiName: string) => {
+    if (sortField === fieldApiName) {
+      // Toggle direction if same field
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      // Set new field and default to ascending
+      setSortField(fieldApiName);
+      setSortDirection('asc');
+    }
+  };
+
+  // Sort records
+  let sortedRecords = [...records];
+  if (sortField) {
+    sortedRecords.sort((a, b) => {
+      const aValue = getRawFieldValue(a, sortField);
+      const bValue = getRawFieldValue(b, sortField);
+      
+      // Handle null/undefined values
+      if (aValue === null || aValue === undefined) return sortDirection === 'asc' ? 1 : -1;
+      if (bValue === null || bValue === undefined) return sortDirection === 'asc' ? -1 : 1;
+      
+      // Compare based on data type
+      if (typeof aValue === 'number' && typeof bValue === 'number') {
+        return sortDirection === 'asc' ? aValue - bValue : bValue - aValue;
+      }
+      
+      // Date comparison
+      if (aValue instanceof Date && bValue instanceof Date) {
+        return sortDirection === 'asc' ? aValue.getTime() - bValue.getTime() : bValue.getTime() - aValue.getTime();
+      }
+      
+      // Convert to string for comparison
+      const aString = String(aValue).toLowerCase();
+      const bString = String(bValue).toLowerCase();
+      
+      return sortDirection === 'asc' ? aString.localeCompare(bString) : bString.localeCompare(aString);
+    });
+  }
+
   const allSelected = records.length > 0 && selectedRecords.length === records.length;
 
   return (
@@ -119,12 +183,29 @@ export function RecordsTable({ records, fields, objectTypeId, selectable = false
             <TableHead>Actions</TableHead>
             
             {fields.map((field) => (
-              <TableHead key={field.id}>{field.name}</TableHead>
+              <TableHead 
+                key={field.id}
+                onClick={() => handleSort(field.api_name)}
+                className="cursor-pointer hover:bg-muted/50 transition-colors"
+              >
+                <div className="flex items-center">
+                  <span>{field.name}</span>
+                  {sortField === field.api_name && (
+                    <span className="ml-1">
+                      {sortDirection === 'asc' ? (
+                        <ArrowUp className="h-4 w-4" />
+                      ) : (
+                        <ArrowDown className="h-4 w-4" />
+                      )}
+                    </span>
+                  )}
+                </div>
+              </TableHead>
             ))}
           </TableRow>
         </TableHeader>
         <TableBody>
-          {records.map((record) => (
+          {sortedRecords.map((record) => (
             <TableRow 
               key={record.id} 
               className={`${selectedRecords.includes(record.id) ? "bg-muted/30" : ""} hover:bg-muted/50 cursor-pointer transition-colors`}
@@ -167,6 +248,7 @@ export function RecordsTable({ records, fields, objectTypeId, selectable = false
                 <TableCell 
                   key={`${record.id}-${field.id}`}
                   onClick={() => handleRowClick(record.id)}
+                  className="whitespace-pre-line"  // Important for line breaks
                 >
                   {getFieldValue(record, field)}
                 </TableCell>

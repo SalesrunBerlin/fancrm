@@ -1,48 +1,60 @@
 
+import { ObjectField } from "@/hooks/useObjectTypes";
 import { LookupValueDisplay } from "./LookupValueDisplay";
-import { Fragment } from "react";
+import { format } from "date-fns";
+import { formatWithLineBreaks } from "@/lib/utils/textFormatUtils";
 
 interface RelatedFieldValueProps {
-  field: {
-    api_name: string;
-    data_type: string;
-    options?: any;
-  };
+  field: ObjectField;
   value: any;
 }
 
 export function RelatedFieldValue({ field, value }: RelatedFieldValueProps) {
-  if (field.data_type === "lookup" && field.options) {
-    return (
-      <LookupValueDisplay
-        value={value}
-        fieldOptions={{
-          target_object_type_id: (typeof field.options === 'object' ? 
-            (field.options as { target_object_type_id?: string })?.target_object_type_id : '') || ''
-        }}
-      />
-    );
+  if (value === undefined || value === null) {
+    return <span>—</span>;
   }
-  
-  // Format boolean values
-  if (field.data_type === "boolean") {
-    return (
-      <span className={value === "true" || value === true ? "text-green-600" : "text-gray-500"}>
-        {value === "true" || value === true ? "Yes" : "No"}
-      </span>
-    );
+
+  switch (field.data_type) {
+    case 'text':
+    case 'textarea':
+    case 'rich_text':
+    case 'long_text':
+    case 'url':
+    case 'email':
+    case 'phone':
+      return <span className="whitespace-pre-line">{formatWithLineBreaks(String(value))}</span>;
+      
+    case 'number':
+      return <span>{value}</span>;
+      
+    case 'date':
+      try {
+        return <span>{format(new Date(value), 'dd.MM.yyyy')}</span>;
+      } catch {
+        return <span>{value}</span>;
+      }
+      
+    case 'datetime':
+      try {
+        return <span>{format(new Date(value), 'dd.MM.yyyy HH:mm')}</span>;
+      } catch {
+        return <span>{value}</span>;
+      }
+      
+    case 'checkbox':
+      return <span>{value === true ? 'Yes' : 'No'}</span>;
+      
+    case 'lookup':
+      return field.options ? (
+        <LookupValueDisplay 
+          value={value} 
+          fieldOptions={field.options as { target_object_type_id: string }}
+        />
+      ) : (
+        <span>{String(value)}</span>
+      );
+      
+    default:
+      return <span>{String(value)}</span>;
   }
-  
-  // For text or textarea, ensure they don't overflow on mobile
-  if (field.data_type === "text" || field.data_type === "textarea") {
-    return (
-      <span className="truncate max-w-[150px] sm:max-w-[200px] md:max-w-[250px] block">
-        {value !== null && value !== undefined ? String(value) : "—"}
-      </span>
-    );
-  }
-  
-  return (
-    <Fragment>{value !== null && value !== undefined ? String(value) : "—"}</Fragment>
-  );
 }
