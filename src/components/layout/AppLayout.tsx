@@ -21,6 +21,8 @@ export function AppLayout() {
         undefined,
         { path: location.pathname }
       );
+      
+      console.log("Page tracked:", location.pathname);
     }
   }, [location.pathname, user]);
   

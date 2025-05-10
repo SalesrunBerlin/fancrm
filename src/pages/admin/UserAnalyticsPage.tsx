@@ -216,7 +216,7 @@ export default function UserAnalyticsPage() {
                         <div key={user.email} className="space-y-1">
                           <div className="flex justify-between text-sm">
                             <span className="truncate max-w-[200px]" title={user.email}>
-                              {user.first_name} {user.last_name || user.email}
+                              {user.first_name || ''} {user.last_name || user.email}
                             </span>
                             <span className="font-medium">{user.total_activities}</span>
                           </div>

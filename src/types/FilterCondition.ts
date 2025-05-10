@@ -1,6 +1,4 @@
 
-import { UUID } from "./index";
-
 export interface FilterCondition {
   id: string;
   fieldApiName: string;
@@ -10,14 +8,14 @@ export interface FilterCondition {
 }
 
 export interface ObjectRecord {
-  id: UUID;
+  id: string;
   record_id: string;
-  object_type_id: UUID;
+  object_type_id: string;
   created_at: string;
   updated_at: string;
-  owner_id: UUID;
-  created_by: UUID;
-  last_modified_by: UUID;
+  owner_id: string;
+  created_by: string;
+  last_modified_by: string;
   fieldValues: Record<string, any>;
   field_values: { field_api_name: string; value: any }[];
 }

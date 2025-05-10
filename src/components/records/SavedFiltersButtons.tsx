@@ -1,28 +1,33 @@
+
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useUserFilterSettings } from "@/hooks/useUserFilterSettings";
-import { Loader2, Save, Trash2 } from "lucide-react";
+import { Loader2, Save } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { FilterCondition } from "@/types/FilterCondition";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { toast } from "sonner";
 
 interface SavedFiltersButtonsProps {
   objectTypeId: string;
-  activeFilters: FilterCondition[];
-  onFiltersChange: (filters: FilterCondition[]) => void;
+  activeFilters?: FilterCondition[];
+  onFiltersChange?: (filters: FilterCondition[]) => void;
+  maxToShow?: number;
 }
 
-export function SavedFiltersButtons({ objectTypeId, activeFilters, onFiltersChange }: SavedFiltersButtonsProps) {
+export function SavedFiltersButtons({ objectTypeId, activeFilters = [], onFiltersChange, maxToShow = 3 }: SavedFiltersButtonsProps) {
   const [open, setOpen] = useState(false);
   const [filterName, setFilterName] = useState("");
   const [selectedFilterId, setSelectedFilterId] = useState<string | null>(null);
   const { 
     filters, 
-    isLoading, 
-    error, 
-    saveFilter, 
-    deleteFilter 
+    isLoading,
+    updateFilters,
+    saveFilter: saveUserFilter,
+    deleteFilter: deleteUserFilter,
+    error 
   } = useUserFilterSettings(objectTypeId);
 
   useEffect(() => {
@@ -38,7 +43,7 @@ export function SavedFiltersButtons({ objectTypeId, activeFilters, onFiltersChan
     }
 
     try {
-      await saveFilter(filterName, activeFilters);
+      await saveUserFilter(filterName, activeFilters);
       toast.success("Filter saved successfully!");
       setOpen(false);
       setFilterName("");
@@ -52,7 +57,7 @@ export function SavedFiltersButtons({ objectTypeId, activeFilters, onFiltersChan
     if (!selectedFilterId) return;
     
     try {
-      await deleteFilter(selectedFilterId);
+      await deleteUserFilter(selectedFilterId);
       toast.success("Filter deleted successfully!");
       setSelectedFilterId(null);
     } catch (err) {
@@ -63,81 +68,73 @@ export function SavedFiltersButtons({ objectTypeId, activeFilters, onFiltersChan
 
   const applyFilter = (filterId: string) => {
     const selectedFilter = filters?.find(f => f.id === filterId);
-    if (selectedFilter) {
+    if (selectedFilter && onFiltersChange) {
       onFiltersChange(selectedFilter.conditions);
       setSelectedFilterId(filterId);
     }
   };
 
+  const visibleFilters = filters?.slice(0, maxToShow) || [];
+
   return (
     <div className="flex items-center space-x-2">
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger asChild>
-          <Button variant="outline">
+          <Button variant="outline" size="sm">
             <Save className="mr-2 h-4 w-4" />
-            Save Filters
+            Filter speichern
           </Button>
         </DialogTrigger>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Save Current Filters</DialogTitle>
+            <DialogTitle>Aktuelle Filter speichern</DialogTitle>
             <DialogDescription>
-              Give a name to the current set of filters to save it for later use.
+              Geben Sie einen Namen für die aktuelle Filterauswahl ein.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="name" className="text-right">
-                Filter name
+                Filtername
               </Label>
               <Input id="name" value={filterName} onChange={(e) => setFilterName(e.target.value)} className="col-span-3" />
             </div>
           </div>
           <DialogFooter>
             <Button type="button" variant="secondary" onClick={() => setOpen(false)}>
-              Cancel
+              Abbrechen
             </Button>
-            <Button type="submit" onClick={handleSaveFilter}>Save</Button>
+            <Button type="submit" onClick={handleSaveFilter}>Speichern</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="outline">
-            Load Filters
+          <Button variant="outline" size="sm">
+            Filter laden
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent className="w-56">
-          <DropdownMenuLabel>Saved Filters</DropdownMenuLabel>
+          <DropdownMenuLabel>Gespeicherte Filter</DropdownMenuLabel>
           {isLoading ? (
             <div className="flex items-center justify-center p-2">
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Loading...
+              Laden...
             </div>
-          ) : !filters?.length ? (
+          ) : !visibleFilters.length ? (
             <div className="p-2 text-sm text-muted-foreground">
-              No filters saved yet.
+              Keine Filter gespeichert.
             </div>
           ) : (
-            filters.map((filter) => (
+            visibleFilters.map((filter) => (
               <DropdownMenuItem key={filter.id} onSelect={() => applyFilter(filter.id)}>
                 {filter.name}
               </DropdownMenuItem>
             ))
           )}
-          {filters?.length ? (
-            <DropdownMenuSeparator />
-          ) : null}
-          <DropdownMenuItem disabled={!selectedFilterId} onClick={handleDeleteFilter} className="text-red-500">
-            <Trash2 className="mr-2 h-4 w-4" />
-            Delete Selected Filter
-          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
     </div>
   );
 }
-
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { toast } from "sonner";

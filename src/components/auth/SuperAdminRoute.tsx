@@ -25,5 +25,6 @@ export function SuperAdminRoute({ children }: { children: React.ReactNode }) {
     return <Navigate to="/dashboard" replace />;
   }
   
-  return <>{children}</>;
+  // User is authenticated and is a SuperAdmin, render the children
+  return <>{children || <Outlet />}</>;
 }

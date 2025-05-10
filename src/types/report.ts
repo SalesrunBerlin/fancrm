@@ -1,4 +1,4 @@
-import { UUID } from ".";
+
 import { FilterCondition } from "./FilterCondition";
 
 export interface ReportField {

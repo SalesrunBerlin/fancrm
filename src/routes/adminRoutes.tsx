@@ -10,50 +10,26 @@ import SessionActivitiesPage from "@/pages/admin/SessionActivitiesPage";
 export const adminRoutes = [
   {
     path: "/admin",
-    element: (
-      <SuperAdminRoute>
-        <AdminDashboard />
-      </SuperAdminRoute>
-    ),
+    element: <SuperAdminRoute><AdminDashboard /></SuperAdminRoute>,
   },
   {
     path: "/admin/users",
-    element: (
-      <SuperAdminRoute>
-        <UserManagementPage />
-      </SuperAdminRoute>
-    ),
+    element: <SuperAdminRoute><UserManagementPage /></SuperAdminRoute>,
   },
   {
     path: "/admin/users/:userId",
-    element: (
-      <SuperAdminRoute>
-        <UserDetailPage />
-      </SuperAdminRoute>
-    ),
+    element: <SuperAdminRoute><UserDetailPage /></SuperAdminRoute>,
   },
   {
     path: "/admin/analytics",
-    element: (
-      <SuperAdminRoute>
-        <UserAnalyticsPage />
-      </SuperAdminRoute>
-    ),
+    element: <SuperAdminRoute><UserAnalyticsPage /></SuperAdminRoute>,
   },
   {
     path: "/admin/users/sessions/:userId",
-    element: (
-      <SuperAdminRoute>
-        <UserSessionsPage />
-      </SuperAdminRoute>
-    ),
+    element: <SuperAdminRoute><UserSessionsPage /></SuperAdminRoute>,
   },
   {
     path: "/admin/sessions/:sessionId/activities",
-    element: (
-      <SuperAdminRoute>
-        <SessionActivitiesPage />
-      </SuperAdminRoute>
-    ),
+    element: <SuperAdminRoute><SessionActivitiesPage /></SuperAdminRoute>,
   }
 ];
