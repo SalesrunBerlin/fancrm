@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Copy, Edit, Save, X, Layout } from 'lucide-react';
+import { ArrowLeft, Copy, Edit, Save, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { useObjectType } from "@/hooks/useObjectType";
 import { useRecordDetail } from "@/hooks/useRecordDetail";
@@ -249,34 +249,23 @@ export default function ObjectRecordDetail() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <div className="flex items-center">
-          <TabsList>
+        {/* Place tabs and layout selector in one row side by side */}
+        <div className="flex items-center gap-2">
+          <TabsList className="flex-grow-0">
             <TabsTrigger value="details">Details</TabsTrigger>
             <TabsTrigger value="related">Related</TabsTrigger>
             {isTicket && aiStatus === "Warteschlange" && (
               <TabsTrigger value="process">Process Ticket</TabsTrigger>
             )}
           </TabsList>
-          {/* Layout Selector moved here as an icon */}
-          <div className="ml-2">
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div className="inline-flex">
-                    <LayoutSelector
-                      objectTypeId={objectTypeId || ""}
-                      selectedLayoutId={selectedLayoutId}
-                      onLayoutChange={handleLayoutChange}
-                      compact={true}
-                    />
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent side="top">
-                  <p>Change layout</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </div>
+          
+          {/* Layout Selector directly next to tabs */}
+          <LayoutSelector
+            objectTypeId={objectTypeId || ""}
+            selectedLayoutId={selectedLayoutId}
+            onLayoutChange={handleLayoutChange}
+            compact={true}
+          />
         </div>
         
         <TabsContent value="details">
