@@ -43,12 +43,13 @@ export default function ObjectRecordsList() {
   const { fields, isLoading: isLoadingFields } = useEnhancedFields(objectTypeId);
   const objectType = objectTypes?.find(type => type.id === objectTypeId);
   
-  // Update view mode to also be stored in user settings
   const [allRecords, setAllRecords] = useState<any[]>([]);
   const [selectedRecords, setSelectedRecords] = useState<string[]>([]);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isCloneDialogOpen, setIsCloneDialogOpen] = useState(false);
-  const { visibleFields, updateVisibleFields } = useUserFieldSettings(objectTypeId);
+  
+  // Update to use the enhanced hook that persists to database
+  const { visibleFields, updateVisibleFields, isLoading: isLoadingFieldSettings } = useUserFieldSettings(objectTypeId);
   const { favoriteColor } = useAuth();
   
   // System fields definition
