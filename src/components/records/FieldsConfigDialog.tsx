@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -33,6 +32,9 @@ export function FieldsConfigDialog({ objectTypeId, onVisibilityChange }: FieldsC
       is_system: true,
       data_type: "datetime",
       object_type_id: objectTypeId,
+      display_order: 1000,
+      owner_id: "",
+      created_at: new Date().toISOString()
     },
     { 
       id: "sys_updated_at", 
@@ -42,6 +44,9 @@ export function FieldsConfigDialog({ objectTypeId, onVisibilityChange }: FieldsC
       is_system: true,
       data_type: "datetime",
       object_type_id: objectTypeId,
+      display_order: 1001,
+      owner_id: "",
+      created_at: new Date().toISOString()
     },
     { 
       id: "sys_record_id", 
@@ -51,6 +56,9 @@ export function FieldsConfigDialog({ objectTypeId, onVisibilityChange }: FieldsC
       is_system: true,
       data_type: "text",
       object_type_id: objectTypeId,
+      display_order: 1002,
+      owner_id: "",
+      created_at: new Date().toISOString()
     }
   ];
 
