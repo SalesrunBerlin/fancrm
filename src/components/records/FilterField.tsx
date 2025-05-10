@@ -1,8 +1,9 @@
+
 import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ObjectField } from "@/types/ObjectFieldTypes";
-import { FilterCondition } from "@/hooks/useObjectRecords";
+import { FilterCondition } from "@/types/FilterCondition";
 import { useFieldPicklistValues } from "@/hooks/useFieldPicklistValues";
 import { supabase } from "@/integrations/supabase/client";
 

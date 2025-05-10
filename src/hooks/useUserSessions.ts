@@ -45,7 +45,7 @@ export interface SessionStats {
 }
 
 export function useUserSessions() {
-  const { isSuperAdmin } = useAuth();
+  const { user, isSuperAdmin } = useAuth();
 
   // Get all user session stats (for superadmin only)
   const { data: sessionStats, isLoading: isLoadingStats, error: statsError, refetch: refetchStats } = useQuery({

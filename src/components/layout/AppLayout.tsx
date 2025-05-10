@@ -1,5 +1,5 @@
 
-// Assuming this is a new file to track page visits
+// Track page visits
 import React, { useEffect } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -25,9 +25,9 @@ export function AppLayout() {
   }, [location.pathname, user]);
   
   return (
-    <>
+    <div className="min-h-screen">
       <Outlet />
       <Toaster />
-    </>
+    </div>
   );
 }

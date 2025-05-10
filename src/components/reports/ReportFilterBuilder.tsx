@@ -3,7 +3,7 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
 import { useObjectFields } from "@/hooks/useObjectFields";
-import { FilterCondition } from "@/hooks/useObjectRecords";
+import { FilterCondition } from "@/types/FilterCondition";
 import { ObjectRecordsFilter } from "@/components/records/ObjectRecordsFilter";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
