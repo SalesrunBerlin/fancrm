@@ -15,12 +15,20 @@ export function useIsMobile() {
     // Set initial value once we're in the browser
     setIsMobile(checkMobile());
 
+    // Create a debounced resize handler for better performance
+    let resizeTimer: number;
     function handleResize() {
-      setIsMobile(checkMobile());
+      clearTimeout(resizeTimer);
+      resizeTimer = window.setTimeout(() => {
+        setIsMobile(checkMobile());
+      }, 100);
     }
 
     window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
+    return () => {
+      window.removeEventListener("resize", handleResize);
+      clearTimeout(resizeTimer);
+    };
   }, []);
 
   // During SSR or initial render, default to false

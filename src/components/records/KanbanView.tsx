@@ -17,10 +17,10 @@ import {
 } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { ChevronDown, ChevronUp, MoveVertical, MoveHorizontal } from "lucide-react";
+import { ChevronDown, ChevronUp, MoveVertical, MoveHorizontal, ArrowLeft, ArrowRight } from "lucide-react";
 import { useFieldPicklistValues } from "@/hooks/useFieldPicklistValues";
 import { useKanbanViewSettings } from "@/hooks/useKanbanViewSettings";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 
 interface KanbanViewProps {
   records: ObjectRecord[];
@@ -263,14 +263,16 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
 
       {/* Mobile view - Horizontal scrollable Kanban board */}
       {isMobile && (
-        <div className="mb-2">
-          <div className="text-xs text-center text-muted-foreground mb-2">
-            Swipe horizontally to see all statuses
+        <div className="mb-4">
+          <div className="flex items-center justify-center space-x-2 mb-3 text-xs text-muted-foreground">
+            <ArrowLeft className="h-4 w-4" />
+            <span>Swipe horizontally to see all statuses</span>
+            <ArrowRight className="h-4 w-4" />
           </div>
           
           <DragDropContext onDragEnd={handleDragEnd}>
-            <ScrollArea className="w-full pb-4" orientation="horizontal">
-              <div className="flex gap-3 min-w-full pb-2 px-1">
+            <ScrollArea className="w-full overflow-x-auto pb-6">
+              <div className="flex gap-3 min-w-full pb-4 px-1">
                 {Object.entries(groupedRecords).map(([columnValue, columnRecords]) => {
                   const columnLabel = getColumnLabel(columnValue);
                   const recordCount = columnRecords.length;
@@ -278,7 +280,7 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
                   return (
                     <div 
                       key={columnValue} 
-                      className="flex-shrink-0 w-[85%] max-w-[300px]"
+                      className="flex-shrink-0 w-[85%] max-w-[300px] min-w-[250px]"
                     >
                       <Card className="h-full border shadow-sm flex flex-col">
                         <div className="bg-muted/50 px-3 py-2 border-b flex justify-between items-center">
@@ -331,15 +333,16 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
                   );
                 })}
               </div>
+              <ScrollBar orientation="horizontal" />
             </ScrollArea>
           </DragDropContext>
           
-          <div className="text-xs text-center text-muted-foreground mt-2">
-            Drag cards horizontally between columns to change status
+          <div className="flex items-center justify-center mt-3 text-xs text-muted-foreground">
+            <MoveHorizontal className="h-4 w-4 mr-2" />
+            <span>Drag cards between columns to change status</span>
           </div>
         </div>
       )}
     </div>
   );
 }
-
