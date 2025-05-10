@@ -1,8 +1,7 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { Play } from "lucide-react";
 import { ActionColor } from "@/hooks/useActions";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,7 +14,6 @@ interface ExpandableActionButtonProps {
   actionName: string;
   color: ActionColor;
   onExecute: () => void;
-  compact?: boolean; // Add compact mode for table cells
   dropdown?: boolean; // Add dropdown mode for table rows
   actions?: Array<{ name: string; color: ActionColor; onClick: () => void }>; // Multiple actions for dropdown
 }
@@ -24,23 +22,9 @@ export function ExpandableActionButton({
   actionName, 
   color, 
   onExecute,
-  compact = false,
   dropdown = false,
   actions = []
 }: ExpandableActionButtonProps) {
-  const [isOpen, setIsOpen] = useState(false);
-
-  const handleButtonClick = () => {
-    // Only toggle open state when button is clicked
-    setIsOpen(!isOpen);
-  };
-
-  const handleNameClick = () => {
-    // When action name is clicked, execute the action
-    onExecute();
-    setIsOpen(false); // Close after execution
-  };
-
   // For dropdown mode in tables (showing multiple actions in a dropdown)
   if (dropdown) {
     return (
@@ -70,53 +54,18 @@ export function ExpandableActionButton({
     );
   }
 
-  // For compact mode in tables, just show a small button
-  if (compact) {
-    return (
-      <ThemedButton 
-        variant={color}
-        size="sm"
-        className="h-7 p-0"
-        onClick={onExecute}
-        title={actionName}
-        useUserColor={false}
-      >
-        <Play className="h-3.5 w-3.5" />
-      </ThemedButton>
-    );
-  }
-
-  // Regular expandable button for normal view
+  // Standard button that shows both icon and text
   return (
-    <Collapsible
-      open={isOpen}
-      onOpenChange={setIsOpen}
-      className="relative transition-all duration-300"
+    <ThemedButton 
+      variant={color}
+      size="default"
+      className="min-w-[120px] h-10"
+      onClick={onExecute}
+      title={actionName}
+      useUserColor={false}
     >
-      <CollapsibleTrigger asChild>
-        <ThemedButton 
-          variant={color}
-          size="icon"
-          className="h-8 transition-all"
-          onClick={handleButtonClick}
-          title={actionName}
-          useUserColor={false}
-        >
-          <Play className="h-4 w-4" />
-        </ThemedButton>
-      </CollapsibleTrigger>
-      
-      <CollapsibleContent className="absolute left-12 top-0 z-20">
-        <ThemedButton 
-          variant={color}
-          size="default"
-          className="h-8 transition-all whitespace-nowrap"
-          onClick={handleNameClick}
-          useUserColor={false}
-        >
-          {actionName}
-        </ThemedButton>
-      </CollapsibleContent>
-    </Collapsible>
+      <Play className="h-4 w-4" />
+      <span>{actionName}</span>
+    </ThemedButton>
   );
 }
