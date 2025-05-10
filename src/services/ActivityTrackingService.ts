@@ -25,7 +25,21 @@ interface ActivityDetails {
   [key: string]: any;
 }
 
+interface PendingActivity {
+  userId: string;
+  activityType: ActivityType;
+  action: string;
+  objectType?: string;
+  objectId?: string;
+  details?: ActivityDetails;
+  timestamp: number;
+}
+
 let currentSessionId: string | null = null;
+let pendingActivities: PendingActivity[] = [];
+let activityBatchTimeout: number | null = null;
+const BATCH_INTERVAL = 2000; // 2 seconds
+const MAX_BATCH_SIZE = 10;
 
 /**
  * Creates a new user session when a user logs in
@@ -69,6 +83,11 @@ export const startUserSession = async (userId: string): Promise<string | null> =
  */
 export const endUserSession = async (): Promise<boolean> => {
   try {
+    // Process any pending activities before ending session
+    if (pendingActivities.length > 0) {
+      await processPendingActivities();
+    }
+    
     if (!currentSessionId) {
       // Try to find the active session
       const { data } = await supabase
@@ -109,6 +128,91 @@ export const endUserSession = async (): Promise<boolean> => {
 };
 
 /**
+ * Schedule processing of pending activities
+ */
+const scheduleBatchProcessing = () => {
+  if (activityBatchTimeout !== null) {
+    return;
+  }
+  
+  activityBatchTimeout = window.setTimeout(async () => {
+    await processPendingActivities();
+    activityBatchTimeout = null;
+    
+    // If there are still pending activities after processing, schedule another batch
+    if (pendingActivities.length > 0) {
+      scheduleBatchProcessing();
+    }
+  }, BATCH_INTERVAL);
+};
+
+/**
+ * Process pending activities in batches
+ */
+const processPendingActivities = async () => {
+  if (pendingActivities.length === 0) return;
+  
+  // Get the current batch (up to MAX_BATCH_SIZE activities)
+  const batch = pendingActivities.splice(0, MAX_BATCH_SIZE);
+  
+  try {
+    // Ensure we have a session for at least one user in the batch
+    if (!currentSessionId) {
+      const firstUserId = batch[0].userId;
+      const { data } = await supabase
+        .from('user_sessions')
+        .select('id')
+        .eq('user_id', firstUserId)
+        .eq('is_active', true)
+        .order('login_time', { ascending: false })
+        .limit(1)
+        .single();
+        
+      if (data) {
+        currentSessionId = data.id;
+      } else {
+        // Create a new session if none exists
+        const newSessionId = await startUserSession(firstUserId);
+        if (!newSessionId) {
+          console.error('Failed to create session for activity tracking');
+          // Add activities back to queue
+          pendingActivities = [...batch, ...pendingActivities];
+          return;
+        }
+      }
+    }
+    
+    // Prepare activities for batch insert
+    const activitiesToInsert = batch.map(activity => ({
+      session_id: currentSessionId,
+      user_id: activity.userId,
+      activity_type: activity.activityType,
+      action: activity.action,
+      object_type: activity.objectType,
+      object_id: activity.objectId,
+      details: activity.details || {},
+      created_at: new Date(activity.timestamp).toISOString()
+    }));
+    
+    // Insert activities in batch
+    const { error } = await supabase
+      .from('user_activities')
+      .insert(activitiesToInsert);
+      
+    if (error) {
+      console.error('Error batch tracking activities:', error);
+      // Add activities back to queue on failure
+      pendingActivities = [...batch, ...pendingActivities];
+    }
+    
+  } catch (err) {
+    console.error('Failed to process activity batch:', err);
+    // Add activities back to queue on failure
+    pendingActivities = [...batch, ...pendingActivities];
+  }
+};
+
+/**
  * Track a user activity
  */
 export const trackActivity = async (
@@ -125,45 +229,27 @@ export const trackActivity = async (
       return false;
     }
 
-    // If no current session, try to find the active session
-    if (!currentSessionId) {
-      const { data } = await supabase
-        .from('user_sessions')
-        .select('id')
-        .eq('user_id', userId)
-        .eq('is_active', true)
-        .order('login_time', { ascending: false })
-        .limit(1)
-        .single();
-
-      if (data) {
-        currentSessionId = data.id;
-      } else {
-        // No active session found, create one
-        const newSessionId = await startUserSession(userId);
-        if (!newSessionId) {
-          console.error('Failed to create session for activity tracking');
-          return false;
-        }
+    // Add activity to pending queue
+    pendingActivities.push({
+      userId,
+      activityType,
+      action,
+      objectType,
+      objectId,
+      details,
+      timestamp: Date.now()
+    });
+    
+    // Schedule batch processing
+    scheduleBatchProcessing();
+    
+    // Process immediately if we have enough activities
+    if (pendingActivities.length >= MAX_BATCH_SIZE) {
+      if (activityBatchTimeout !== null) {
+        clearTimeout(activityBatchTimeout);
+        activityBatchTimeout = null;
       }
-    }
-
-    // Insert the activity
-    const { error } = await supabase
-      .from('user_activities')
-      .insert({
-        session_id: currentSessionId,
-        user_id: userId,
-        activity_type: activityType,
-        action,
-        object_type: objectType,
-        object_id: objectId,
-        details: details || {}
-      });
-
-    if (error) {
-      console.error('Error tracking activity:', error);
-      return false;
+      await processPendingActivities();
     }
 
     return true;
@@ -193,7 +279,16 @@ export const updateLastActivity = async (): Promise<void> => {
  * Setup a periodic heartbeat to update the last_activity_time
  */
 export const setupActivityHeartbeat = (intervalMs = 60000): () => void => {
-  const intervalId = setInterval(updateLastActivity, intervalMs);
+  const intervalId = setInterval(() => {
+    // Throttle activity updates to reduce database load
+    updateLastActivity();
+    
+    // Process any pending activities
+    if (pendingActivities.length > 0 && activityBatchTimeout === null) {
+      processPendingActivities();
+    }
+  }, intervalMs);
+  
   return () => clearInterval(intervalId);
 };
 
@@ -203,3 +298,23 @@ export const setupActivityHeartbeat = (intervalMs = 60000): () => void => {
 export const getCurrentSessionId = (): string | null => {
   return currentSessionId;
 };
+
+/**
+ * Force process all pending activities immediately
+ * Useful when navigating away from the app or during critical operations
+ */
+export const flushPendingActivities = async (): Promise<void> => {
+  if (activityBatchTimeout !== null) {
+    clearTimeout(activityBatchTimeout);
+    activityBatchTimeout = null;
+  }
+  
+  await processPendingActivities();
+};
+
+// Add event listener for beforeunload to flush pending activities
+if (typeof window !== 'undefined') {
+  window.addEventListener('beforeunload', () => {
+    flushPendingActivities();
+  });
+}

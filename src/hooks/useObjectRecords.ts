@@ -1,19 +1,90 @@
 
-// This file doesn't exist in the allowed files list, so I'll assume we need to create it
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { trackActivity } from "@/services/ActivityTrackingService";
+import { FilterCondition, ObjectRecord, SavedFilter } from "@/types/FilterCondition";
+import { useCallback } from "react";
 
 interface RecordData {
   field_values: { [key: string]: any };
   id?: string;
 }
 
-export function useObjectRecords(objectTypeId: string | undefined) {
+export function useObjectRecords(objectTypeId: string | undefined, filters: FilterCondition[] = []) {
   const queryClient = useQueryClient();
   const { user } = useAuth();
+
+  // Build query based on filters
+  const buildFilteredQuery = useCallback((baseQuery: any) => {
+    let query = baseQuery;
+    
+    if (filters.length > 0) {
+      // Group filters by logical operator
+      const andFilters = filters.filter(f => !f.logicalOperator || f.logicalOperator === 'AND');
+      const orFilters = filters.filter(f => f.logicalOperator === 'OR');
+      
+      // Apply AND filters first
+      andFilters.forEach(filter => {
+        // Apply different operators based on filter type
+        switch (filter.operator) {
+          case 'equals':
+            query = query.eq(`field_values.${filter.fieldApiName}.value`, filter.value);
+            break;
+          case 'not_equals':
+            query = query.neq(`field_values.${filter.fieldApiName}.value`, filter.value);
+            break;
+          case 'contains':
+            query = query.ilike(`field_values.${filter.fieldApiName}.value`, `%${filter.value}%`);
+            break;
+          case 'starts_with':
+            query = query.ilike(`field_values.${filter.fieldApiName}.value`, `${filter.value}%`);
+            break;
+          case 'ends_with':
+            query = query.ilike(`field_values.${filter.fieldApiName}.value`, `%${filter.value}`);
+            break;
+          case 'greater_than':
+            query = query.gt(`field_values.${filter.fieldApiName}.value`, filter.value);
+            break;
+          case 'less_than':
+            query = query.lt(`field_values.${filter.fieldApiName}.value`, filter.value);
+            break;
+          default:
+            // Default to equals if operator is not recognized
+            query = query.eq(`field_values.${filter.fieldApiName}.value`, filter.value);
+        }
+      });
+      
+      // Apply OR filters with or() function
+      if (orFilters.length > 0) {
+        const orConditions = orFilters.map(filter => {
+          switch (filter.operator) {
+            case 'equals':
+              return { [`field_values.${filter.fieldApiName}.value`]: filter.value };
+            case 'not_equals':
+              return { [`field_values.${filter.fieldApiName}.value`]: { $ne: filter.value } };
+            case 'contains':
+              return { [`field_values.${filter.fieldApiName}.value`]: { $ilike: `%${filter.value}%` } };
+            case 'starts_with':
+              return { [`field_values.${filter.fieldApiName}.value`]: { $ilike: `${filter.value}%` } };
+            case 'ends_with':
+              return { [`field_values.${filter.fieldApiName}.value`]: { $ilike: `%${filter.value}` } };
+            case 'greater_than':
+              return { [`field_values.${filter.fieldApiName}.value`]: { $gt: filter.value } };
+            case 'less_than':
+              return { [`field_values.${filter.fieldApiName}.value`]: { $lt: filter.value } };
+            default:
+              return { [`field_values.${filter.fieldApiName}.value`]: filter.value };
+          }
+        });
+        
+        query = query.or(orConditions.map(c => JSON.stringify(c)).join(','));
+      }
+    }
+    
+    return query;
+  }, [filters]);
 
   // Get all records for an object type
   const {
@@ -22,14 +93,19 @@ export function useObjectRecords(objectTypeId: string | undefined) {
     error,
     refetch
   } = useQuery({
-    queryKey: ["object-records", objectTypeId],
+    queryKey: ["object-records", objectTypeId, filters],
     queryFn: async () => {
       if (!objectTypeId) return [];
 
-      const { data, error } = await supabase
+      let query = supabase
         .from("object_records")
         .select("*, field_values:object_field_values(field_api_name, value)")
         .eq("object_type_id", objectTypeId);
+      
+      // Apply filters if any
+      query = buildFilteredQuery(query);
+
+      const { data, error } = await query;
 
       if (error) throw error;
 
@@ -199,6 +275,90 @@ export function useObjectRecords(objectTypeId: string | undefined) {
     }
   });
 
+  // Clone a record
+  const cloneRecord = useMutation({
+    mutationFn: async (recordId: string) => {
+      if (!recordId || !objectTypeId) throw new Error("Missing recordId or objectTypeId");
+      
+      // Get the original record data
+      const { data: originalRecord, error: fetchError } = await supabase
+        .from("object_records")
+        .select("*")
+        .eq("id", recordId)
+        .single();
+        
+      if (fetchError) throw fetchError;
+      
+      // Get the original field values
+      const { data: fieldValues, error: fieldValuesError } = await supabase
+        .from("object_field_values")
+        .select("field_api_name, value")
+        .eq("record_id", recordId);
+        
+      if (fieldValuesError) throw fieldValuesError;
+      
+      // Create the new record
+      const { data: newRecord, error: createError } = await supabase
+        .from("object_records")
+        .insert({
+          object_type_id: objectTypeId,
+          owner_id: user?.id
+        })
+        .select()
+        .single();
+        
+      if (createError) throw createError;
+      
+      // Helper function to append "copy" to name fields
+      const appendCopyToValue = (fieldName: string, value: string) => {
+        if (fieldName === 'name' || fieldName.endsWith('_name') || fieldName.includes('name')) {
+          return `${value}_copy`;
+        }
+        return value;
+      };
+      
+      // Insert the cloned field values with modification for name fields
+      if (fieldValues && fieldValues.length > 0) {
+        const fieldValueInserts = fieldValues.map(fv => ({
+          record_id: newRecord.id,
+          field_api_name: fv.field_api_name,
+          value: appendCopyToValue(fv.field_api_name, fv.value)
+        }));
+        
+        const { error: insertError } = await supabase
+          .from("object_field_values")
+          .insert(fieldValueInserts);
+          
+        if (insertError) throw insertError;
+      }
+      
+      // Track the cloning
+      if (user) {
+        trackActivity(
+          user.id,
+          'record_create',
+          'Cloned record',
+          'object_type',
+          objectTypeId,
+          { 
+            original_record_id: recordId,
+            new_record_id: newRecord.id 
+          }
+        );
+      }
+      
+      return newRecord;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["object-records", objectTypeId] });
+      toast.success("Record cloned successfully");
+    },
+    onError: (error) => {
+      console.error("Error cloning record:", error);
+      toast.error("Failed to clone record");
+    }
+  });
+
   return {
     records,
     isLoading,
@@ -206,6 +366,10 @@ export function useObjectRecords(objectTypeId: string | undefined) {
     refetch,
     createRecord,
     updateRecord,
-    deleteRecord
+    deleteRecord,
+    cloneRecord
   };
 }
+
+// Re-export types for components that need them
+export type { FilterCondition, ObjectRecord, SavedFilter };
