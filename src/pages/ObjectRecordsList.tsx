@@ -201,8 +201,8 @@ export default function ObjectRecordsList() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title={objectType.name}
-        description={objectType.description || `Manage your ${objectType.name.toLowerCase()}`}
+        title={objectType?.name || "Records"}
+        description={objectType?.description || `Manage your records`}
         actions={
           <>
             {/* Toggle between Table and Kanban view */}
@@ -356,7 +356,7 @@ export default function ObjectRecordsList() {
       {/* Regular actions section - will only show new record actions when no records are selected */}
       <ObjectActionsSection 
         objectTypeId={objectTypeId!} 
-        objectTypeName={objectType.name}
+        objectTypeName={objectType?.name || ""}
       />
 
       {/* Mass actions section - only visible when records are selected */}
