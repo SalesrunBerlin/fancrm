@@ -3,16 +3,7 @@ import { useState } from "react";
 import { ObjectRecord } from "@/types/ObjectFieldTypes";
 import { Card, CardContent } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
-import { Edit, MoreHorizontal } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useIsMobile } from "@/hooks/use-mobile";
 
 interface KanbanCardProps {
   record: ObjectRecord;
@@ -35,7 +26,6 @@ export function KanbanCard({
 }: KanbanCardProps) {
   const navigate = useNavigate();
   const [isHovered, setIsHovered] = useState(false);
-  const isMobile = useIsMobile();
 
   // For the record name/title, we'll look for common naming fields
   const getRecordName = () => {
@@ -72,11 +62,6 @@ export function KanbanCard({
     navigate(`/objects/${objectTypeId}/${record.id}`);
   };
 
-  const handleEditClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    navigate(`/objects/${objectTypeId}/${record.id}/edit`);
-  };
-  
   const handleCheckboxChange = (checked: boolean) => {
     if (onSelect) {
       onSelect(record.id, checked);
@@ -109,8 +94,8 @@ export function KanbanCard({
     >
       <CardContent className="p-3 relative">
         <div className="flex items-center gap-2">
-          {/* Show checkbox when in selection mode or on mobile */}
-          {(selectionMode || isMobile) && (
+          {/* Show checkbox when in selection mode (regardless of device type) */}
+          {selectionMode && (
             <Checkbox 
               checked={isSelected}
               onCheckedChange={handleCheckboxChange}
@@ -123,38 +108,7 @@ export function KanbanCard({
           </div>
         </div>
         
-        {/* Action buttons only show on hover or on mobile */}
-        <div className={`absolute top-2 right-2 flex space-x-1 ${(isHovered || isMobile) ? 'opacity-100' : 'opacity-0'} transition-opacity`}>
-          <Button
-            variant="ghost" 
-            size="icon" 
-            className="h-7 w-7" 
-            onClick={handleEditClick}
-          >
-            <Edit className="h-3.5 w-3.5" />
-            <span className="sr-only">Edit</span>
-          </Button>
-          
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <MoreHorizontal className="h-3.5 w-3.5" />
-                <span className="sr-only">More options</span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-              <DropdownMenuItem onClick={handleEditClick}>Edit</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => navigate(`/objects/${objectTypeId}/${record.id}`)}>
-                View details
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+        {/* Action buttons have been removed as requested */}
       </CardContent>
     </Card>
   );
