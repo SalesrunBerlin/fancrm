@@ -67,14 +67,11 @@ export function SavedFiltersButtons({ objectTypeId, maxToShow = 3 }: SavedFilter
       });
       
       // Add a small toast notification before navigating
-      toast.success(`Lade "${filter.name}" Filter`);
+      toast.success(`Navigiere zu "${filter.name}" Filter`);
       
-      // Save the selected filter directly to user_view_settings via our hook
-      // This will be done in useUserFilterSettings hook and will persist to DB for logged-in users
-      
-      // Navigate to the optimized object list page with this filter applied
-      // The filter will be loaded from the database when the page loads
-      navigate(`/objects/${objectTypeId}/optimized`);
+      // Navigate to the optimized object list page with this filter ID in the URL
+      // The filter ID will be used to load the filter from settings
+      navigate(`/objects/${objectTypeId}/optimized/${filter.id}`);
     } catch (error) {
       console.error("Fehler beim Anwenden des gespeicherten Filters:", error);
       toast.error("Filter konnte nicht angewendet werden. Bitte versuchen Sie es erneut.");

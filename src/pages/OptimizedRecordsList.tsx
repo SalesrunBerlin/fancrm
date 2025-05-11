@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useNavigate } from "react-router-dom";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
 import { FilterCondition } from "@/hooks/useObjectRecords";
 import { useEnhancedFields } from "@/hooks/useEnhancedFields";
@@ -31,18 +31,27 @@ import { DataPagination } from "@/components/ui/data-pagination";
 import { isArchived } from "@/patches/ObjectTypePatches";
 
 export default function OptimizedRecordsList() {
-  const { objectTypeId } = useParams<{ objectTypeId: string }>();
+  const { objectTypeId, filterId } = useParams<{ objectTypeId: string; filterId?: string }>();
+  const navigate = useNavigate();
   const { objectTypes } = useObjectTypes();
   const [isFilterExpanded, setIsFilterExpanded] = useState(false);
   const { user } = useAuth();
   
   // Use our user settings hooks for filters, layout, and pagination
-  const { filters: activeFilters, updateFilters: setActiveFilters } = useUserFilterSettings(objectTypeId);
+  const { 
+    filters: activeFilters, 
+    updateFilters: setActiveFilters, 
+    settings,
+    savedFilters,
+    isLoading: isLoadingFilterSettings 
+  } = useUserFilterSettings(objectTypeId);
+  
   const { viewMode, updateViewMode } = useLayoutViewSettings(objectTypeId);
   const { pageSize, currentPage, setPageSize, setCurrentPage } = useUserPaginationSettings(objectTypeId);
   
   // Filter loading state
   const [isFilterLoading, setIsFilterLoading] = useState(false);
+  const [isApplyingFilterFromUrl, setIsApplyingFilterFromUrl] = useState(false);
   
   // Use our new paginated records hook
   const { 
@@ -66,6 +75,57 @@ export default function OptimizedRecordsList() {
 
   const { fields, isLoading: isLoadingFields } = useEnhancedFields(objectTypeId);
   const objectType = objectTypes?.find(type => type.id === objectTypeId);
+  
+  // Apply filter from URL if filterId is provided
+  // This will run only after the page has loaded and filter settings are available
+  useEffect(() => {
+    const applyFilterFromUrl = async () => {
+      if (filterId && savedFilters && !isApplyingFilterFromUrl && !isFilterLoading) {
+        try {
+          console.log("Attempting to apply filter from URL with ID:", filterId);
+          setIsApplyingFilterFromUrl(true);
+          
+          // Find the filter with matching ID
+          const filterToApply = savedFilters.find(filter => filter.id === filterId);
+          
+          if (filterToApply) {
+            console.log("Found filter to apply:", filterToApply);
+            
+            // Show toast notification
+            toast.success(`Anwenden des Filters "${filterToApply.name}"...`);
+            
+            // Add a small delay to ensure the UI is updated
+            setTimeout(() => {
+              // Apply the filter conditions
+              setActiveFilters(filterToApply.conditions);
+              
+              // Remove the filterId from the URL without navigating
+              navigate(`/objects/${objectTypeId}/optimized`, { replace: true });
+              
+              // Show success message
+              toast.success(`Filter "${filterToApply.name}" angewendet`);
+              setIsApplyingFilterFromUrl(false);
+            }, 500);
+          } else {
+            console.error("Filter not found with ID:", filterId);
+            toast.error("Der angegebene Filter konnte nicht gefunden werden.");
+            setIsApplyingFilterFromUrl(false);
+            navigate(`/objects/${objectTypeId}/optimized`, { replace: true });
+          }
+        } catch (error) {
+          console.error("Error applying filter from URL:", error);
+          toast.error("Fehler beim Laden des Filters. Bitte versuchen Sie es erneut.");
+          setIsApplyingFilterFromUrl(false);
+          navigate(`/objects/${objectTypeId}/optimized`, { replace: true });
+        }
+      }
+    };
+    
+    // Only try to apply the filter if we have savedFilters loaded and we're not already applying a filter
+    if (!isLoadingFilterSettings && savedFilters && filterId) {
+      applyFilterFromUrl();
+    }
+  }, [filterId, savedFilters, objectTypeId, navigate, setActiveFilters, isLoadingFilterSettings, isFilterLoading]);
   
   const [selectedRecords, setSelectedRecords] = useState<string[]>([]);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -201,6 +261,17 @@ export default function OptimizedRecordsList() {
       setIsFilterLoading(false);
     }, 300);
   };
+
+  // Show loading state while applying filter from URL
+  if (isApplyingFilterFromUrl) {
+    return (
+      <div className="flex flex-col justify-center items-center h-64">
+        <Loader2 className="h-12 w-12 animate-spin mb-4 text-primary" />
+        <h2 className="text-xl font-medium">Lade Filter...</h2>
+        <p className="text-muted-foreground mt-2">Bitte warten, während der Filter angewendet wird.</p>
+      </div>
+    );
+  }
 
   if (!objectType) {
     return (

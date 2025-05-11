@@ -60,12 +60,18 @@ export function useUserFilterSettings(objectTypeId: string | undefined) {
     });
   };
 
+  // Function to get a specific saved filter by ID
+  const getFilterById = (filterId: string) => {
+    return savedFilters.find(filter => filter.id === filterId);
+  };
+
   return {
     filters,
     savedFilters,
     updateFilters,
     saveFilter,
     deleteFilter,
+    getFilterById,
     settings,
     updateSettings,
     isLoading
