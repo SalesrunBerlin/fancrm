@@ -38,14 +38,15 @@ export function LoginHistoryTable({ loginHistory }: LoginHistoryTableProps) {
     if (!timestamp) return '-';
     
     try {
-      const date = new Date(typeof timestamp === 'number' ? timestamp : parseInt(timestamp as string));
+      // Stellen Sie sicher, dass timestamp als Zahl oder gültiges Datumsstring vorliegt
+      const date = new Date(typeof timestamp === 'number' ? timestamp : parseInt(String(timestamp)));
       
-      // Check if date is valid
+      // Prüfen Sie, ob das Datum gültig ist
       if (isNaN(date.getTime())) {
-        return String(timestamp).substring(0, 20); // Return part of the original string if not a valid date
+        return String(timestamp).substring(0, 20); // Geben Sie einen Teil des Originalstrings zurück, wenn kein gültiges Datum
       }
       
-      // Format the date as DD.MM.YYYY, HH:MM:SS (with proper zero padding)
+      // Formatieren Sie das Datum als DD.MM.YYYY, HH:MM:SS (mit richtiger Nullpolsterung)
       const day = String(date.getDate()).padStart(2, '0');
       const month = String(date.getMonth() + 1).padStart(2, '0');
       const year = date.getFullYear();
@@ -56,7 +57,7 @@ export function LoginHistoryTable({ loginHistory }: LoginHistoryTableProps) {
       return `${day}.${month}.${year}, ${hours}:${minutes}:${seconds}`;
     } catch (e) {
       console.error("Error formatting date:", e);
-      return String(timestamp).substring(0, 20); // Return part of the original string on error
+      return String(timestamp).substring(0, 20); // Geben Sie einen Teil des Originalstrings bei Fehler zurück
     }
   };
 

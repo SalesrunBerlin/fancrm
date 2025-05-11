@@ -20,15 +20,23 @@ export function formatDate(dateString: string | null | undefined): string {
   if (!dateString) return '-';
   
   try {
-    // Try to parse the date string first with parseISO for ISO strings
-    let date: Date;
+    // Versuche zuerst ISO-Strings mit parseISO zu parsen
+    let date: Date | null = null;
+    
     if (typeof dateString === 'string') {
+      // Versuche parseISO für ISO-Strings
       date = parseISO(dateString);
+      
+      // Wenn parseISO fehlschlägt, versuche es mit new Date()
+      if (!isValid(date)) {
+        date = new Date(dateString);
+      }
     } else {
+      // Falls dateString kein String ist, versuche es direkt mit new Date()
       date = new Date(dateString);
     }
     
-    // Check if the date is valid before formatting
+    // Prüfe, ob das Datum gültig ist, bevor es formatiert wird
     if (!isValid(date)) {
       console.warn(`Invalid date string: ${dateString}`);
       return dateString || '-';

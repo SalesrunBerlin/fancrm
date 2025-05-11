@@ -29,25 +29,47 @@ export function RelatedFieldValue({ field, value }: RelatedFieldValueProps) {
       
     case 'date':
       try {
-        // Safely parse the date
-        const date = typeof value === 'string' ? parseISO(value) : new Date(value);
-        if (!isValid(date)) {
-          return <span>{String(value)}</span>;
+        // Sicheres Parsen des Datums
+        if (typeof value === 'string') {
+          // Versuche es mit parseISO für ISO-Strings
+          const date = parseISO(value);
+          if (isValid(date)) {
+            return <span>{format(date, 'dd.MM.yyyy')}</span>;
+          }
+          
+          // Falls parseISO fehlschlägt, versuche es mit new Date()
+          const fallbackDate = new Date(value);
+          if (isValid(fallbackDate)) {
+            return <span>{format(fallbackDate, 'dd.MM.yyyy')}</span>;
+          }
         }
-        return <span>{format(date, 'dd.MM.yyyy')}</span>;
-      } catch {
+        // Falls alles fehlschlägt, zeige den ursprünglichen Wert an
+        return <span>{String(value)}</span>;
+      } catch (error) {
+        console.error("Error formatting date:", error, value);
         return <span>{String(value)}</span>;
       }
       
     case 'datetime':
       try {
-        // Safely parse the datetime
-        const date = typeof value === 'string' ? parseISO(value) : new Date(value);
-        if (!isValid(date)) {
-          return <span>{String(value)}</span>;
+        // Sicheres Parsen des Datums und der Zeit
+        if (typeof value === 'string') {
+          // Versuche es mit parseISO für ISO-Strings
+          const date = parseISO(value);
+          if (isValid(date)) {
+            return <span>{format(date, 'dd.MM.yyyy HH:mm')}</span>;
+          }
+          
+          // Falls parseISO fehlschlägt, versuche es mit new Date()
+          const fallbackDate = new Date(value);
+          if (isValid(fallbackDate)) {
+            return <span>{format(fallbackDate, 'dd.MM.yyyy HH:mm')}</span>;
+          }
         }
-        return <span>{format(date, 'dd.MM.yyyy HH:mm')}</span>;
-      } catch {
+        // Falls alles fehlschlägt, zeige den ursprünglichen Wert an
+        return <span>{String(value)}</span>;
+      } catch (error) {
+        console.error("Error formatting datetime:", error, value);
         return <span>{String(value)}</span>;
       }
       

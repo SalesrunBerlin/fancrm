@@ -10,7 +10,10 @@ interface PicklistValue {
   label: string;
   order_position: number;
   owner_id?: string;
-  color?: string; // Color property for Kanban view display
+  color?: string; // Hinzugefügt: Color-Eigenschaft für Kanban-Ansicht
+  // Weitere mögliche Eigenschaften aus der Datenbank
+  created_at?: string;
+  updated_at?: string;
 }
 
 interface AddPicklistValueData {
@@ -65,6 +68,7 @@ export function useFieldPicklistValues(fieldId: string) {
       
       // Generate default colors for picklist values if they don't have one
       const enhancedData = data.map((item, index) => {
+        // Wir prüfen, ob das item bereits eine color-Eigenschaft hat
         if (!item.color) {
           // Simple array of default colors - these will be used if no color is set
           const defaultColors = [
@@ -74,7 +78,7 @@ export function useFieldPicklistValues(fieldId: string) {
           // Use modulo to cycle through colors if we have more items than colors
           item.color = defaultColors[index % defaultColors.length];
         }
-        return item;
+        return item as PicklistValue;
       });
       
       console.log(`Found ${enhancedData.length} picklist values for field ${fieldId}`);
