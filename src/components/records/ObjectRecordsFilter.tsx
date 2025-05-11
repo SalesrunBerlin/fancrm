@@ -82,8 +82,8 @@ export function ObjectRecordsFilter({
     }
   }, [objectTypeId, user, activeFilters]);
 
-  // Debounced filter application function
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // Create a debounced apply function, but don't automatically call it
+  // This is now only used when the Apply button is clicked
   const debouncedApplyFilters = useCallback(
     debounce((filtersToApply: FilterCondition[]) => {
       if (onFilterChange) {
@@ -118,8 +118,8 @@ export function ObjectRecordsFilter({
           }
         }, 100);
       }
-    }, 250), // 250ms debounce
-    [onFilterChange, objectTypeId, setLastAppliedFilter]
+    }, 250),
+    [onFilterChange, objectTypeId, setLastAppliedFilter, onClose]
   );
 
   const addFilterCondition = () => {
@@ -202,60 +202,27 @@ export function ObjectRecordsFilter({
     delete updatedLastApplied[objectTypeId];
     setLastAppliedFilter(updatedLastApplied);
     
-    // Apply empty filter
-    debouncedApplyFilters(emptyFilter);
+    // Apply empty filter immediately
+    if (onFilterChange) {
+      onFilterChange(emptyFilter);
+      toast.success("Filters cleared");
+    }
     
     // Add a single empty condition after clearing
     setTimeout(() => {
       addFilterCondition();
     }, 0);
+    
+    // Close filter panel if onClose is provided
+    if (onClose) {
+      onClose();
+    }
   };
 
   const applyFilters = () => {
-    if (onFilterChange) {
-      // Remove empty filters before applying
-      const validFilters = filters.filter(f => 
-        f.value !== undefined && 
-        f.value !== null && 
-        f.value !== "" || 
-        f.operator === "isNull" || 
-        f.operator === "isNotNull"
-      );
-      
-      console.log("Applying filters:", validFilters);
-      
-      // Save as last applied filter
-      setLastAppliedFilter(prev => ({
-        ...prev,
-        [objectTypeId]: validFilters
-      }));
-      
-      setIsApplying(true);
-      
-      // Small delay to show loading state
-      setTimeout(() => {
-        onFilterChange(validFilters);
-        setIsApplying(false);
-        toast.success("Filters applied");
-        
-        // If onClose is provided, close the filter panel
-        if (onClose) {
-          onClose();
-        }
-      }, 100);
-    }
+    // Use the debounced function we defined earlier
+    debouncedApplyFilters(filters);
   };
-
-  // Auto-apply filters when they change
-  useEffect(() => {
-    if (filters.length > 0) {
-      // Apply after a small delay to allow for multiple changes
-      const timer = setTimeout(() => {
-        debouncedApplyFilters(filters);
-      }, 500);
-      return () => clearTimeout(timer);
-    }
-  }, [filters, debouncedApplyFilters]);
 
   return (
     <div className="space-y-4">

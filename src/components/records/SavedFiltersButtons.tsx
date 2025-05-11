@@ -44,21 +44,38 @@ export function SavedFiltersButtons({ objectTypeId, maxToShow = 3 }: SavedFilter
 
   const handleFilterClick = (filter: SavedFilter) => {
     try {
+      if (!filter.conditions || filter.conditions.length === 0) {
+        toast.error("This filter appears to be empty or invalid");
+        return;
+      }
+
+      // Ensure each filter condition has proper structure
+      const validatedConditions = filter.conditions.map(condition => {
+        // Ensure ID is present
+        if (!condition.id) {
+          condition.id = crypto.randomUUID();
+        }
+        
+        // Ensure required fields exist
+        if (!condition.fieldApiName || !condition.operator) {
+          throw new Error("Invalid filter condition detected");
+        }
+        
+        return condition;
+      });
+      
       // Navigate to optimized list with filter applied
       const lastAppliedStorageKey = `last-applied-filters-${userId}`;
       const currentLastApplied = localStorage.getItem(lastAppliedStorageKey);
       const lastApplied = currentLastApplied ? JSON.parse(currentLastApplied) : {};
       
-      console.log("Saving filter to apply:", filter.conditions);
-      
-      // Ensure each filter condition has a valid ID
-      const validatedConditions = filter.conditions.map(condition => ({
-        ...condition,
-        id: condition.id || crypto.randomUUID()
-      }));
+      console.log("Saving filter to apply:", validatedConditions);
       
       lastApplied[objectTypeId] = validatedConditions;
       localStorage.setItem(lastAppliedStorageKey, JSON.stringify(lastApplied));
+      
+      // Add a small toast notification before navigating
+      toast.success(`Loading ${filter.name} filter`);
       
       // Navigate to the optimized object list page with this filter applied
       navigate(`/objects/${objectTypeId}/optimized`);
@@ -83,7 +100,7 @@ export function SavedFiltersButtons({ objectTypeId, maxToShow = 3 }: SavedFilter
   );
 }
 
-// Component to display a filter badge with a count of matching records
+// Optimized component to display a filter badge with a count of matching records
 function FilterBadgeWithCount({ 
   filter, 
   objectTypeId, 
