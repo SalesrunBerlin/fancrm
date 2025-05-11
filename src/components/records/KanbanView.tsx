@@ -12,6 +12,7 @@ import { MoveToButton } from './MoveToButton';
 import { useObjectRecords } from '@/hooks/useObjectRecords';
 import { toast } from 'sonner';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Button } from '@/components/ui/button'; // Add this import!
 
 export interface PicklistValue {
   id: string;
