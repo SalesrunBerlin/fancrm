@@ -56,7 +56,7 @@ export function KanbanCard({ record, objectTypeId, onClick, isSelected }: Kanban
   return (
     <Card 
       className={cn(
-        "mb-2 cursor-pointer hover:shadow-md transition-shadow pl-7",
+        "mb-2 cursor-pointer hover:shadow-md transition-shadow",
         onClick ? "hover:border-primary/50" : "",
         isSelected ? "border-primary border-2" : ""
       )}
