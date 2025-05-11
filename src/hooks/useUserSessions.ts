@@ -39,7 +39,7 @@ export function useUserSessions(page = 1, filterOptions = {}) {
   const { isSuperAdmin } = useAuth();
   const [totalPages, setTotalPages] = useState(1);
 
-  // Query for user session statistics (aggregated data)
+  // Query for user session statistics using the optimized view
   const {
     data: sessionStats,
     isLoading: isLoadingStats,
@@ -51,15 +51,15 @@ export function useUserSessions(page = 1, filterOptions = {}) {
       if (!isSuperAdmin) throw new Error("Unauthorized");
       
       const { data, error } = await supabase
-        .from("admin_user_session_stats")
+        .from("admin_user_session_stats_optimized")
         .select("*");
       
       if (error) throw error;
       return data as UserSessionStats[];
     },
     enabled: isSuperAdmin,
-    staleTime: 60000, // 1 minute before considering data stale
-    cacheTime: 5 * 60 * 1000, // Cache for 5 minutes
+    staleTime: 300000, // 5 minutes before considering data stale (increased from 1 minute)
+    cacheTime: 1800000, // Cache for 30 minutes (increased from 5 minutes)
   });
 
   // Query for detailed session data with pagination
@@ -73,10 +73,13 @@ export function useUserSessions(page = 1, filterOptions = {}) {
     queryFn: async () => {
       if (!isSuperAdmin) throw new Error("Unauthorized");
 
-      // Count total rows for pagination
+      // Count total rows for pagination - Use an optimized count query
       const { count, error: countError } = await supabase
         .from("user_sessions")
-        .select("*", { count: "exact", head: true });
+        .select("id", { count: "exact", head: true })
+        .order('login_time', { ascending: false })
+        // Add time filter to reduce data volume
+        .gte('login_time', new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString());
       
       if (countError) throw countError;
       
@@ -88,12 +91,22 @@ export function useUserSessions(page = 1, filterOptions = {}) {
       let query = supabase
         .from("user_sessions")
         .select(`
-          *,
+          id,
+          user_id,
+          login_time,
+          logout_time,
+          is_active,
+          user_agent,
+          ip_address,
+          last_activity_time,
+          session_duration_seconds,
           profiles:user_id (email, first_name, last_name),
           activities_count:user_activities (count)
         `)
         .order('login_time', { ascending: false })
-        .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1);
+        .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1)
+        // Add time filter to reduce data volume
+        .gte('login_time', new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString());
       
       // Apply filters if provided
       // Filter logic can be extended here based on filterOptions
@@ -112,9 +125,53 @@ export function useUserSessions(page = 1, filterOptions = {}) {
       })) as SessionDetails[];
     },
     enabled: isSuperAdmin,
-    staleTime: 30000, // 30 seconds before considering data stale
+    staleTime: 120000, // 2 minutes before considering data stale (increased from 30 seconds)
     keepPreviousData: true, // Keep previous data while loading new data
   });
+
+  // New function to get user sessions by ID
+  const getUserSessions = (userId) => {
+    return useQuery({
+      queryKey: ["user-sessions-by-id", userId],
+      queryFn: async () => {
+        if (!isSuperAdmin || !userId) throw new Error("Unauthorized or invalid user ID");
+        
+        const { data, error } = await supabase
+          .from("user_sessions")
+          .select("*")
+          .eq("user_id", userId)
+          .order('login_time', { ascending: false })
+          // Add time filter to reduce data volume
+          .gte('login_time', new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString());
+        
+        if (error) throw error;
+        return data;
+      },
+      enabled: isSuperAdmin && !!userId,
+      staleTime: 120000, // 2 minutes
+    });
+  };
+
+  // New function to get session activities
+  const getSessionActivities = (sessionId) => {
+    return useQuery({
+      queryKey: ["session-activities", sessionId],
+      queryFn: async () => {
+        if (!isSuperAdmin || !sessionId) throw new Error("Unauthorized or invalid session ID");
+        
+        const { data, error } = await supabase
+          .from("user_activities")
+          .select("*, profiles:user_id(email) as user_email")
+          .eq("session_id", sessionId)
+          .order('timestamp', { ascending: false });
+        
+        if (error) throw error;
+        return data;
+      },
+      enabled: isSuperAdmin && !!sessionId,
+      staleTime: 120000, // 2 minutes
+    });
+  };
 
   return {
     sessionStats,
@@ -125,6 +182,8 @@ export function useUserSessions(page = 1, filterOptions = {}) {
     detailsError,
     refetchStats,
     refetchDetails,
+    getUserSessions,
+    getSessionActivities,
     pagination: {
       currentPage: page,
       totalPages

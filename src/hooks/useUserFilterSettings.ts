@@ -16,9 +16,9 @@ export function useUserFilterSettings(objectTypeId: string | undefined) {
     []
   );
   
-  // Database storage for authenticated users
+  // Database storage for authenticated users - with optimized staleTime/cacheTime
   const { settings: dbSettings, updateSettings: updateDbSettings, isLoading } = 
-    useUserViewSettings(objectTypeId, 'filters');
+    useUserViewSettings(objectTypeId, 'filters', false, 300000, 1800000); // 5min stale, 30min cache
     
   // Extract filters from database settings
   const dbFilters = (dbSettings.filters || []) as FilterCondition[];
@@ -26,27 +26,59 @@ export function useUserFilterSettings(objectTypeId: string | undefined) {
   // Determine which filters to use (DB if authenticated, local otherwise)
   const filters = user ? dbFilters : localFilters;
   
-  // Sync local storage with DB when DB settings change
+  // Sync local storage with DB when DB settings change - with debouncing
+  const [syncTimeout, setSyncTimeout] = useState<NodeJS.Timeout | null>(null);
+  
   useEffect(() => {
     if (user && dbFilters.length > 0 && !isLoading) {
-      setLocalFilters(dbFilters);
+      // Clear previous timeout if any
+      if (syncTimeout) {
+        clearTimeout(syncTimeout);
+      }
+      
+      // Set a new timeout to debounce updates
+      const timeout = setTimeout(() => {
+        setLocalFilters(dbFilters);
+      }, 2000); // 2 second debounce
+      
+      setSyncTimeout(timeout);
+      
+      return () => {
+        if (timeout) clearTimeout(timeout);
+      };
     }
   }, [user, dbFilters, isLoading, setLocalFilters]);
   
-  // Update filters in both DB (if authenticated) and local storage
+  // Update filters in both DB (if authenticated) and local storage - with debouncing
+  const [updateTimeout, setUpdateTimeout] = useState<NodeJS.Timeout | null>(null);
+  
   const updateFilters = useCallback((newFilters: FilterCondition[]) => {
-    // Always update local storage for immediate UI updates
+    // Always update local storage immediately for UI responsiveness
     setLocalFilters(newFilters);
     
-    // If user is authenticated, also update database
+    // If user is authenticated, debounce DB updates
     if (user && objectTypeId) {
-      updateDbSettings({
-        filters: newFilters
-      });
+      // Clear previous timeout if any
+      if (updateTimeout) {
+        clearTimeout(updateTimeout);
+      }
+      
+      // Set a new timeout for DB update
+      const timeout = setTimeout(() => {
+        updateDbSettings({
+          filters: newFilters
+        });
+      }, 2000); // 2 second debounce
+      
+      setUpdateTimeout(timeout);
+      
+      return () => {
+        if (timeout) clearTimeout(timeout);
+      };
     }
-  }, [setLocalFilters, updateDbSettings, user, objectTypeId]);
+  }, [setLocalFilters, updateDbSettings, user, objectTypeId, updateTimeout]);
 
-  // Save a filter with name for future use
+  // Save a filter with name for future use - with optimizations for infrequent operations
   const saveFilter = useCallback(async (name: string, conditions: FilterCondition[]) => {
     if (!user || !objectTypeId) return null;
     

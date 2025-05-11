@@ -38,17 +38,23 @@ interface PendingActivity {
 let currentSessionId: string | null = null;
 let pendingActivities: PendingActivity[] = [];
 let activityBatchTimeout: number | null = null;
-const BATCH_INTERVAL = 2000; // 2 seconds
-const MAX_BATCH_SIZE = 10;
+let lastActionMap: {[key: string]: number} = {}; // Track last timestamp of each action type
+const BATCH_INTERVAL = 5000; // 5 seconds (increased from 2 seconds)
+const MAX_BATCH_SIZE = 20; // Increased from 10
+const DEBOUNCE_INTERVAL = 60000; // 1 minute debounce for same actions
+const MAX_ACTIVITIES_PER_SESSION = 1000; // Cap on activities per session
+let activityCounter = 0;
 
 /**
  * Creates a new user session when a user logs in
  */
 export const startUserSession = async (userId: string): Promise<string | null> => {
   try {
+    // Reset activity counter on new session
+    activityCounter = 0;
+    
     // Get user agent and IP information
     let userAgent = '';
-    let ipAddress = '';
     
     if (typeof window !== 'undefined') {
       userAgent = window.navigator.userAgent;
@@ -60,7 +66,7 @@ export const startUserSession = async (userId: string): Promise<string | null> =
       .insert({
         user_id: userId,
         user_agent: userAgent,
-        ip_address: ipAddress,
+        ip_address: '', // Getting IP on client side is unreliable, better leave empty
       })
       .select('id')
       .single();
@@ -191,7 +197,7 @@ const processPendingActivities = async () => {
       object_type: activity.objectType,
       object_id: activity.objectId,
       details: activity.details || {},
-      created_at: new Date(activity.timestamp).toISOString()
+      timestamp: new Date(activity.timestamp).toISOString()
     }));
     
     // Insert activities in batch
@@ -229,6 +235,36 @@ export const trackActivity = async (
       return false;
     }
 
+    // Skip tracking if we've reached the activity limit for this session
+    if (activityCounter >= MAX_ACTIVITIES_PER_SESSION) {
+      console.warn('Activity limit reached for this session');
+      return false;
+    }
+    
+    // Create a key for this activity
+    const activityKey = `${activityType}-${action}-${objectType || ''}-${objectId || ''}`;
+    const now = Date.now();
+    
+    // Check if we already tracked a similar activity recently (debounce)
+    if (lastActionMap[activityKey] && (now - lastActionMap[activityKey] < DEBOUNCE_INTERVAL)) {
+      // Skip duplicated activity within debounce period
+      return true;
+    }
+    
+    // For page views, apply even more aggressive debouncing
+    if (activityType === 'view_page') {
+      // Only track one page view per minute per page
+      if (lastActionMap[`view-${objectType || ''}`] && 
+          (now - lastActionMap[`view-${objectType || ''}`] < DEBOUNCE_INTERVAL)) {
+        return true;
+      }
+      lastActionMap[`view-${objectType || ''}`] = now;
+    }
+    
+    // Update activity timestamp
+    lastActionMap[activityKey] = now;
+    activityCounter++;
+
     // Add activity to pending queue
     pendingActivities.push({
       userId,
@@ -237,7 +273,7 @@ export const trackActivity = async (
       objectType,
       objectId,
       details,
-      timestamp: Date.now()
+      timestamp: now
     });
     
     // Schedule batch processing
@@ -278,7 +314,8 @@ export const updateLastActivity = async (): Promise<void> => {
 /**
  * Setup a periodic heartbeat to update the last_activity_time
  */
-export const setupActivityHeartbeat = (intervalMs = 60000): () => void => {
+export const setupActivityHeartbeat = (intervalMs = 300000): () => void => {
+  // 5 minutes interval (increased from 1 minute)
   const intervalId = setInterval(() => {
     // Throttle activity updates to reduce database load
     updateLastActivity();
