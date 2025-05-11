@@ -1,7 +1,7 @@
 
 import { ObjectField } from "@/hooks/useObjectTypes";
 import { LookupValueDisplay } from "./LookupValueDisplay";
-import { format, isValid } from "date-fns";
+import { format, isValid, parseISO } from "date-fns";
 import { formatWithLineBreaks } from "@/lib/utils/textFormatUtils";
 
 interface RelatedFieldValueProps {
@@ -29,7 +29,8 @@ export function RelatedFieldValue({ field, value }: RelatedFieldValueProps) {
       
     case 'date':
       try {
-        const date = new Date(value);
+        // Safely parse the date
+        const date = typeof value === 'string' ? parseISO(value) : new Date(value);
         if (!isValid(date)) {
           return <span>{String(value)}</span>;
         }
@@ -40,7 +41,8 @@ export function RelatedFieldValue({ field, value }: RelatedFieldValueProps) {
       
     case 'datetime':
       try {
-        const date = new Date(value);
+        // Safely parse the datetime
+        const date = typeof value === 'string' ? parseISO(value) : new Date(value);
         if (!isValid(date)) {
           return <span>{String(value)}</span>;
         }

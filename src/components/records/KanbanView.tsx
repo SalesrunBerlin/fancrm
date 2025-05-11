@@ -7,6 +7,7 @@ import { useKanbanViewSettings } from '@/hooks/useKanbanViewSettings';
 import { useObjectFields } from '@/hooks/useObjectFields';
 import { useFieldPicklistValues } from '@/hooks/useFieldPicklistValues';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useNavigate } from 'react-router-dom';
 
 interface PicklistValue {
   id: string;
@@ -24,6 +25,7 @@ interface KanbanViewProps {
 }
 
 export function KanbanView({ objectTypeId, records, isLoading, onRecordClick }: KanbanViewProps) {
+  const navigate = useNavigate();
   const { settings, updateFieldApiName, isColumnExpanded, toggleColumnExpansion } = useKanbanViewSettings(objectTypeId);
   const { fields } = useObjectFields(objectTypeId);
   const [selectedField, setSelectedField] = useState<string | null>(settings?.fieldApiName || null);
@@ -77,6 +79,15 @@ export function KanbanView({ objectTypeId, records, isLoading, onRecordClick }: 
     return groups;
   }, [records, selectedField, picklistValues]);
 
+  const handleRecordClick = (recordId: string) => {
+    if (onRecordClick) {
+      onRecordClick(recordId);
+    } else {
+      // Use React Router navigation instead of direct browser navigation
+      navigate(`/objects/${objectTypeId}/records/${recordId}`);
+    }
+  };
+
   if (isLoading || isLoadingPicklist) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -108,7 +119,7 @@ export function KanbanView({ objectTypeId, records, isLoading, onRecordClick }: 
                   key={record.id}
                   record={record}
                   objectTypeId={objectTypeId}
-                  onClick={onRecordClick}
+                  onClick={handleRecordClick}
                 />
               ))}
               {groupedRecords[value.value]?.length === 0 && (

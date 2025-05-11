@@ -24,6 +24,7 @@ import Structures from "@/pages/Structures";
 import ReportsPage from "@/pages/ReportsPage";
 import HelpPage from "@/pages/HelpPage";
 import PublicActionPage from "@/pages/PublicActionPage";
+import PublicRecordPage from "@/pages/PublicRecordPage";
 import ActionsPage from "@/pages/ActionsPage";
 import ApplicationsPage from "@/pages/ApplicationsPage";
 import ObjectRecordDetail from "@/pages/ObjectRecordDetail";
@@ -62,7 +63,7 @@ function App() {
                 <Route path="/landing" element={<LandingPage />} />
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/public/action/:token" element={<PublicActionPage />} />
-                <Route path="/public/record/:token" element={<div>Public Record View</div>} />
+                <Route path="/public/record/:token/:recordId" element={<PublicRecordPage />} />
                 
                 {/* Protected routes with AuthGuard */}
                 <Route element={<AuthGuard />}>

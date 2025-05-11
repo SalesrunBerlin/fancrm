@@ -1,7 +1,7 @@
 
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
-import { isValid } from "date-fns"
+import { isValid, parseISO } from "date-fns"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -20,7 +20,14 @@ export function formatDate(dateString: string | null | undefined): string {
   if (!dateString) return '-';
   
   try {
-    const date = new Date(dateString);
+    // Try to parse the date string first with parseISO for ISO strings
+    let date: Date;
+    if (typeof dateString === 'string') {
+      date = parseISO(dateString);
+    } else {
+      date = new Date(dateString);
+    }
+    
     // Check if the date is valid before formatting
     if (!isValid(date)) {
       console.warn(`Invalid date string: ${dateString}`);
@@ -50,6 +57,12 @@ export function parseMultiFormatDate(dateString: string): string | null {
   
   try {
     // Try direct Date parsing (for ISO format and some other standard formats)
+    date = parseISO(trimmed);
+    if (isValid(date)) {
+      return date.toISOString().split('T')[0]; // Return YYYY-MM-DD
+    }
+    
+    // Try with new Date() if parseISO failed
     date = new Date(trimmed);
     if (isValid(date)) {
       return date.toISOString().split('T')[0]; // Return YYYY-MM-DD
