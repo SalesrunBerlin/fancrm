@@ -7,6 +7,7 @@ import { Action, useActions } from "@/hooks/useActions";
 import { toast } from "sonner";
 import { ExpandableActionButton } from "./ExpandableActionButton";
 import { Skeleton } from "@/components/ui/skeleton";
+import { supabase } from "@/integrations/supabase/client";
 
 interface ObjectActionsSectionProps {
   objectTypeId: string;

@@ -1,465 +1,122 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Card, CardHeader } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
-import { ObjectField, ObjectRecord } from '@/types/ObjectFieldTypes';
-import { KanbanCard } from './KanbanCard';
-import { Loader2, PlusCircle, Check, Settings, PenLine } from 'lucide-react'; 
-import { useKanbanViewSettings } from "@/hooks/useKanbanViewSettings";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useIsMobile } from "@/hooks/use-mobile";
-import { toast } from "sonner";
-import { KanbanFieldsDialog } from './KanbanFieldsDialog';
-import { useQuery } from "@tanstack/react-query";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { useFieldPicklistValues } from "@/hooks/useFieldPicklistValues";
 
-interface KanbanViewProps {
-  records: ObjectRecord[];
-  fields: ObjectField[];
-  objectTypeId: string;
-  onUpdateRecord: (recordId: string, fieldValues: Record<string, any>) => Promise<void>;
+import React, { useEffect, useState, useMemo } from 'react';
+import { Loader2 } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { KanbanCard } from './KanbanCard';
+import { useKanbanViewSettings } from '@/hooks/useKanbanViewSettings';
+import { useObjectFields } from '@/hooks/useObjectFields';
+import { useFieldPicklistValues } from '@/hooks/useFieldPicklistValues';
+import { Skeleton } from '@/components/ui/skeleton';
+
+interface PicklistValue {
+  id: string;
+  value: string;
+  color?: string;
+  order?: number;
 }
 
-export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: KanbanViewProps) {
-  // Find all suitable picklist fields for the Kanban view
-  const picklistFields = useMemo(() => 
-    fields.filter(field => field.data_type === 'picklist'), 
-    [fields]
-  );
-  
-  const { 
-    settings, 
-    updateFieldApiName, 
-    updateVisibleCardFields, 
-    getVisibleCardFields,
-    isLoading: isKanbanSettingsLoading
-  } = useKanbanViewSettings(objectTypeId);
-  
-  const isMobile = useIsMobile();
-  
-  // Get visible card fields from settings
-  const visibleCardFields = getVisibleCardFields();
-  
-  // State for field editor dialog
-  const [showFieldEditor, setShowFieldEditor] = useState(false);
-  
-  // State for selected records (for batch operations)
-  const [selectedRecords, setSelectedRecords] = useState<string[]>([]);
-  const [selectionMode, setSelectionMode] = useState(false);
-  
-  // Find the status field based on settings or default to first picklist field
-  const statusField = useMemo(() => 
-    fields.find(field => field.api_name === settings.fieldApiName) || 
-    picklistFields[0] || 
-    fields.find(field => field.data_type === 'picklist'),
-    [fields, settings.fieldApiName, picklistFields]
-  );
-  
-  // Use React Query for picklist values for better caching
-  const { data: picklistValues, isLoading: isLoadingPicklistValues } = useFieldPicklistValues(
-    statusField?.id || ''
-  );
-  
-  const [columns, setColumns] = useState<{[key: string]: ObjectRecord[]}>({});
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [draggedElement, setDraggedElement] = useState<string | null>(null);
-  const [activeDroppable, setActiveDroppable] = useState<string | null>(null);
-  const buttonsRef = useRef<{[key: string]: HTMLDivElement | null}>({});
+interface KanbanViewProps {
+  objectTypeId: string;
+  records: any[];
+  isLoading: boolean;
+  onRecordClick?: (id: string) => void;
+}
 
-  // Set initial field API name if none is saved
+export function KanbanView({ objectTypeId, records, isLoading, onRecordClick }: KanbanViewProps) {
+  const { settings, updateFieldApiName, isColumnExpanded, toggleColumnExpansion } = useKanbanViewSettings(objectTypeId);
+  const { fields } = useObjectFields(objectTypeId);
+  const [selectedField, setSelectedField] = useState<string | null>(settings?.fieldApiName || null);
+  
+  // Find all picklist fields that can be used for kanban view
+  const picklistFields = useMemo(() => {
+    return fields?.filter(field => field.data_type === 'picklist') || [];
+  }, [fields]);
+  
   useEffect(() => {
-    if (statusField && (!settings.fieldApiName || !fields.some(f => f.api_name === settings.fieldApiName))) {
-      console.log("Setting initial field API name:", statusField.api_name);
-      updateFieldApiName(statusField.api_name);
+    // Set the first picklist field as default if none selected
+    if (!selectedField && picklistFields.length > 0) {
+      const defaultField = picklistFields[0].api_name;
+      setSelectedField(defaultField);
+      updateFieldApiName(defaultField);
     }
-  }, [statusField, settings.fieldApiName, updateFieldApiName, fields]);
+  }, [picklistFields, selectedField, updateFieldApiName]);
 
-  // Use memoization to organize records into columns - major performance boost
-  useEffect(() => {
-    if (!statusField || (records.length === 0 && !picklistValues?.length)) {
-      setIsLoading(false);
-      return;
-    }
+  // Get picklist values for the selected field
+  const { picklistValues, isLoading: isLoadingPicklist } = useFieldPicklistValues(
+    objectTypeId,
+    selectedField || ''
+  );
 
-    // Organize records into columns - use a lazy approach for larger datasets
-    const organizeRecords = () => {
-      const kanbanColumns: {[key: string]: ObjectRecord[]} = {};
-      
-      // First, create an "Uncategorized" column for records without a status
-      kanbanColumns["uncategorized"] = [];
-      
-      // Create columns for all available picklist values from the database
-      if (picklistValues && picklistValues.length > 0) {
-        picklistValues.forEach(option => {
-          kanbanColumns[option.value] = [];
-        });
-      } else {
-        // If no picklist values are defined yet, create columns from record values
-        const statusValues = new Set<string>();
-        records.forEach(record => {
-          const status = record.field_values?.[statusField.api_name];
-          if (status) {
-            statusValues.add(status);
-          }
-        });
-        
-        statusValues.forEach(status => {
-          kanbanColumns[status] = [];
-        });
-      }
-      
-      // Put records in their respective columns
-      records.forEach(record => {
-        const status = record.field_values?.[statusField.api_name];
-        if (status && kanbanColumns[status]) {
-          kanbanColumns[status].push(record);
-        } else {
-          kanbanColumns["uncategorized"].push(record);
-        }
+  // Group records by picklist value
+  const groupedRecords = useMemo(() => {
+    if (!records || !selectedField) return {};
+    
+    const groups: Record<string, any[]> = {};
+    
+    // Initialize groups for all picklist values
+    if (picklistValues) {
+      picklistValues.forEach(value => {
+        groups[value.value] = [];
       });
-      
-      setColumns(kanbanColumns);
-      setIsLoading(false);
-    };
-
-    // Use requestIdleCallback or setTimeout for non-blocking rendering
-    if (window.requestIdleCallback) {
-      window.requestIdleCallback(() => organizeRecords());
-    } else {
-      setTimeout(organizeRecords, 0);
-    }
-  }, [records, statusField, picklistValues]);
-
-  const handleDragStart = (result: any) => {
-    setDraggedElement(result.draggableId);
-  };
-
-  const handleDragEnterButton = (columnId: string) => {
-    setActiveDroppable(columnId);
-  };
-
-  const handleDragLeaveButton = () => {
-    // We don't reset here since we want the highlight to persist
-    // until another column is entered or drag ends
-  };
-
-  const handleDragEnd = async (result: DropResult) => {
-    const { destination, source, draggableId } = result;
-    
-    setDraggedElement(null);
-    setActiveDroppable(null);
-    
-    // If dropped outside a droppable area or in the same column
-    if (
-      !destination || 
-      (source.droppableId === destination.droppableId && 
-       source.index === destination.index)
-    ) {
-      return;
     }
     
-    // Find the record being moved
-    const record = records.find(r => r.id === draggableId);
-    if (!record || !statusField) return;
+    // Add a group for empty values
+    groups[''] = [];
     
-    // Create updated record data
-    const newStatus = destination.droppableId === "uncategorized" ? null : destination.droppableId;
-    const updatedFieldValues = {
-      [statusField.api_name]: newStatus
-    };
-    
-    // Update the Kanban view immediately for a responsive feel
-    const sourceColumn = [...(columns[source.droppableId] || [])];
-    const destColumn = [...(columns[destination.droppableId] || [])];
-    
-    // Remove from source column
-    const [movedRecord] = sourceColumn.splice(source.index, 1);
-    
-    // Add to destination column
-    destColumn.splice(destination.index, 0, movedRecord);
-    
-    // Update UI
-    setColumns({
-      ...columns,
-      [source.droppableId]: sourceColumn,
-      [destination.droppableId]: destColumn
+    // Group records
+    records.forEach(record => {
+      const fieldValue = record.fields?.[selectedField] || '';
+      if (groups[fieldValue]) {
+        groups[fieldValue].push(record);
+      } else {
+        // If value doesn't match any picklist value, add to empty group
+        groups[''].push(record);
+      }
     });
     
-    try {
-      // Update the record in the database
-      await onUpdateRecord(draggableId, updatedFieldValues);
-    } catch (error) {
-      console.error("Failed to update record status:", error);
-      
-      // Revert the UI change on error
-      setColumns({
-        ...columns,
-        [source.droppableId]: columns[source.droppableId] || [],
-        [destination.droppableId]: columns[destination.droppableId] || []
-      });
-    }
-  };
+    return groups;
+  }, [records, selectedField, picklistValues]);
 
-  // Handle changing the selected field for Kanban view
-  const handleFieldChange = (fieldApiName: string) => {
-    console.log("Updating field API name to:", fieldApiName);
-    updateFieldApiName(fieldApiName);
-  };
-
-  // Handle toggling selection mode
-  const toggleSelectionMode = () => {
-    setSelectionMode(!selectionMode);
-    // Clear selections when exiting selection mode
-    if (selectionMode) {
-      setSelectedRecords([]);
-    }
-  };
-
-  // Handle selection of a record
-  const handleRecordSelection = (recordId: string, selected: boolean) => {
-    if (selected) {
-      setSelectedRecords(prev => [...prev, recordId]);
-    } else {
-      setSelectedRecords(prev => prev.filter(id => id !== recordId));
-    }
-  };
-
-  // Handle saving selected fields for card display
-  const handleSaveVisibleFields = (selectedFields: string[]) => {
-    console.log("Saving visible fields:", selectedFields);
-    updateVisibleCardFields(selectedFields);
-  };
-
-  // Handle batch update of selected records
-  const handleBatchUpdate = async (newStatus: string) => {
-    if (selectedRecords.length === 0 || !statusField) return;
-
-    try {
-      toast.loading(`Updating ${selectedRecords.length} records...`);
-      
-      // Update each selected record with the new status
-      await Promise.all(selectedRecords.map(recordId => 
-        onUpdateRecord(recordId, { [statusField.api_name]: newStatus })
-      ));
-      
-      toast.dismiss();
-      toast.success(`Updated ${selectedRecords.length} records to "${newStatus}"`);
-      
-      // Clear selections after successful update
-      setSelectedRecords([]);
-      setSelectionMode(false);
-    } catch (error) {
-      console.error("Failed to update records:", error);
-      toast.dismiss();
-      toast.error("Failed to update some records");
-    }
-  };
-
-  if (isLoading || isLoadingPicklistValues || isKanbanSettingsLoading) {
+  if (isLoading || isLoadingPicklist) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin" />
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
-  }
-
-  if (!statusField) {
-    return (
-      <div className="text-center py-8">
-        <p className="text-muted-foreground">
-          No picklist field found for Kanban view. Please create a status or picklist field.
-        </p>
-      </div>
-    );
-  }
-
-  // Get all column IDs for display
-  const allColumnIds = Object.keys(columns);
-  
-  // Move "uncategorized" to the end
-  const sortedColumnIds = allColumnIds.filter(id => id !== "uncategorized");
-  if (allColumnIds.includes("uncategorized")) {
-    sortedColumnIds.push("uncategorized");
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      {/* Kanban view controls */}
-      <div className="flex flex-col sm:flex-row justify-between gap-2 mb-2">
-        <div className="flex items-center gap-2">
-          <Select 
-            value={statusField.api_name} 
-            onValueChange={handleFieldChange}
+    <div className="w-full overflow-x-auto">
+      <div className="flex space-x-4 p-4 min-w-max">
+        {picklistValues?.map((value) => (
+          <div
+            key={value.id}
+            className="bg-card w-72 rounded-lg shadow flex flex-col"
           >
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Select field" />
-            </SelectTrigger>
-            <SelectContent>
-              {picklistFields.map(field => (
-                <SelectItem key={field.api_name} value={field.api_name}>
-                  {field.name}
-                </SelectItem>
+            <div 
+              className="p-3 font-medium border-b flex justify-between items-center"
+              style={{ backgroundColor: value.color ? `${value.color}20` : undefined }}
+            >
+              <span>{value.value || 'No Value'}</span>
+              <span className="text-muted-foreground text-sm">
+                {groupedRecords[value.value]?.length || 0}
+              </span>
+            </div>
+            <div className="p-2 flex-1 overflow-y-auto max-h-[calc(100vh-250px)]">
+              {groupedRecords[value.value]?.map((record) => (
+                <KanbanCard
+                  key={record.id}
+                  record={record}
+                  objectTypeId={objectTypeId}
+                  onClick={() => onRecordClick?.(record.id)}
+                />
               ))}
-            </SelectContent>
-          </Select>
-          
-          <Button
-            variant={selectionMode ? "default" : "outline"}
-            size="sm"
-            onClick={toggleSelectionMode}
-            className="ml-2"
-          >
-            {selectionMode ? "Cancel Selection" : "Select Items"}
-          </Button>
-
-          {/* Add Edit button for fields selection */}
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => setShowFieldEditor(true)}
-            className="ml-1"
-            title="Edit card fields"
-          >
-            <PenLine className="h-4 w-4" />
-          </Button>
-        </div>
-
-        {/* Batch update dropdown - only visible when records are selected */}
-        {selectedRecords.length > 0 && (
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium">
-              {selectedRecords.length} selected
-            </span>
-            
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button size="sm">
-                  Move To...
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                {/* Show "uncategorized" option */}
-                <DropdownMenuItem 
-                  onClick={() => handleBatchUpdate("")}
-                >
-                  Uncategorized
-                </DropdownMenuItem>
-                
-                {/* Show all picklist values from the database, not just those with records */}
-                {picklistValues && picklistValues.map((option) => (
-                  <DropdownMenuItem 
-                    key={option.id}
-                    onClick={() => handleBatchUpdate(option.value)}
-                  >
-                    {option.label}
-                    {option.value === statusField.api_name && <Check className="ml-2 h-4 w-4" />}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
+              {groupedRecords[value.value]?.length === 0 && (
+                <p className="text-center text-muted-foreground p-4">No records</p>
+              )}
+            </div>
           </div>
-        )}
-      </div>
-        
-      {/* Fields selection dialog */}
-      <KanbanFieldsDialog
-        isOpen={showFieldEditor}
-        onOpenChange={setShowFieldEditor}
-        fields={fields}
-        selectedFields={visibleCardFields}
-        onSave={handleSaveVisibleFields}
-      />
-
-      {/* Kanban board with virtualization for better performance */}
-      <div className="overflow-auto pb-4">
-        <DragDropContext
-          onDragStart={handleDragStart}
-          onDragEnd={handleDragEnd}
-        >
-          <div className="flex gap-4 overflow-x-auto pb-4 min-h-[70vh]">
-            {sortedColumnIds.map((columnId) => (
-              <div 
-                key={columnId}
-                className={`flex-shrink-0 w-72 bg-card rounded-md border shadow-sm flex flex-col ${
-                  activeDroppable === columnId ? 'border-primary border-2' : ''
-                }`}
-                ref={(el) => {
-                  if (el) {
-                    buttonsRef.current[columnId] = el;
-                  }
-                }}
-                onMouseEnter={() => draggedElement && handleDragEnterButton(columnId)}
-                onMouseLeave={() => draggedElement && handleDragLeaveButton()}
-              >
-                <CardHeader className="py-3 px-4 border-b bg-muted/50">
-                  <h3 className="text-sm font-medium">
-                    {columnId === "uncategorized" ? "Uncategorized" : 
-                     picklistValues?.find(pv => pv.value === columnId)?.label || columnId}
-                  </h3>
-                  <div className="text-xs text-muted-foreground">{columns[columnId].length} records</div>
-                </CardHeader>
-                <Droppable droppableId={columnId}>
-                  {(provided) => (
-                    <div
-                      {...provided.droppableProps}
-                      ref={provided.innerRef}
-                      className="flex-1 p-2 overflow-y-auto"
-                      style={{ minHeight: '200px' }}
-                    >
-                      {columns[columnId].map((record, index) => (
-                        <Draggable 
-                          key={record.id} 
-                          draggableId={record.id} 
-                          index={index}
-                          isDragDisabled={selectionMode}
-                        >
-                          {(provided, snapshot) => (
-                            <div
-                              ref={provided.innerRef}
-                              {...provided.draggableProps}
-                              {...provided.dragHandleProps}
-                            >
-                              <KanbanCard
-                                record={record}
-                                objectTypeId={objectTypeId}
-                                isDragging={snapshot.isDragging}
-                                isSelected={selectedRecords.includes(record.id)}
-                                onSelect={handleRecordSelection}
-                                selectionMode={selectionMode}
-                                visibleFields={visibleCardFields}
-                                fields={fields}
-                              />
-                            </div>
-                          )}
-                        </Draggable>
-                      ))}
-                      {provided.placeholder}
-                    </div>
-                  )}
-                </Droppable>
-                <div className="p-2 border-t">
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    className="w-full justify-start text-muted-foreground"
-                    onClick={() => {
-                      // Implement add new record functionality
-                    }}
-                  >
-                    <PlusCircle className="mr-1 h-4 w-4" />
-                    Add Record
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </DragDropContext>
+        ))}
       </div>
     </div>
   );
