@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { FilterCondition } from "@/hooks/useObjectRecords";
 import { useObjectRecords } from "@/hooks/useObjectRecords";
 import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 interface SavedFilter {
   id: string;
@@ -42,17 +43,29 @@ export function SavedFiltersButtons({ objectTypeId, maxToShow = 3 }: SavedFilter
   }
 
   const handleFilterClick = (filter: SavedFilter) => {
-    // Navigate to optimized list with filter applied
-    const lastAppliedStorageKey = `last-applied-filters-${userId}`;
-    const currentLastApplied = localStorage.getItem(lastAppliedStorageKey);
-    const lastApplied = currentLastApplied ? JSON.parse(currentLastApplied) : {};
-    
-    console.log("Saving filter to apply:", filter.conditions);
-    lastApplied[objectTypeId] = filter.conditions;
-    localStorage.setItem(lastAppliedStorageKey, JSON.stringify(lastApplied));
-    
-    // Navigate to the optimized object list page with this filter applied
-    navigate(`/objects/${objectTypeId}/optimized`);
+    try {
+      // Navigate to optimized list with filter applied
+      const lastAppliedStorageKey = `last-applied-filters-${userId}`;
+      const currentLastApplied = localStorage.getItem(lastAppliedStorageKey);
+      const lastApplied = currentLastApplied ? JSON.parse(currentLastApplied) : {};
+      
+      console.log("Saving filter to apply:", filter.conditions);
+      
+      // Ensure each filter condition has a valid ID
+      const validatedConditions = filter.conditions.map(condition => ({
+        ...condition,
+        id: condition.id || crypto.randomUUID()
+      }));
+      
+      lastApplied[objectTypeId] = validatedConditions;
+      localStorage.setItem(lastAppliedStorageKey, JSON.stringify(lastApplied));
+      
+      // Navigate to the optimized object list page with this filter applied
+      navigate(`/objects/${objectTypeId}/optimized`);
+    } catch (error) {
+      console.error("Error applying saved filter:", error);
+      toast.error("Could not apply the filter. Please try again.");
+    }
   };
 
   return (

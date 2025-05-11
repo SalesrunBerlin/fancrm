@@ -1,9 +1,8 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { ObjectField } from "@/hooks/useObjectTypes";
 import { FilterField } from "@/components/records/FilterField";
-import { Plus, Save, Trash } from "lucide-react";
+import { Plus, Save, Trash, X } from "lucide-react";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { FilterCondition } from "@/hooks/useObjectRecords";
 import { Card } from "@/components/ui/card";
@@ -23,13 +22,15 @@ interface ObjectRecordsFilterProps {
   fields: ObjectField[];
   onFilterChange?: (filters: FilterCondition[]) => void;
   activeFilters?: FilterCondition[];
+  onClose?: () => void;
 }
 
 export function ObjectRecordsFilter({ 
   objectTypeId, 
   fields,
   onFilterChange,
-  activeFilters = []
+  activeFilters = [],
+  onClose
 }: ObjectRecordsFilterProps) {
   const [filters, setFilters] = useState<FilterCondition[]>(activeFilters);
   const [isApplying, setIsApplying] = useState<boolean>(false);
@@ -68,19 +69,11 @@ export function ObjectRecordsFilter({
       if (lastFilter && lastFilter.length > 0) {
         console.log("Loading last applied filter:", lastFilter);
         setFilters(lastFilter);
-        if (onFilterChange) {
-          console.log("Applying last filter via onFilterChange");
-          onFilterChange(lastFilter);
-        }
       } else if (savedFilters?.[objectTypeId]?.length > 0) {
         // Otherwise try to load most recently saved filter
         const recentFilter = savedFilters[objectTypeId][0];
         console.log("Loading most recent saved filter:", recentFilter);
         setFilters(recentFilter.conditions);
-        if (onFilterChange) {
-          console.log("Applying recent filter via onFilterChange");
-          onFilterChange(recentFilter.conditions);
-        }
       } else if (filters.length === 0) {
         // Initialize with an empty filter if none exist
         console.log("Initializing with empty filter");
@@ -118,6 +111,11 @@ export function ObjectRecordsFilter({
           onFilterChange(validFilters);
           setIsApplying(false);
           toast.success("Filters applied");
+          
+          // If onClose is provided, close the filter panel
+          if (onClose) {
+            onClose();
+          }
         }, 100);
       }
     }, 250), // 250ms debounce
@@ -184,16 +182,6 @@ export function ObjectRecordsFilter({
   const loadSavedFilter = (savedFilter: SavedFilter) => {
     console.log("Loading saved filter:", savedFilter);
     setFilters(savedFilter.conditions);
-    
-    // Update last applied filter
-    console.log("Updating last applied filter storage");
-    setLastAppliedFilter({
-      ...lastAppliedFilter,
-      [objectTypeId]: savedFilter.conditions
-    });
-    
-    // Apply immediately
-    debouncedApplyFilters(savedFilter.conditions);
   };
 
   const deleteSavedFilter = (filterId: string) => {
@@ -224,7 +212,38 @@ export function ObjectRecordsFilter({
   };
 
   const applyFilters = () => {
-    debouncedApplyFilters(filters);
+    if (onFilterChange) {
+      // Remove empty filters before applying
+      const validFilters = filters.filter(f => 
+        f.value !== undefined && 
+        f.value !== null && 
+        f.value !== "" || 
+        f.operator === "isNull" || 
+        f.operator === "isNotNull"
+      );
+      
+      console.log("Applying filters:", validFilters);
+      
+      // Save as last applied filter
+      setLastAppliedFilter(prev => ({
+        ...prev,
+        [objectTypeId]: validFilters
+      }));
+      
+      setIsApplying(true);
+      
+      // Small delay to show loading state
+      setTimeout(() => {
+        onFilterChange(validFilters);
+        setIsApplying(false);
+        toast.success("Filters applied");
+        
+        // If onClose is provided, close the filter panel
+        if (onClose) {
+          onClose();
+        }
+      }, 100);
+    }
   };
 
   // Auto-apply filters when they change
@@ -243,6 +262,12 @@ export function ObjectRecordsFilter({
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-medium">Filter Records</h3>
         <div className="space-x-2">
+          {onClose && (
+            <Button size="sm" variant="ghost" onClick={onClose} className="p-0 h-8 w-8">
+              <X className="h-4 w-4" />
+              <span className="sr-only">Close</span>
+            </Button>
+          )}
           <Button size="sm" variant="outline" onClick={clearFilters}>
             Clear
           </Button>

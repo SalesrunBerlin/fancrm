@@ -1,40 +1,31 @@
 
 import { useUserViewSettings } from "./useUserViewSettings";
 
-export interface PaginationSettings {
-  pageSize: number;
-  currentPage: number;
-}
-
-const DEFAULT_PAGE_SIZE = 20;
-
 export function useUserPaginationSettings(objectTypeId: string | undefined) {
   const { settings, updateSettings, isLoading } = useUserViewSettings(objectTypeId, 'pagination');
   
-  // Initialize with default values if not set
-  const paginationSettings: PaginationSettings = {
-    pageSize: settings?.pageSize || DEFAULT_PAGE_SIZE,
-    currentPage: settings?.currentPage || 1
-  };
+  const pageSize = settings?.pageSize || 20;
+  const currentPage = settings?.currentPage || 1;
 
-  const updatePaginationSettings = (newSettings: Partial<PaginationSettings>) => {
+  const setPageSize = (newPageSize: number) => {
     updateSettings({
       ...settings,
-      ...newSettings
+      pageSize: newPageSize,
+      // Reset to page 1 when changing page size
+      currentPage: 1
     });
   };
 
-  const setPageSize = (pageSize: number) => {
-    updatePaginationSettings({ pageSize, currentPage: 1 }); // Reset to page 1 when changing page size
-  };
-
-  const setCurrentPage = (currentPage: number) => {
-    updatePaginationSettings({ currentPage });
+  const setCurrentPage = (newPage: number) => {
+    updateSettings({
+      ...settings,
+      currentPage: newPage
+    });
   };
 
   return {
-    pageSize: paginationSettings.pageSize,
-    currentPage: paginationSettings.currentPage,
+    pageSize,
+    currentPage,
     setPageSize,
     setCurrentPage,
     isLoading

@@ -5,7 +5,7 @@ import { useObjectTypes } from "@/hooks/useObjectTypes";
 import { FilterCondition } from "@/hooks/useObjectRecords";
 import { useEnhancedFields } from "@/hooks/useEnhancedFields";
 import { PageHeader } from "@/components/ui/page-header";
-import { Loader2, Plus, Upload, Trash2, Filter, KanbanIcon, TableIcon, Copy } from "lucide-react";
+import { Loader2, Plus, Upload, Trash2, Filter, KanbanIcon, TableIcon, Copy, X } from "lucide-react";
 import { RecordsTable } from "@/components/records/RecordsTable";
 import { Card } from "@/components/ui/card";
 import { FieldsConfigDialog } from "@/components/records/FieldsConfigDialog";
@@ -52,9 +52,18 @@ export default function OptimizedRecordsList() {
     isLoading, 
     deleteRecord, 
     updateRecord, 
-    cloneRecord 
+    cloneRecord,
+    error
   } = usePaginatedObjectRecords(objectTypeId, activeFilters, currentPage, pageSize);
   
+  // Show error if records failed to load
+  useEffect(() => {
+    if (error) {
+      console.error("Error loading records:", error);
+      toast.error("Failed to load records. Please try again.");
+    }
+  }, [error]);
+
   const { fields, isLoading: isLoadingFields } = useEnhancedFields(objectTypeId);
   const objectType = objectTypes?.find(type => type.id === objectTypeId);
   
@@ -327,18 +336,8 @@ export default function OptimizedRecordsList() {
             fields={allFields} 
             onFilterChange={handleFilterChange}
             activeFilters={activeFilters}
+            onClose={toggleFilterPanel}
           />
-          {activeFilters.length > 0 && (
-            <div className="flex justify-end mt-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={clearFilters}
-              >
-                Clear All Filters
-              </Button>
-            </div>
-          )}
         </Card>
       )}
 
@@ -408,6 +407,39 @@ export default function OptimizedRecordsList() {
         {showLoadingState ? (
           <div className="flex justify-center py-8">
             <Loader2 className="h-8 w-8 animate-spin" />
+          </div>
+        ) : records.length === 0 && activeFilters.length > 0 ? (
+          <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
+            <Filter className="h-10 w-10 text-muted-foreground mb-4" />
+            <h3 className="text-lg font-medium">No records match your filters</h3>
+            <p className="text-muted-foreground mt-2 mb-6">
+              Try adjusting your filter criteria or creating a new record.
+            </p>
+            <div className="flex gap-4">
+              <Button variant="outline" onClick={clearFilters}>
+                Clear Filters
+              </Button>
+              <Button asChild>
+                <Link to={`/objects/${objectTypeId}/new`}>
+                  <Plus className="mr-1.5 h-4 w-4" />
+                  New {objectType.name}
+                </Link>
+              </Button>
+            </div>
+          </div>
+        ) : records.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
+            <TableIcon className="h-10 w-10 text-muted-foreground mb-4" />
+            <h3 className="text-lg font-medium">No records found</h3>
+            <p className="text-muted-foreground mt-2 mb-6">
+              Get started by creating your first record.
+            </p>
+            <Button asChild>
+              <Link to={`/objects/${objectTypeId}/new`}>
+                <Plus className="mr-1.5 h-4 w-4" />
+                New {objectType.name}
+              </Link>
+            </Button>
           </div>
         ) : (
           <>
