@@ -1,79 +1,188 @@
 
-import React from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { cn } from '@/lib/utils';
+import { useState } from "react";
+import { ObjectRecord, ObjectField } from "@/types/ObjectFieldTypes";
+import { Card, CardContent } from "@/components/ui/card";
+import { useNavigate } from "react-router-dom";
+import { Checkbox } from "@/components/ui/checkbox";
+import { LookupValueDisplay } from "./LookupValueDisplay";
 
-export interface KanbanCardProps {
-  record: any;
+interface KanbanCardProps {
+  record: ObjectRecord;
   objectTypeId: string;
-  onClick?: (id: string) => void;
+  isDragging?: boolean;
+  className?: string;
+  isSelected?: boolean;
+  onSelect?: (recordId: string, selected: boolean) => void;
+  selectionMode?: boolean;
+  visibleFields?: string[]; // Prop for visible fields
+  fields?: ObjectField[]; // All available fields for formatting
 }
 
-export function KanbanCard({ record, objectTypeId, onClick }: KanbanCardProps) {
-  const handleClick = () => {
-    if (onClick) {
-      onClick(record.id);
-    }
-  };
-  
-  // Get the name field or first field value for display
-  const getDisplayName = () => {
-    const nameField = record?.fields?.name || record?.name;
+export function KanbanCard({ 
+  record, 
+  objectTypeId, 
+  isDragging = false, 
+  className = "",
+  isSelected = false,
+  onSelect,
+  selectionMode = false,
+  visibleFields = [],
+  fields = []
+}: KanbanCardProps) {
+  const navigate = useNavigate();
+  const [isHovered, setIsHovered] = useState(false);
+  // Cache for lookup values to avoid redundant renders
+  const [lookupCache] = useState<Record<string, boolean>>({});
+
+  // For the record name/title, we'll look for common naming fields
+  const getRecordName = () => {
+    const commonNameFields = ['name', 'title', 'subject', 'display_name'];
     
-    if (nameField) {
-      return nameField;
-    }
+    if (record.displayName) return record.displayName;
     
-    // If no name field, get the first non-empty field value
-    const firstValue = Object.values(record?.fields || {}).find(val => val);
-    return firstValue || `Record ${record.id.substring(0, 8)}`;
-  };
-  
-  // Get the description field or second field value for display
-  const getDescription = () => {
-    const descField = record?.fields?.description || record?.description;
-    
-    if (descField) {
-      return descField;
-    }
-    
-    // Get field keys and values
-    const fields = record?.fields || {};
-    const fieldEntries = Object.entries(fields);
-    
-    // Skip the first entry (assumed to be the title) and get the next one
-    if (fieldEntries.length > 1) {
-      const [fieldName, fieldValue] = fieldEntries[1];
-      if (fieldValue) {
-        return `${fieldName}: ${fieldValue}`;
+    if (record.field_values) {
+      // Try common name fields
+      for (const field of commonNameFields) {
+        if (record.field_values[field]) {
+          return record.field_values[field];
+        }
+      }
+      
+      // If no common field found, use the first non-empty field
+      const firstNonEmptyField = Object.entries(record.field_values)
+        .find(([_, value]) => value !== null && value !== undefined && value !== '');
+      
+      if (firstNonEmptyField) {
+        return firstNonEmptyField[1];
       }
     }
     
-    return null;
+    // Fallback to record ID
+    return `Record ${record.id.slice(0, 8)}`;
   };
-  
+
+  // Format field value based on field type
+  const formatFieldValue = (apiName: string, value: any) => {
+    if (value === null || value === undefined) return "-";
+    
+    // Find field definition for proper formatting
+    const field = fields.find(f => f.api_name === apiName);
+    
+    if (!field) return String(value);
+    
+    switch(field.data_type) {
+      case 'lookup':
+        // Return a special component for lookup fields
+        const targetObjectTypeId = field.options?.target_object_type_id;
+        // Mark this field as a lookup in the cache
+        lookupCache[apiName] = true;
+        return { isLookup: true, value, targetObjectTypeId, displayFieldApiName: field.options?.display_field_api_name };
+      case 'date':
+      case 'datetime':
+        try {
+          const date = new Date(value);
+          return date.toLocaleDateString();
+        } catch (e) {
+          return String(value);
+        }
+      case 'number':
+      case 'currency':
+        return typeof value === 'number' ? value.toLocaleString() : value;
+      case 'boolean':
+        return value === true ? 'Yes' : 'No';
+      default:
+        return String(value);
+    }
+  };
+
+  const handleCardClick = (e: React.MouseEvent) => {
+    // If we're in selection mode or clicked on checkbox, don't navigate
+    if (selectionMode || e.target instanceof HTMLInputElement) {
+      return;
+    }
+    navigate(`/objects/${objectTypeId}/${record.id}`);
+  };
+
+  const handleCheckboxChange = (checked: boolean) => {
+    if (onSelect) {
+      onSelect(record.id, checked);
+    }
+  };
+
+  // Format record name for display with line break if it's too long
+  const recordName = getRecordName();
+  const formatDisplayName = (name: string | any) => {
+    if (typeof name !== 'string') {
+      return String(name);
+    }
+    
+    if (name.length > 25) {
+      return (
+        <>
+          {name.slice(0, 25)}…
+        </>
+      );
+    }
+    return name;
+  };
+
+  // Safety check for visibleFields
+  const safeVisibleFields = Array.isArray(visibleFields) ? visibleFields : [];
+
   return (
     <Card 
-      className={cn(
-        "mb-2 cursor-pointer hover:shadow-md transition-shadow",
-        onClick ? "hover:border-primary/50" : ""
-      )}
-      onClick={handleClick}
+      className={`mb-2 cursor-pointer ${isDragging ? 'shadow-lg' : ''} ${isSelected ? 'ring-2 ring-primary' : ''} ${className}`}
+      onClick={handleCardClick}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
     >
-      <CardHeader className="p-3 pb-2">
-        <CardTitle className="text-sm font-medium truncate">
-          {getDisplayName()}
-        </CardTitle>
-        {getDescription() && (
-          <CardDescription className="text-xs truncate">
-            {getDescription()}
-          </CardDescription>
-        )}
-      </CardHeader>
-      <CardContent className="p-3 pt-0">
-        <div className="flex justify-between items-center text-xs text-muted-foreground">
-          <span>{record.id.substring(0, 8)}</span>
+      <CardContent className="p-3 relative">
+        <div className="flex items-center gap-2">
+          {/* Show checkbox when in selection mode (regardless of device type) */}
+          {selectionMode && (
+            <Checkbox 
+              checked={isSelected}
+              onCheckedChange={handleCheckboxChange}
+              onClick={(e) => e.stopPropagation()}
+              className="mr-2"
+            />
+          )}
+          <div className="text-sm font-medium flex-1">
+            {formatDisplayName(recordName)}
+          </div>
         </div>
+
+        {/* Display additional fields when selected - NOW MORE COMPACT */}
+        {safeVisibleFields.length > 0 && record.field_values && (
+          <div className="mt-2 pt-2 border-t border-gray-100 text-xs">
+            <div className="flex flex-wrap gap-x-3 gap-y-1">
+              {safeVisibleFields.map((fieldApiName) => {
+                const formattedValue = formatFieldValue(fieldApiName, record.field_values?.[fieldApiName]);
+                
+                // Special handling for lookup fields
+                if (formattedValue && typeof formattedValue === 'object' && formattedValue.isLookup) {
+                  return (
+                    <span key={fieldApiName} className="text-muted-foreground">
+                      <LookupValueDisplay 
+                        value={formattedValue.value} 
+                        fieldOptions={{
+                          target_object_type_id: formattedValue.targetObjectTypeId,
+                          display_field_api_name: formattedValue.displayFieldApiName
+                        }}
+                      />
+                    </span>
+                  );
+                }
+                
+                return (
+                  <span key={fieldApiName} className="text-muted-foreground">
+                    {formattedValue}
+                  </span>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

@@ -43,13 +43,12 @@ export default function ObjectRecordsList() {
   const { fields, isLoading: isLoadingFields } = useEnhancedFields(objectTypeId);
   const objectType = objectTypes?.find(type => type.id === objectTypeId);
   
+  // Update view mode to also be stored in user settings
   const [allRecords, setAllRecords] = useState<any[]>([]);
   const [selectedRecords, setSelectedRecords] = useState<string[]>([]);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isCloneDialogOpen, setIsCloneDialogOpen] = useState(false);
-  
-  // Update to use the enhanced hook that persists to database
-  const { visibleFields, updateVisibleFields, isLoading: isLoadingFieldSettings } = useUserFieldSettings(objectTypeId);
+  const { visibleFields, updateVisibleFields } = useUserFieldSettings(objectTypeId);
   const { favoriteColor } = useAuth();
   
   // System fields definition
@@ -402,9 +401,19 @@ export default function ObjectRecordsList() {
               <div className="p-4">
                 <KanbanView
                   records={allRecords}
+                  fields={fields || []}
                   objectTypeId={objectTypeId!}
-                  isLoading={isLoading}
-                  onRecordClick={(recordId) => window.location.href = `/objects/${objectTypeId}/records/${recordId}`}
+                  onUpdateRecord={async (recordId, fieldValues) => {
+                    try {
+                      await updateRecord.mutateAsync({
+                        id: recordId,
+                        field_values: fieldValues
+                      });
+                    } catch (error) {
+                      console.error("Error updating record:", error);
+                      throw error;
+                    }
+                  }}
                 />
               </div>
             )}

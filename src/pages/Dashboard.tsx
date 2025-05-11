@@ -14,12 +14,10 @@ import { ExpandableActionButton } from "@/components/actions/ExpandableActionBut
 import { useActions } from "@/hooks/useActions";
 import { SavedFiltersButtons } from "@/components/records/SavedFiltersButtons";
 import { ObjectCountBadge } from "@/components/dashboard/ObjectCountBadge";
-import { useIsMobile } from "@/hooks/use-mobile";
 
 export default function Dashboard() {
   const { user } = useAuth();
   const { currentApplication, appObjects, isLoading } = useCurrentApplicationData();
-  const isMobile = useIsMobile();
   
   // Filter objects to only show those owned by the current user or system objects
   // that are active, and don't show published objects from other users
@@ -43,7 +41,7 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="container mx-auto p-2 sm:p-4 space-y-4 sm:space-y-6">
+    <div className="container mx-auto p-4 space-y-6">
       <PageHeader 
         title="Dashboard"
         description={currentApplication ? `Current Application: ${currentApplication.name}` : "No application selected"}
@@ -51,7 +49,7 @@ export default function Dashboard() {
       />
       
       {isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {[1, 2, 3, 4, 5, 6].map(i => (
             <Card key={i}>
               <CardHeader>
@@ -68,7 +66,7 @@ export default function Dashboard() {
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -77,12 +75,12 @@ export default function Dashboard() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-muted-foreground text-sm sm:text-base mb-4">
+              <p className="text-muted-foreground mb-4">
                 Your custom CRM solution is ready. You can create and manage your own
                 object types and records in the Settings section.
               </p>
               {currentApplication && (
-                <p className="text-xs sm:text-sm bg-muted p-2 rounded-md">
+                <p className="text-sm bg-muted p-2 rounded-md">
                   You're currently in the <strong>{currentApplication.name}</strong> application
                 </p>
               )}
@@ -91,9 +89,9 @@ export default function Dashboard() {
 
           {filteredObjects?.filter(type => type.is_active).map((objectType) => (
             <Card key={objectType.id} className="flex flex-col">
-              <CardHeader className="pb-1 sm:pb-2 relative">
+              <CardHeader className="pb-2 relative">
                 <Link to={`/objects/${objectType.id}`}>
-                  <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                  <CardTitle className="flex items-center gap-2">
                     {getIconComponent(objectType.icon)}
                     <div className="flex items-center gap-1">
                       {objectType.name}
@@ -101,20 +99,15 @@ export default function Dashboard() {
                   </CardTitle>
                 </Link>
                 {/* Add record count badge in top right */}
-                <div className="absolute top-3 sm:top-4 right-3 sm:right-4">
+                <div className="absolute top-4 right-4">
                   <ObjectCountBadge objectTypeId={objectType.id} />
                 </div>
               </CardHeader>
-              <CardContent className="pt-1 sm:pt-3 flex flex-col">
+              <CardContent className="pt-3 flex flex-col">
                 <DashboardObjectActions objectTypeId={objectType.id} />
                 
-                {/* Add SavedFiltersButtons component with explicit visibility */}
-                <div className="block w-full">
-                  <SavedFiltersButtons 
-                    objectTypeId={objectType.id} 
-                    maxToShow={isMobile ? 2 : 3} 
-                  />
-                </div>
+                {/* Add SavedFiltersButtons component */}
+                <SavedFiltersButtons objectTypeId={objectType.id} maxToShow={3} />
               </CardContent>
             </Card>
           ))}
@@ -139,15 +132,13 @@ function ObjectRecordCount({ objectTypeId }: { objectTypeId: string }) {
 function DashboardObjectActions({ objectTypeId }: { objectTypeId: string }) {
   const { getActionsByObjectId } = useActions();
   const [actions, setActions] = useState<any[]>([]);
-  const isMobile = useIsMobile();
   
   useEffect(() => {
     const loadActions = async () => {
       try {
         const objectActions = await getActionsByObjectId(objectTypeId);
-        // Limit to fewer actions on mobile
-        const limit = isMobile ? 4 : 5;
-        setActions(objectActions.slice(0, limit));
+        // Limit to 5 actions max now
+        setActions(objectActions.slice(0, 5));
       } catch (error) {
         console.error("Error loading actions for dashboard:", error);
       }
@@ -156,28 +147,25 @@ function DashboardObjectActions({ objectTypeId }: { objectTypeId: string }) {
     if (objectTypeId) {
       loadActions();
     }
-  }, [objectTypeId, getActionsByObjectId, isMobile]);
+  }, [objectTypeId, getActionsByObjectId]);
   
   if (!actions.length) {
     return null;
   }
   
-  // Display actions in a flex row with gap, wrapping as needed
+  // Display actions in a single horizontal row, spread across the full width
   return (
-    <div className="flex flex-wrap gap-1 sm:gap-2 w-full mb-2 sm:mb-4">
+    <div className="flex flex-row justify-between w-full gap-2">
       {actions.map((action) => (
-        <div key={action.id} className="w-[calc(50%-2px)] sm:w-[calc(50%-4px)]"> {/* Adjust gap for mobile */}
-          <ExpandableActionButton
-            key={action.id}
-            actionName={action.name}
-            color={action.color}
-            compact={true}
-            wideButton={true}
-            onExecute={() => {
-              window.location.href = `/actions/execute/${action.id}`;
-            }}
-          />
-        </div>
+        <ExpandableActionButton
+          key={action.id}
+          actionName={action.name}
+          color={action.color}
+          compact={true}
+          onExecute={() => {
+            window.location.href = `/actions/execute/${action.id}`;
+          }}
+        />
       ))}
     </div>
   );

@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -98,7 +99,7 @@ export function useActions() {
   const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
 
-  // Get all actions using the materialized view for better performance
+  // Get all actions
   const { data: actions, refetch } = useQuery({
     queryKey: ["actions"],
     queryFn: async () => {
@@ -106,9 +107,9 @@ export function useActions() {
       
       console.log("useActions: Fetching all actions");
       const { data, error } = await supabase
-        .from("action_metadata_view")
-        .select("*")
-        .order("action_name", { ascending: true });
+        .from("actions")
+        .select("*, object_types(name,api_name)")
+        .order("created_at", { ascending: false });
 
       if (error) {
         console.error("Error fetching actions:", error);
@@ -116,151 +117,18 @@ export function useActions() {
         return [];
       }
 
-      // Map the materialized view data back to the Action format
+      console.log(`useActions: Fetched ${data?.length || 0} actions`);
+      
+      // Ensure color is a valid ActionColor by explicitly casting
       const typedData = data.map(item => ({
-        id: item.action_id,
-        name: item.action_name,
-        description: item.description,
-        action_type: item.action_type as ActionType,
-        target_object_id: item.target_object_id,
-        source_field_id: item.source_field_id,
-        lookup_field_id: item.lookup_field_id,
-        color: (item.color || 'default') as ActionColor,
-        is_public: item.is_public,
-        owner_id: user.id, // We don't store this in the view
-        created_at: "", // These fields aren't important for the UI
-        updated_at: "",
-        // Additional metadata from joins
-        object_types: {
-          name: item.target_object_name,
-          api_name: item.target_object_api_name
-        }
+        ...item,
+        color: (item.color || 'default') as ActionColor
       }));
       
       return typedData as (Action & { object_types: { name: string; api_name: string } })[];
     },
     enabled: !!user,
-    staleTime: 1000 * 60 * 5, // 5 minutes
-    gcTime: 1000 * 60 * 30,   // 30 minutes
   });
-
-  // Get actions by object type ID - optimized to use the materialized view
-  const getActionsByObjectId = async (objectTypeId: string): Promise<Action[]> => {
-    if (!user || !objectTypeId) {
-      console.log("useActions.getActionsByObjectId: No user or objectTypeId provided");
-      return [];
-    }
-    
-    // Fetch from cache if available
-    const existingActions = queryClient.getQueryData<Action[]>(["actions-by-object", objectTypeId]);
-    if (existingActions) {
-      return existingActions;
-    }
-    
-    try {
-      // First get actions where this object is the target (standard global actions)
-      const { data: targetActions, error: targetError } = await supabase
-        .from("action_metadata_view")
-        .select("*")
-        .eq("target_object_id", objectTypeId);
-
-      if (targetError) {
-        console.error("Error fetching target actions:", targetError);
-        throw targetError;
-      }
-
-      // Get lookup field details to check for linked record actions
-      const { data: objectFields, error: fieldsError } = await supabase
-        .from("object_fields")
-        .select("id, api_name, options")
-        .eq("object_type_id", objectTypeId)
-        .eq("data_type", "lookup");
-      
-      if (fieldsError) {
-        console.error("Error fetching object fields:", fieldsError);
-      }
-      
-      // Find source actions (linked record actions)
-      const { data: sourceActions, error: sourceError } = await supabase
-        .from("action_metadata_view")
-        .select("*")
-        .eq("action_type", "linked_record")
-        .not("source_field_id", "is", null);
-
-      if (sourceError) {
-        console.error("Error fetching source actions:", sourceError);
-        throw sourceError;
-      }
-
-      // Filter source actions based on target object type
-      const validSourceActions = sourceActions.filter(action => {
-        // Check if the source field options match our current object type
-        if (!action.source_field_id) return false;
-        
-        // Find the corresponding object field
-        const field = objectFields?.find(f => f.id === action.source_field_id);
-        if (!field) return false;
-        
-        // Check field options
-        try {
-          let options = field.options;
-          if (typeof options === 'string') {
-            options = JSON.parse(options);
-          }
-          
-          if (options && typeof options === 'object' && !Array.isArray(options)) {
-            const typedOptions = options as Record<string, any>;
-            return typedOptions.target_object_type_id === objectTypeId;
-          }
-        } catch (e) {
-          console.error("Error parsing field options:", e);
-        }
-        
-        return false;
-      });
-
-      // Get mass actions that apply to this object type
-      const { data: massActions, error: massActionsError } = await supabase
-        .from("action_metadata_view")
-        .select("*")
-        .eq("action_type", "mass_action")
-        .eq("target_object_id", objectTypeId);
-
-      if (massActionsError) {
-        console.error("Error fetching mass actions:", massActionsError);
-      }
-
-      // Convert view data back to Action format and combine
-      const convertToAction = (item: any): Action => ({
-        id: item.action_id,
-        name: item.action_name,
-        description: item.description,
-        action_type: item.action_type as ActionType,
-        target_object_id: item.target_object_id,
-        source_field_id: item.source_field_id,
-        lookup_field_id: item.lookup_field_id,
-        color: (item.color || 'default') as ActionColor,
-        is_public: item.is_public,
-        owner_id: user.id,
-        created_at: "",
-        updated_at: ""
-      });
-
-      const allActions = [
-        ...(targetActions?.map(convertToAction) || []),
-        ...validSourceActions.map(convertToAction),
-        ...(massActions?.map(convertToAction) || [])
-      ];
-      
-      // Cache the results
-      queryClient.setQueryData(["actions-by-object", objectTypeId], allActions);
-      
-      return allActions;
-    } catch (error) {
-      console.error("Exception in getActionsByObjectId:", error);
-      throw error;
-    }
-  };
 
   // Get action by token
   const getActionByToken = async (token: string): Promise<Action | null> => {
@@ -301,6 +169,124 @@ export function useActions() {
     } catch (error) {
       console.error("Error in getActionByToken:", error);
       return null;
+    }
+  };
+
+  // Get actions by object type ID - including both target and source actions
+  const getActionsByObjectId = async (objectTypeId: string): Promise<Action[]> => {
+    if (!user || !objectTypeId) {
+      console.log("useActions.getActionsByObjectId: No user or objectTypeId provided");
+      return [];
+    }
+    
+    console.log(`useActions: Fetching actions for objectTypeId: ${objectTypeId}`);
+    
+    try {
+      // First get actions where this object is the target (standard global actions)
+      const { data: targetActions, error: targetError } = await supabase
+        .from("actions")
+        .select("*")
+        .eq("target_object_id", objectTypeId);
+
+      if (targetError) {
+        console.error("Error fetching target actions:", targetError);
+        throw targetError;
+      }
+
+      // Then get actions where this object is the source (linked record actions)
+      // We need to find actions that have source_field_id pointing to fields that reference this object type
+      const { data: sourceActions, error: sourceError } = await supabase
+        .from("actions")
+        .select("*")
+        .filter("action_type", "eq", "linked_record")
+        .filter("source_field_id", "not.is", null)
+        .order("created_at", { ascending: false });
+
+      if (sourceError) {
+        console.error("Error fetching source actions:", sourceError);
+        throw sourceError;
+      }
+
+      // For source actions, we need to filter them further
+      // by checking if they reference fields that point to our object type
+      let validSourceActions: Action[] = [];
+      
+      if (sourceActions && sourceActions.length > 0) {
+        // Get all field IDs from source actions
+        const fieldIds = sourceActions
+          .filter(action => action.source_field_id)
+          .map(action => action.source_field_id);
+          
+        if (fieldIds.length > 0) {
+          // Get field details to check which object type they reference
+          const { data: fields, error: fieldsError } = await supabase
+            .from("object_fields")
+            .select("id, options")
+            .in("id", fieldIds)
+            .filter("data_type", "eq", "lookup");
+            
+          if (fieldsError) {
+            console.error("Error fetching field details:", fieldsError);
+          } else if (fields && fields.length > 0) {
+            // Filter actions by checking if their fields reference our object type
+            validSourceActions = sourceActions.filter(action => {
+              const field = fields.find(f => f.id === action.source_field_id);
+              if (!field) return false;
+              
+              let options = field.options;
+              if (typeof options === 'string') {
+                try {
+                  options = JSON.parse(options);
+                } catch (e) {
+                  console.error("Error parsing field options:", e);
+                  return false;
+                }
+              }
+              
+              // Check if the field references our object type - fixed TypeScript error by checking type
+              if (options && typeof options === 'object' && !Array.isArray(options)) {
+                const typedOptions = options as Record<string, any>;
+                return typedOptions.target_object_type_id === objectTypeId;
+              }
+              
+              return false;
+            }) as Action[]; // Explicit cast to Action[]
+          }
+        }
+      }
+
+      // Get mass actions where the lookup field points to this object type
+      const { data: massActions, error: massActionsError } = await supabase
+        .from("actions")
+        .select("*, object_fields!inner(*)")
+        .eq("action_type", "mass_action")
+        .eq("object_fields.object_type_id", objectTypeId);
+
+      if (massActionsError) {
+        console.error("Error fetching mass actions:", massActionsError);
+      }
+
+      // Combine all actions and ensure the colors are properly typed
+      const allActions = [
+        ...(targetActions?.map(action => ({
+          ...action,
+          color: (action.color || 'default') as ActionColor
+        })) || []),
+        ...validSourceActions.map(action => ({
+          ...action,
+          color: (action.color || 'default') as ActionColor
+        })),
+        ...(massActions?.map(action => ({
+          ...action,
+          color: (action.color || 'default') as ActionColor
+        })) || [])
+      ];
+      
+      console.log(`useActions.getActionsByObjectId: Found ${allActions.length} actions total for ${objectTypeId}`);
+      return allActions as Action[]; // Explicit cast to Action[]
+    } catch (error) {
+      console.error("Exception in getActionsByObjectId:", error);
+      throw error;
     }
   };
 

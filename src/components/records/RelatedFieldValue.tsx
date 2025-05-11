@@ -1,7 +1,7 @@
 
 import { ObjectField } from "@/hooks/useObjectTypes";
 import { LookupValueDisplay } from "./LookupValueDisplay";
-import { format, isValid, parseISO } from "date-fns";
+import { format } from "date-fns";
 import { formatWithLineBreaks } from "@/lib/utils/textFormatUtils";
 
 interface RelatedFieldValueProps {
@@ -29,26 +29,16 @@ export function RelatedFieldValue({ field, value }: RelatedFieldValueProps) {
       
     case 'date':
       try {
-        // Safely parse the date
-        const date = typeof value === 'string' ? parseISO(value) : new Date(value);
-        if (!isValid(date)) {
-          return <span>{String(value)}</span>;
-        }
-        return <span>{format(date, 'dd.MM.yyyy')}</span>;
+        return <span>{format(new Date(value), 'dd.MM.yyyy')}</span>;
       } catch {
-        return <span>{String(value)}</span>;
+        return <span>{value}</span>;
       }
       
     case 'datetime':
       try {
-        // Safely parse the datetime
-        const date = typeof value === 'string' ? parseISO(value) : new Date(value);
-        if (!isValid(date)) {
-          return <span>{String(value)}</span>;
-        }
-        return <span>{format(date, 'dd.MM.yyyy HH:mm')}</span>;
+        return <span>{format(new Date(value), 'dd.MM.yyyy HH:mm')}</span>;
       } catch {
-        return <span>{String(value)}</span>;
+        return <span>{value}</span>;
       }
       
     case 'checkbox':

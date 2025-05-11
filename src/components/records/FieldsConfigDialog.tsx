@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -11,7 +10,6 @@ import { Label } from "@/components/ui/label";
 import { CheckIcon, ChevronDown, ChevronUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { useUserFieldSettings } from "@/hooks/useUserFieldSettings";
 
 interface FieldsConfigDialogProps {
   objectTypeId: string;
@@ -20,7 +18,6 @@ interface FieldsConfigDialogProps {
 
 export function FieldsConfigDialog({ objectTypeId, onVisibilityChange }: FieldsConfigDialogProps) {
   const { fields, isLoading } = useEnhancedFields(objectTypeId);
-  const { visibleFields, updateVisibleFields } = useUserFieldSettings(objectTypeId);
   const [selectedFields, setSelectedFields] = useState<string[]>([]);
   const [orderedFields, setOrderedFields] = useState<ObjectField[]>([]);
   const [open, setOpen] = useState(false);
@@ -65,17 +62,20 @@ export function FieldsConfigDialog({ objectTypeId, onVisibilityChange }: FieldsC
     }
   ];
 
-  // Initialize selected fields from the hook
+  // Load selected fields from local storage on initial load
   useEffect(() => {
-    if (visibleFields && visibleFields.length > 0) {
-      setSelectedFields(visibleFields);
-    } else if (fields && fields.length > 0) {
-      // Default to first 5 fields if no saved configuration
-      const defaultFields = fields.slice(0, 5).map(field => field.api_name);
-      setSelectedFields(defaultFields);
-      updateVisibleFields(defaultFields);
+    if (fields && fields.length > 0) {
+      const savedFields = localStorage.getItem(`visible-fields-${objectTypeId}`);
+      if (savedFields) {
+        const parsedFields = JSON.parse(savedFields);
+        setSelectedFields(parsedFields);
+      } else {
+        // Default to first 5 fields if no saved configuration
+        const defaultFields = fields.slice(0, 5).map(field => field.api_name);
+        setSelectedFields(defaultFields);
+      }
     }
-  }, [fields, visibleFields, updateVisibleFields, objectTypeId]);
+  }, [fields, objectTypeId]);
 
   // Update ordered fields when fields or selected fields change
   useEffect(() => {
@@ -114,8 +114,8 @@ export function FieldsConfigDialog({ objectTypeId, onVisibilityChange }: FieldsC
     }
 
     setSelectedFields(newSelectedFields);
-    updateVisibleFields(newSelectedFields);
     onVisibilityChange(newSelectedFields);
+    localStorage.setItem(`visible-fields-${objectTypeId}`, JSON.stringify(newSelectedFields));
   };
 
   // Move field up in the order
@@ -125,8 +125,8 @@ export function FieldsConfigDialog({ objectTypeId, onVisibilityChange }: FieldsC
       const newSelectedFields = [...selectedFields];
       [newSelectedFields[index - 1], newSelectedFields[index]] = [newSelectedFields[index], newSelectedFields[index - 1]];
       setSelectedFields(newSelectedFields);
-      updateVisibleFields(newSelectedFields);
       onVisibilityChange(newSelectedFields);
+      localStorage.setItem(`visible-fields-${objectTypeId}`, JSON.stringify(newSelectedFields));
     }
   };
 
@@ -137,8 +137,8 @@ export function FieldsConfigDialog({ objectTypeId, onVisibilityChange }: FieldsC
       const newSelectedFields = [...selectedFields];
       [newSelectedFields[index], newSelectedFields[index + 1]] = [newSelectedFields[index + 1], newSelectedFields[index]];
       setSelectedFields(newSelectedFields);
-      updateVisibleFields(newSelectedFields);
       onVisibilityChange(newSelectedFields);
+      localStorage.setItem(`visible-fields-${objectTypeId}`, JSON.stringify(newSelectedFields));
     }
   };
 
