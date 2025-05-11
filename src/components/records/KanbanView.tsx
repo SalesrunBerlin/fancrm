@@ -13,7 +13,7 @@ interface PicklistValue {
   id: string;
   value: string;
   label?: string;
-  color?: string;
+  color?: string; // Make color optional since it might not exist in the database
   order?: number;
 }
 
@@ -96,17 +96,31 @@ export function KanbanView({ objectTypeId, records, isLoading, onRecordClick }: 
     );
   }
 
+  // Generate default colors for kanban columns if not provided
+  const getColumnBackgroundColor = (value: PicklistValue, index: number) => {
+    if (value.color) {
+      return `${value.color}20`; // Use the color with 20% opacity if it exists
+    }
+    
+    // Default color palette for columns without colors
+    const defaultColors = [
+      '#E5DEFF', '#D3E4FD', '#F2FCE2', '#FEF7CD', '#FFDEE2', '#FDE1D3'
+    ];
+    
+    return `${defaultColors[index % defaultColors.length]}`;
+  };
+
   return (
     <div className="w-full overflow-x-auto">
       <div className="flex space-x-4 p-4 min-w-max">
-        {picklistValues?.map((value) => (
+        {picklistValues?.map((value, index) => (
           <div
             key={value.id}
             className="bg-card w-72 rounded-lg shadow flex flex-col"
           >
             <div 
               className="p-3 font-medium border-b flex justify-between items-center"
-              style={{ backgroundColor: value.color ? `${value.color}20` : undefined }}
+              style={{ backgroundColor: getColumnBackgroundColor(value, index) }}
             >
               <span>{value.value || 'No Value'}</span>
               <span className="text-muted-foreground text-sm">
