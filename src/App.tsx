@@ -18,6 +18,23 @@ import Auth from "@/pages/Auth";
 import Settings from "@/pages/Settings";
 import ObjectRecordsList from "@/pages/ObjectRecordsList";
 import NotFound from "@/pages/NotFound";
+import ObjectManager from "@/pages/ObjectManager";
+import ActionExecutePage from "@/pages/ActionExecutePage";
+import Structures from "@/pages/Structures";
+import ReportsPage from "@/pages/ReportsPage";
+import HelpPage from "@/pages/HelpPage";
+import PublicActionPage from "@/pages/PublicActionPage";
+import ActionsPage from "@/pages/ActionsPage";
+import ApplicationsPage from "@/pages/ApplicationsPage";
+import ObjectRecordDetail from "@/pages/ObjectRecordDetail";
+import CreateRecordPage from "@/pages/CreateRecordPage";
+import ImportRecordsPage from "@/pages/ImportRecordsPage";
+import MassActionPage from "@/pages/MassActionPage";
+import UserManagementPage from "@/pages/UserManagementPage";
+import AdminDashboard from "@/pages/admin/AdminDashboard";
+import HelpContentEditor from "@/pages/admin/HelpContentEditor";
+import UserDetailPage from "@/pages/admin/UserDetailPage";
+import CreateObjectPage from "@/pages/CreateObjectPage";
 
 // Setup an optimized React Query client with better cache control
 const queryClient = new QueryClient({
@@ -44,36 +61,40 @@ function App() {
                 <Route path="/" element={<Index />} />
                 <Route path="/landing" element={<LandingPage />} />
                 <Route path="/auth" element={<Auth />} />
+                <Route path="/public/action/:token" element={<PublicActionPage />} />
+                <Route path="/public/record/:token" element={<div>Public Record View</div>} />
                 
                 {/* Protected routes with AuthGuard */}
                 <Route element={<AuthGuard />}>
                   <Route element={<Layout />}>
                     <Route path="/dashboard" element={<Dashboard />} />
                     <Route path="/settings" element={<Settings />} />
-                    <Route path="/reports" element={<div>Reports Page</div>} />
-                    <Route path="/applications" element={<div>Applications Page</div>} />
-                    <Route path="/actions" element={<div>Actions Page</div>} />
-                    <Route path="/structures" element={<div>Structures Page</div>} />
+                    <Route path="/reports" element={<ReportsPage />} />
+                    <Route path="/applications" element={<ApplicationsPage />} />
+                    <Route path="/actions" element={<ActionsPage />} />
+                    <Route path="/structures" element={<Structures />} />
+                    <Route path="/help" element={<HelpPage />} />
                     
                     {/* Object routes */}
                     <Route path="/objects/:objectTypeId" element={<ObjectRecordsList />} />
-                    <Route path="/objects/:objectTypeId/records/:recordId" element={<div>Record Detail</div>} />
-                    <Route path="/objects/:objectTypeId/new" element={<div>Create Record</div>} />
-                    <Route path="/objects/:objectTypeId/import" element={<div>Import Records</div>} />
+                    <Route path="/objects/:objectTypeId/records/:recordId" element={<ObjectRecordDetail />} />
+                    <Route path="/objects/:objectTypeId/new" element={<CreateRecordPage />} />
+                    <Route path="/objects/:objectTypeId/import" element={<ImportRecordsPage />} />
                     
                     {/* Action routes */}
-                    <Route path="/actions/execute/:actionId" element={<div>Execute Action</div>} />
-                    <Route path="/actions/execute/:actionId/from/:recordId" element={<div>Execute Linked Action</div>} />
-                    <Route path="/actions/mass/:actionId" element={<div>Execute Mass Action</div>} />
+                    <Route path="/actions/execute/:actionId" element={<ActionExecutePage />} />
+                    <Route path="/actions/execute/:actionId/from/:recordId" element={<ActionExecutePage />} />
+                    <Route path="/actions/mass/:actionId" element={<MassActionPage />} />
                     
                     {/* Settings routes */}
-                    <Route path="/settings/object-manager" element={<div>Object Manager</div>} />
-                    <Route path="/settings/user-management" element={<div>User Management</div>} />
+                    <Route path="/settings/object-manager" element={<ObjectManager />} />
+                    <Route path="/settings/object-manager/new" element={<CreateObjectPage />} />
+                    <Route path="/settings/user-management" element={<UserManagementPage />} />
                     
                     {/* Admin routes */}
-                    <Route path="/admin" element={<div>Admin Dashboard</div>} />
-                    <Route path="/admin/help-content" element={<div>Help Content Editor</div>} />
-                    <Route path="/admin/users" element={<div>User Management</div>} />
+                    <Route path="/admin" element={<AdminDashboard />} />
+                    <Route path="/admin/help-content" element={<HelpContentEditor />} />
+                    <Route path="/admin/users" element={<UserDetailPage />} />
                   </Route>
                 </Route>
 
