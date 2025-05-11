@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { ObjectField } from "@/hooks/useObjectTypes";
 import { FilterField } from "@/components/records/FilterField";
@@ -10,6 +10,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
+import { debounce } from "lodash";
 
 interface SavedFilter {
   id: string;
@@ -31,6 +32,7 @@ export function ObjectRecordsFilter({
   activeFilters = []
 }: ObjectRecordsFilterProps) {
   const [filters, setFilters] = useState<FilterCondition[]>(activeFilters);
+  const [isApplying, setIsApplying] = useState<boolean>(false);
   const { user } = useAuth();
   const userId = user?.id || 'anonymous';
   const storageKey = `object-filters-${userId}`;
@@ -87,12 +89,40 @@ export function ObjectRecordsFilter({
     }
   }, [objectTypeId, user, activeFilters]);
 
-  // Update parent component when filters change
-  useEffect(() => {
-    if (onFilterChange && filters.length > 0) {
-      onFilterChange(filters);
-    }
-  }, [filters, onFilterChange]);
+  // Debounced filter application function
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const debouncedApplyFilters = useCallback(
+    debounce((filtersToApply: FilterCondition[]) => {
+      if (onFilterChange) {
+        // Remove empty filters before applying
+        const validFilters = filtersToApply.filter(f => 
+          f.value !== undefined && 
+          f.value !== null && 
+          f.value !== "" || 
+          f.operator === "isNull" || 
+          f.operator === "isNotNull"
+        );
+        
+        console.log("Applying debounced filters:", validFilters);
+        
+        // Save as last applied filter
+        setLastAppliedFilter(prev => ({
+          ...prev,
+          [objectTypeId]: validFilters
+        }));
+        
+        setIsApplying(true);
+        
+        // Small delay to show loading state
+        setTimeout(() => {
+          onFilterChange(validFilters);
+          setIsApplying(false);
+          toast.success("Filters applied");
+        }, 100);
+      }
+    }, 250), // 250ms debounce
+    [onFilterChange, objectTypeId, setLastAppliedFilter]
+  );
 
   const addFilterCondition = () => {
     if (fields.length > 0) {
@@ -162,10 +192,8 @@ export function ObjectRecordsFilter({
       [objectTypeId]: savedFilter.conditions
     });
     
-    if (onFilterChange) {
-      console.log("Applying saved filter via onFilterChange");
-      onFilterChange(savedFilter.conditions);
-    }
+    // Apply immediately
+    debouncedApplyFilters(savedFilter.conditions);
   };
 
   const deleteSavedFilter = (filterId: string) => {
@@ -186,9 +214,8 @@ export function ObjectRecordsFilter({
     delete updatedLastApplied[objectTypeId];
     setLastAppliedFilter(updatedLastApplied);
     
-    if (onFilterChange) {
-      onFilterChange(emptyFilter);
-    }
+    // Apply empty filter
+    debouncedApplyFilters(emptyFilter);
     
     // Add a single empty condition after clearing
     setTimeout(() => {
@@ -197,28 +224,19 @@ export function ObjectRecordsFilter({
   };
 
   const applyFilters = () => {
-    if (onFilterChange) {
-      // Remove empty filters before applying
-      const validFilters = filters.filter(f => 
-        f.value !== undefined && 
-        f.value !== null && 
-        f.value !== "" || 
-        f.operator === "isNull" || 
-        f.operator === "isNotNull"
-      );
-      
-      console.log("Applying filters and saving to lastApplied:", validFilters);
-      
-      // Save as last applied filter
-      setLastAppliedFilter({
-        ...lastAppliedFilter,
-        [objectTypeId]: validFilters
-      });
-      
-      onFilterChange(validFilters);
-      toast.success("Filters applied");
-    }
+    debouncedApplyFilters(filters);
   };
+
+  // Auto-apply filters when they change
+  useEffect(() => {
+    if (filters.length > 0) {
+      // Apply after a small delay to allow for multiple changes
+      const timer = setTimeout(() => {
+        debouncedApplyFilters(filters);
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [filters, debouncedApplyFilters]);
 
   return (
     <div className="space-y-4">
@@ -314,8 +332,12 @@ export function ObjectRecordsFilter({
 
       {/* Apply filters button */}
       <div className="pt-2">
-        <Button onClick={applyFilters} className="w-full">
-          Apply Filters
+        <Button 
+          onClick={applyFilters} 
+          disabled={isApplying}
+          className="w-full"
+        >
+          {isApplying ? "Applying..." : "Apply Filters"}
         </Button>
       </div>
     </div>

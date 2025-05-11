@@ -41,6 +41,9 @@ export default function OptimizedRecordsList() {
   const { viewMode, updateViewMode } = useLayoutViewSettings(objectTypeId);
   const { pageSize, currentPage, setPageSize, setCurrentPage } = useUserPaginationSettings(objectTypeId);
   
+  // Filter loading state
+  const [isFilterLoading, setIsFilterLoading] = useState(false);
+  
   // Use our new paginated records hook
   const { 
     records, 
@@ -163,9 +166,15 @@ export default function OptimizedRecordsList() {
 
   const handleFilterChange = (filters: FilterCondition[]) => {
     console.log("OptimizedRecordsList - Filters updated:", filters);
+    setIsFilterLoading(true);
     setActiveFilters(filters);
     // Reset to first page when filters change
     setCurrentPage(1);
+    
+    // Add a small delay to show loading state
+    setTimeout(() => {
+      setIsFilterLoading(false);
+    }, 500);
   };
 
   const toggleFilterPanel = () => {
@@ -173,9 +182,15 @@ export default function OptimizedRecordsList() {
   };
 
   const clearFilters = () => {
+    setIsFilterLoading(true);
     setActiveFilters([]);
     // Reset to first page when clearing filters
     setCurrentPage(1);
+    
+    // Add a small delay to show loading state
+    setTimeout(() => {
+      setIsFilterLoading(false);
+    }, 300);
   };
 
   if (!objectType) {
@@ -205,6 +220,9 @@ export default function OptimizedRecordsList() {
 
   // All available fields for filtering (both regular and system fields)
   const allFields = [...(fields || []), ...systemFields.map(field => toSafeObjectField(field))];
+
+  // Determine if we should show loading state
+  const showLoadingState = isLoading || isLoadingFields || isFilterLoading;
 
   return (
     <div className="space-y-6">
@@ -342,6 +360,8 @@ export default function OptimizedRecordsList() {
                   className="h-4 w-4 p-0 ml-1" 
                   onClick={() => {
                     setActiveFilters(activeFilters.filter(f => f.id !== filter.id));
+                    // Reset to first page
+                    setCurrentPage(1);
                   }}
                 >
                   <span className="sr-only">Remove</span>
@@ -385,7 +405,7 @@ export default function OptimizedRecordsList() {
 
       {/* Main content area */}
       <Card className="overflow-hidden">
-        {isLoading || isLoadingFields ? (
+        {showLoadingState ? (
           <div className="flex justify-center py-8">
             <Loader2 className="h-8 w-8 animate-spin" />
           </div>

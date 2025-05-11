@@ -173,7 +173,7 @@ export function usePaginatedObjectRecords(
     },
     enabled: !!objectTypeId && !!user && page > 0 && pageSize > 0,
     staleTime: 30000, // Cache data for 30 seconds
-    keepPreviousData: true // Keep previous data while loading new data
+    placeholderData: (previousData) => previousData // Use previousData instead of keepPreviousData
   });
 
   const createRecord = useMutation({

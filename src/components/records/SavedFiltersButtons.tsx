@@ -42,7 +42,7 @@ export function SavedFiltersButtons({ objectTypeId, maxToShow = 3 }: SavedFilter
   }
 
   const handleFilterClick = (filter: SavedFilter) => {
-    // Store the selected filter to apply it when the page loads
+    // Navigate to optimized list with filter applied
     const lastAppliedStorageKey = `last-applied-filters-${userId}`;
     const currentLastApplied = localStorage.getItem(lastAppliedStorageKey);
     const lastApplied = currentLastApplied ? JSON.parse(currentLastApplied) : {};
@@ -51,8 +51,8 @@ export function SavedFiltersButtons({ objectTypeId, maxToShow = 3 }: SavedFilter
     lastApplied[objectTypeId] = filter.conditions;
     localStorage.setItem(lastAppliedStorageKey, JSON.stringify(lastApplied));
     
-    // Navigate to the object list page with this filter applied
-    navigate(`/objects/${objectTypeId}`);
+    // Navigate to the optimized object list page with this filter applied
+    navigate(`/objects/${objectTypeId}/optimized`);
   };
 
   return (
