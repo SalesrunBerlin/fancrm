@@ -79,6 +79,8 @@ function App() {
                     {/* Object routes */}
                     <Route path="/objects/:objectTypeId" element={<ObjectRecordsList />} />
                     <Route path="/objects/:objectTypeId/records/:recordId" element={<ObjectRecordDetail />} />
+                    {/* Add support for the URL format without 'records' in the path */}
+                    <Route path="/objects/:objectTypeId/:recordId" element={<ObjectRecordDetail />} />
                     <Route path="/objects/:objectTypeId/new" element={<CreateRecordPage />} />
                     <Route path="/objects/:objectTypeId/import" element={<ImportRecordsPage />} />
                     

@@ -37,7 +37,7 @@ const LandingPage = () => {
             ) : (
               <>
                 <Button asChild size="lg">
-                  <Link to="/auth">Login</Link>
+                  <Link to="/auth?tab=signin">Login</Link>
                 </Button>
                 <Button asChild variant="outline" size="lg">
                   <Link to="/auth?tab=signup">Register</Link>
