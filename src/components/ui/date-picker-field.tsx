@@ -1,6 +1,6 @@
 
 import * as React from "react";
-import { format } from "date-fns";
+import { format, isValid } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
@@ -33,24 +33,18 @@ export function DatePickerField({
   const [open, setOpen] = React.useState(false);
   
   // State for temporarily storing date and time selections before saving
-  const [selectedDate, setSelectedDate] = React.useState<Date | undefined>(
-    value && !isNaN(new Date(value).getTime()) ? new Date(value) : undefined
-  );
+  const [selectedDate, setSelectedDate] = React.useState<Date | undefined>(undefined);
   
   // State for hours and minutes (for datetime fields)
-  const [hours, setHours] = React.useState<string>(
-    value && !isNaN(new Date(value).getTime()) ? format(new Date(value), "HH") : "00"
-  );
-  const [minutes, setMinutes] = React.useState<string>(
-    value && !isNaN(new Date(value).getTime()) ? format(new Date(value), "mm") : "00"
-  );
+  const [hours, setHours] = React.useState<string>("00");
+  const [minutes, setMinutes] = React.useState<string>("00");
 
   // Update local state when props value changes
   React.useEffect(() => {
     if (value) {
       try {
         const dateValue = new Date(value);
-        if (!isNaN(dateValue.getTime())) { 
+        if (isValid(dateValue)) { 
           setSelectedDate(dateValue);
           setHours(format(dateValue, "HH"));
           setMinutes(format(dateValue, "mm"));
@@ -105,7 +99,7 @@ export function DatePickerField({
 
   // Handle saving and closing the popover
   const saveAndClose = (dateToSave: Date | undefined = selectedDate) => {
-    if (dateToSave) {
+    if (dateToSave && isValid(dateToSave)) {
       try {
         // For datetime fields, apply the selected hours and minutes
         if (isDateTime) {
@@ -140,7 +134,7 @@ export function DatePickerField({
     // Try to parse the input as a date
     try {
       const parsedDate = new Date(inputValue);
-      if (!isNaN(parsedDate.getTime())) {
+      if (isValid(parsedDate)) {
         const formattedDate = isDateTime 
           ? parsedDate.toISOString()
           : format(parsedDate, "yyyy-MM-dd");
@@ -164,7 +158,7 @@ export function DatePickerField({
     
     try {
       const dateValue = new Date(value);
-      if (isNaN(dateValue.getTime())) return value;
+      if (!isValid(dateValue)) return value;
       
       return isDateTime 
         ? format(dateValue, "PPp") // Date with time

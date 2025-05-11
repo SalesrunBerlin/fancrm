@@ -1,7 +1,7 @@
 
 import { ObjectField } from "@/hooks/useObjectTypes";
 import { LookupValueDisplay } from "./LookupValueDisplay";
-import { format } from "date-fns";
+import { format, isValid } from "date-fns";
 import { formatWithLineBreaks } from "@/lib/utils/textFormatUtils";
 
 interface RelatedFieldValueProps {
@@ -30,7 +30,7 @@ export function RelatedFieldValue({ field, value }: RelatedFieldValueProps) {
     case 'date':
       try {
         const date = new Date(value);
-        if (isNaN(date.getTime())) {
+        if (!isValid(date)) {
           return <span>{String(value)}</span>;
         }
         return <span>{format(date, 'dd.MM.yyyy')}</span>;
@@ -41,7 +41,7 @@ export function RelatedFieldValue({ field, value }: RelatedFieldValueProps) {
     case 'datetime':
       try {
         const date = new Date(value);
-        if (isNaN(date.getTime())) {
+        if (!isValid(date)) {
           return <span>{String(value)}</span>;
         }
         return <span>{format(date, 'dd.MM.yyyy HH:mm')}</span>;

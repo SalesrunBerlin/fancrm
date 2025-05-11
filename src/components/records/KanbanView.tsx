@@ -11,6 +11,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 interface PicklistValue {
   id: string;
   value: string;
+  label?: string;
   color?: string;
   order?: number;
 }
@@ -43,7 +44,6 @@ export function KanbanView({ objectTypeId, records, isLoading, onRecordClick }: 
 
   // Get picklist values for the selected field
   const { picklistValues, isLoading: isLoadingPicklist } = useFieldPicklistValues(
-    objectTypeId,
     selectedField || ''
   );
 

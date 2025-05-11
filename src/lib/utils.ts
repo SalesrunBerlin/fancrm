@@ -1,6 +1,7 @@
 
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
+import { isValid } from "date-fns"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -21,7 +22,7 @@ export function formatDate(dateString: string | null | undefined): string {
   try {
     const date = new Date(dateString);
     // Check if the date is valid before formatting
-    if (isNaN(date.getTime())) {
+    if (!isValid(date)) {
       console.warn(`Invalid date string: ${dateString}`);
       return dateString || '-';
     }
@@ -50,7 +51,7 @@ export function parseMultiFormatDate(dateString: string): string | null {
   try {
     // Try direct Date parsing (for ISO format and some other standard formats)
     date = new Date(trimmed);
-    if (!isNaN(date.getTime())) {
+    if (isValid(date)) {
       return date.toISOString().split('T')[0]; // Return YYYY-MM-DD
     }
     
@@ -58,7 +59,7 @@ export function parseMultiFormatDate(dateString: string): string | null {
     if (/^\d{1,2}\.\d{1,2}\.\d{4}$/.test(trimmed)) {
       const parts = trimmed.split('.');
       date = new Date(`${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`);
-      if (!isNaN(date.getTime())) {
+      if (isValid(date)) {
         return date.toISOString().split('T')[0]; // Return YYYY-MM-DD
       }
     }
@@ -67,7 +68,7 @@ export function parseMultiFormatDate(dateString: string): string | null {
     if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(trimmed)) {
       const parts = trimmed.split('/');
       date = new Date(`${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`);
-      if (!isNaN(date.getTime())) {
+      if (isValid(date)) {
         return date.toISOString().split('T')[0]; // Return YYYY-MM-DD
       }
     }
@@ -76,7 +77,7 @@ export function parseMultiFormatDate(dateString: string): string | null {
     if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(trimmed)) {
       const parts = trimmed.split('/');
       date = new Date(`${parts[2]}-${parts[0].padStart(2, '0')}-${parts[1].padStart(2, '0')}`);
-      if (!isNaN(date.getTime())) {
+      if (isValid(date)) {
         return date.toISOString().split('T')[0]; // Return YYYY-MM-DD
       }
     }
