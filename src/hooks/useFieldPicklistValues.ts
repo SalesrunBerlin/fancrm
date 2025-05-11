@@ -10,6 +10,7 @@ interface PicklistValue {
   label: string;
   order_position: number;
   owner_id?: string;
+  color?: string; // Added color property as optional
 }
 
 interface AddPicklistValueData {
