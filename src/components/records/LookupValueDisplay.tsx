@@ -2,8 +2,9 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useQuery } from "@tanstack/react-query";
 
-// Global cache for storing lookup values to reduce duplicate requests
+// Global cache for lookup values to reduce duplicate requests
 const lookupValueCache: Record<string, string> = {};
 
 interface LookupValueDisplayProps {
@@ -14,65 +15,48 @@ interface LookupValueDisplayProps {
   };
 }
 
-export function LookupValueDisplay({ value, fieldOptions }: LookupValueDisplayProps) {
-  const [displayValue, setDisplayValue] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const { target_object_type_id } = fieldOptions;
-  
-  // Create a cache key from value and target_object_type_id
-  const cacheKey = `${value}:${target_object_type_id}`;
-
-  useEffect(() => {
-    const fetchLookupDisplayValue = async () => {
-      if (!value || !target_object_type_id) {
-        setDisplayValue(value || "-");
-        setIsLoading(false);
-        return;
-      }
-
+// New hook to efficiently fetch lookup display values
+export function useLookupDisplayValue(value: string, targetObjectTypeId: string) {
+  return useQuery({
+    queryKey: ['lookup-display', value, targetObjectTypeId],
+    queryFn: async () => {
+      if (!value || !targetObjectTypeId) return value;
+      
       // Check cache first
+      const cacheKey = `${value}:${targetObjectTypeId}`;
       if (lookupValueCache[cacheKey]) {
-        setDisplayValue(lookupValueCache[cacheKey]);
-        setIsLoading(false);
-        return;
+        return lookupValueCache[cacheKey];
       }
       
-      try {
-        // Get the object type to determine default display field
-        const { data: objectType } = await supabase
-          .from("object_types")
-          .select("default_field_api_name")
-          .eq("id", target_object_type_id)
-          .single();
-          
-        const displayFieldApiName = fieldOptions.display_field_api_name || 
-                                   objectType?.default_field_api_name || 
-                                   "name";
+      // Use the optimized view instead of joining multiple tables
+      const { data, error } = await supabase
+        .from("object_lookup_display_values")
+        .select("display_value")
+        .eq("lookup_record_id", value)
+        .eq("target_object_type_id", targetObjectTypeId)
+        .maybeSingle();
         
-        // Get the field value for the lookup record
-        const { data: fieldValue } = await supabase
-          .from("object_field_values")
-          .select("value")
-          .eq("record_id", value)
-          .eq("field_api_name", displayFieldApiName)
-          .single();
-
-        const finalDisplayValue = fieldValue?.value || value;
-        
-        // Store in cache
-        lookupValueCache[cacheKey] = finalDisplayValue;
-        
-        setDisplayValue(finalDisplayValue);
-      } catch (error) {
+      if (error) {
         console.error("Error fetching lookup display value:", error);
-        setDisplayValue(value);
-      } finally {
-        setIsLoading(false);
+        return value;
       }
-    };
-    
-    fetchLookupDisplayValue();
-  }, [value, target_object_type_id, fieldOptions, cacheKey]);
+      
+      const displayValue = data?.display_value || value;
+      
+      // Update cache
+      lookupValueCache[cacheKey] = displayValue;
+      return displayValue;
+    },
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    gcTime: 1000 * 60 * 30,   // 30 minutes
+    enabled: !!value && !!targetObjectTypeId,
+  });
+}
+
+export function LookupValueDisplay({ value, fieldOptions }: LookupValueDisplayProps) {
+  const { target_object_type_id } = fieldOptions;
+  
+  const { data: displayValue, isLoading } = useLookupDisplayValue(value, target_object_type_id);
   
   if (isLoading) {
     return <Skeleton className="h-4 w-24" />;

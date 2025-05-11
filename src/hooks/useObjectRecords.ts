@@ -20,6 +20,7 @@ export interface ObjectRecord {
   created_by: string | null;
   last_modified_by: string | null;
   field_values?: { [key: string]: any };
+  fieldValues?: { [key: string]: any };
   displayName?: string;
 }
 
@@ -45,86 +46,97 @@ export function useObjectRecords(
       console.log(`Fetching records for object type: ${objectTypeId}`);
       console.log("Applying filters:", filters);
       
-      // Get records
-      let query = supabase
-        .from("object_records")
-        .select("*")
-        .eq("object_type_id", objectTypeId)
-        .limit(100);
-      
-      // Apply server-side filters if possible
-      // Note: For most filter types, we'll use client-side filtering
-      // because Supabase doesn't support complex filtering on field_values easily
-      
-      const { data: recordsData, error: recordsError } = await query;
-      
-      if (recordsError) {
-        console.error("Error fetching records:", recordsError);
-        throw recordsError;
-      }
-      
-      if (recordsData.length === 0) {
-        return [];
-      }
-      
-      // Get field values for all records
-      const recordIds = recordsData.map(record => record.id);
-      
-      const { data: fieldValuesData, error: fieldValuesError } = await supabase
-        .from("object_field_values")
-        .select("*")
-        .in("record_id", recordIds);
-      
-      if (fieldValuesError) {
-        console.error("Error fetching field values:", fieldValuesError);
-        throw fieldValuesError;
-      }
-
-      // Group field values by record id
-      const fieldValuesByRecordId = fieldValuesData.reduce((acc, fieldValue) => {
-        if (!acc[fieldValue.record_id]) {
-          acc[fieldValue.record_id] = {};
+      try {
+        // Get records with a more optimized query
+        // Use a reasonable limit to avoid loading too many records at once
+        let query = supabase
+          .from("object_records")
+          .select("id, record_id, object_type_id, created_at, updated_at, owner_id, created_by, last_modified_by")
+          .eq("object_type_id", objectTypeId)
+          .order("created_at", { ascending: false })
+          .limit(200);
+        
+        // Apply server-side filters if possible
+        // Note: For most filter types, we'll use client-side filtering
+        // because Supabase doesn't support complex filtering on field_values easily
+        
+        const { data: recordsData, error: recordsError } = await query;
+        
+        if (recordsError) {
+          console.error("Error fetching records:", recordsError);
+          throw recordsError;
         }
-        acc[fieldValue.record_id][fieldValue.field_api_name] = fieldValue.value;
-        return acc;
-      }, {} as { [key: string]: { [key: string]: any } });
-      
-      // Add field values to records
-      let recordsWithFieldValues = recordsData.map(record => ({
-        ...record,
-        field_values: fieldValuesByRecordId[record.id] || {}
-      }));
-      
-      // Apply client-side filtering
-      if (filters && filters.length > 0) {
-        recordsWithFieldValues = recordsWithFieldValues.filter(record => {
-          return filters.every(filter => {
-            // Skip empty filters
-            if (!filter.value && filter.value !== false) {
-              return true;
-            }
-            
-            const fieldValue = record.field_values?.[filter.fieldApiName];
-            const filterValue = filter.value;
-            
-            // Handle system fields
-            if (filter.fieldApiName === 'created_at' || filter.fieldApiName === 'updated_at') {
-              const dateValue = record[filter.fieldApiName];
-              return applyFilterOperator(filter.operator, dateValue, filterValue);
-            } else if (filter.fieldApiName === 'record_id') {
-              return applyFilterOperator(filter.operator, record.record_id, filterValue);
-            }
-            
-            // Handle regular field values
-            return applyFilterOperator(filter.operator, fieldValue, filterValue);
-          });
+        
+        if (recordsData.length === 0) {
+          return [];
+        }
+        
+        // Get field values for all records in a single optimized query
+        const recordIds = recordsData.map(record => record.id);
+        
+        const { data: fieldValuesData, error: fieldValuesError } = await supabase
+          .from("object_field_values")
+          .select("record_id, field_api_name, value")
+          .in("record_id", recordIds);
+        
+        if (fieldValuesError) {
+          console.error("Error fetching field values:", fieldValuesError);
+          throw fieldValuesError;
+        }
+
+        // Group field values by record id - more memory efficient
+        const fieldValuesByRecordId: { [key: string]: { [key: string]: any } } = {};
+        
+        fieldValuesData?.forEach(fieldValue => {
+          if (!fieldValuesByRecordId[fieldValue.record_id]) {
+            fieldValuesByRecordId[fieldValue.record_id] = {};
+          }
+          fieldValuesByRecordId[fieldValue.record_id][fieldValue.field_api_name] = fieldValue.value;
         });
+        
+        // Add field values to records
+        let recordsWithFieldValues = recordsData.map(record => ({
+          ...record,
+          field_values: fieldValuesByRecordId[record.id] || {},
+          fieldValues: fieldValuesByRecordId[record.id] || {}
+        }));
+        
+        // Apply client-side filtering
+        if (filters && filters.length > 0) {
+          recordsWithFieldValues = recordsWithFieldValues.filter(record => {
+            return filters.every(filter => {
+              // Skip empty filters
+              if (!filter.value && filter.value !== false) {
+                return true;
+              }
+              
+              const fieldValue = record.field_values?.[filter.fieldApiName];
+              const filterValue = filter.value;
+              
+              // Handle system fields
+              if (filter.fieldApiName === 'created_at' || filter.fieldApiName === 'updated_at') {
+                const dateValue = record[filter.fieldApiName];
+                return applyFilterOperator(filter.operator, dateValue, filterValue);
+              } else if (filter.fieldApiName === 'record_id') {
+                return applyFilterOperator(filter.operator, record.record_id, filterValue);
+              }
+              
+              // Handle regular field values
+              return applyFilterOperator(filter.operator, fieldValue, filterValue);
+            });
+          });
+        }
+        
+        console.log(`Fetched ${recordsWithFieldValues.length} records with field values`);
+        return recordsWithFieldValues;
+      } catch (error) {
+        console.error("Error in useObjectRecords:", error);
+        throw error;
       }
-      
-      console.log(`Fetched ${recordsWithFieldValues.length} records with field values`);
-      return recordsWithFieldValues;
     },
     enabled: !!objectTypeId && !!user,
+    staleTime: 1000 * 60 * 1, // 1 minute
+    gcTime: 1000 * 60 * 10,   // 10 minutes
   });
 
   const createRecord = useMutation({

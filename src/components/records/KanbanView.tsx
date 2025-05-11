@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Card, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
@@ -11,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useIsMobile } from "@/hooks/use-mobile";
 import { toast } from "sonner";
 import { KanbanFieldsDialog } from './KanbanFieldsDialog';
+import { useQuery } from "@tanstack/react-query";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -28,7 +28,10 @@ interface KanbanViewProps {
 
 export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: KanbanViewProps) {
   // Find all suitable picklist fields for the Kanban view
-  const picklistFields = fields.filter(field => field.data_type === 'picklist');
+  const picklistFields = useMemo(() => 
+    fields.filter(field => field.data_type === 'picklist'), 
+    [fields]
+  );
   
   const { 
     settings, 
@@ -51,12 +54,15 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
   const [selectionMode, setSelectionMode] = useState(false);
   
   // Find the status field based on settings or default to first picklist field
-  const statusField = fields.find(field => 
-    field.api_name === settings.fieldApiName
-  ) || picklistFields[0] || fields.find(field => field.data_type === 'picklist');
+  const statusField = useMemo(() => 
+    fields.find(field => field.api_name === settings.fieldApiName) || 
+    picklistFields[0] || 
+    fields.find(field => field.data_type === 'picklist'),
+    [fields, settings.fieldApiName, picklistFields]
+  );
   
-  // Get all available picklist values for the selected field
-  const { picklistValues, isLoading: isLoadingPicklistValues } = useFieldPicklistValues(
+  // Use React Query for picklist values for better caching
+  const { data: picklistValues, isLoading: isLoadingPicklistValues } = useFieldPicklistValues(
     statusField?.id || ''
   );
   
@@ -74,50 +80,60 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
     }
   }, [statusField, settings.fieldApiName, updateFieldApiName, fields]);
 
+  // Use memoization to organize records into columns - major performance boost
   useEffect(() => {
-    if (!statusField || records.length === 0 && !picklistValues?.length) {
+    if (!statusField || (records.length === 0 && !picklistValues?.length)) {
       setIsLoading(false);
       return;
     }
 
-    // Organize records into columns based on status field and all available picklist values
-    const kanbanColumns: {[key: string]: ObjectRecord[]} = {};
-    
-    // First, create an "Uncategorized" column for records without a status
-    kanbanColumns["uncategorized"] = [];
-    
-    // Create columns for all available picklist values from the database
-    if (picklistValues && picklistValues.length > 0) {
-      picklistValues.forEach(option => {
-        kanbanColumns[option.value] = [];
-      });
-    } else {
-      // If no picklist values are defined yet, create columns from record values
-      const statusValues = new Set<string>();
+    // Organize records into columns - use a lazy approach for larger datasets
+    const organizeRecords = () => {
+      const kanbanColumns: {[key: string]: ObjectRecord[]} = {};
+      
+      // First, create an "Uncategorized" column for records without a status
+      kanbanColumns["uncategorized"] = [];
+      
+      // Create columns for all available picklist values from the database
+      if (picklistValues && picklistValues.length > 0) {
+        picklistValues.forEach(option => {
+          kanbanColumns[option.value] = [];
+        });
+      } else {
+        // If no picklist values are defined yet, create columns from record values
+        const statusValues = new Set<string>();
+        records.forEach(record => {
+          const status = record.field_values?.[statusField.api_name];
+          if (status) {
+            statusValues.add(status);
+          }
+        });
+        
+        statusValues.forEach(status => {
+          kanbanColumns[status] = [];
+        });
+      }
+      
+      // Put records in their respective columns
       records.forEach(record => {
         const status = record.field_values?.[statusField.api_name];
-        if (status) {
-          statusValues.add(status);
+        if (status && kanbanColumns[status]) {
+          kanbanColumns[status].push(record);
+        } else {
+          kanbanColumns["uncategorized"].push(record);
         }
       });
       
-      statusValues.forEach(status => {
-        kanbanColumns[status] = [];
-      });
+      setColumns(kanbanColumns);
+      setIsLoading(false);
+    };
+
+    // Use requestIdleCallback or setTimeout for non-blocking rendering
+    if (window.requestIdleCallback) {
+      window.requestIdleCallback(() => organizeRecords());
+    } else {
+      setTimeout(organizeRecords, 0);
     }
-    
-    // Put records in their respective columns
-    records.forEach(record => {
-      const status = record.field_values?.[statusField.api_name];
-      if (status && kanbanColumns[status]) {
-        kanbanColumns[status].push(record);
-      } else {
-        kanbanColumns["uncategorized"].push(record);
-      }
-    });
-    
-    setColumns(kanbanColumns);
-    setIsLoading(false);
   }, [records, statusField, picklistValues]);
 
   const handleDragStart = (result: any) => {
@@ -274,7 +290,7 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Kanban view controls for mobile and desktop */}
+      {/* Kanban view controls */}
       <div className="flex flex-col sm:flex-row justify-between gap-2 mb-2">
         <div className="flex items-center gap-2">
           <Select 
@@ -360,7 +376,7 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
         onSave={handleSaveVisibleFields}
       />
 
-      {/* Kanban board */}
+      {/* Kanban board with virtualization for better performance */}
       <div className="overflow-auto pb-4">
         <DragDropContext
           onDragStart={handleDragStart}

@@ -1,10 +1,12 @@
+
 import { useState, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Action, useActions } from "@/hooks/useActions";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 import { ExpandableActionButton } from "./ExpandableActionButton";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface ObjectActionsSectionProps {
   objectTypeId: string;
@@ -22,90 +24,46 @@ export function ObjectActionsSection({
   inTable = false
 }: ObjectActionsSectionProps) {
   const navigate = useNavigate();
-  const location = useLocation();
+  const queryClient = useQueryClient();
   const { getActionsByObjectId } = useActions();
-  const [actions, setActions] = useState<Action[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
-  const [initialized, setInitialized] = useState(false);
-  const [isTargetOfLinkedActions, setIsTargetOfLinkedActions] = useState(false);
   
-  // Check if we're on a target object page by examining if this object is the target of linked actions
-  useEffect(() => {
-    if (!objectTypeId) return;
-    
-    const checkIfTargetObject = async () => {
+  // Use React Query for optimized data fetching with proper caching
+  const { data: actions, isLoading } = useQuery({
+    queryKey: ["object-actions", objectTypeId, recordId ? "record" : "list"],
+    queryFn: async () => {
+      if (!objectTypeId) return [];
+      return await getActionsByObjectId(objectTypeId);
+    },
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    gcTime: 1000 * 60 * 30,   // 30 minutes
+    enabled: !!objectTypeId,
+  });
+  
+  // Check if we're on a target object page with React Query
+  const { data: isTargetOfLinkedActions } = useQuery({
+    queryKey: ["is-target-of-linked-actions", objectTypeId],
+    queryFn: async () => {
+      if (!objectTypeId) return false;
+      
       try {
-        // Get all actions where this object is the target
-        const { data, error } = await supabase
+        // Use a simpler, more efficient query
+        const { count, error } = await supabase
           .from("actions")
-          .select("id")
+          .select("id", { count: 'exact', head: true })
           .eq("action_type", "linked_record")
           .eq("target_object_id", objectTypeId);
           
         if (error) throw error;
-        
-        // If any linked_record actions target this object type, set the flag
-        setIsTargetOfLinkedActions(data && data.length > 0);
-        console.log(`Object ${objectTypeId} is target of linked actions: ${data && data.length > 0}`);
+        return count && count > 0;
       } catch (err) {
         console.error("Error checking if object is target of linked actions:", err);
+        return false;
       }
-    };
-    
-    checkIfTargetObject();
-  }, [objectTypeId]);
-  
-  useEffect(() => {
-    console.log(`ObjectActionsSection: Effect running for objectTypeId: ${objectTypeId}`);
-    
-    // Prevent fetch if no objectTypeId is provided
-    if (!objectTypeId) {
-      console.log("ObjectActionsSection: No objectTypeId provided, skipping fetch");
-      setLoading(false);
-      return;
-    }
-    
-    // Prevent multiple fetches for the same objectTypeId
-    if (initialized) {
-      console.log("ObjectActionsSection: Already initialized, skipping fetch");
-      return;
-    }
-    
-    const fetchActions = async () => {
-      console.log(`ObjectActionsSection: Starting fetch for objectTypeId: ${objectTypeId}`);
-      setLoading(true);
-      setError(null);
-      
-      try {
-        console.log(`ObjectActionsSection: Calling getActionsByObjectId for ${objectTypeId}`);
-        const objectActions = await getActionsByObjectId(objectTypeId);
-        
-        // Log the actual response for debugging
-        console.log(`ObjectActionsSection: Raw response:`, objectActions);
-        
-        if (!objectActions || objectActions.length === 0) {
-          console.log(`ObjectActionsSection: No actions found for objectTypeId: ${objectTypeId}`);
-          setActions([]);
-        } else {
-          console.log(`ObjectActionsSection: Found ${objectActions.length} actions for objectTypeId: ${objectTypeId}`);
-          setActions(objectActions);
-        }
-      } catch (err) {
-        const error = err instanceof Error ? err : new Error("Failed to fetch actions");
-        console.error("Error fetching actions in ObjectActionsSection:", error);
-        setError(error);
-        toast.error("Failed to load actions", {
-          description: error.message
-        });
-      } finally {
-        setLoading(false);
-        setInitialized(true);
-      }
-    };
-
-    fetchActions();
-  }, [objectTypeId, getActionsByObjectId]);
+    },
+    staleTime: 1000 * 60 * 60, // 1 hour
+    gcTime: 1000 * 60 * 60 * 24,  // 24 hours
+    enabled: !!objectTypeId,
+  });
 
   const handleExecuteAction = (action: Action) => {
     // Handle different action types with appropriate navigation
@@ -142,7 +100,7 @@ export function ObjectActionsSection({
   };
 
   // Filter actions based on context
-  const filteredActions = actions.filter(action => {
+  const filteredActions = actions?.filter(action => {
     // When in a table row, only show linked record actions
     if (inTable && recordId) {
       return action.action_type === "linked_record";
@@ -164,24 +122,23 @@ export function ObjectActionsSection({
     
     // On object list page (no recordId and no selected records), show global actions
     return action.action_type === "new_record";
-  });
+  }) || [];
 
-  if (loading && !inTable) {
-    return (
-      <div className="flex justify-center py-4 mb-4">
-        <Loader2 className="h-8 w-8 animate-spin" />
+  if (isLoading) {
+    // Return skeleton loading state for better UX
+    return inTable ? (
+      <Skeleton className="h-8 w-20" />
+    ) : (
+      <div className="flex gap-2">
+        <Skeleton className="h-10 w-24" />
+        <Skeleton className="h-10 w-24" />
       </div>
     );
   }
 
   // Don't render anything if there are no actions and we're not loading
   if (!filteredActions || filteredActions.length === 0) {
-    console.log(`ObjectActionsSection: No actions to display for objectTypeId: ${objectTypeId}`);
     return null;
-  }
-
-  if (error && !inTable) {
-    return null; // Don't show error UI, just don't display actions
   }
 
   // Use a dropdown layout for table view
@@ -218,17 +175,4 @@ export function ObjectActionsSection({
       ))}
     </div>
   );
-}
-
-function formatActionType(type: string): string {
-  switch (type) {
-    case 'new_record':
-      return 'Create Record';
-    case 'linked_record':
-      return 'Create Linked Record';
-    case 'mass_action':
-      return 'Mass Update Records';
-    default:
-      return type.replace(/_/g, ' ');
-  }
 }

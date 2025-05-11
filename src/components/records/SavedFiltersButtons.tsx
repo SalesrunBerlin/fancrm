@@ -5,9 +5,10 @@ import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { useAuth } from "@/contexts/AuthContext";
 import { Badge } from "@/components/ui/badge";
 import { FilterCondition } from "@/hooks/useObjectRecords";
-import { useObjectRecords } from "@/hooks/useObjectRecords";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { supabase } from "@/integrations/supabase/client";
 
 interface SavedFilter {
   id: string;
@@ -29,6 +30,7 @@ export function SavedFiltersButtons({ objectTypeId, maxToShow = 3 }: SavedFilter
   const [savedFilters] = useLocalStorage<Record<string, SavedFilter[]>>(storageKey, {});
   const [filters, setFilters] = useState<SavedFilter[]>([]);
   const isMobile = useIsMobile();
+  const queryClient = useQueryClient();
   
   useEffect(() => {
     if (savedFilters && savedFilters[objectTypeId]) {
@@ -54,6 +56,12 @@ export function SavedFiltersButtons({ objectTypeId, maxToShow = 3 }: SavedFilter
     console.log("Saving filter to apply:", filter.conditions);
     lastApplied[objectTypeId] = filter.conditions;
     localStorage.setItem(lastAppliedStorageKey, JSON.stringify(lastApplied));
+    
+    // Pre-fetch filter results if possible
+    queryClient.prefetchQuery({
+      queryKey: ["object-records", objectTypeId, filter.conditions],
+      staleTime: 1000 * 60, // 1 minute
+    });
     
     // Navigate to the object list page with this filter applied
     navigate(`/objects/${objectTypeId}`);
@@ -84,9 +92,86 @@ function FilterBadgeWithCount({
   objectTypeId: string;
   onClick: () => void;
 }) {
-  const { records, isLoading } = useObjectRecords(objectTypeId, filter.conditions);
-  const recordCount = records?.length || 0;
   const isMobile = useIsMobile();
+  
+  // Use React Query to fetch record counts efficiently
+  const { data: recordCount, isLoading } = useQuery({
+    queryKey: ["filter-record-count", objectTypeId, filter.id],
+    queryFn: async (): Promise<number> => {
+      try {
+        // First check if we can use count-only query for efficiency
+        const { count, error } = await supabase
+          .from("object_records")
+          .select("*", { count: 'exact', head: true })
+          .eq("object_type_id", objectTypeId);
+          
+        if (error) throw error;
+        
+        // If no filter conditions or simple conditions, return the total count
+        if (!filter.conditions || filter.conditions.length === 0) {
+          return count || 0;
+        }
+        
+        // For complex filtering, we need to do client-side filtering
+        // Get all records and field values
+        const { data: records } = await supabase
+          .from("object_records")
+          .select("id, field_values:object_field_values(field_api_name, value)")
+          .eq("object_type_id", objectTypeId)
+          .limit(200); // Reasonable limit to avoid excessive data transfer
+          
+        if (!records) return 0;
+        
+        // Process records into the format expected by the filter function
+        const processedRecords = records.map(record => {
+          const fieldValues: Record<string, any> = {};
+          
+          if (record.field_values) {
+            (record.field_values as any[]).forEach((fv: any) => {
+              if (fv.field_api_name && fv.value !== null) {
+                fieldValues[fv.field_api_name] = fv.value;
+              }
+            });
+          }
+          
+          return {
+            ...record,
+            field_values: fieldValues
+          };
+        });
+        
+        // Apply client-side filtering (simplified for efficiency)
+        const filteredRecords = processedRecords.filter(record => {
+          return filter.conditions.every(condition => {
+            if (!condition.value && condition.value !== false) {
+              return true;
+            }
+            
+            const fieldValue = record.field_values?.[condition.fieldApiName];
+            const filterValue = condition.value;
+            
+            switch (condition.operator) {
+              case "equals":
+              case "is":
+                return String(fieldValue).toLowerCase() === String(filterValue).toLowerCase();
+              case "contains":
+                return String(fieldValue).toLowerCase().includes(String(filterValue).toLowerCase());
+              // Add other common cases
+              default:
+                return true;
+            }
+          });
+        });
+        
+        return filteredRecords.length;
+      } catch (error) {
+        console.error("Error counting filtered records:", error);
+        return 0;
+      }
+    },
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    gcTime: 1000 * 60 * 10,   // 10 minutes
+  });
   
   return (
     <Badge
@@ -98,7 +183,7 @@ function FilterBadgeWithCount({
     >
       {filter.name}
       <span className="absolute -top-2 -right-2 flex h-4 w-4 sm:h-5 sm:w-5 items-center justify-center rounded-full bg-primary text-[9px] sm:text-[10px] text-primary-foreground">
-        {isLoading ? <Loader2 className="h-2 w-2 sm:h-3 sm:w-3 animate-spin" /> : recordCount}
+        {isLoading ? <Loader2 className="h-2 w-2 sm:h-3 sm:w-3 animate-spin" /> : recordCount || 0}
       </span>
     </Badge>
   );
