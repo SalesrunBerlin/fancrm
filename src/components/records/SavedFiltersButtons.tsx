@@ -1,140 +1,105 @@
 
-import { useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { useUserFilterSettings } from "@/hooks/useUserFilterSettings";
-import { Loader2, Save } from "lucide-react";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { FilterCondition } from "@/types/FilterCondition";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { toast } from "sonner";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { useLocalStorage } from "@/hooks/useLocalStorage";
+import { useAuth } from "@/contexts/AuthContext";
+import { Badge } from "@/components/ui/badge";
+import { FilterCondition } from "@/hooks/useObjectRecords";
+import { useObjectRecords } from "@/hooks/useObjectRecords";
+import { Loader2 } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
+
+interface SavedFilter {
+  id: string;
+  name: string;
+  conditions: FilterCondition[];
+  recordCount?: number;
+}
 
 interface SavedFiltersButtonsProps {
   objectTypeId: string;
-  activeFilters?: FilterCondition[];
-  onFiltersChange?: (filters: FilterCondition[]) => void;
   maxToShow?: number;
 }
 
-export function SavedFiltersButtons({ objectTypeId, activeFilters = [], onFiltersChange, maxToShow = 3 }: SavedFiltersButtonsProps) {
-  const [open, setOpen] = useState(false);
-  const [filterName, setFilterName] = useState("");
-  const [selectedFilterId, setSelectedFilterId] = useState<string | null>(null);
-  const { 
-    filters, 
-    isLoading,
-    updateFilters,
-    saveFilter: saveUserFilter,
-    deleteFilter: deleteUserFilter,
-    error 
-  } = useUserFilterSettings(objectTypeId);
-
+export function SavedFiltersButtons({ objectTypeId, maxToShow = 3 }: SavedFiltersButtonsProps) {
+  const { user } = useAuth();
+  const userId = user?.id || 'anonymous';
+  const navigate = useNavigate();
+  const storageKey = `object-filters-${userId}`;
+  const [savedFilters] = useLocalStorage<Record<string, SavedFilter[]>>(storageKey, {});
+  const [filters, setFilters] = useState<SavedFilter[]>([]);
+  const isMobile = useIsMobile();
+  
   useEffect(() => {
-    if (error) {
-      console.error("Error fetching saved filters:", error);
+    if (savedFilters && savedFilters[objectTypeId]) {
+      // Show only the first maxToShow filters
+      // On mobile, show fewer filters to prevent overcrowding
+      const mobileMaxToShow = isMobile ? 2 : maxToShow;
+      setFilters(savedFilters[objectTypeId].slice(0, mobileMaxToShow));
+    } else {
+      setFilters([]);
     }
-  }, [error]);
+  }, [savedFilters, objectTypeId, maxToShow, isMobile]);
 
-  const handleSaveFilter = async () => {
-    if (!filterName.trim()) {
-      alert("Please enter a filter name.");
-      return;
-    }
+  if (filters.length === 0) {
+    return null;
+  }
 
-    try {
-      await saveUserFilter(filterName, activeFilters);
-      toast.success("Filter saved successfully!");
-      setOpen(false);
-      setFilterName("");
-    } catch (err) {
-      console.error("Error saving filter:", err);
-      alert("Failed to save filter.");
-    }
-  };
-
-  const handleDeleteFilter = async () => {
-    if (!selectedFilterId) return;
+  const handleFilterClick = (filter: SavedFilter) => {
+    // Store the selected filter to apply it when the page loads
+    const lastAppliedStorageKey = `last-applied-filters-${userId}`;
+    const currentLastApplied = localStorage.getItem(lastAppliedStorageKey);
+    const lastApplied = currentLastApplied ? JSON.parse(currentLastApplied) : {};
     
-    try {
-      await deleteUserFilter(selectedFilterId);
-      toast.success("Filter deleted successfully!");
-      setSelectedFilterId(null);
-    } catch (err) {
-      console.error("Error deleting filter:", err);
-      alert("Failed to delete filter.");
-    }
+    console.log("Saving filter to apply:", filter.conditions);
+    lastApplied[objectTypeId] = filter.conditions;
+    localStorage.setItem(lastAppliedStorageKey, JSON.stringify(lastApplied));
+    
+    // Navigate to the object list page with this filter applied
+    navigate(`/objects/${objectTypeId}`);
   };
-
-  const applyFilter = (filterId: string) => {
-    const selectedFilter = filters?.find(f => f.id === filterId);
-    if (selectedFilter && onFiltersChange) {
-      onFiltersChange(selectedFilter.conditions);
-      setSelectedFilterId(filterId);
-    }
-  };
-
-  const visibleFilters = filters?.slice(0, maxToShow) || [];
 
   return (
-    <div className="flex items-center space-x-2">
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogTrigger asChild>
-          <Button variant="outline" size="sm">
-            <Save className="mr-2 h-4 w-4" />
-            Filter speichern
-          </Button>
-        </DialogTrigger>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Aktuelle Filter speichern</DialogTitle>
-            <DialogDescription>
-              Geben Sie einen Namen für die aktuelle Filterauswahl ein.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="name" className="text-right">
-                Filtername
-              </Label>
-              <Input id="name" value={filterName} onChange={(e) => setFilterName(e.target.value)} className="col-span-3" />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button type="button" variant="secondary" onClick={() => setOpen(false)}>
-              Abbrechen
-            </Button>
-            <Button type="submit" onClick={handleSaveFilter}>Speichern</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="sm">
-            Filter laden
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent className="w-56">
-          <DropdownMenuLabel>Gespeicherte Filter</DropdownMenuLabel>
-          {isLoading ? (
-            <div className="flex items-center justify-center p-2">
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Laden...
-            </div>
-          ) : !visibleFilters.length ? (
-            <div className="p-2 text-sm text-muted-foreground">
-              Keine Filter gespeichert.
-            </div>
-          ) : (
-            visibleFilters.map((filter) => (
-              <DropdownMenuItem key={filter.id} onSelect={() => applyFilter(filter.id)}>
-                {filter.name}
-              </DropdownMenuItem>
-            ))
-          )}
-        </DropdownMenuContent>
-      </DropdownMenu>
+    <div className="flex flex-wrap gap-1 sm:gap-2 mt-2 sm:mt-3 w-full">
+      <div className="w-full text-xs text-muted-foreground mb-0 sm:mb-1">Gespeicherte Filter:</div>
+      {filters.map((filter) => (
+        <FilterBadgeWithCount 
+          key={filter.id} 
+          filter={filter} 
+          objectTypeId={objectTypeId}
+          onClick={() => handleFilterClick(filter)}
+        />
+      ))}
     </div>
+  );
+}
+
+// Component to display a filter badge with a count of matching records
+function FilterBadgeWithCount({ 
+  filter, 
+  objectTypeId, 
+  onClick 
+}: { 
+  filter: SavedFilter; 
+  objectTypeId: string;
+  onClick: () => void;
+}) {
+  const { records, isLoading } = useObjectRecords(objectTypeId, filter.conditions);
+  const recordCount = records?.length || 0;
+  const isMobile = useIsMobile();
+  
+  return (
+    <Badge
+      variant="outline"
+      className={`cursor-pointer hover:bg-accent/20 text-wrap whitespace-normal text-xs sm:text-base leading-normal relative ${
+        isMobile ? 'py-2 px-3 max-w-full' : 'py-3 px-4'
+      }`}
+      onClick={onClick}
+    >
+      {filter.name}
+      <span className="absolute -top-2 -right-2 flex h-4 w-4 sm:h-5 sm:w-5 items-center justify-center rounded-full bg-primary text-[9px] sm:text-[10px] text-primary-foreground">
+        {isLoading ? <Loader2 className="h-2 w-2 sm:h-3 sm:w-3 animate-spin" /> : recordCount}
+      </span>
+    </Badge>
   );
 }

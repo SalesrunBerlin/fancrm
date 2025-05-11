@@ -12,6 +12,7 @@ import { useState, useEffect } from "react";
 import { useObjectRecords } from "@/hooks/useObjectRecords";
 import { ExpandableActionButton } from "@/components/actions/ExpandableActionButton";
 import { useActions } from "@/hooks/useActions";
+import { SavedFiltersButtons } from "@/components/records/SavedFiltersButtons";
 import { ObjectCountBadge } from "@/components/dashboard/ObjectCountBadge";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -106,6 +107,14 @@ export default function Dashboard() {
               </CardHeader>
               <CardContent className="pt-1 sm:pt-3 flex flex-col">
                 <DashboardObjectActions objectTypeId={objectType.id} />
+                
+                {/* Add SavedFiltersButtons component with explicit visibility */}
+                <div className="block w-full">
+                  <SavedFiltersButtons 
+                    objectTypeId={objectType.id} 
+                    maxToShow={isMobile ? 2 : 3} 
+                  />
+                </div>
               </CardContent>
             </Card>
           ))}

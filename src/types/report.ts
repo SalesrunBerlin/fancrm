@@ -1,5 +1,5 @@
 
-import { FilterCondition } from "./FilterCondition";
+import { FilterCondition } from "@/hooks/useObjectRecords";
 
 export interface ReportField {
   objectTypeId: string;

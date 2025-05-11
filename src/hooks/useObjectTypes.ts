@@ -1,9 +1,9 @@
+
 import { useQuery, useMutation, QueryObserverResult, RefetchOptions } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { ObjectField as ObjectFieldType } from "@/types/ObjectFieldTypes";
-import { trackActivity } from "@/services/ActivityTrackingService";
 
 export interface ObjectType {
   id: string;
@@ -92,18 +92,6 @@ export function useObjectTypes() {
           throw error;
         }
         
-        // Track the activity
-        if (user) {
-          trackActivity(
-            user.id,
-            'object_create',
-            'Created object type',
-            'object_type',
-            data.id,
-            { name: data.name, api_name: data.api_name }
-          );
-        }
-        
         return data as ObjectType;
       } catch (error: any) {
         console.error("Error creating object type:", error);
@@ -141,19 +129,6 @@ export function useObjectTypes() {
         .single();
       
       if (error) throw error;
-      
-      // Track the update activity
-      if (user) {
-        trackActivity(
-          user.id,
-          'object_update',
-          'Updated object type',
-          'object_type',
-          objectType.id,
-          { name: objectType.name }
-        );
-      }
-      
       return data;
     },
     onSuccess: () => refetch()
@@ -189,7 +164,6 @@ export function useObjectTypes() {
     onSuccess: () => refetch()
   });
 
-  // Add tracking for archiving object type
   const archiveObjectType = useMutation({
     mutationFn: async (id: string) => {
       const { data, error } = await supabase
@@ -200,18 +174,6 @@ export function useObjectTypes() {
         .single();
       
       if (error) throw error;
-      
-      // Track the archive activity
-      if (user) {
-        trackActivity(
-          user.id,
-          'object_update',
-          'Archived object type',
-          'object_type',
-          id
-        );
-      }
-      
       return data;
     },
     onSuccess: () => refetch()

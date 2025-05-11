@@ -1,123 +1,113 @@
 
-import { PageHeader } from "@/components/ui/page-header";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useNavigate } from "react-router-dom";
-import { Users, Activity, Settings, BarChart2, User, FileText } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Settings, HelpCircle, Users, BookOpen, Briefcase } from "lucide-react";
+import { Link } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function AdminDashboard() {
-  const navigate = useNavigate();
+  const { user } = useAuth();
   
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div className="space-y-6">
       <PageHeader 
-        title="Admin Dashboard"
-        description="Verwaltungsfunktionen und System-Analytics"
+        title="Admin Dashboard" 
+        description={`Willkommen im Administrationsbereich, ${user?.email}`}
       />
       
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center text-lg">
-              <Users className="mr-2 h-5 w-5" />
-              Benutzer-Verwaltung
-            </CardTitle>
-            <CardDescription>
-              Benutzer und Berechtigungen verwalten
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="pb-2">
-            <p className="text-sm text-muted-foreground">
-              Benutzer hinzufügen, bearbeiten und Zugriffsrechte verwalten
-            </p>
-          </CardContent>
-          <CardFooter>
-            <Button 
-              variant="outline" 
-              className="w-full"
-              onClick={() => navigate("/admin/users")}
-            >
-              Zur Benutzerverwaltung
-            </Button>
-          </CardFooter>
-        </Card>
+        <Link to="/admin/help-tabs">
+          <Card className="h-full hover:bg-accent/5 transition-colors">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <BookOpen className="h-5 w-5" />
+                Help Tab Management
+              </CardTitle>
+              <CardDescription>
+                Manage help center tabs
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                Create, edit, and organize tabs in the help center.
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
+
+        <Link to="/admin/help-content">
+          <Card className="h-full hover:bg-accent/5 transition-colors">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <HelpCircle className="h-5 w-5" />
+                Help Content Management
+              </CardTitle>
+              <CardDescription>
+                Edit help content displayed in the help center
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                Update, add or remove help content sections and articles for users.
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
         
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center text-lg">
-              <Activity className="mr-2 h-5 w-5" />
-              Benutzer-Analysen
-            </CardTitle>
-            <CardDescription>
-              Aktivitäten und Nutzungsstatistiken
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="pb-2">
-            <p className="text-sm text-muted-foreground">
-              Sitzungen, Aktivitäten und Nutzungsmuster einsehen
-            </p>
-          </CardContent>
-          <CardFooter>
-            <Button 
-              variant="outline" 
-              className="w-full"
-              onClick={() => navigate("/admin/analytics")}
-            >
-              Zu den Benutzer-Analysen
-            </Button>
-          </CardFooter>
-        </Card>
+        <Link to="/admin/users">
+          <Card className="h-full hover:bg-accent/5 transition-colors">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="h-5 w-5" />
+                User Management
+              </CardTitle>
+              <CardDescription>
+                Manage users and roles
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                View and edit user details, assign roles and monitor user activity.
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
         
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center text-lg">
-              <Settings className="mr-2 h-5 w-5" />
-              Workspace-Verwaltung
-            </CardTitle>
-            <CardDescription>
-              Workspace-Einstellungen verwalten
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="pb-2">
-            <p className="text-sm text-muted-foreground">
-              Workspace-Konfiguration und Einstellungen anpassen
-            </p>
-          </CardContent>
-          <CardFooter>
-            <Button 
-              variant="outline" 
-              className="w-full"
-              onClick={() => navigate("/admin/workspace")}
-            >
-              Zur Workspace-Verwaltung
-            </Button>
-          </CardFooter>
-        </Card>
+        <Link to="/admin/workspace">
+          <Card className="h-full hover:bg-accent/5 transition-colors">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Briefcase className="h-5 w-5" />
+                Workspace Management
+              </CardTitle>
+              <CardDescription>
+                Manage workspace settings and users
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                Configure workspace settings, add and manage users, customize login experience.
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
         
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center text-lg">
-              <FileText className="mr-2 h-5 w-5" />
-              Hilfe-Inhalte
+        <Card className="h-full opacity-60">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Settings className="h-5 w-5" />
+              System Settings
             </CardTitle>
             <CardDescription>
-              Hilfe und Dokumentation bearbeiten
+              Configure system-wide settings (Coming soon)
             </CardDescription>
           </CardHeader>
-          <CardContent className="pb-2">
+          <CardContent>
             <p className="text-sm text-muted-foreground">
-              System-Dokumentation und Hilfeseiten verwalten
+              Adjust global application settings and default configurations.
             </p>
           </CardContent>
-          <CardFooter>
-            <Button 
-              variant="outline" 
-              className="w-full"
-              onClick={() => navigate("/admin/help-content")}
-            >
-              Hilfe-Inhalte bearbeiten
-            </Button>
-          </CardFooter>
         </Card>
       </div>
     </div>

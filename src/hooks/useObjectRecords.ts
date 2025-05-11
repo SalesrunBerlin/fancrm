@@ -1,361 +1,345 @@
-
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
-import { trackActivity } from "@/services/ActivityTrackingService";
-import { FilterCondition, ObjectRecord, SavedFilter } from "@/types/FilterCondition";
-import { useCallback } from "react";
+import type { RecordFormData } from "@/types";
 
-interface RecordData {
-  field_values: { [key: string]: any };
-  id?: string;
+export interface FilterCondition {
+  id: string;
+  fieldApiName: string;
+  operator: string;
+  value: any;
 }
 
-export function useObjectRecords(objectTypeId: string | undefined, filters: FilterCondition[] = []) {
-  const queryClient = useQueryClient();
+export interface ObjectRecord {
+  id: string;
+  record_id: string | null;
+  object_type_id: string;
+  created_at: string;
+  updated_at: string;
+  owner_id: string | null;
+  created_by: string | null;
+  last_modified_by: string | null;
+  field_values?: { [key: string]: any };
+  displayName?: string;
+}
+
+export function useObjectRecords(
+  objectTypeId?: string,
+  filters: FilterCondition[] = []
+) {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
 
-  // Build query based on filters
-  const buildFilteredQuery = useCallback((baseQuery: any) => {
-    let query = baseQuery;
-    
-    if (filters.length > 0) {
-      // Group filters by logical operator
-      const andFilters = filters.filter(f => !f.logicalOperator || f.logicalOperator === 'AND');
-      const orFilters = filters.filter(f => f.logicalOperator === 'OR');
-      
-      // Apply AND filters first
-      andFilters.forEach(filter => {
-        // Apply different operators based on filter type
-        switch (filter.operator) {
-          case 'equals':
-            query = query.eq(`field_values.${filter.fieldApiName}.value`, filter.value);
-            break;
-          case 'not_equals':
-            query = query.neq(`field_values.${filter.fieldApiName}.value`, filter.value);
-            break;
-          case 'contains':
-            query = query.ilike(`field_values.${filter.fieldApiName}.value`, `%${filter.value}%`);
-            break;
-          case 'starts_with':
-            query = query.ilike(`field_values.${filter.fieldApiName}.value`, `${filter.value}%`);
-            break;
-          case 'ends_with':
-            query = query.ilike(`field_values.${filter.fieldApiName}.value`, `%${filter.value}`);
-            break;
-          case 'greater_than':
-            query = query.gt(`field_values.${filter.fieldApiName}.value`, filter.value);
-            break;
-          case 'less_than':
-            query = query.lt(`field_values.${filter.fieldApiName}.value`, filter.value);
-            break;
-          default:
-            // Default to equals if operator is not recognized
-            query = query.eq(`field_values.${filter.fieldApiName}.value`, filter.value);
-        }
-      });
-      
-      // Apply OR filters with or() function
-      if (orFilters.length > 0) {
-        const orConditions = orFilters.map(filter => {
-          switch (filter.operator) {
-            case 'equals':
-              return { [`field_values.${filter.fieldApiName}.value`]: filter.value };
-            case 'not_equals':
-              return { [`field_values.${filter.fieldApiName}.value`]: { $ne: filter.value } };
-            case 'contains':
-              return { [`field_values.${filter.fieldApiName}.value`]: { $ilike: `%${filter.value}%` } };
-            case 'starts_with':
-              return { [`field_values.${filter.fieldApiName}.value`]: { $ilike: `${filter.value}%` } };
-            case 'ends_with':
-              return { [`field_values.${filter.fieldApiName}.value`]: { $ilike: `%${filter.value}` } };
-            case 'greater_than':
-              return { [`field_values.${filter.fieldApiName}.value`]: { $gt: filter.value } };
-            case 'less_than':
-              return { [`field_values.${filter.fieldApiName}.value`]: { $lt: filter.value } };
-            default:
-              return { [`field_values.${filter.fieldApiName}.value`]: filter.value };
-          }
-        });
-        
-        query = query.or(orConditions.map(c => JSON.stringify(c)).join(','));
-      }
-    }
-    
-    return query;
-  }, [filters]);
-
-  // Get all records for an object type
   const {
     data: records,
     isLoading,
     error,
-    refetch
+    refetch,
   } = useQuery({
     queryKey: ["object-records", objectTypeId, filters],
-    queryFn: async () => {
-      if (!objectTypeId) return [];
-
+    queryFn: async (): Promise<ObjectRecord[]> => {
+      if (!objectTypeId || !user) {
+        return [];
+      }
+      
+      console.log(`Fetching records for object type: ${objectTypeId}`);
+      console.log("Applying filters:", filters);
+      
+      // Get records
       let query = supabase
         .from("object_records")
-        .select("*, field_values:object_field_values(field_api_name, value)")
-        .eq("object_type_id", objectTypeId);
+        .select("*")
+        .eq("object_type_id", objectTypeId)
+        .limit(100);
       
-      // Apply filters if any
-      query = buildFilteredQuery(query);
-
-      const { data, error } = await query;
-
-      if (error) throw error;
-
-      // Track viewing of records if authenticated
-      if (user) {
-        trackActivity(
-          user.id,
-          'view_page',
-          'Viewed records list',
-          'object_type',
-          objectTypeId
-        );
+      // Apply server-side filters if possible
+      // Note: For most filter types, we'll use client-side filtering
+      // because Supabase doesn't support complex filtering on field_values easily
+      
+      const { data: recordsData, error: recordsError } = await query;
+      
+      if (recordsError) {
+        console.error("Error fetching records:", recordsError);
+        throw recordsError;
+      }
+      
+      if (recordsData.length === 0) {
+        return [];
+      }
+      
+      // Get field values for all records
+      const recordIds = recordsData.map(record => record.id);
+      
+      const { data: fieldValuesData, error: fieldValuesError } = await supabase
+        .from("object_field_values")
+        .select("*")
+        .in("record_id", recordIds);
+      
+      if (fieldValuesError) {
+        console.error("Error fetching field values:", fieldValuesError);
+        throw fieldValuesError;
       }
 
-      return data.map(record => {
-        const fieldValues = {};
-        record.field_values?.forEach(fv => {
-          fieldValues[fv.field_api_name] = fv.value;
+      // Group field values by record id
+      const fieldValuesByRecordId = fieldValuesData.reduce((acc, fieldValue) => {
+        if (!acc[fieldValue.record_id]) {
+          acc[fieldValue.record_id] = {};
+        }
+        acc[fieldValue.record_id][fieldValue.field_api_name] = fieldValue.value;
+        return acc;
+      }, {} as { [key: string]: { [key: string]: any } });
+      
+      // Add field values to records
+      let recordsWithFieldValues = recordsData.map(record => ({
+        ...record,
+        field_values: fieldValuesByRecordId[record.id] || {}
+      }));
+      
+      // Apply client-side filtering
+      if (filters && filters.length > 0) {
+        recordsWithFieldValues = recordsWithFieldValues.filter(record => {
+          return filters.every(filter => {
+            // Skip empty filters
+            if (!filter.value && filter.value !== false) {
+              return true;
+            }
+            
+            const fieldValue = record.field_values?.[filter.fieldApiName];
+            const filterValue = filter.value;
+            
+            // Handle system fields
+            if (filter.fieldApiName === 'created_at' || filter.fieldApiName === 'updated_at') {
+              const dateValue = record[filter.fieldApiName];
+              return applyFilterOperator(filter.operator, dateValue, filterValue);
+            } else if (filter.fieldApiName === 'record_id') {
+              return applyFilterOperator(filter.operator, record.record_id, filterValue);
+            }
+            
+            // Handle regular field values
+            return applyFilterOperator(filter.operator, fieldValue, filterValue);
+          });
         });
-        return {
-          ...record,
-          fieldValues
-        };
-      });
+      }
+      
+      console.log(`Fetched ${recordsWithFieldValues.length} records with field values`);
+      return recordsWithFieldValues;
     },
-    enabled: !!objectTypeId
+    enabled: !!objectTypeId && !!user,
   });
 
-  // Create a new record
   const createRecord = useMutation({
-    mutationFn: async (data: RecordData) => {
-      if (!objectTypeId) throw new Error("No object type ID provided");
+    mutationFn: async (formData: RecordFormData) => {
+      if (!objectTypeId || !user) {
+        throw new Error("Missing objectTypeId or user");
+      }
+      
+      console.log("Creating record with data:", formData);
 
-      // Create record in object_records table
-      const { data: recordData, error: recordError } = await supabase
+      // First, create the record with owner_id
+      const { data: newRecord, error: recordError } = await supabase
         .from("object_records")
-        .insert({
+        .insert([{ 
           object_type_id: objectTypeId,
-          owner_id: user?.id
-        })
+          owner_id: user.id // Add owner_id to comply with RLS policies
+        }])
         .select()
         .single();
 
-      if (recordError) throw recordError;
+      if (recordError) {
+        console.error("Error creating record:", recordError);
+        throw recordError;
+      }
 
-      // Insert field values
-      const fieldValuePromises = Object.entries(data.field_values).map(([key, value]) => {
-        return supabase
+      // Then, create the field values
+      const fieldValues = Object.entries(formData).map(([key, value]) => ({
+        record_id: newRecord.id,
+        field_api_name: key,
+        value: value === null ? null : String(value)
+      }));
+
+      if (fieldValues.length > 0) {
+        const { error: fieldValuesError } = await supabase
           .from("object_field_values")
-          .insert({
-            record_id: recordData.id,
-            field_api_name: key,
-            value: value?.toString()
-          });
-      });
+          .insert(fieldValues);
 
-      await Promise.all(fieldValuePromises);
-
-      // Track record creation
-      if (user) {
-        trackActivity(
-          user.id,
-          'record_create',
-          'Created record',
-          'object_type',
-          objectTypeId,
-          { record_id: recordData.id }
-        );
+        if (fieldValuesError) {
+          console.error("Error creating field values:", fieldValuesError);
+          throw fieldValuesError;
+        }
       }
 
-      return recordData;
+      return newRecord;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["object-records", objectTypeId] });
-      toast.success("Record created successfully");
-    },
-    onError: (error) => {
-      console.error("Error creating record:", error);
-      toast.error("Failed to create record");
     }
   });
 
-  // Update an existing record
-  const updateRecord = useMutation({
-    mutationFn: async (data: RecordData) => {
-      if (!objectTypeId || !data.id) throw new Error("No object type ID or record ID provided");
-
-      // Update record in object_records table to update the timestamp
-      await supabase
-        .from("object_records")
-        .update({ updated_at: new Date().toISOString() })
-        .eq("id", data.id);
-
-      // Update field values
-      const fieldValuePromises = Object.entries(data.field_values).map(([key, value]) => {
-        return supabase
-          .from("object_field_values")
-          .upsert({
-            record_id: data.id,
-            field_api_name: key,
-            value: value?.toString()
-          }, { 
-            onConflict: 'record_id,field_api_name' 
-          });
-      });
-
-      await Promise.all(fieldValuePromises);
-
-      // Track record update
-      if (user) {
-        trackActivity(
-          user.id,
-          'record_update',
-          'Updated record',
-          'object_type',
-          objectTypeId,
-          { record_id: data.id }
-        );
-      }
-
-      return { id: data.id };
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["object-records", objectTypeId] });
-      toast.success("Record updated successfully");
-    },
-    onError: (error) => {
-      console.error("Error updating record:", error);
-      toast.error("Failed to update record");
-    }
-  });
-
-  // Delete a record
-  const deleteRecord = useMutation({
-    mutationFn: async (recordId: string) => {
-      if (!recordId) throw new Error("No record ID provided");
-      
-      // Delete record in object_records table
-      const { error } = await supabase
-        .from("object_records")
-        .delete()
-        .eq("id", recordId);
-
-      if (error) throw error;
-
-      // Track record deletion
-      if (user) {
-        trackActivity(
-          user.id,
-          'record_delete',
-          'Deleted record',
-          'object_type',
-          objectTypeId,
-          { record_id: recordId }
-        );
-      }
-
-      return { id: recordId };
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["object-records", objectTypeId] });
-      toast.success("Record deleted successfully");
-    },
-    onError: (error) => {
-      console.error("Error deleting record:", error);
-      toast.error("Failed to delete record");
-    }
-  });
-
-  // Clone a record
   const cloneRecord = useMutation({
     mutationFn: async (recordId: string) => {
-      if (!recordId || !objectTypeId) throw new Error("Missing recordId or objectTypeId");
+      if (!objectTypeId || !user) {
+        throw new Error("Missing objectTypeId or user");
+      }
       
-      // Get the original record data
-      const { data: originalRecord, error: fetchError } = await supabase
+      console.log("Cloning record:", recordId);
+      
+      // First, get the record to clone
+      const { data: recordData } = await supabase
         .from("object_records")
         .select("*")
         .eq("id", recordId)
         .single();
         
-      if (fetchError) throw fetchError;
+      if (!recordData) {
+        throw new Error("Record not found");
+      }
       
-      // Get the original field values
+      // Get field values for the record
       const { data: fieldValues, error: fieldValuesError } = await supabase
         .from("object_field_values")
-        .select("field_api_name, value")
+        .select("*")
         .eq("record_id", recordId);
         
-      if (fieldValuesError) throw fieldValuesError;
+      if (fieldValuesError) {
+        console.error("Error fetching field values:", fieldValuesError);
+        throw fieldValuesError;
+      }
       
-      // Create the new record
-      const { data: newRecord, error: createError } = await supabase
+      // Create new record
+      const { data: newRecord, error: recordError } = await supabase
         .from("object_records")
-        .insert({
+        .insert([{ 
           object_type_id: objectTypeId,
-          owner_id: user?.id
-        })
+          owner_id: user.id
+        }])
         .select()
         .single();
         
-      if (createError) throw createError;
-      
-      // Helper function to append "copy" to name fields
-      const appendCopyToValue = (fieldName: string, value: string) => {
-        if (fieldName === 'name' || fieldName.endsWith('_name') || fieldName.includes('name')) {
-          return `${value}_copy`;
-        }
-        return value;
-      };
-      
-      // Insert the cloned field values with modification for name fields
-      if (fieldValues && fieldValues.length > 0) {
-        const fieldValueInserts = fieldValues.map(fv => ({
-          record_id: newRecord.id,
-          field_api_name: fv.field_api_name,
-          value: appendCopyToValue(fv.field_api_name, fv.value)
-        }));
-        
-        const { error: insertError } = await supabase
-          .from("object_field_values")
-          .insert(fieldValueInserts);
-          
-        if (insertError) throw insertError;
+      if (recordError) {
+        console.error("Error creating cloned record:", recordError);
+        throw recordError;
       }
       
-      // Track the cloning
-      if (user) {
-        trackActivity(
-          user.id,
-          'record_create',
-          'Cloned record',
-          'object_type',
-          objectTypeId,
-          { 
-            original_record_id: recordId,
-            new_record_id: newRecord.id 
-          }
-        );
+      // Create modified field values for the new record
+      // Handle the name field specially to append "_copy"
+      const nameFields = ["name", "title", "subject", "display_name"];
+      const newFieldValues = fieldValues.map(fv => {
+        let value = fv.value;
+        
+        // Add "_copy" suffix to name fields
+        if (fv.value && nameFields.includes(fv.field_api_name.toLowerCase())) {
+          value = `${fv.value}_copy`;
+        }
+        
+        return {
+          record_id: newRecord.id,
+          field_api_name: fv.field_api_name,
+          value
+        };
+      });
+      
+      // Insert the new field values
+      if (newFieldValues.length > 0) {
+        const { error: insertError } = await supabase
+          .from("object_field_values")
+          .insert(newFieldValues);
+          
+        if (insertError) {
+          console.error("Error creating cloned field values:", insertError);
+          throw insertError;
+        }
       }
       
       return newRecord;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["object-records", objectTypeId] });
-      toast.success("Record cloned successfully");
+    }
+  });
+
+  const updateRecord = useMutation({
+    mutationFn: async ({ id, field_values }: { id: string, field_values: RecordFormData }) => {
+      if (!id || !user) {
+        throw new Error("Missing record id or user");
+      }
+      
+      console.log("Updating record:", id, "with data:", field_values);
+
+      // Update the record's timestamp and ensure owner_id is set
+      const { error: recordError } = await supabase
+        .from("object_records")
+        .update({ 
+          updated_at: new Date().toISOString(),
+          owner_id: user.id, // Set owner_id to current user to comply with RLS policies
+          last_modified_by: user.id
+        })
+        .eq("id", id);
+
+      if (recordError) {
+        console.error("Error updating record:", recordError);
+        throw recordError;
+      }
+
+      // For each field value, upsert (update or insert)
+      for (const [key, value] of Object.entries(field_values)) {
+        const { error } = await supabase
+          .from("object_field_values")
+          .upsert({
+            record_id: id,
+            field_api_name: key,
+            value: value === null ? null : String(value)
+          }, {
+            onConflict: 'record_id,field_api_name'
+          });
+
+        if (error) {
+          console.error(`Error updating field ${key}:`, error);
+          throw error;
+        }
+      }
+
+      return { id, field_values };
     },
-    onError: (error) => {
-      console.error("Error cloning record:", error);
-      toast.error("Failed to clone record");
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["object-records", objectTypeId] });
+      queryClient.invalidateQueries({ queryKey: ["record-detail", objectTypeId] });
+    }
+  });
+
+  const deleteRecord = useMutation({
+    mutationFn: async (id: string) => {
+      if (!id || !user) {
+        throw new Error("Missing record id or user");
+      }
+      
+      console.log("Deleting record:", id);
+
+      // First delete all field values
+      const { error: fieldValuesError } = await supabase
+        .from("object_field_values")
+        .delete()
+        .eq("record_id", id);
+
+      if (fieldValuesError) {
+        console.error("Error deleting field values:", fieldValuesError);
+        throw fieldValuesError;
+      }
+
+      // Then delete the record
+      const { error: recordError } = await supabase
+        .from("object_records")
+        .delete()
+        .eq("id", id);
+
+      if (recordError) {
+        console.error("Error deleting record:", recordError);
+        throw recordError;
+      }
+
+      return id;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["object-records", objectTypeId] });
     }
   });
 
@@ -371,5 +355,48 @@ export function useObjectRecords(objectTypeId: string | undefined, filters: Filt
   };
 }
 
-// Re-export types for components that need them
-export type { FilterCondition, ObjectRecord, SavedFilter };
+// Helper function to apply filter operators
+function applyFilterOperator(operator: string, fieldValue: any, filterValue: any): boolean {
+  if (fieldValue === undefined || fieldValue === null) {
+    // If searching for empty values
+    if (filterValue === "" || filterValue === null) {
+      return ["equals", "is"].includes(operator);
+    }
+    return false;
+  }
+
+  // Convert both values to strings for text comparisons
+  const fieldStr = String(fieldValue).toLowerCase();
+  const filterStr = String(filterValue).toLowerCase();
+
+  switch (operator) {
+    case "equals":
+    case "is":
+      return fieldStr === filterStr;
+    
+    case "notEqual":
+    case "isNot":
+      return fieldStr !== filterStr;
+      
+    case "contains":
+      return fieldStr.includes(filterStr);
+      
+    case "startsWith":
+      return fieldStr.startsWith(filterStr);
+      
+    case "greaterThan":
+      return Number(fieldValue) > Number(filterValue);
+      
+    case "lessThan":
+      return Number(fieldValue) < Number(filterValue);
+      
+    case "before":
+      return new Date(fieldValue) < new Date(filterValue);
+      
+    case "after":
+      return new Date(fieldValue) > new Date(filterValue);
+      
+    default:
+      return false;
+  }
+}

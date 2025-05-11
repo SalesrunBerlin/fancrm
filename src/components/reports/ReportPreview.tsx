@@ -1,8 +1,9 @@
+
 import { useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import { ReportDisplay } from "@/components/reports/ReportDisplay";
 import { ReportField } from "@/types/report";
-import { FilterCondition } from "@/types/FilterCondition";
+import { FilterCondition } from "@/hooks/useObjectRecords";
 
 interface ReportPreviewProps {
   name: string;

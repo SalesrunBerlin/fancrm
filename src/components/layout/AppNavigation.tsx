@@ -3,17 +3,15 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Settings, LayoutDashboard, AppWindow, FileText, List, Play, BarChart3, Shield, Activity } from "lucide-react";
+import { Settings, LayoutDashboard, AppWindow, FileText, List, Play, BarChart3 } from "lucide-react";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
 import { useCurrentApplicationData } from "@/hooks/useCurrentApplicationData";
-import { useAuth } from "@/contexts/AuthContext";
 
 export function AppNavigation() {
   const navigate = useNavigate();
   const location = useLocation();
   const { objectTypes } = useObjectTypes();
   const { currentAppId, appObjects } = useCurrentApplicationData();
-  const { isSuperAdmin } = useAuth();
   
   // Filter to show only objects in the current application
   const navigationObjects = currentAppId && appObjects?.length 
@@ -21,7 +19,7 @@ export function AppNavigation() {
     : objectTypes?.filter(obj => obj.show_in_navigation && !obj.is_archived) || [];
 
   const isActive = (path: string) => {
-    return location.pathname === path || location.pathname.startsWith(`${path}/`);
+    return location.pathname === path;
   };
 
   return (
@@ -29,7 +27,7 @@ export function AppNavigation() {
       <div className="space-y-4 px-3">
         <div className="px-4 py-2">
           <h2 className="mb-2 px-2 text-lg font-semibold tracking-tight">
-            Allgemein
+            General
           </h2>
           <div className="space-y-1">
             <Button
@@ -47,7 +45,7 @@ export function AppNavigation() {
               onClick={() => navigate("/applications")}
             >
               <AppWindow className="mr-2 h-4 w-4" />
-              Anwendungen
+              Applications
             </Button>
 
             <Button
@@ -56,7 +54,7 @@ export function AppNavigation() {
               onClick={() => navigate("/actions")}
             >
               <Play className="mr-2 h-4 w-4" />
-              Aktionen
+              Actions
             </Button>
 
             <Button
@@ -65,7 +63,7 @@ export function AppNavigation() {
               onClick={() => navigate("/reports")}
             >
               <BarChart3 className="mr-2 h-4 w-4" />
-              Berichte
+              Reports
             </Button>
 
             <Button
@@ -74,30 +72,8 @@ export function AppNavigation() {
               onClick={() => navigate("/structures")}
             >
               <FileText className="mr-2 h-4 w-4" />
-              Strukturen
+              Structures
             </Button>
-
-            {isSuperAdmin && (
-              <>
-                <Button
-                  variant={isActive("/admin") ? "secondary" : "ghost"}
-                  className="w-full justify-start"
-                  onClick={() => navigate("/admin")}
-                >
-                  <Shield className="mr-2 h-4 w-4" />
-                  Admin-Bereich
-                </Button>
-                
-                <Button
-                  variant={isActive("/admin/analytics") ? "secondary" : "ghost"}
-                  className="w-full justify-start"
-                  onClick={() => navigate("/admin/analytics")}
-                >
-                  <Activity className="mr-2 h-4 w-4" />
-                  Benutzeranalysen
-                </Button>
-              </>
-            )}
 
             <Button
               variant={isActive("/settings") ? "secondary" : "ghost"}
@@ -105,7 +81,7 @@ export function AppNavigation() {
               onClick={() => navigate("/settings")}
             >
               <Settings className="mr-2 h-4 w-4" />
-              Einstellungen
+              Settings
             </Button>
           </div>
         </div>
@@ -113,7 +89,7 @@ export function AppNavigation() {
         {navigationObjects && navigationObjects.length > 0 && (
           <div className="px-4 py-2">
             <h2 className="mb-2 px-2 text-lg font-semibold tracking-tight">
-              Benutzerdefinierte Objekte
+              Custom Objects
             </h2>
             <div className="space-y-1">
               {navigationObjects.map(type => (
