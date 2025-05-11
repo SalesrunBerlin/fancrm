@@ -34,24 +34,38 @@ export function DatePickerField({
   
   // State for temporarily storing date and time selections before saving
   const [selectedDate, setSelectedDate] = React.useState<Date | undefined>(
-    value ? new Date(value) : undefined
+    value && !isNaN(new Date(value).getTime()) ? new Date(value) : undefined
   );
   
   // State for hours and minutes (for datetime fields)
   const [hours, setHours] = React.useState<string>(
-    value ? format(new Date(value), "HH") : "00"
+    value && !isNaN(new Date(value).getTime()) ? format(new Date(value), "HH") : "00"
   );
   const [minutes, setMinutes] = React.useState<string>(
-    value ? format(new Date(value), "mm") : "00"
+    value && !isNaN(new Date(value).getTime()) ? format(new Date(value), "mm") : "00"
   );
 
   // Update local state when props value changes
   React.useEffect(() => {
     if (value) {
-      const dateValue = new Date(value);
-      setSelectedDate(dateValue);
-      setHours(format(dateValue, "HH"));
-      setMinutes(format(dateValue, "mm"));
+      try {
+        const dateValue = new Date(value);
+        if (!isNaN(dateValue.getTime())) { 
+          setSelectedDate(dateValue);
+          setHours(format(dateValue, "HH"));
+          setMinutes(format(dateValue, "mm"));
+        } else {
+          console.warn("Invalid date value:", value);
+          setSelectedDate(undefined);
+          setHours("00");
+          setMinutes("00");
+        }
+      } catch (error) {
+        console.error("Error parsing date:", value, error);
+        setSelectedDate(undefined);
+        setHours("00");
+        setMinutes("00");
+      }
     } else {
       setSelectedDate(undefined);
       setHours("00");
@@ -92,19 +106,23 @@ export function DatePickerField({
   // Handle saving and closing the popover
   const saveAndClose = (dateToSave: Date | undefined = selectedDate) => {
     if (dateToSave) {
-      // For datetime fields, apply the selected hours and minutes
-      if (isDateTime) {
-        const dateWithHours = new Date(dateToSave);
-        dateWithHours.setHours(parseInt(hours, 10));
-        dateWithHours.setMinutes(parseInt(minutes, 10));
-        
-        // Format as ISO string for storing with time
-        const formattedDate = dateWithHours.toISOString();
-        onChange(formattedDate);
-      } else {
-        // For date-only fields, format as YYYY-MM-DD
-        const formattedDate = format(dateToSave, "yyyy-MM-dd");
-        onChange(formattedDate);
+      try {
+        // For datetime fields, apply the selected hours and minutes
+        if (isDateTime) {
+          const dateWithHours = new Date(dateToSave);
+          dateWithHours.setHours(parseInt(hours, 10));
+          dateWithHours.setMinutes(parseInt(minutes, 10));
+          
+          // Format as ISO string for storing with time
+          const formattedDate = dateWithHours.toISOString();
+          onChange(formattedDate);
+        } else {
+          // For date-only fields, format as YYYY-MM-DD
+          const formattedDate = format(dateToSave, "yyyy-MM-dd");
+          onChange(formattedDate);
+        }
+      } catch (error) {
+        console.error("Error formatting date:", error);
       }
     }
     

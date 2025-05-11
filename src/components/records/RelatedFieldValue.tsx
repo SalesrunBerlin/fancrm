@@ -29,16 +29,24 @@ export function RelatedFieldValue({ field, value }: RelatedFieldValueProps) {
       
     case 'date':
       try {
-        return <span>{format(new Date(value), 'dd.MM.yyyy')}</span>;
+        const date = new Date(value);
+        if (isNaN(date.getTime())) {
+          return <span>{String(value)}</span>;
+        }
+        return <span>{format(date, 'dd.MM.yyyy')}</span>;
       } catch {
-        return <span>{value}</span>;
+        return <span>{String(value)}</span>;
       }
       
     case 'datetime':
       try {
-        return <span>{format(new Date(value), 'dd.MM.yyyy HH:mm')}</span>;
+        const date = new Date(value);
+        if (isNaN(date.getTime())) {
+          return <span>{String(value)}</span>;
+        }
+        return <span>{format(date, 'dd.MM.yyyy HH:mm')}</span>;
       } catch {
-        return <span>{value}</span>;
+        return <span>{String(value)}</span>;
       }
       
     case 'checkbox':
