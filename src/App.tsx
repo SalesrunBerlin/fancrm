@@ -1,7 +1,7 @@
 
 import React, { Suspense, lazy } from "react";
 import { BrowserRouter as Router } from "react-router-dom";
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Outlet } from "react-router-dom";
 import { Toaster } from "sonner";
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
@@ -47,19 +47,34 @@ function App() {
                 
                 {/* Protected routes with AuthGuard */}
                 <Route element={<AuthGuard />}>
-                  <Route path="/dashboard" element={<Layout><Dashboard /></Layout>} />
-                  <Route path="/settings" element={<Layout><Settings /></Layout>} />
-                  
-                  {/* Object routes */}
-                  <Route path="/objects/:objectTypeId" element={<Layout><ObjectRecordsList /></Layout>} />
-                  <Route path="/objects/:objectTypeId/records/:recordId" element={<Layout><div>Record Detail</div></Layout>} />
-                  <Route path="/objects/:objectTypeId/new" element={<Layout><div>Create Record</div></Layout>} />
-                  <Route path="/objects/:objectTypeId/import" element={<Layout><div>Import Records</div></Layout>} />
-                  
-                  {/* Action routes */}
-                  <Route path="/actions/execute/:actionId" element={<Layout><div>Execute Action</div></Layout>} />
-                  <Route path="/actions/execute/:actionId/from/:recordId" element={<Layout><div>Execute Linked Action</div></Layout>} />
-                  <Route path="/actions/mass/:actionId" element={<Layout><div>Execute Mass Action</div></Layout>} />
+                  <Route element={<Layout />}>
+                    <Route path="/dashboard" element={<Dashboard />} />
+                    <Route path="/settings" element={<Settings />} />
+                    <Route path="/reports" element={<div>Reports Page</div>} />
+                    <Route path="/applications" element={<div>Applications Page</div>} />
+                    <Route path="/actions" element={<div>Actions Page</div>} />
+                    <Route path="/structures" element={<div>Structures Page</div>} />
+                    
+                    {/* Object routes */}
+                    <Route path="/objects/:objectTypeId" element={<ObjectRecordsList />} />
+                    <Route path="/objects/:objectTypeId/records/:recordId" element={<div>Record Detail</div>} />
+                    <Route path="/objects/:objectTypeId/new" element={<div>Create Record</div>} />
+                    <Route path="/objects/:objectTypeId/import" element={<div>Import Records</div>} />
+                    
+                    {/* Action routes */}
+                    <Route path="/actions/execute/:actionId" element={<div>Execute Action</div>} />
+                    <Route path="/actions/execute/:actionId/from/:recordId" element={<div>Execute Linked Action</div>} />
+                    <Route path="/actions/mass/:actionId" element={<div>Execute Mass Action</div>} />
+                    
+                    {/* Settings routes */}
+                    <Route path="/settings/object-manager" element={<div>Object Manager</div>} />
+                    <Route path="/settings/user-management" element={<div>User Management</div>} />
+                    
+                    {/* Admin routes */}
+                    <Route path="/admin" element={<div>Admin Dashboard</div>} />
+                    <Route path="/admin/help-content" element={<div>Help Content Editor</div>} />
+                    <Route path="/admin/users" element={<div>User Management</div>} />
+                  </Route>
                 </Route>
 
                 {/* Catch-all route */}

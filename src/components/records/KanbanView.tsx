@@ -108,7 +108,7 @@ export function KanbanView({ objectTypeId, records, isLoading, onRecordClick }: 
                   key={record.id}
                   record={record}
                   objectTypeId={objectTypeId}
-                  onClick={() => onRecordClick?.(record.id)}
+                  onClick={onRecordClick}
                 />
               ))}
               {groupedRecords[value.value]?.length === 0 && (
