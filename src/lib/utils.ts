@@ -20,36 +20,45 @@ export function formatDate(dateString: string | null | undefined): string {
   if (!dateString) return '-';
   
   try {
-    // Versuche zuerst ISO-Strings mit parseISO zu parsen
+    // First try to parse the date string
     let date: Date | null = null;
+    let isValidDate = false;
     
     if (typeof dateString === 'string') {
-      // Versuche parseISO für ISO-Strings
-      date = parseISO(dateString);
+      // Try different parsing methods
       
-      // Wenn parseISO fehlschlägt, versuche es mit new Date()
-      if (!isValid(date)) {
+      // Method 1: parseISO for ISO strings
+      date = parseISO(dateString);
+      isValidDate = isValid(date);
+      
+      // Method 2: Direct Date constructor if parseISO fails
+      if (!isValidDate) {
         date = new Date(dateString);
+        isValidDate = isValid(date);
       }
-    } else {
-      // Falls dateString kein String ist, versuche es direkt mit new Date()
-      date = new Date(dateString);
+      
+      // Method 3: Try parsing numeric strings as timestamps
+      if (!isValidDate && /^\d+$/.test(dateString)) {
+        date = new Date(parseInt(dateString, 10));
+        isValidDate = isValid(date);
+      }
     }
     
-    // Prüfe, ob das Datum gültig ist, bevor es formatiert wird
-    if (!isValid(date)) {
-      console.warn(`Invalid date string: ${dateString}`);
-      return dateString || '-';
+    // If we have a valid date, format it
+    if (isValidDate && date) {
+      return new Intl.DateTimeFormat('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+      }).format(date);
     }
     
-    return new Intl.DateTimeFormat('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    }).format(date);
+    // If all parsing attempts failed, log and return original
+    console.warn(`Could not parse date string: ${dateString}`);
+    return typeof dateString === 'string' ? dateString : '-';
   } catch (error) {
     console.error(`Error formatting date: ${dateString}`, error);
-    return dateString || '-';
+    return typeof dateString === 'string' ? dateString : '-';
   }
 }
 
@@ -62,17 +71,22 @@ export function parseMultiFormatDate(dateString: string): string | null {
   
   // Try parsing different date formats
   let date: Date | null = null;
+  let isValidDate = false;
   
   try {
     // Try direct Date parsing (for ISO format and some other standard formats)
     date = parseISO(trimmed);
-    if (isValid(date)) {
+    isValidDate = isValid(date);
+    
+    if (isValidDate) {
       return date.toISOString().split('T')[0]; // Return YYYY-MM-DD
     }
     
     // Try with new Date() if parseISO failed
     date = new Date(trimmed);
-    if (isValid(date)) {
+    isValidDate = isValid(date);
+    
+    if (isValidDate) {
       return date.toISOString().split('T')[0]; // Return YYYY-MM-DD
     }
     
@@ -80,7 +94,9 @@ export function parseMultiFormatDate(dateString: string): string | null {
     if (/^\d{1,2}\.\d{1,2}\.\d{4}$/.test(trimmed)) {
       const parts = trimmed.split('.');
       date = new Date(`${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`);
-      if (isValid(date)) {
+      isValidDate = isValid(date);
+      
+      if (isValidDate) {
         return date.toISOString().split('T')[0]; // Return YYYY-MM-DD
       }
     }
@@ -89,7 +105,9 @@ export function parseMultiFormatDate(dateString: string): string | null {
     if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(trimmed)) {
       const parts = trimmed.split('/');
       date = new Date(`${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`);
-      if (isValid(date)) {
+      isValidDate = isValid(date);
+      
+      if (isValidDate) {
         return date.toISOString().split('T')[0]; // Return YYYY-MM-DD
       }
     }
@@ -98,16 +116,20 @@ export function parseMultiFormatDate(dateString: string): string | null {
     if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(trimmed)) {
       const parts = trimmed.split('/');
       date = new Date(`${parts[2]}-${parts[0].padStart(2, '0')}-${parts[1].padStart(2, '0')}`);
-      if (isValid(date)) {
+      isValidDate = isValid(date);
+      
+      if (isValidDate) {
         return date.toISOString().split('T')[0]; // Return YYYY-MM-DD
       }
     }
+    
+    // If we couldn't parse the date after all attempts
+    console.warn(`Failed to parse date: ${trimmed}`);
+    return null;
   } catch (error) {
     console.error(`Error parsing date: ${trimmed}`, error);
+    return null;
   }
-  
-  // If we couldn't parse the date, return null
-  return null;
 }
 
 // Helper for safely accessing HTML Element properties

@@ -27,6 +27,7 @@ export function ApplicationSwitcher({
   
   // Function to truncate application name if it's longer than 12 characters
   const truncateAppName = (name: string) => {
+    if (!name) return "Default App";
     if (name.length > 12) {
       return name.substring(0, 12) + "...";
     }

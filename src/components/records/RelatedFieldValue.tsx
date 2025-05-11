@@ -29,21 +29,23 @@ export function RelatedFieldValue({ field, value }: RelatedFieldValueProps) {
       
     case 'date':
       try {
-        // Sicheres Parsen des Datums
+        // Safe date parsing logic
         if (typeof value === 'string') {
-          // Versuche es mit parseISO für ISO-Strings
-          const date = parseISO(value);
-          if (isValid(date)) {
-            return <span>{format(date, 'dd.MM.yyyy')}</span>;
+          // Try parseISO for ISO strings
+          const parsedDate = parseISO(value);
+          if (isValid(parsedDate)) {
+            return <span>{format(parsedDate, 'dd.MM.yyyy')}</span>;
           }
           
-          // Falls parseISO fehlschlägt, versuche es mit new Date()
+          // If that fails, try with the Date constructor
           const fallbackDate = new Date(value);
           if (isValid(fallbackDate)) {
             return <span>{format(fallbackDate, 'dd.MM.yyyy')}</span>;
           }
         }
-        // Falls alles fehlschlägt, zeige den ursprünglichen Wert an
+        
+        // If all parsing attempts fail or value is not a string
+        console.warn("Invalid date value:", value);
         return <span>{String(value)}</span>;
       } catch (error) {
         console.error("Error formatting date:", error, value);
@@ -52,21 +54,23 @@ export function RelatedFieldValue({ field, value }: RelatedFieldValueProps) {
       
     case 'datetime':
       try {
-        // Sicheres Parsen des Datums und der Zeit
+        // Safe date-time parsing logic
         if (typeof value === 'string') {
-          // Versuche es mit parseISO für ISO-Strings
-          const date = parseISO(value);
-          if (isValid(date)) {
-            return <span>{format(date, 'dd.MM.yyyy HH:mm')}</span>;
+          // Try parseISO for ISO strings
+          const parsedDate = parseISO(value);
+          if (isValid(parsedDate)) {
+            return <span>{format(parsedDate, 'dd.MM.yyyy HH:mm')}</span>;
           }
           
-          // Falls parseISO fehlschlägt, versuche es mit new Date()
+          // If that fails, try with the Date constructor
           const fallbackDate = new Date(value);
           if (isValid(fallbackDate)) {
             return <span>{format(fallbackDate, 'dd.MM.yyyy HH:mm')}</span>;
           }
         }
-        // Falls alles fehlschlägt, zeige den ursprünglichen Wert an
+        
+        // If all parsing attempts fail or value is not a string
+        console.warn("Invalid datetime value:", value);
         return <span>{String(value)}</span>;
       } catch (error) {
         console.error("Error formatting datetime:", error, value);

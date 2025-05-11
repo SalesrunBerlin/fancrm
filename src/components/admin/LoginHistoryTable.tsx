@@ -1,4 +1,3 @@
-
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 
@@ -38,15 +37,34 @@ export function LoginHistoryTable({ loginHistory }: LoginHistoryTableProps) {
     if (!timestamp) return '-';
     
     try {
-      // Stellen Sie sicher, dass timestamp als Zahl oder gültiges Datumsstring vorliegt
-      const date = new Date(typeof timestamp === 'number' ? timestamp : parseInt(String(timestamp)));
+      // Handle the timestamp safely
+      let date: Date;
       
-      // Prüfen Sie, ob das Datum gültig ist
-      if (isNaN(date.getTime())) {
-        return String(timestamp).substring(0, 20); // Geben Sie einen Teil des Originalstrings zurück, wenn kein gültiges Datum
+      if (typeof timestamp === 'number') {
+        // If it's a numeric timestamp
+        date = new Date(timestamp);
+      } else if (typeof timestamp === 'string') {
+        // If it's a string, try to parse it
+        
+        // Try as a numeric string first (milliseconds since epoch)
+        if (/^\d+$/.test(timestamp)) {
+          date = new Date(parseInt(timestamp, 10));
+        } else {
+          // Otherwise try as a date string
+          date = new Date(timestamp);
+        }
+      } else {
+        // If it's neither number nor string, we can't format it
+        return String(timestamp);
       }
       
-      // Formatieren Sie das Datum als DD.MM.YYYY, HH:MM:SS (mit richtiger Nullpolsterung)
+      // Check if the date is valid before formatting
+      if (isNaN(date.getTime())) {
+        console.warn(`Invalid date: ${timestamp}`);
+        return String(timestamp).substring(0, 20); // Return a part of the original string if invalid
+      }
+      
+      // Format the date as DD.MM.YYYY, HH:MM:SS
       const day = String(date.getDate()).padStart(2, '0');
       const month = String(date.getMonth() + 1).padStart(2, '0');
       const year = date.getFullYear();
@@ -57,7 +75,7 @@ export function LoginHistoryTable({ loginHistory }: LoginHistoryTableProps) {
       return `${day}.${month}.${year}, ${hours}:${minutes}:${seconds}`;
     } catch (e) {
       console.error("Error formatting date:", e);
-      return String(timestamp).substring(0, 20); // Geben Sie einen Teil des Originalstrings bei Fehler zurück
+      return String(timestamp).substring(0, 20); // Return a part of the original string on error
     }
   };
 
