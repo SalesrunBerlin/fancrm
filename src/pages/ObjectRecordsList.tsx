@@ -402,19 +402,9 @@ export default function ObjectRecordsList() {
               <div className="p-4">
                 <KanbanView
                   records={allRecords}
-                  fields={fields || []}
                   objectTypeId={objectTypeId!}
-                  onUpdateRecord={async (recordId, fieldValues) => {
-                    try {
-                      await updateRecord.mutateAsync({
-                        id: recordId,
-                        field_values: fieldValues
-                      });
-                    } catch (error) {
-                      console.error("Error updating record:", error);
-                      throw error;
-                    }
-                  }}
+                  isLoading={isLoading}
+                  onRecordClick={(recordId) => window.location.href = `/objects/${objectTypeId}/records/${recordId}`}
                 />
               </div>
             )}
