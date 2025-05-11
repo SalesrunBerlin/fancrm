@@ -1,21 +1,16 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { ObjectField } from "@/hooks/useObjectTypes";
 import { FilterField } from "@/components/records/FilterField";
 import { Plus, Save, Trash, X } from "lucide-react";
-import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { FilterCondition } from "@/hooks/useObjectRecords";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { debounce } from "lodash";
-
-interface SavedFilter {
-  id: string;
-  name: string;
-  conditions: FilterCondition[];
-}
+import { useUserFilterSettings } from "@/hooks/useUserFilterSettings";
 
 interface ObjectRecordsFilterProps {
   objectTypeId: string;
@@ -36,73 +31,56 @@ export function ObjectRecordsFilter({
   const [isApplying, setIsApplying] = useState<boolean>(false);
   const { user } = useAuth();
   const userId = user?.id || 'anonymous';
-  const storageKey = `object-filters-${userId}`;
   
-  const [savedFilters, setSavedFilters] = useLocalStorage<Record<string, SavedFilter[]>>(
-    storageKey,
-    {}
-  );
+  // Use our user filter settings hook to access and update filters in the database
+  const { settings, updateSettings, isLoading: isLoadingSettings } = useUserFilterSettings(objectTypeId);
+  
   const [filterName, setFilterName] = useState("");
   const [showSaveOptions, setShowSaveOptions] = useState(false);
-  const lastAppliedStorageKey = `last-applied-filters-${userId}`;
-  const [lastAppliedFilter, setLastAppliedFilter] = useLocalStorage<Record<string, FilterCondition[]>>(
-    lastAppliedStorageKey,
-    {}
-  );
 
   // Debug logging
   useEffect(() => {
     console.log("ObjectRecordsFilter mounted for objectTypeId:", objectTypeId);
-    console.log("Last applied filters in storage:", lastAppliedFilter);
     console.log("Active filters passed in props:", activeFilters);
-  }, []);
+    console.log("Settings from database:", settings);
+  }, [objectTypeId, activeFilters, settings]);
 
-  // Load saved filters for this object type
+  // Load filters from props
   useEffect(() => {
     if (activeFilters && activeFilters.length > 0) {
       console.log("Using active filters from props:", activeFilters);
       setFilters(activeFilters);
-    } else if (objectTypeId) {
-      // Try to load last applied filter for this object
-      const lastFilter = lastAppliedFilter?.[objectTypeId];
-      
-      if (lastFilter && lastFilter.length > 0) {
-        console.log("Loading last applied filter:", lastFilter);
-        setFilters(lastFilter);
-      } else if (savedFilters?.[objectTypeId]?.length > 0) {
-        // Otherwise try to load most recently saved filter
-        const recentFilter = savedFilters[objectTypeId][0];
-        console.log("Loading most recent saved filter:", recentFilter);
-        setFilters(recentFilter.conditions);
-      } else if (filters.length === 0) {
-        // Initialize with an empty filter if none exist
-        console.log("Initializing with empty filter");
-        addFilterCondition();
-      }
+    } else if (filters.length === 0) {
+      // Initialize with an empty filter if none exist
+      console.log("Initializing with empty filter");
+      addFilterCondition();
     }
-  }, [objectTypeId, user, activeFilters]);
+  }, [activeFilters]);
 
-  // Create a debounced apply function, but don't automatically call it
-  // This is now only used when the Apply button is clicked
+  // Create a debounced apply function - only used when Apply button is clicked
   const debouncedApplyFilters = useCallback(
     debounce((filtersToApply: FilterCondition[]) => {
       if (onFilterChange) {
         // Remove empty filters before applying
         const validFilters = filtersToApply.filter(f => 
-          f.value !== undefined && 
+          (f.value !== undefined && 
           f.value !== null && 
-          f.value !== "" || 
+          f.value !== "") || 
           f.operator === "isNull" || 
           f.operator === "isNotNull"
         );
         
         console.log("Applying debounced filters:", validFilters);
         
-        // Save as last applied filter
-        setLastAppliedFilter(prev => ({
-          ...prev,
-          [objectTypeId]: validFilters
-        }));
+        // Update filters in database settings
+        if (user) {
+          const currentFilters = settings?.filters || [];
+          updateSettings({
+            ...settings,
+            filters: validFilters,
+            lastApplied: new Date().toISOString()
+          });
+        }
         
         setIsApplying(true);
         
@@ -110,7 +88,7 @@ export function ObjectRecordsFilter({
         setTimeout(() => {
           onFilterChange(validFilters);
           setIsApplying(false);
-          toast.success("Filters applied");
+          toast.success("Filter angewendet");
           
           // If onClose is provided, close the filter panel
           if (onClose) {
@@ -119,7 +97,7 @@ export function ObjectRecordsFilter({
         }, 100);
       }
     }, 250),
-    [onFilterChange, objectTypeId, setLastAppliedFilter, onClose]
+    [onFilterChange, objectTypeId, settings, updateSettings, user, onClose]
   );
 
   const addFilterCondition = () => {
@@ -148,64 +126,70 @@ export function ObjectRecordsFilter({
 
   const saveFilters = () => {
     if (!filterName.trim()) {
-      toast.error("Please enter a name for your filter");
+      toast.error("Bitte geben Sie einen Namen für Ihren Filter ein");
       return;
     }
 
-    const newSavedFilter: SavedFilter = {
+    const newSavedFilter = {
       id: crypto.randomUUID(),
       name: filterName,
       conditions: filters
     };
 
-    const updatedSavedFilters = {
-      ...savedFilters,
-      [objectTypeId]: [
-        newSavedFilter,
-        ...(savedFilters[objectTypeId] || [])
-      ].slice(0, 10) // Keep only the 10 most recent saved filters
-    };
+    // Get existing savedFilters array or initialize it
+    const savedFilters = Array.isArray(settings?.savedFilters) 
+      ? settings.savedFilters 
+      : [];
 
-    setSavedFilters(updatedSavedFilters);
+    // Add new filter at the beginning of the array
+    const updatedSavedFilters = [
+      newSavedFilter,
+      ...savedFilters
+    ].slice(0, 10); // Keep only the 10 most recent saved filters
+
+    // Save to database
+    updateSettings({
+      ...settings,
+      savedFilters: updatedSavedFilters
+    });
+
     setFilterName("");
     setShowSaveOptions(false);
-    
-    // Save as last applied filter too
-    setLastAppliedFilter({
-      ...lastAppliedFilter,
-      [objectTypeId]: filters
-    });
-    
-    toast.success("Filter saved successfully");
+    toast.success("Filter erfolgreich gespeichert");
   };
 
-  const loadSavedFilter = (savedFilter: SavedFilter) => {
+  const loadSavedFilter = (savedFilter: {id: string, name: string, conditions: FilterCondition[]}) => {
     console.log("Loading saved filter:", savedFilter);
     setFilters(savedFilter.conditions);
   };
 
   const deleteSavedFilter = (filterId: string) => {
-    const updatedFilters = savedFilters[objectTypeId].filter(f => f.id !== filterId);
-    setSavedFilters({
-      ...savedFilters,
-      [objectTypeId]: updatedFilters
+    if (!settings?.savedFilters) return;
+    
+    const updatedFilters = settings.savedFilters.filter(f => f.id !== filterId);
+    
+    updateSettings({
+      ...settings,
+      savedFilters: updatedFilters
     });
-    toast.success("Filter deleted");
+    toast.success("Filter gelöscht");
   };
 
   const clearFilters = () => {
-    const emptyFilter = [];
+    const emptyFilter: FilterCondition[] = [];
     setFilters(emptyFilter);
     
-    // Clear the last applied filter
-    const updatedLastApplied = { ...lastAppliedFilter };
-    delete updatedLastApplied[objectTypeId];
-    setLastAppliedFilter(updatedLastApplied);
+    // Update filters in database
+    updateSettings({
+      ...settings,
+      filters: emptyFilter,
+      lastApplied: new Date().toISOString()
+    });
     
     // Apply empty filter immediately
     if (onFilterChange) {
       onFilterChange(emptyFilter);
-      toast.success("Filters cleared");
+      toast.success("Filter zurückgesetzt");
     }
     
     // Add a single empty condition after clearing
@@ -254,17 +238,17 @@ export function ObjectRecordsFilter({
           <Input
             value={filterName}
             onChange={(e) => setFilterName(e.target.value)}
-            placeholder="Enter filter name"
+            placeholder="Filter-Namen eingeben"
             className="max-w-xs"
           />
-          <Button size="sm" onClick={saveFilters}>Save Filter</Button>
+          <Button size="sm" onClick={saveFilters}>Filter speichern</Button>
         </div>
       )}
 
       {/* Saved filters list */}
-      {savedFilters[objectTypeId]?.length > 0 && (
+      {settings?.savedFilters?.length > 0 && (
         <div className="flex flex-wrap gap-2 mb-4">
-          {savedFilters[objectTypeId].map(filter => (
+          {settings.savedFilters.map(filter => (
             <div 
               key={filter.id} 
               className="flex items-center bg-muted rounded-md px-2 py-1 text-sm"
@@ -318,7 +302,7 @@ export function ObjectRecordsFilter({
           className="mt-2"
         >
           <Plus className="h-3 w-3 mr-1" />
-          Add Filter
+          Filter hinzufügen
         </Button>
       </div>
 
@@ -329,7 +313,7 @@ export function ObjectRecordsFilter({
           disabled={isApplying}
           className="w-full"
         >
-          {isApplying ? "Applying..." : "Apply Filters"}
+          {isApplying ? "Wird angewendet..." : "Filter anwenden"}
         </Button>
       </div>
     </div>

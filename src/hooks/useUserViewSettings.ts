@@ -4,15 +4,10 @@ import { useLocalStorage } from "./useLocalStorage";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 
-// Define types for our settings
-export interface UserViewSettings {
-  // Generic settings structure that can accommodate different setting types
-  [key: string]: any;
-}
-
+// Define settings type
 export type SettingsType = 'kanban' | 'filter' | 'layout' | 'pagination';
 
-export function useUserViewSettings(
+export function useUserViewSettings<T extends Record<string, any>>(
   objectTypeId: string | undefined, 
   settingsType: SettingsType
 ) {
@@ -21,27 +16,27 @@ export function useUserViewSettings(
   
   // Local storage as fallback or for non-authenticated users
   const localStorageKey = objectTypeId ? `${settingsType}-settings-${objectTypeId}` : '';
-  const [localSettings, setLocalSettings] = useLocalStorage<UserViewSettings>(localStorageKey, {});
+  const [localSettings, setLocalSettings] = useLocalStorage<T>(localStorageKey, {} as T);
   
   // State for server-side settings
-  const [serverSettings, setServerSettings] = useState<UserViewSettings>({});
+  const [serverSettings, setServerSettings] = useState<T>({} as T);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
   // Function to safely parse JSON if needed
-  const safeParseJSON = (data: any): UserViewSettings => {
-    if (!data) return {};
+  const safeParseJSON = (data: any): T => {
+    if (!data) return {} as T;
     
     if (typeof data === 'string') {
       try {
-        return JSON.parse(data);
+        return JSON.parse(data) as T;
       } catch (e) {
         console.error('Error parsing settings JSON:', e);
-        return {};
+        return {} as T;
       }
     }
     
-    return data as UserViewSettings;
+    return data as T;
   };
 
   // Function to load settings from server if user is logged in
@@ -92,7 +87,7 @@ export function useUserViewSettings(
   const settings = isLoggedIn ? serverSettings : localSettings;
 
   // Function to update settings
-  const updateSettings = useCallback(async (newSettings: UserViewSettings) => {
+  const updateSettings = useCallback(async (newSettings: T) => {
     console.log(`Updating ${settingsType} settings:`, newSettings);
     
     // First update local state for immediate feedback
@@ -103,7 +98,7 @@ export function useUserViewSettings(
     }
     
     // If logged in, also save to server
-    if (isLoggedIn && objectTypeId) {
+    if (isLoggedIn && objectTypeId && user) {
       try {
         setIsSaving(true);
         

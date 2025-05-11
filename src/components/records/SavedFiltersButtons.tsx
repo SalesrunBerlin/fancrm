@@ -1,13 +1,13 @@
 
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { useAuth } from "@/contexts/AuthContext";
 import { Badge } from "@/components/ui/badge";
 import { FilterCondition } from "@/hooks/useObjectRecords";
 import { useObjectRecords } from "@/hooks/useObjectRecords";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { useUserFilterSettings } from "@/hooks/useUserFilterSettings";
 
 interface SavedFilter {
   id: string;
@@ -25,27 +25,29 @@ export function SavedFiltersButtons({ objectTypeId, maxToShow = 3 }: SavedFilter
   const { user } = useAuth();
   const userId = user?.id || 'anonymous';
   const navigate = useNavigate();
-  const storageKey = `object-filters-${userId}`;
-  const [savedFilters] = useLocalStorage<Record<string, SavedFilter[]>>(storageKey, {});
   const [filters, setFilters] = useState<SavedFilter[]>([]);
   
+  // Use the user filter settings hook to get filters from database
+  const { settings, isLoading: isLoadingSettings } = useUserFilterSettings(objectTypeId);
+  
   useEffect(() => {
-    if (savedFilters && savedFilters[objectTypeId]) {
+    // Get saved filters from database settings
+    if (settings && settings.savedFilters && Array.isArray(settings.savedFilters)) {
       // Show only the first maxToShow filters
-      setFilters(savedFilters[objectTypeId].slice(0, maxToShow));
+      setFilters(settings.savedFilters.slice(0, maxToShow));
     } else {
       setFilters([]);
     }
-  }, [savedFilters, objectTypeId, maxToShow]);
+  }, [settings, maxToShow]);
 
-  if (filters.length === 0) {
+  if (filters.length === 0 || isLoadingSettings) {
     return null;
   }
 
   const handleFilterClick = (filter: SavedFilter) => {
     try {
       if (!filter.conditions || filter.conditions.length === 0) {
-        toast.error("This filter appears to be empty or invalid");
+        toast.error("Dieser Filter ist leer oder ungültig");
         return;
       }
 
@@ -58,30 +60,24 @@ export function SavedFiltersButtons({ objectTypeId, maxToShow = 3 }: SavedFilter
         
         // Ensure required fields exist
         if (!condition.fieldApiName || !condition.operator) {
-          throw new Error("Invalid filter condition detected");
+          throw new Error("Ungültige Filterbedingung erkannt");
         }
         
         return condition;
       });
       
-      // Navigate to optimized list with filter applied
-      const lastAppliedStorageKey = `last-applied-filters-${userId}`;
-      const currentLastApplied = localStorage.getItem(lastAppliedStorageKey);
-      const lastApplied = currentLastApplied ? JSON.parse(currentLastApplied) : {};
-      
-      console.log("Saving filter to apply:", validatedConditions);
-      
-      lastApplied[objectTypeId] = validatedConditions;
-      localStorage.setItem(lastAppliedStorageKey, JSON.stringify(lastApplied));
-      
       // Add a small toast notification before navigating
-      toast.success(`Loading ${filter.name} filter`);
+      toast.success(`Lade "${filter.name}" Filter`);
+      
+      // Save the selected filter directly to user_view_settings via our hook
+      // This will be done in useUserFilterSettings hook and will persist to DB for logged-in users
       
       // Navigate to the optimized object list page with this filter applied
+      // The filter will be loaded from the database when the page loads
       navigate(`/objects/${objectTypeId}/optimized`);
     } catch (error) {
-      console.error("Error applying saved filter:", error);
-      toast.error("Could not apply the filter. Please try again.");
+      console.error("Fehler beim Anwenden des gespeicherten Filters:", error);
+      toast.error("Filter konnte nicht angewendet werden. Bitte versuchen Sie es erneut.");
     }
   };
 
