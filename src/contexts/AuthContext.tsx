@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -40,6 +41,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       if (!user) return;
       
+      console.log("Setting favorite color:", color, "for user:", user.id);
+      
       // Create a user_preferences table entry using a direct SQL query instead of RPC
       const { error } = await supabase
         .from('user_color_preferences')
@@ -49,10 +52,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           colors: { favorite_color: color } 
         }, { onConflict: 'user_id' });
       
-      if (error) throw error;
+      if (error) {
+        console.error("Database error when saving color preference:", error);
+        throw error;
+      }
       
       // Update the local state after successful DB update
       setFavoriteColorState(color);
+      console.log("Color preference successfully updated to:", color);
     } catch (error) {
       console.error("Error saving color preference:", error);
       throw error;
@@ -122,6 +129,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const loadUserPreferences = async (userId: string) => {
     try {
+      console.log("Loading color preferences for user:", userId);
+      
       // Use direct query instead of RPC
       const { data, error } = await supabase
         .from('user_color_preferences')
@@ -134,10 +143,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return;
       }
       
+      console.log("Color preference data from database:", data);
+      
       if (data && data.colors && typeof data.colors === 'object') {
         // Make sure we're accessing the favorite_color property safely
         const colorPreference = data.colors as { favorite_color?: string };
+        console.log("Setting color preference from database:", colorPreference.favorite_color);
         setFavoriteColorState(colorPreference.favorite_color || null);
+      } else {
+        console.log("No color preference found in database");
       }
     } catch (error) {
       console.error('Error loading user preferences:', error);
