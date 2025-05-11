@@ -5,31 +5,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 
-// Array of default colors for picklist values
-const defaultColors = [
-  "#8B5CF6", // Purple
-  "#D946EF", // Magenta
-  "#EC4899", // Pink
-  "#F97316", // Orange
-  "#EAB308", // Yellow
-  "#22C55E", // Green
-  "#06B6D4", // Cyan
-  "#3B82F6", // Blue
-  "#6366F1", // Indigo
-  "#A855F7"  // Violet
-];
-
 export function usePicklistCreation(fieldId: string | null) {
   const [isAddingValues, setIsAddingValues] = useState(false);
   const { addValue, removeValue, refetch } = useFieldPicklistValues(fieldId || '');
   const { user } = useAuth();
-  
-  // Function to get a color for a new picklist value 
-  const getNextColor = (existingValues: number) => {
-    // Use the index to select a color, cycle through if we have more values than colors
-    const colorIndex = existingValues % defaultColors.length;
-    return defaultColors[colorIndex];
-  };
 
   const addPicklistValue = async (value: string) => {
     if (!fieldId) return false;
@@ -40,19 +19,9 @@ export function usePicklistCreation(fieldId: string | null) {
     
     setIsAddingValues(true);
     try {
-      // Get current count to determine a color
-      const { data: existingValues } = await supabase
-        .from('field_picklist_values')
-        .select('id')
-        .eq('field_id', fieldId);
-      
-      const count = existingValues?.length || 0;
-      const color = getNextColor(count);
-      
       await addValue.mutateAsync({
         value: value.trim(),
         label: value.trim(),
-        color // Add a color to new picklist values
       });
       return true;
     } catch (error) {
@@ -84,21 +53,12 @@ export function usePicklistCreation(fieldId: string | null) {
       // Unique values only (just in case)
       const uniqueValues = Array.from(new Set(values.filter(v => v.trim() !== '')));
       
-      // Get current count to determine starting color
-      const { data: existingValues } = await supabase
-        .from('field_picklist_values')
-        .select('id')
-        .eq('field_id', fieldToUse);
-      
-      const startIndex = existingValues?.length || 0;
-      
       // Create batch of picklist value objects for insertion
-      const picklistValueObjects = uniqueValues.map((value, index) => ({
+      const picklistValueObjects = uniqueValues.map(value => ({
         field_id: fieldToUse,
         value: value.trim(),
         label: value.trim(),
-        owner_id: user.id,
-        color: getNextColor(startIndex + index) // Assign a color based on position
+        owner_id: user.id, // Explicitly set the owner_id to the current user's ID
       }));
       
       console.log('Inserting picklist values with owner_id:', user.id);

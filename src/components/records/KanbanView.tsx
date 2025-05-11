@@ -2,15 +2,20 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { Loader2 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
+import { KanbanCard } from './KanbanCard';
+import { useKanbanViewSettings } from '@/hooks/useKanbanViewSettings';
 import { useObjectFields } from '@/hooks/useObjectFields';
 import { useFieldPicklistValues } from '@/hooks/useFieldPicklistValues';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useNavigate } from 'react-router-dom';
-import { useObjectRecords } from '@/hooks/useObjectRecords';
-import { toast } from 'sonner';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { SimpleKanbanCard } from './SimpleKanbanCard';
+
+interface PicklistValue {
+  id: string;
+  value: string;
+  label?: string;
+  color?: string;
+  order?: number;
+}
 
 interface KanbanViewProps {
   objectTypeId: string;
@@ -21,10 +26,9 @@ interface KanbanViewProps {
 
 export function KanbanView({ objectTypeId, records, isLoading, onRecordClick }: KanbanViewProps) {
   const navigate = useNavigate();
+  const { settings, updateFieldApiName, isColumnExpanded, toggleColumnExpansion } = useKanbanViewSettings(objectTypeId);
   const { fields } = useObjectFields(objectTypeId);
-  const { updateRecord } = useObjectRecords(objectTypeId);
-  const [selectedField, setSelectedField] = useState<string | null>(null);
-  const [isUpdating, setIsUpdating] = useState(false);
+  const [selectedField, setSelectedField] = useState<string | null>(settings?.fieldApiName || null);
   
   // Find all picklist fields that can be used for kanban view
   const picklistFields = useMemo(() => {
@@ -34,9 +38,11 @@ export function KanbanView({ objectTypeId, records, isLoading, onRecordClick }: 
   useEffect(() => {
     // Set the first picklist field as default if none selected
     if (!selectedField && picklistFields.length > 0) {
-      setSelectedField(picklistFields[0].id);
+      const defaultField = picklistFields[0].api_name;
+      setSelectedField(defaultField);
+      updateFieldApiName(defaultField);
     }
-  }, [picklistFields, selectedField]);
+  }, [picklistFields, selectedField, updateFieldApiName]);
 
   // Get picklist values for the selected field
   const { picklistValues, isLoading: isLoadingPicklist } = useFieldPicklistValues(
@@ -61,12 +67,8 @@ export function KanbanView({ objectTypeId, records, isLoading, onRecordClick }: 
     
     // Group records
     records.forEach(record => {
-      // Use the field ID to get the proper field value from the record
-      // This is necessary since selectedField is now the field ID rather than the API name
-      const fieldApiName = fields?.find(f => f.id === selectedField)?.api_name || '';
-      const fieldValue = record.field_values?.[fieldApiName] || '';
-      
-      if (groups[fieldValue] !== undefined) {
+      const fieldValue = record.fields?.[selectedField] || '';
+      if (groups[fieldValue]) {
         groups[fieldValue].push(record);
       } else {
         // If value doesn't match any picklist value, add to empty group
@@ -75,45 +77,17 @@ export function KanbanView({ objectTypeId, records, isLoading, onRecordClick }: 
     });
     
     return groups;
-  }, [records, selectedField, picklistValues, fields]);
+  }, [records, selectedField, picklistValues]);
 
   const handleRecordClick = (recordId: string) => {
     if (onRecordClick) {
       onRecordClick(recordId);
     } else {
-      // Use React Router navigation
+      // Use React Router navigation instead of direct browser navigation
       navigate(`/objects/${objectTypeId}/records/${recordId}`);
     }
   };
 
-  const handleMoveRecord = async (recordId: string, targetStatus: string) => {
-    if (!selectedField) return;
-    
-    // Find the field API name from the field ID
-    const fieldApiName = fields?.find(f => f.id === selectedField)?.api_name;
-    if (!fieldApiName) {
-      toast.error("Could not find field API name");
-      return;
-    }
-    
-    setIsUpdating(true);
-    try {
-      await updateRecord.mutateAsync({
-        id: recordId,
-        field_values: {
-          [fieldApiName]: targetStatus
-        }
-      });
-      toast.success("Record moved successfully");
-    } catch (error) {
-      console.error("Error moving record:", error);
-      toast.error("Failed to move record");
-    } finally {
-      setIsUpdating(false);
-    }
-  };
-
-  // Display loading state
   if (isLoading || isLoadingPicklist) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -122,84 +96,38 @@ export function KanbanView({ objectTypeId, records, isLoading, onRecordClick }: 
     );
   }
 
-  // Check if we have a selected field and picklist values
-  if (!selectedField) {
-    return (
-      <div className="p-4 text-center">
-        <p className="text-muted-foreground">No picklist fields available for Kanban view</p>
-      </div>
-    );
-  }
-
-  const fieldName = fields?.find(f => f.id === selectedField)?.name || 'Status';
-
   return (
-    <div className="w-full">
-      <div className="mb-4 flex items-center justify-between">
-        <h3 className="text-sm font-medium">Grouped by: {fieldName}</h3>
-        
-        {picklistFields.length > 1 && (
-          <select 
-            className="border p-1 rounded text-sm"
-            value={selectedField}
-            onChange={(e) => setSelectedField(e.target.value)}
+    <div className="w-full overflow-x-auto">
+      <div className="flex space-x-4 p-4 min-w-max">
+        {picklistValues?.map((value) => (
+          <div
+            key={value.id}
+            className="bg-card w-72 rounded-lg shadow flex flex-col"
           >
-            {picklistFields.map(field => (
-              <option key={field.id} value={field.id}>
-                {field.name}
-              </option>
-            ))}
-          </select>
-        )}
-      </div>
-      
-      <div className="overflow-x-auto">
-        <div className="flex space-x-4 p-4 min-w-max">
-          {picklistValues?.map((value, index) => {
-            // Use the color from the database, or fall back to a default color
-            const columnColor = value.color || `hsl(${index * 40}, 70%, 65%)`;
-            
-            return (
-              <div
-                key={value.id || index}
-                className="bg-card w-72 rounded-lg shadow flex flex-col"
-              >
-                <div 
-                  className="p-3 font-medium border-b flex justify-between items-center"
-                  style={{ 
-                    backgroundColor: `${columnColor}20`, // Use 20% opacity for background
-                    borderLeft: `4px solid ${columnColor}` // Add left border with full opacity
-                  }}
-                >
-                  <span>{value.label || value.value || 'No Value'}</span>
-                  <span className="text-muted-foreground text-sm">
-                    {groupedRecords[value.value]?.length || 0}
-                  </span>
-                </div>
-                <div className="p-2 flex-1 overflow-y-auto max-h-[calc(100vh-250px)]">
-                  {groupedRecords[value.value]?.map((record) => (
-                    <SimpleKanbanCard
-                      key={record.id}
-                      record={record}
-                      onClick={() => handleRecordClick(record.id)}
-                      onMove={(targetStatus) => handleMoveRecord(record.id, targetStatus)}
-                      currentStatus={value.value}
-                      availableStatuses={picklistValues?.filter(v => v.value !== value.value).map(v => v.value) || []}
-                    />
-                  ))}
-                  {groupedRecords[value.value]?.length === 0 && (
-                    <p className="text-center text-muted-foreground p-4">No records</p>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-          {!picklistValues || picklistValues.length === 0 ? (
-            <div className="p-4 text-center w-full">
-              <p className="text-muted-foreground">No picklist values found for this field</p>
+            <div 
+              className="p-3 font-medium border-b flex justify-between items-center"
+              style={{ backgroundColor: value.color ? `${value.color}20` : undefined }}
+            >
+              <span>{value.value || 'No Value'}</span>
+              <span className="text-muted-foreground text-sm">
+                {groupedRecords[value.value]?.length || 0}
+              </span>
             </div>
-          ) : null}
-        </div>
+            <div className="p-2 flex-1 overflow-y-auto max-h-[calc(100vh-250px)]">
+              {groupedRecords[value.value]?.map((record) => (
+                <KanbanCard
+                  key={record.id}
+                  record={record}
+                  objectTypeId={objectTypeId}
+                  onClick={handleRecordClick}
+                />
+              ))}
+              {groupedRecords[value.value]?.length === 0 && (
+                <p className="text-center text-muted-foreground p-4">No records</p>
+              )}
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );

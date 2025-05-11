@@ -20,45 +20,28 @@ export function formatDate(dateString: string | null | undefined): string {
   if (!dateString) return '-';
   
   try {
-    // First try to parse the date string
-    let date: Date | null = null;
-    let isValidDate = false;
-    
+    // Try to parse the date string first with parseISO for ISO strings
+    let date: Date;
     if (typeof dateString === 'string') {
-      // Try different parsing methods
-      
-      // Method 1: parseISO for ISO strings
       date = parseISO(dateString);
-      isValidDate = isValid(date);
-      
-      // Method 2: Direct Date constructor if parseISO fails
-      if (!isValidDate) {
-        date = new Date(dateString);
-        isValidDate = isValid(date);
-      }
-      
-      // Method 3: Try parsing numeric strings as timestamps
-      if (!isValidDate && /^\d+$/.test(dateString)) {
-        date = new Date(parseInt(dateString, 10));
-        isValidDate = isValid(date);
-      }
+    } else {
+      date = new Date(dateString);
     }
     
-    // If we have a valid date, format it
-    if (isValidDate && date) {
-      return new Intl.DateTimeFormat('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-      }).format(date);
+    // Check if the date is valid before formatting
+    if (!isValid(date)) {
+      console.warn(`Invalid date string: ${dateString}`);
+      return dateString || '-';
     }
     
-    // If all parsing attempts failed, log and return original
-    console.warn(`Could not parse date string: ${dateString}`);
-    return typeof dateString === 'string' ? dateString : '-';
+    return new Intl.DateTimeFormat('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    }).format(date);
   } catch (error) {
     console.error(`Error formatting date: ${dateString}`, error);
-    return typeof dateString === 'string' ? dateString : '-';
+    return dateString || '-';
   }
 }
 
@@ -71,22 +54,17 @@ export function parseMultiFormatDate(dateString: string): string | null {
   
   // Try parsing different date formats
   let date: Date | null = null;
-  let isValidDate = false;
   
   try {
     // Try direct Date parsing (for ISO format and some other standard formats)
     date = parseISO(trimmed);
-    isValidDate = isValid(date);
-    
-    if (isValidDate) {
+    if (isValid(date)) {
       return date.toISOString().split('T')[0]; // Return YYYY-MM-DD
     }
     
     // Try with new Date() if parseISO failed
     date = new Date(trimmed);
-    isValidDate = isValid(date);
-    
-    if (isValidDate) {
+    if (isValid(date)) {
       return date.toISOString().split('T')[0]; // Return YYYY-MM-DD
     }
     
@@ -94,9 +72,7 @@ export function parseMultiFormatDate(dateString: string): string | null {
     if (/^\d{1,2}\.\d{1,2}\.\d{4}$/.test(trimmed)) {
       const parts = trimmed.split('.');
       date = new Date(`${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`);
-      isValidDate = isValid(date);
-      
-      if (isValidDate) {
+      if (isValid(date)) {
         return date.toISOString().split('T')[0]; // Return YYYY-MM-DD
       }
     }
@@ -105,9 +81,7 @@ export function parseMultiFormatDate(dateString: string): string | null {
     if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(trimmed)) {
       const parts = trimmed.split('/');
       date = new Date(`${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`);
-      isValidDate = isValid(date);
-      
-      if (isValidDate) {
+      if (isValid(date)) {
         return date.toISOString().split('T')[0]; // Return YYYY-MM-DD
       }
     }
@@ -116,20 +90,16 @@ export function parseMultiFormatDate(dateString: string): string | null {
     if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(trimmed)) {
       const parts = trimmed.split('/');
       date = new Date(`${parts[2]}-${parts[0].padStart(2, '0')}-${parts[1].padStart(2, '0')}`);
-      isValidDate = isValid(date);
-      
-      if (isValidDate) {
+      if (isValid(date)) {
         return date.toISOString().split('T')[0]; // Return YYYY-MM-DD
       }
     }
-    
-    // If we couldn't parse the date after all attempts
-    console.warn(`Failed to parse date: ${trimmed}`);
-    return null;
   } catch (error) {
     console.error(`Error parsing date: ${trimmed}`, error);
-    return null;
   }
+  
+  // If we couldn't parse the date, return null
+  return null;
 }
 
 // Helper for safely accessing HTML Element properties

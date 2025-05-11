@@ -11,8 +11,8 @@ const Index = () => {
     return <Navigate to="/dashboard" replace />;
   }
   
-  // If not logged in, go to auth page directly
-  return <Navigate to="/auth" replace />;
+  // If not logged in, go to landing page
+  return <Navigate to="/landing" replace />;
 };
 
 export default Index;

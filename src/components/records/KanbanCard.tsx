@@ -6,40 +6,39 @@ import { cn } from '@/lib/utils';
 export interface KanbanCardProps {
   record: any;
   objectTypeId: string;
-  onClick?: (id: string, event?: React.MouseEvent) => void;
-  isSelected?: boolean;
+  onClick?: (id: string) => void;
 }
 
-export function KanbanCard({ record, objectTypeId, onClick, isSelected }: KanbanCardProps) {
-  const handleClick = (event: React.MouseEvent) => {
+export function KanbanCard({ record, objectTypeId, onClick }: KanbanCardProps) {
+  const handleClick = () => {
     if (onClick) {
-      onClick(record.id, event);
+      onClick(record.id);
     }
   };
   
   // Get the name field or first field value for display
   const getDisplayName = () => {
-    const nameField = record?.field_values?.name || record?.name;
+    const nameField = record?.fields?.name || record?.name;
     
     if (nameField) {
       return nameField;
     }
     
     // If no name field, get the first non-empty field value
-    const firstValue = Object.values(record?.field_values || {}).find(val => val);
+    const firstValue = Object.values(record?.fields || {}).find(val => val);
     return firstValue || `Record ${record.id.substring(0, 8)}`;
   };
   
   // Get the description field or second field value for display
   const getDescription = () => {
-    const descField = record?.field_values?.description || record?.description;
+    const descField = record?.fields?.description || record?.description;
     
     if (descField) {
       return descField;
     }
     
     // Get field keys and values
-    const fields = record?.field_values || {};
+    const fields = record?.fields || {};
     const fieldEntries = Object.entries(fields);
     
     // Skip the first entry (assumed to be the title) and get the next one
@@ -57,8 +56,7 @@ export function KanbanCard({ record, objectTypeId, onClick, isSelected }: Kanban
     <Card 
       className={cn(
         "mb-2 cursor-pointer hover:shadow-md transition-shadow",
-        onClick ? "hover:border-primary/50" : "",
-        isSelected ? "border-primary border-2" : ""
+        onClick ? "hover:border-primary/50" : ""
       )}
       onClick={handleClick}
     >

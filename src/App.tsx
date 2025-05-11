@@ -36,11 +36,6 @@ import AdminDashboard from "@/pages/admin/AdminDashboard";
 import HelpContentEditor from "@/pages/admin/HelpContentEditor";
 import UserDetailPage from "@/pages/admin/UserDetailPage";
 import CreateObjectPage from "@/pages/CreateObjectPage";
-import ProfilePage from "@/pages/ProfilePage";
-import CreateFieldPage from "@/pages/CreateFieldPage";
-import ObjectFieldEditPage from "@/pages/ObjectFieldEditPage";
-import ImportCreateFieldPage from "@/pages/ImportCreateFieldPage";
-import EditRecordPage from "@/pages/EditRecordPage";
 
 // Setup an optimized React Query client with better cache control
 const queryClient = new QueryClient({
@@ -74,7 +69,6 @@ function App() {
                 <Route element={<AuthGuard />}>
                   <Route element={<Layout />}>
                     <Route path="/dashboard" element={<Dashboard />} />
-                    <Route path="/profile" element={<ProfilePage />} />
                     <Route path="/settings" element={<Settings />} />
                     <Route path="/reports" element={<ReportsPage />} />
                     <Route path="/applications" element={<ApplicationsPage />} />
@@ -85,11 +79,8 @@ function App() {
                     {/* Object routes */}
                     <Route path="/objects/:objectTypeId" element={<ObjectRecordsList />} />
                     <Route path="/objects/:objectTypeId/records/:recordId" element={<ObjectRecordDetail />} />
-                    {/* Add support for the URL format without 'records' in the path */}
-                    <Route path="/objects/:objectTypeId/:recordId" element={<ObjectRecordDetail />} />
                     <Route path="/objects/:objectTypeId/new" element={<CreateRecordPage />} />
                     <Route path="/objects/:objectTypeId/import" element={<ImportRecordsPage />} />
-                    <Route path="/objects/:objectTypeId/:recordId/edit" element={<EditRecordPage />} />
                     
                     {/* Action routes */}
                     <Route path="/actions/execute/:actionId" element={<ActionExecutePage />} />
@@ -99,10 +90,6 @@ function App() {
                     {/* Settings routes */}
                     <Route path="/settings/object-manager" element={<ObjectManager />} />
                     <Route path="/settings/object-manager/new" element={<CreateObjectPage />} />
-                    <Route path="/settings/objects/:objectTypeId" element={<ObjectManager />} />
-                    <Route path="/settings/objects/:objectTypeId/fields/new" element={<CreateFieldPage />} />
-                    <Route path="/settings/objects/:objectTypeId/fields/:fieldId" element={<ObjectFieldEditPage />} />
-                    <Route path="/settings/objects/:objectTypeId/import/fields/:columnName" element={<ImportCreateFieldPage />} />
                     <Route path="/settings/user-management" element={<UserManagementPage />} />
                     
                     {/* Admin routes */}

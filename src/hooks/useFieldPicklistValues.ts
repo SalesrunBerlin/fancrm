@@ -10,16 +10,11 @@ interface PicklistValue {
   label: string;
   order_position: number;
   owner_id?: string;
-  color?: string; // Explicitly define color as optional
-  // Weitere mögliche Eigenschaften aus der Datenbank
-  created_at?: string;
-  updated_at?: string;
 }
 
 interface AddPicklistValueData {
   value: string;
   label: string;
-  color?: string; // Added color property to allow setting it when adding values
 }
 
 export function useFieldPicklistValues(fieldId: string) {
@@ -66,40 +61,20 @@ export function useFieldPicklistValues(fieldId: string) {
         throw error;
       }
       
-      // Generate default colors for picklist values if they don't have one
-      const enhancedData = data.map((item, index) => {
-        const enhancedItem = {...item} as PicklistValue;
-        // Check if the item already has a color property
-        if (!enhancedItem.color) {
-          // Simple array of default colors - these will be used if no color is set
-          const defaultColors = [
-            "#8B5CF6", "#D946EF", "#EC4899", "#F97316", 
-            "#EAB308", "#22C55E", "#06B6D4", "#3B82F6"
-          ];
-          // Use modulo to cycle through colors if we have more items than colors
-          enhancedItem.color = defaultColors[index % defaultColors.length];
-        }
-        return enhancedItem;
-      });
-      
-      console.log(`Found ${enhancedData.length} picklist values for field ${fieldId}`);
-      return enhancedData;
+      console.log(`Found ${data.length} picklist values for field ${fieldId}`);
+      return data;
     },
     enabled: !!fieldId,
   });
 
   const addValue = useMutation({
     mutationFn: async (data: AddPicklistValueData) => {
-      // Generate a color if none was provided
-      const colorToUse = data.color || `#${Math.floor(Math.random()*16777215).toString(16).padStart(6, '0')}`;
-      
       const { error } = await supabase.from("field_picklist_values").insert({
         field_id: fieldId,
         value: data.value,
         label: data.label,
         order_position: (picklistValues?.length || 0) + 1,
         owner_id: user?.id,
-        color: colorToUse // Add the color to the database
       });
 
       if (error) throw error;

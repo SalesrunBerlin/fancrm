@@ -24,7 +24,6 @@ import { KanbanView } from "@/components/records/KanbanView";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useUserFilterSettings } from "@/hooks/useUserFilterSettings";
 import { useLayoutViewSettings } from "@/hooks/useLayoutViewSettings";
-import { useNavigate } from "react-router-dom";
 
 export default function ObjectRecordsList() {
   const { objectTypeId } = useParams<{ objectTypeId: string }>();
@@ -171,8 +170,6 @@ export default function ObjectRecordsList() {
   const clearFilters = () => {
     setActiveFilters([]);
   };
-
-  const navigate = useNavigate();
 
   if (!objectType) {
     return (
@@ -407,7 +404,7 @@ export default function ObjectRecordsList() {
                   records={allRecords}
                   objectTypeId={objectTypeId!}
                   isLoading={isLoading}
-                  onRecordClick={(recordId) => navigate(`/objects/${objectTypeId}/records/${recordId}`)}
+                  onRecordClick={(recordId) => window.location.href = `/objects/${objectTypeId}/records/${recordId}`}
                 />
               </div>
             )}
