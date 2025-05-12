@@ -59,7 +59,7 @@ const LandingPage = () => {
     {
       icon: <LayoutKanban />,
       title: "Kanban-Board",
-      description: "Verschiebe Aufgaben per Drag & Drop von „Offen" zu „Erledigt"."
+      description: "Verschiebe Aufgaben per Drag & Drop von 'Offen' zu 'Erledigt'."
     },
     {
       icon: <Users />,
