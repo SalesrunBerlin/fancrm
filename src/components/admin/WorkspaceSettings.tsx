@@ -1,7 +1,6 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -14,7 +13,6 @@ interface WorkspaceSettingsProps {
 }
 
 export function WorkspaceSettings({ workspaceId }: WorkspaceSettingsProps) {
-  const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [workspace, setWorkspace] = useState<any>(null);

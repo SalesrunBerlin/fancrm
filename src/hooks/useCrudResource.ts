@@ -52,8 +52,8 @@ export function useCrudResource<T extends ResourceType>(resourceType: T) {
         throw new Error("No data returned after insert");
       }
       
-      // Type assertion to ensure we're returning the expected shape
-      return response.data[0] as CreateResponse;
+      // Return the first item with proper type assertion
+      return response.data[0] as unknown as CreateResponse;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Failed to create resource";
       setError(new Error(errorMessage));
@@ -71,7 +71,7 @@ export function useCrudResource<T extends ResourceType>(resourceType: T) {
       const { error } = await supabase
         .from(resourceType)
         .update(data as any)
-        .eq('id', id);
+        .eq('id', id as any);
         
       if (error) throw new Error(error.message);
     } catch (err) {
@@ -91,7 +91,7 @@ export function useCrudResource<T extends ResourceType>(resourceType: T) {
       const { error } = await supabase
         .from(resourceType)
         .delete()
-        .eq('id', id);
+        .eq('id', id as any);
         
       if (error) throw new Error(error.message);
     } catch (err) {
@@ -111,7 +111,7 @@ export function useCrudResource<T extends ResourceType>(resourceType: T) {
       const { data, error } = await supabase
         .from(resourceType)
         .select()
-        .eq('id', id)
+        .eq('id', id as any)
         .single();
         
       if (error) throw new Error(error.message);
