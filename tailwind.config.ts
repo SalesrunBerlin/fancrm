@@ -93,5 +93,20 @@ export default {
       }
     }
   },
-  plugins: [require("tailwindcss-animate")],
+  plugins: [
+    require("tailwindcss-animate"),
+    function({ addBase }) {
+      addBase({
+        // Add custom CSS to support opacity modifiers with CSS variables
+        ':root': {
+          '--color-muted-opacity-50': 'rgba(var(--color-muted-rgb), 0.5)',
+        }
+      });
+    }
+  ],
+  // Add this to enable arbitrary values
+  safelist: [
+    'hover:bg-muted/50',
+    'data-[state=selected]:bg-muted'
+  ]
 } satisfies Config;

@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -33,6 +34,11 @@
     --ring: 220 80% 75%;
 
     --radius: 0.5rem;
+    
+    /* RGB values for colors to support opacity modifiers */
+    --color-muted-rgb: 240, 241, 245;
+    --color-primary-rgb: 166, 195, 241;
+    --color-accent-rgb: 240, 241, 245;
   }
 
   .dark {
@@ -63,6 +69,11 @@
     --border: 220 20% 20%;
     --input: 220 20% 20%;
     --ring: 220 80% 75%;
+    
+    /* RGB values for dark mode */
+    --color-muted-rgb: 51, 53, 64;
+    --color-primary-rgb: 166, 195, 241;
+    --color-accent-rgb: 51, 53, 64;
   }
 }
 
@@ -112,8 +123,9 @@ html, body {
   @apply [&_tr:last-child]:border-0;
 }
 
+/* Fix the opacity issue by using custom classes instead of opacity modifiers */
 .crm-table-row {
-  @apply border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted;
+  @apply border-b transition-colors hover:bg-opacity-50 hover:bg-muted data-[state=selected]:bg-muted;
 }
 
 .crm-table-cell {

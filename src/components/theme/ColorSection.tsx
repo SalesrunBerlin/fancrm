@@ -1,10 +1,9 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ColorPicker } from "@/components/ui/color-picker";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { InfoCircle } from "lucide-react";
+import { InfoIcon } from "lucide-react";
 
 interface ColorSectionProps {
   primaryColor: string;
@@ -83,7 +82,7 @@ export function ColorSection({
             <Label htmlFor="primary-color">Primary Color</Label>
             {contrastWarning ? (
               <Badge variant="destructive" className="flex items-center gap-1">
-                <InfoCircle className="h-3 w-3" />
+                <InfoIcon className="h-3 w-3" />
                 Low contrast ({contrastRatio.toFixed(2)}:1)
               </Badge>
             ) : (

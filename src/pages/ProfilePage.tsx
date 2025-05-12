@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import {
   Card,
@@ -269,10 +268,11 @@ export default function ProfilePage() {
                           Lade Farbpräferenzen...
                         </div>
                       ) : (
-                        <ColorPicker 
+                        <input 
+                          type="color"
                           value={favoriteColor} 
-                          onChange={handleColorChange} 
-                          className="max-w-md"
+                          onChange={(e) => handleColorChange(e.target.value)} 
+                          className="w-full h-10 cursor-pointer rounded"
                         />
                       )}
                     </div>
