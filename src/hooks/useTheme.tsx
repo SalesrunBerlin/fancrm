@@ -119,7 +119,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     async function loadProfileTheme() {
       if (!user) {
-        setProfileTheme(null);
+        // When no user is authenticated, use default theme values but don't save to database
+        setProfileTheme(defaultTheme);
         setIsLoading(false);
         return;
       }
@@ -134,12 +135,14 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
           
         if (error) {
           console.error("Error loading theme:", error);
-          setProfileTheme(null);
+          // Use default values if no theme is found
+          setProfileTheme({...defaultTheme, profile_id: user.id});
         } else {
           setProfileTheme(data as ProfileTheme);
         }
       } catch (err) {
         console.error("Failed to load theme:", err);
+        setProfileTheme({...defaultTheme, profile_id: user.id});
       } finally {
         setIsLoading(false);
       }
