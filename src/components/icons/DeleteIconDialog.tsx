@@ -52,13 +52,12 @@ export function DeleteIconDialog({ iconId, iconName, onDeleted }: DeleteIconDial
     <>
       <Button 
         variant="outline" 
-        size="icon" 
+        size="icon"
         className="text-destructive hover:text-destructive"
         onClick={() => setOpen(true)}
-      >
-        <Trash className="h-3 w-3" />
-        <span className="sr-only">Löschen</span>
-      </Button>
+        iconOnly
+        icon={<Trash className="h-3 w-3" />}
+      />
 
       <AlertDialog open={open} onOpenChange={setOpen}>
         <AlertDialogContent>

@@ -9,7 +9,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuItem
 } from "@/components/ui/dropdown-menu";
-import { ThemedButton } from "@/components/ui/themed-button";
+import { Button } from "@/components/ui/button";
 
 interface ExpandableActionButtonProps {
   actionName: string;
@@ -48,14 +48,14 @@ export function ExpandableActionButton({
     return (
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <ThemedButton 
+          <Button 
             variant="ghost"
             size="sm"
             className="h-8 p-0 text-blue-500 hover:text-blue-600"
             useUserColor={false}
           >
             <Play className="h-4 w-4" />
-          </ThemedButton>
+          </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-48 bg-white">
           {actions.map((action, index) => (
@@ -75,33 +75,33 @@ export function ExpandableActionButton({
   // New dashboard mode with icon and text
   if (dashboard) {
     return (
-      <ThemedButton 
+      <Button 
         variant={color}
         size="sm"
         className="h-8 text-left flex items-center justify-start"
         onClick={onExecute}
         title={actionName}
         useUserColor={false}
+        icon={<Play className="h-3.5 w-3.5" />}
       >
-        <Play className="h-3.5 w-3.5 mr-1 flex-shrink-0" />
-        <span className="truncate">{actionName}</span>
-      </ThemedButton>
+        {actionName}
+      </Button>
     );
   }
 
   // For compact mode in tables, just show a small button
   if (compact) {
     return (
-      <ThemedButton 
+      <Button 
         variant={color}
         size="sm"
         className="h-7 p-0"
         onClick={onExecute}
         title={actionName}
         useUserColor={false}
-      >
-        <Play className="h-3.5 w-3.5" />
-      </ThemedButton>
+        iconOnly
+        icon={<Play className="h-3.5 w-3.5" />}
+      />
     );
   }
 
@@ -113,28 +113,28 @@ export function ExpandableActionButton({
       className="relative transition-all duration-300"
     >
       <CollapsibleTrigger asChild>
-        <ThemedButton 
+        <Button 
           variant={color}
           size="icon"
           className="h-8 transition-all"
           onClick={handleButtonClick}
           title={actionName}
           useUserColor={false}
-        >
-          <Play className="h-4 w-4" />
-        </ThemedButton>
+          iconOnly
+          icon={<Play />}
+        />
       </CollapsibleTrigger>
       
       <CollapsibleContent className="absolute left-12 top-0 z-20">
-        <ThemedButton 
+        <Button 
           variant={color}
-          size="default"
+          size="md"
           className="h-8 transition-all whitespace-nowrap"
           onClick={handleNameClick}
           useUserColor={false}
         >
           {actionName}
-        </ThemedButton>
+        </Button>
       </CollapsibleContent>
     </Collapsible>
   );

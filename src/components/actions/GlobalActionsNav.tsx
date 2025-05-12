@@ -1,6 +1,7 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronDown, Play } from "lucide-react";
+import { Play } from "lucide-react";
 import { useActions, Action, ActionColor } from "@/hooks/useActions";
 import { cn } from "@/lib/utils";
 import {
@@ -10,7 +11,6 @@ import {
   DropdownMenuItem
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { ThemedButton } from "@/components/ui/themed-button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -97,15 +97,15 @@ export function GlobalActionsNav() {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <TooltipTrigger asChild>
-                <ThemedButton 
+                <Button 
                   variant={favoriteColor as ActionColor || "default"}
                   size="icon" 
                   className="h-8 w-8 p-0"
                   aria-label="Actions"
                   useUserColor={true}
-                >
-                  <Play className="h-5 w-5" fill="currentColor" />
-                </ThemedButton>
+                  iconOnly
+                  icon={<Play className="h-5 w-5" fill="currentColor" />}
+                />
               </TooltipTrigger>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="min-w-[180px] bg-white">

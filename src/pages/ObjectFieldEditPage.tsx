@@ -49,8 +49,11 @@ export default function ObjectFieldEditPage() {
             exist.
           </AlertDescription>
         </Alert>
-        <Button variant="outline" onClick={() => navigate(-1)}>
-          <ArrowLeft className="mr-2 h-4 w-4" />
+        <Button 
+          variant="outline" 
+          onClick={() => navigate(-1)}
+          icon={<ArrowLeft />}
+        >
           Go Back
         </Button>
       </div>
@@ -79,8 +82,8 @@ export default function ObjectFieldEditPage() {
             <Button
               variant="destructive"
               onClick={() => setShowDeleteDialog(true)}
+              icon={<Trash />}
             >
-              <Trash className="mr-2 h-4 w-4" />
               Delete Field
             </Button>
           )
