@@ -65,6 +65,11 @@ export default function OptimizedRecordsList() {
     error
   } = usePaginatedObjectRecords(objectTypeId, activeFilters, currentPage, pageSize);
   
+  // Calculate filtered count based on active filters
+  const filteredCount = activeFilters.length > 0 ? records.length : totalCount;
+  // Calculate filtered pages
+  const filteredPages = Math.ceil(filteredCount / pageSize);
+
   // Show error if records failed to load
   useEffect(() => {
     if (error) {
@@ -516,7 +521,7 @@ export default function OptimizedRecordsList() {
           <>
             {activeFilters.length > 0 && (
               <div className="bg-muted/30 p-2 px-4 border-b text-sm">
-                Showing {totalCount} {totalCount === 1 ? 'result' : 'results'} with active filters
+                Showing {records.length} {records.length === 1 ? 'result' : 'results'} with active filters
               </div>
             )}
             
@@ -532,11 +537,13 @@ export default function OptimizedRecordsList() {
                 <div className="border-t p-2">
                   <DataPagination
                     currentPage={currentPage}
-                    totalPages={totalPages}
+                    totalPages={filteredPages}
                     pageSize={pageSize}
                     totalItems={totalCount}
+                    filteredItemsCount={records.length}
                     onPageChange={setCurrentPage}
                     onPageSizeChange={setPageSize}
+                    showFilterStatus={activeFilters.length > 0}
                   />
                 </div>
               </>
@@ -561,11 +568,13 @@ export default function OptimizedRecordsList() {
                 <div className="mt-4">
                   <DataPagination
                     currentPage={currentPage}
-                    totalPages={totalPages}
+                    totalPages={filteredPages}
                     pageSize={pageSize}
                     totalItems={totalCount}
+                    filteredItemsCount={records.length}
                     onPageChange={setCurrentPage}
                     onPageSizeChange={setPageSize}
+                    showFilterStatus={activeFilters.length > 0}
                   />
                 </div>
               </div>
