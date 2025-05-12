@@ -1,10 +1,13 @@
 
-import { ApiKeyManager } from '@/components/ai/ApiKeyManager';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { PageHeader } from '@/components/ui/page-header';
-import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { ApiKeyManager } from '@/components/ai/ApiKeyManager';
+import { ExternalLink, Plug } from 'lucide-react';
 
 export default function OpenAISettings() {
   const { user } = useAuth();
@@ -73,6 +76,37 @@ export default function OpenAISettings() {
         description="Manage your OpenAI API key and view usage statistics"
       />
 
+      <Card>
+        <CardHeader>
+          <div className="flex justify-between items-center">
+            <div>
+              <CardTitle>API Connections</CardTitle>
+              <CardDescription>Manage all your API connections in one place</CardDescription>
+            </div>
+            <Button asChild>
+              <Link to="/connections">
+                <Plug className="h-4 w-4 mr-2" />
+                Manage Connections
+              </Link>
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground">
+            We've improved our connections management! You can now configure and manage all your API connections, including OpenAI,
+            in the dedicated Connections page. This gives you a centralized place to organize all your integrations.
+          </p>
+          <div className="mt-4">
+            <Button variant="outline" asChild>
+              <Link to="/connections">
+                <Plug className="h-4 w-4 mr-2" />
+                Go to Connections
+              </Link>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <ApiKeyManager />
         
@@ -125,6 +159,52 @@ export default function OpenAISettings() {
                 No usage data available
               </div>
             )}
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>External Resources</CardTitle>
+            <CardDescription>Helpful links for using the OpenAI API</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ul className="space-y-2">
+              <li>
+                <a 
+                  href="https://platform.openai.com/docs" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline flex items-center"
+                >
+                  OpenAI API Documentation
+                  <ExternalLink className="h-4 w-4 ml-1" />
+                </a>
+              </li>
+              <li>
+                <a 
+                  href="https://platform.openai.com/account/api-keys" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline flex items-center"
+                >
+                  Get your API key from OpenAI
+                  <ExternalLink className="h-4 w-4 ml-1" />
+                </a>
+              </li>
+              <li>
+                <a 
+                  href="https://platform.openai.com/account/usage" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline flex items-center"
+                >
+                  OpenAI Usage Dashboard
+                  <ExternalLink className="h-4 w-4 ml-1" />
+                </a>
+              </li>
+            </ul>
           </CardContent>
         </Card>
       </div>

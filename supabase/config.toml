@@ -61,4 +61,9 @@ verify_jwt = true
 verify_jwt = true
 [functions.generate_embedding]
 verify_jwt = true
-
+[functions.store_connection]
+verify_jwt = true
+[functions.delete_connection]
+verify_jwt = true
+[functions.proxy_connection]
+verify_jwt = true

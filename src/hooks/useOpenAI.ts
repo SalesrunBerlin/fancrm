@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { useConnections } from './useConnections';
 
 export type OpenAIMessage = {
   role: 'system' | 'user' | 'assistant';
@@ -15,35 +16,16 @@ interface UseOpenAIOptions {
 
 export function useOpenAI(options: UseOpenAIOptions = {}) {
   const { user } = useAuth();
-  const [hasApiKey, setHasApiKey] = useState<boolean | null>(null);
+  const { hasConnection, getConnectionByType, makeRequest } = useConnections({ autoFetch: true });
   const [isLoading, setIsLoading] = useState(false);
   const [messages, setMessages] = useState<OpenAIMessage[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
   const [usage, setUsage] = useState<{ prompt_tokens: number; completion_tokens: number } | null>(null);
 
-  // Check if the user has an API key stored
-  const checkApiKey = async () => {
-    if (!user) {
-      setHasApiKey(false);
-      return;
-    }
+  // Check if the user has an OpenAI connection
+  const hasApiKey = hasConnection('openai');
 
-    try {
-      const { data, error } = await supabase
-        .from('openai_key_profile')
-        .select('profile_id')
-        .eq('profile_id', user.id)
-        .maybeSingle();
-
-      if (error) throw error;
-      setHasApiKey(!!data);
-    } catch (error) {
-      console.error('Error checking API key:', error);
-      setHasApiKey(false);
-    }
-  };
-
-  // Store a new OpenAI API key
+  // Store a new OpenAI API key (for backward compatibility)
   const storeApiKey = async (apiKey: string) => {
     if (!user) {
       toast.error('You must be logged in to store an API key');
@@ -53,13 +35,16 @@ export function useOpenAI(options: UseOpenAIOptions = {}) {
     try {
       setIsLoading(true);
       
-      const { error } = await supabase.functions.invoke('store_openai_key', {
-        body: { api_key: apiKey }
+      const { error } = await supabase.functions.invoke('store_connection', {
+        body: { 
+          service_type: 'openai', 
+          display_name: 'OpenAI', 
+          api_key: apiKey
+        }
       });
 
       if (error) throw error;
       
-      setHasApiKey(true);
       toast.success('API key stored successfully');
       return true;
     } catch (error) {
@@ -71,21 +56,27 @@ export function useOpenAI(options: UseOpenAIOptions = {}) {
     }
   };
 
-  // Delete the stored API key
+  // Delete the stored API key (for backward compatibility)
   const deleteApiKey = async () => {
     if (!user) {
       toast.error('You must be logged in to delete your API key');
       return false;
     }
 
+    const connection = getConnectionByType('openai');
+    if (!connection) {
+      return false;
+    }
+
     try {
       setIsLoading(true);
       
-      const { error } = await supabase.functions.invoke('delete_openai_key', {});
+      const { error } = await supabase.functions.invoke('delete_connection', {
+        body: { connection_id: connection.id }
+      });
 
       if (error) throw error;
       
-      setHasApiKey(false);
       toast.success('API key removed successfully');
       return true;
     } catch (error) {
@@ -113,6 +104,12 @@ export function useOpenAI(options: UseOpenAIOptions = {}) {
       return;
     }
 
+    const connection = getConnectionByType('openai');
+    if (!connection) {
+      toast.error('OpenAI connection not found');
+      return;
+    }
+
     try {
       setIsLoading(true);
       setIsStreaming(true);
@@ -132,18 +129,26 @@ export function useOpenAI(options: UseOpenAIOptions = {}) {
       ];
       setMessages(newMessages);
 
-      // Set up response stream
-      const response = await supabase.functions.invoke('openai_proxy', {
+      // Set up request data for the OpenAI API
+      const requestData = {
+        url: 'https://api.openai.com/v1/chat/completions',
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
         body: {
           model,
           messages: newMessages,
           temperature: 0.7,
-          dataScope
+          stream: true
         },
-        responseType: 'stream'
-      });
+        stream: true
+      };
 
-      if (!response.data) {
+      // Send the request through our proxy
+      const response = await makeRequest(connection.id, requestData);
+
+      if (!response || !response.data) {
         throw new Error('No data in response');
       }
 
@@ -234,18 +239,12 @@ export function useOpenAI(options: UseOpenAIOptions = {}) {
     setMessages(systemMessage ? [systemMessage] : []);
   };
 
-  // Check for API key on component mount or when user changes
-  useEffect(() => {
-    checkApiKey();
-  }, [user]);
-
   return {
     hasApiKey,
     isLoading,
     messages,
     isStreaming,
     usage,
-    checkApiKey,
     storeApiKey,
     deleteApiKey,
     sendMessage,

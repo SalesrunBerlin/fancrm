@@ -1,4 +1,3 @@
-
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { Toaster } from "sonner"; 
 import { Layout } from "@/components/layout/Layout";
@@ -64,9 +63,11 @@ import Index from "./pages/Index";
 import OptimizedRecordsList from "./pages/OptimizedRecordsList";
 import ImportImpressum from "./pages/import/ImportImpressum";
 import { ImpressumScraper } from "@/components/ImpressumScraper";
-// Import new OpenAI pages
+// Import OpenAI pages
 import OpenAISettings from "./pages/OpenAISettings";
 import OpenAIAssistant from "./pages/OpenAIAssistant";
+// Import new ConnectionsPage
+import ConnectionsPage from "./pages/ConnectionsPage";
 
 // Create a client
 const queryClient = new QueryClient({
@@ -176,6 +177,9 @@ function AppContent() {
         {/* OpenAI routes */}
         <Route path="/openai/settings" element={<OpenAISettings />} />
         <Route path="/openai/assistant" element={<OpenAIAssistant />} />
+        
+        {/* Connections route */}
+        <Route path="/connections" element={<ConnectionsPage />} />
         
         {/* Ticket Queue routes */}
         <Route path="/ticket-queue" element={<TicketQueuePage />} />
