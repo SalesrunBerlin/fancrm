@@ -1,24 +1,36 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ConnectionType, useConnections } from "@/hooks/useConnections";
+import { ConnectionType, Connection, useConnections } from "@/hooks/useConnections";
 import { ConnectionManager } from "./ConnectionManager";
+import { Loader2 } from "lucide-react";
 
 interface AddConnectionDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  editingConnection?: Connection | null;
 }
 
 export function AddConnectionDialog({
   open,
-  onOpenChange
+  onOpenChange,
+  editingConnection = null
 }: AddConnectionDialogProps) {
   const [selectedService, setSelectedService] = useState<ConnectionType>("openai");
-  const { connectionTypes } = useConnections();
+  const { connectionTypes, isLoading } = useConnections();
   
-  // Filter out types that already have connections
-  const availableTypes = connectionTypes.filter(ct => !ct.has_connection);
+  // Update the selected service when editing an existing connection
+  useEffect(() => {
+    if (editingConnection) {
+      setSelectedService(editingConnection.service_type);
+    }
+  }, [editingConnection]);
+  
+  // Filter out types that already have connections unless we're editing that connection
+  const availableTypes = connectionTypes.filter(ct => 
+    !ct.has_connection || (editingConnection && ct.service_type === editingConnection.service_type)
+  );
   
   // Define configuration options for different services
   const getConfigFields = (type: ConnectionType) => {
@@ -97,13 +109,29 @@ export function AddConnectionDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Add New Connection</DialogTitle>
+          <DialogTitle>{editingConnection ? 'Edit Connection' : 'Add New Connection'}</DialogTitle>
           <DialogDescription>
-            Connect your accounts to AI services and other APIs
+            {editingConnection 
+              ? `Edit your ${editingConnection.service_type} connection settings`
+              : 'Connect your accounts to AI services and other APIs'
+            }
           </DialogDescription>
         </DialogHeader>
         
-        {availableTypes.length > 0 ? (
+        {isLoading ? (
+          <div className="flex justify-center py-8">
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          </div>
+        ) : editingConnection ? (
+          // When editing, just show the single connection manager
+          <ConnectionManager
+            serviceType={editingConnection.service_type}
+            title={getServiceTitle(editingConnection.service_type)}
+            description={getServiceDescription(editingConnection.service_type)}
+            defaultDisplayName={editingConnection.display_name}
+            configFields={getConfigFields(editingConnection.service_type)}
+          />
+        ) : availableTypes.length > 0 ? (
           <Tabs 
             defaultValue={availableTypes[0]?.service_type || "openai"} 
             onValueChange={(value) => setSelectedService(value as ConnectionType)}

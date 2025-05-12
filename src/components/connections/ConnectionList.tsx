@@ -3,18 +3,46 @@ import React from 'react';
 import { useConnections, Connection } from '@/hooks/useConnections';
 import { ConnectionCard } from './ConnectionCard';
 import { Button } from '@/components/ui/button';
-import { Loader2, RefreshCw } from 'lucide-react';
+import { Loader2, RefreshCw, AlertCircle } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
 
 interface ConnectionListProps {
   onEditConnection?: (connection: Connection) => void;
 }
 
 export function ConnectionList({ onEditConnection }: ConnectionListProps) {
-  const { connections, isLoading, fetchConnections } = useConnections();
+  const { connections, isLoading, error, fetchConnections } = useConnections();
 
   const handleRefresh = () => {
     fetchConnections();
   };
+
+  if (error) {
+    return (
+      <Card className="border-red-300 bg-red-50 dark:bg-red-950/20">
+        <CardContent className="p-6">
+          <div className="flex flex-col items-center text-center space-y-2">
+            <AlertCircle className="w-8 h-8 text-red-500" />
+            <h3 className="text-lg font-semibold">Failed to load connections</h3>
+            <p className="text-sm text-muted-foreground">{error.message}</p>
+            <Button 
+              variant="outline" 
+              className="mt-4"
+              onClick={handleRefresh}
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <RefreshCw className="w-4 h-4 mr-2" />
+              )}
+              Try Again
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <div className="space-y-4">

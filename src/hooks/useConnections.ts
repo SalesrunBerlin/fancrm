@@ -34,6 +34,7 @@ export function useConnections(options: UseConnectionsOptions = {}) {
   const [connections, setConnections] = useState<Connection[]>([]);
   const [connectionTypes, setConnectionTypes] = useState<ConnectionTypeInfo[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
 
   // Fetch all connections for the user
   const fetchConnections = async () => {
@@ -41,6 +42,7 @@ export function useConnections(options: UseConnectionsOptions = {}) {
 
     try {
       setIsLoading(true);
+      setError(null);
       
       const { data, error } = await supabase
         .from('user_connections')
@@ -49,12 +51,15 @@ export function useConnections(options: UseConnectionsOptions = {}) {
 
       if (error) {
         console.error('Failed to fetch connections:', error);
+        setError(new Error(`Failed to fetch connections: ${error.message}`));
         throw error;
       }
       
       setConnections(data as Connection[] || []);
-    } catch (error) {
-      console.error('Failed to fetch connections:', error);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to load connections';
+      console.error('Failed to fetch connections:', err);
+      setError(new Error(errorMessage));
       toast.error('Failed to load connections');
     } finally {
       setIsLoading(false);
@@ -67,18 +72,22 @@ export function useConnections(options: UseConnectionsOptions = {}) {
 
     try {
       setIsLoading(true);
+      setError(null);
       
       const { data, error } = await supabase
         .rpc('get_user_connection_types');
 
       if (error) {
         console.error('Failed to fetch connection types:', error);
+        setError(new Error(`Failed to fetch connection types: ${error.message}`));
         throw error;
       }
       
       setConnectionTypes(data as ConnectionTypeInfo[] || []);
-    } catch (error) {
-      console.error('Failed to fetch connection types:', error);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch connection types';
+      console.error('Failed to fetch connection types:', err);
+      setError(new Error(errorMessage));
       toast.error('Failed to fetch connection types');
     } finally {
       setIsLoading(false);
@@ -99,6 +108,7 @@ export function useConnections(options: UseConnectionsOptions = {}) {
 
     try {
       setIsLoading(true);
+      setError(null);
       
       const { error } = await supabase.functions.invoke('store_connection', {
         body: { 
@@ -109,7 +119,11 @@ export function useConnections(options: UseConnectionsOptions = {}) {
         }
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Failed to store connection:', error);
+        setError(new Error(`Failed to store connection: ${error.message}`));
+        throw error;
+      }
       
       toast.success('Connection stored successfully');
       
@@ -118,8 +132,10 @@ export function useConnections(options: UseConnectionsOptions = {}) {
       await fetchConnectionTypes();
       
       return true;
-    } catch (error: any) {
-      console.error('Failed to store connection:', error);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to store connection';
+      console.error('Failed to store connection:', err);
+      setError(new Error(errorMessage));
       toast.error('Failed to store connection');
       return false;
     } finally {
@@ -136,12 +152,17 @@ export function useConnections(options: UseConnectionsOptions = {}) {
 
     try {
       setIsLoading(true);
+      setError(null);
       
       const { error } = await supabase.functions.invoke('delete_connection', {
         body: { connection_id: connectionId }
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Failed to delete connection:', error);
+        setError(new Error(`Failed to delete connection: ${error.message}`));
+        throw error;
+      }
       
       toast.success('Connection removed successfully');
       
@@ -150,8 +171,10 @@ export function useConnections(options: UseConnectionsOptions = {}) {
       await fetchConnectionTypes();
       
       return true;
-    } catch (error: any) {
-      console.error('Failed to delete connection:', error);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to delete connection';
+      console.error('Failed to delete connection:', err);
+      setError(new Error(errorMessage));
       toast.error('Failed to delete connection');
       return false;
     } finally {
@@ -168,13 +191,18 @@ export function useConnections(options: UseConnectionsOptions = {}) {
 
     try {
       setIsLoading(true);
+      setError(null);
       
       const { error } = await supabase
         .from('user_connections')
         .update({ is_active: isActive })
         .eq('id', connectionId);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Failed to update connection status:', error);
+        setError(new Error(`Failed to update connection status: ${error.message}`));
+        throw error;
+      }
       
       toast.success(`Connection ${isActive ? 'enabled' : 'disabled'} successfully`);
       
@@ -183,8 +211,10 @@ export function useConnections(options: UseConnectionsOptions = {}) {
       await fetchConnectionTypes();
       
       return true;
-    } catch (error: any) {
-      console.error('Failed to update connection status:', error);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to update connection status';
+      console.error('Failed to update connection status:', err);
+      setError(new Error(errorMessage));
       toast.error('Failed to update connection status');
       return false;
     } finally {
@@ -209,6 +239,8 @@ export function useConnections(options: UseConnectionsOptions = {}) {
     }
 
     try {
+      setError(null);
+      
       // For streaming responses, set responseType to 'stream'
       const responseType = requestData.stream ? 'stream' : 'json';
       
@@ -220,11 +252,17 @@ export function useConnections(options: UseConnectionsOptions = {}) {
         responseType
       });
 
-      if (response.error) throw response.error;
+      if (response.error) {
+        console.error('API request failed:', response.error);
+        setError(new Error(`API request failed: ${response.error.message}`));
+        throw response.error;
+      }
       
       return response;
-    } catch (error: any) {
-      console.error('API request failed:', error);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'API request failed';
+      console.error('API request failed:', err);
+      setError(new Error(errorMessage));
       toast.error('API request failed');
       return null;
     }
@@ -256,6 +294,7 @@ export function useConnections(options: UseConnectionsOptions = {}) {
     connections,
     connectionTypes,
     isLoading,
+    error,
     fetchConnections,
     fetchConnectionTypes,
     storeConnection,

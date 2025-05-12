@@ -20,6 +20,7 @@ export function useOpenAI(options: UseOpenAIOptions = {}) {
   const [isLoading, setIsLoading] = useState(false);
   const [messages, setMessages] = useState<OpenAIMessage[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
   const [usage, setUsage] = useState<{ prompt_tokens: number; completion_tokens: number } | null>(null);
 
   // Check if the user has an OpenAI connection
@@ -34,6 +35,7 @@ export function useOpenAI(options: UseOpenAIOptions = {}) {
 
     try {
       setIsLoading(true);
+      setError(null);
       
       const { error } = await supabase.functions.invoke('store_connection', {
         body: { 
@@ -43,12 +45,17 @@ export function useOpenAI(options: UseOpenAIOptions = {}) {
         }
       });
 
-      if (error) throw error;
+      if (error) {
+        setError(new Error(`Failed to store API key: ${error.message}`));
+        throw error;
+      }
       
       toast.success('API key stored successfully');
       return true;
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to store API key';
       console.error('Failed to store API key:', error);
+      setError(new Error(errorMessage));
       toast.error('Failed to store API key');
       return false;
     } finally {
@@ -70,17 +77,23 @@ export function useOpenAI(options: UseOpenAIOptions = {}) {
 
     try {
       setIsLoading(true);
+      setError(null);
       
       const { error } = await supabase.functions.invoke('delete_connection', {
         body: { connection_id: connection.id }
       });
 
-      if (error) throw error;
+      if (error) {
+        setError(new Error(`Failed to delete API key: ${error.message}`));
+        throw error;
+      }
       
       toast.success('API key removed successfully');
       return true;
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to delete API key';
       console.error('Failed to delete API key:', error);
+      setError(new Error(errorMessage));
       toast.error('Failed to delete API key');
       return false;
     } finally {
@@ -113,6 +126,7 @@ export function useOpenAI(options: UseOpenAIOptions = {}) {
     try {
       setIsLoading(true);
       setIsStreaming(true);
+      setError(null);
 
       // Add system message if not present
       if (!messages.some(m => m.role === 'system') && options.defaultSystemMessage) {
@@ -195,13 +209,16 @@ export function useOpenAI(options: UseOpenAIOptions = {}) {
               }
             } catch (e) {
               // Ignore parsing errors in stream
+              console.warn("Error parsing streaming data:", e);
             }
           }
         }
       }
 
     } catch (error: any) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to send message';
       console.error('Error sending message:', error);
+      setError(new Error(errorMessage));
       toast.error(error.message || 'Failed to send message');
     } finally {
       setIsLoading(false);
@@ -216,6 +233,7 @@ export function useOpenAI(options: UseOpenAIOptions = {}) {
     }
 
     try {
+      setError(null);
       const { data, error } = await supabase
         .from('openai_usage_profile')
         .select('prompt_tokens, completion_tokens')
@@ -223,11 +241,16 @@ export function useOpenAI(options: UseOpenAIOptions = {}) {
         .eq('day', new Date().toISOString().split('T')[0])
         .single();
 
-      if (error) throw error;
+      if (error) {
+        setError(new Error(`Failed to fetch usage stats: ${error.message}`));
+        throw error;
+      }
       
       return data;
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Error fetching usage stats';
       console.error('Error fetching usage stats:', error);
+      setError(new Error(errorMessage));
       return null;
     }
   };
@@ -244,6 +267,7 @@ export function useOpenAI(options: UseOpenAIOptions = {}) {
     isLoading,
     messages,
     isStreaming,
+    error,
     usage,
     storeApiKey,
     deleteApiKey,

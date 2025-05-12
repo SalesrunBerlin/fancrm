@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -29,7 +30,7 @@ export function ConnectionManager({
   defaultDisplayName,
   configFields = [],
 }: ConnectionManagerProps) {
-  const { connectionTypes, storeConnection, deleteConnection, isLoading } = useConnections();
+  const { connectionTypes, storeConnection, deleteConnection, isLoading, error } = useConnections();
   
   const connectionInfo = connectionTypes.find(ct => ct.service_type === serviceType);
   const hasExistingConnection = connectionInfo?.has_connection ?? false;
@@ -50,6 +51,9 @@ export function ConnectionManager({
   };
 
   const handleSaveConnection = async () => {
+    // Clear previous validation error
+    setValidationError("");
+    
     // Validation
     if (!apiKey) {
       setValidationError("API key is required");
@@ -69,16 +73,27 @@ export function ConnectionManager({
       }
     }
 
-    setValidationError("");
-    
     const success = await storeConnection(serviceType, displayName, apiKey, configValues);
     
     if (success) {
       setApiKey("");
-      // Don't reset display name, it's better UX to keep it
-      // Don't reset config values either unless you want to
+      // Don't reset config values or display name for better UX
     }
   };
+
+  if (error) {
+    return (
+      <Card className="border-red-300 bg-red-50 dark:bg-red-950/20">
+        <CardContent className="p-6">
+          <div className="flex flex-col items-center text-center space-y-2">
+            <AlertCircle className="w-8 h-8 text-red-500" />
+            <h3 className="text-lg font-semibold">Connection Error</h3>
+            <p className="text-sm text-muted-foreground">{error.message}</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>
@@ -91,6 +106,9 @@ export function ConnectionManager({
           <div className="flex items-center space-x-2">
             <CheckCircle className="h-5 w-5 text-green-500" />
             <span>API key is configured</span>
+            {connectionInfo?.is_active === false && (
+              <span className="text-sm text-amber-600 ml-2">(Connection disabled)</span>
+            )}
           </div>
         ) : (
           <div className="space-y-4">
