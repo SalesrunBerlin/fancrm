@@ -64,6 +64,9 @@ import Index from "./pages/Index";
 import OptimizedRecordsList from "./pages/OptimizedRecordsList";
 import ImportImpressum from "./pages/import/ImportImpressum";
 import { ImpressumScraper } from "@/components/ImpressumScraper";
+// Import new OpenAI pages
+import OpenAISettings from "./pages/OpenAISettings";
+import OpenAIAssistant from "./pages/OpenAIAssistant";
 
 // Create a client
 const queryClient = new QueryClient({
@@ -169,6 +172,10 @@ function AppContent() {
         <Route path="/objects/:objectTypeId/new" element={<CreateRecordPage />} />
         <Route path="/objects/:objectTypeId/:recordId" element={<ObjectRecordDetail />} />
         <Route path="/objects/:objectTypeId/:recordId/edit" element={<EditRecordPage />} />
+        
+        {/* OpenAI routes */}
+        <Route path="/openai/settings" element={<OpenAISettings />} />
+        <Route path="/openai/assistant" element={<OpenAIAssistant />} />
         
         {/* Ticket Queue routes */}
         <Route path="/ticket-queue" element={<TicketQueuePage />} />

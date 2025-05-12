@@ -53,8 +53,11 @@ secret = ""
 redirect_uri = ""
 
 [functions]
-[functions.log_feedback]
+[functions.store_openai_key]
 verify_jwt = true
-[functions.export_feedback]
-verify_jwt = false
-schedule = "0 2 * * *"  # Run at 02:00 UTC daily
+[functions.delete_openai_key]
+verify_jwt = true
+[functions.openai_proxy]
+verify_jwt = true
+[functions.generate_embedding]
+verify_jwt = true
