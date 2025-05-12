@@ -15,7 +15,7 @@ export function CreateIconButton() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="default" icon={<Image />}>
+        <Button variant="default" size="md" icon={<Image />}>
           Icon erstellen
         </Button>
       </DropdownMenuTrigger>

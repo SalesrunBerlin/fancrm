@@ -11,11 +11,10 @@ export interface ThemedButtonProps extends ButtonProps {
 export const ThemedButton = React.forwardRef<HTMLButtonElement, ThemedButtonProps>(
   ({ className, variant, useUserColor = true, children, ...props }, ref) => {
     // ThemedButton now just wraps the underlying Button component
-    // while maintaining backward compatibility with the API
     return (
       <Button 
         className={className} 
-        variant={variant} 
+        variant={variant as any} 
         useUserColor={useUserColor} 
         ref={ref} 
         {...props}

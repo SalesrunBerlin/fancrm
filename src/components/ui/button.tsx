@@ -92,6 +92,7 @@ const buttonVariants = cva(
         lg: "h-11 rounded-md px-6 text-base",
         icon: "h-10 w-10 p-2",
         responsive: "h-9 w-9 p-0 md:h-10 md:w-auto md:px-4 md:py-2",
+        default: "h-10 px-4 py-2 text-sm", // For backward compatibility
       },
       fullWidth: {
         true: "w-full",
@@ -120,7 +121,7 @@ export interface ButtonProps
   /**
    * Size preset.
    */
-  size?: "xs" | "sm" | "md" | "lg" | "icon" | "responsive";
+  size?: "xs" | "sm" | "md" | "lg" | "icon" | "responsive" | "default";
   /**
    * Optional left icon or right icon.
    */
@@ -201,7 +202,21 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     
     // Determine if the button is disabled (explicitly or due to loading)
     const isDisabled = disabled || loading;
+
+    // Create the button content that will be used with or without Slot
+    const buttonContent = (
+      <>
+        {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+        {/* Render icon at the start if specified */}
+        {!loading && icon && iconPosition === "start" && icon}
+        {/* Render children */}
+        {children}
+        {/* Render icon at the end if specified */}
+        {!loading && icon && iconPosition === "end" && icon}
+      </>
+    );
     
+    // If asChild, use Slot
     const Comp = asChild ? Slot : "button";
 
     return (
@@ -220,16 +235,29 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         disabled={isDisabled}
         {...props}
       >
-        {loading && <Loader2 className="h-4 w-4 animate-spin" />}
-        
-        {/* Render icon at the start if specified */}
-        {!loading && icon && iconPosition === "start" && icon}
-        
-        {/* Render children */}
-        {children}
-        
-        {/* Render icon at the end if specified */}
-        {!loading && icon && iconPosition === "end" && icon}
+        {asChild ? 
+          // When using asChild, we need to ensure a single child is passed
+          // But we still want our button content, so we wrap it in a span
+          // This ensures React.Children.only inside Slot works correctly
+          React.isValidElement(children) ? 
+            React.cloneElement(children, {
+              ...children.props,
+              children: (
+                <>
+                  {loading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                  {!loading && icon && iconPosition === "start" && React.cloneElement(icon as React.ReactElement, {
+                    className: cn("mr-2", (icon as React.ReactElement).props.className)
+                  })}
+                  {children.props.children}
+                  {!loading && icon && iconPosition === "end" && React.cloneElement(icon as React.ReactElement, {
+                    className: cn("ml-2", (icon as React.ReactElement).props.className)
+                  })}
+                </>
+              )
+            }) 
+          : buttonContent
+        : buttonContent
+      }
       </Comp>
     );
   }

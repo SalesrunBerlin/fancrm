@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useApplications, Application } from "@/hooks/useApplications";
 import { Button } from "@/components/ui/button";
@@ -72,7 +71,7 @@ export function ApplicationSwitcher({
   return (
     <Button
       variant={variant}
-      size={size}
+      size="md"
       onClick={handleSwitchApplication}
       disabled={switching || applications?.length <= 1}
       className={cn("gap-2", className)}

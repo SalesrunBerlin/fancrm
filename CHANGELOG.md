@@ -8,5 +8,8 @@
 - Added support for custom colors in the Button component
 - Added loading state to Button component
 - Added icon support with positioning to Button component
-- Added comprehensive storybook stories for the Button component
-- Added tests for the Button component
+
+### Fixed
+- Fixed compatibility issues with asChild and children in Button component
+- Fixed size prop types to support existing code
+
