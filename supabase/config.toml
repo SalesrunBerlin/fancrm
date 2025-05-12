@@ -28,3 +28,7 @@ enabled = true
 [edge_functions]
 [edge_functions.admin-create-user]
 verify_jwt = true
+
+[edge_functions.scrape-impressum]
+verify_jwt = true
+
