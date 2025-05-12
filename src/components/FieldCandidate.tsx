@@ -60,8 +60,7 @@ export const FieldCandidate: React.FC<FieldCandidateProps> = ({
     onValidationChange(valid);
   }, [isRequired, value, onValidationChange]);
 
-  const handleValidationToggle = () => {
-    const newIsValid = !isValid;
+  const handleValidationToggle = (newIsValid: boolean) => {
     setIsValid(newIsValid);
     onValidationChange(newIsValid);
     
@@ -105,7 +104,7 @@ export const FieldCandidate: React.FC<FieldCandidateProps> = ({
             variant={isValid ? "default" : "ghost"}
             size="sm"
             className={`h-6 w-6 p-0 rounded-full ${isValid ? "bg-green-500 hover:bg-green-600" : "text-green-600"}`}
-            onClick={handleValidationToggle}
+            onClick={() => handleValidationToggle(true)}
             type="button"
           >
             <Check className="h-3 w-3" />
@@ -115,7 +114,7 @@ export const FieldCandidate: React.FC<FieldCandidateProps> = ({
             variant={!isValid ? "destructive" : "ghost"}
             size="sm"
             className={`h-6 w-6 p-0 rounded-full ${!isValid ? "bg-red-500 hover:bg-red-600" : "text-red-600"}`}
-            onClick={handleValidationToggle}
+            onClick={() => handleValidationToggle(false)}
             type="button"
           >
             <X className="h-3 w-3" />
@@ -136,7 +135,7 @@ export const FieldCandidate: React.FC<FieldCandidateProps> = ({
         <Select
           onValueChange={handleCandidateChange}
           value={value}
-          disabled={isValid && candidates[0]?.value === value}
+          disabled={false} // Always enable selection
         >
           <SelectTrigger className="w-full">
             <SelectValue placeholder={`Select ${fieldName}...`} />

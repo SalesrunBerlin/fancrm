@@ -42,9 +42,9 @@ export default function ObjectRestorePage() {
           variant="outline" 
           asChild 
           className="mb-6"
-          icon={<ArrowLeft />}
         >
           <Link to="/settings/object-manager">
+            <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Object Manager
           </Link>
         </Button>
@@ -65,9 +65,9 @@ export default function ObjectRestorePage() {
         variant="outline" 
         asChild 
         className="mb-6"
-        icon={<ArrowLeft />}
       >
         <Link to={`/settings/objects/${objectTypeId}`}>
+          <ArrowLeft className="h-4 w-4 mr-2" />
           Back to {objectType.name}
         </Link>
       </Button>
@@ -106,8 +106,8 @@ export default function ObjectRestorePage() {
             variant="default" 
             onClick={handleRestore}
             disabled={isRestoring}
-            loading={isRestoring}
           >
+            {isRestoring && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Restore Object
           </Button>
         </CardFooter>

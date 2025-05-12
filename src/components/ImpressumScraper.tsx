@@ -62,34 +62,34 @@ export function ImpressumScraper() {
               <div className="space-y-4">
                 <div>
                   <span className="font-medium">Company:</span>
-                  <p>{data.company}</p>
+                  <p>{data.fields.company[0]?.value || "Not found"}</p>
                 </div>
                 
                 <div>
                   <span className="font-medium">Address:</span>
-                  <p>{data.address}</p>
+                  <p>{data.fields.address[0]?.value || "Not found"}</p>
                 </div>
                 
-                {data.phone && (
+                {data.fields.phone && data.fields.phone.length > 0 && (
                   <div>
                     <span className="font-medium">Phone:</span>
-                    <p>{data.phone}</p>
+                    <p>{data.fields.phone[0]?.value || "Not found"}</p>
                   </div>
                 )}
                 
-                {data.email && (
+                {data.fields.email && data.fields.email.length > 0 && (
                   <div>
                     <span className="font-medium">Email:</span>
-                    <p>{data.email}</p>
+                    <p>{data.fields.email[0]?.value || "Not found"}</p>
                   </div>
                 )}
                 
-                {data.ceos && data.ceos.length > 0 && (
+                {data.fields.ceos && data.fields.ceos.length > 0 && (
                   <div>
                     <span className="font-medium">CEOs/Managing Directors:</span>
                     <ul className="list-disc list-inside">
-                      {data.ceos.map((ceo, index) => (
-                        <li key={index}>{ceo}</li>
+                      {data.fields.ceos.map((ceo, index) => (
+                        <li key={index}>{ceo.value}</li>
                       ))}
                     </ul>
                   </div>

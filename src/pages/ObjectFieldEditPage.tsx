@@ -12,7 +12,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { AlertCircle } from "lucide-react";
 import { DeleteDialog } from "@/components/common/DeleteDialog";
 import { PicklistValuesManager } from "@/components/settings/PicklistValuesManager";
-import { Separator } from "@/components/ui/separator";
 
 export default function ObjectFieldEditPage() {
   const { objectTypeId, fieldId } = useParams<{
@@ -52,8 +51,8 @@ export default function ObjectFieldEditPage() {
         <Button 
           variant="outline" 
           onClick={() => navigate(-1)}
-          icon={<ArrowLeft />}
         >
+          <ArrowLeft className="h-4 w-4 mr-2" />
           Go Back
         </Button>
       </div>
@@ -82,8 +81,8 @@ export default function ObjectFieldEditPage() {
             <Button
               variant="destructive"
               onClick={() => setShowDeleteDialog(true)}
-              icon={<Trash />}
             >
+              <Trash className="h-4 w-4 mr-2" />
               Delete Field
             </Button>
           )

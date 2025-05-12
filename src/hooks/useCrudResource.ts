@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
 export type ResourceType = "companies" | "persons";
 
@@ -52,6 +52,7 @@ export function useCrudResource<T extends ResourceType>(resourceType: T) {
         throw new Error("No data returned after insert");
       }
       
+      // Type assertion to ensure we're returning the expected shape
       return response.data[0] as CreateResponse;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Failed to create resource";
@@ -70,7 +71,7 @@ export function useCrudResource<T extends ResourceType>(resourceType: T) {
       const { error } = await supabase
         .from(resourceType)
         .update(data as any)
-        .eq("id", id);
+        .eq('id', id);
         
       if (error) throw new Error(error.message);
     } catch (err) {
@@ -90,7 +91,7 @@ export function useCrudResource<T extends ResourceType>(resourceType: T) {
       const { error } = await supabase
         .from(resourceType)
         .delete()
-        .eq("id", id);
+        .eq('id', id);
         
       if (error) throw new Error(error.message);
     } catch (err) {
@@ -110,7 +111,7 @@ export function useCrudResource<T extends ResourceType>(resourceType: T) {
       const { data, error } = await supabase
         .from(resourceType)
         .select()
-        .eq("id", id)
+        .eq('id', id)
         .single();
         
       if (error) throw new Error(error.message);
