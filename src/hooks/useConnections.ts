@@ -209,16 +209,20 @@ export function useConnections(options: UseConnectionsOptions = {}) {
     }
 
     try {
-      // For streaming responses, set responseType to 'stream'
-      const responseType = requestData.stream ? 'stream' : 'json';
-      
-      const response = await supabase.functions.invoke('proxy_connection', {
+      // For streaming responses, handle them properly
+      const options: any = {
         body: {
           connection_id: connectionId,
           request_data: requestData
-        },
-        responseType
-      });
+        }
+      };
+      
+      // Set responseType option for streaming if needed
+      if (requestData.stream) {
+        options.responseType = 'stream';
+      }
+      
+      const response = await supabase.functions.invoke('proxy_connection', options);
 
       if (response.error) throw response.error;
       
