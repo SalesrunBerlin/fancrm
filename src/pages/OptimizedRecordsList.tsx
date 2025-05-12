@@ -80,7 +80,7 @@ export default function OptimizedRecordsList() {
   // This will run only after the page has loaded and filter settings are available
   useEffect(() => {
     const applyFilterFromUrl = async () => {
-      if (filterId && !isApplyingFilterFromUrl && !isFilterLoading && !isLoadingFilterSettings) {
+      if (filterId && !isApplyingFilterFromUrl && !isLoadingFilterSettings) {
         try {
           console.log("Attempting to apply filter from URL with ID:", filterId);
           setIsApplyingFilterFromUrl(true);
@@ -125,7 +125,7 @@ export default function OptimizedRecordsList() {
     if (!isLoadingFilterSettings && savedFilters && filterId) {
       applyFilterFromUrl();
     }
-  }, [filterId, savedFilters, objectTypeId, navigate, setActiveFilters, isLoadingFilterSettings, isFilterLoading, getFilterById]);
+  }, [filterId, savedFilters, objectTypeId, navigate, setActiveFilters, isLoadingFilterSettings, getFilterById]);
   
   const [selectedRecords, setSelectedRecords] = useState<string[]>([]);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);

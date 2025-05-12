@@ -59,6 +59,7 @@ import AutoTicketProcessorPage from "./pages/AutoTicketProcessorPage";
 import TicketAnalysisPage from "./pages/TicketAnalysisPage";
 import LandingPage from "./pages/LandingPage";
 import Index from "./pages/Index";
+import OptimizedRecordsList from "./pages/OptimizedRecordsList";
 
 // Create a client
 const queryClient = new QueryClient({
@@ -154,6 +155,9 @@ function AppContent() {
         <Route path="/applications/:applicationId/publish" element={<ApplicationPublishPage />} />
         <Route path="/applications/import" element={<ApplicationImportPage />} />
         <Route path="/objects/:objectTypeId" element={<ObjectRecordsList />} />
+        {/* Add optimized view with filter support */}
+        <Route path="/objects/:objectTypeId/optimized" element={<OptimizedRecordsList />} />
+        <Route path="/objects/:objectTypeId/optimized/:filterId" element={<OptimizedRecordsList />} />
         <Route path="/objects/:objectTypeId/import" element={<ImportRecordsPage />} />
         <Route path="/objects/:objectTypeId/import/create-field/:columnName" element={<ImportCreateFieldPage />} />
         <Route path="/objects/:objectTypeId/create-object-from-field/:fieldApiName/:fieldName" element={<CreateObjectFromFieldValuesPage />} />

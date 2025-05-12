@@ -77,8 +77,13 @@ export function SavedFiltersButtons({ objectTypeId, maxToShow = 3 }: SavedFilter
       toast.success(`Navigiere zu "${filter.name}" Filter`);
       
       // Navigate to the optimized object list page with this filter ID in the URL
-      console.log(`Navigating to /objects/${objectTypeId}/optimized/${filter.id}`);
+      // Fix: Use the filterId parameter to ensure proper navigation and filter loading
       navigate(`/objects/${objectTypeId}/optimized/${filter.id}`);
+      
+      // Set a timeout to reset the navigation state (safety measure)
+      setTimeout(() => {
+        setIsNavigating(false);
+      }, 2000);
       
     } catch (error) {
       console.error("Fehler beim Anwenden des gespeicherten Filters:", error);

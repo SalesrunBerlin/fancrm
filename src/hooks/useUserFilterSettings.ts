@@ -62,6 +62,7 @@ export function useUserFilterSettings(objectTypeId: string | undefined) {
 
   // Function to get a specific saved filter by ID
   const getFilterById = (filterId: string) => {
+    if (!filterId || !savedFilters || !Array.isArray(savedFilters)) return null;
     return savedFilters.find(filter => filter.id === filterId);
   };
 
