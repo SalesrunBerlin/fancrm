@@ -1,10 +1,11 @@
+
 import React, { useEffect } from "react";
 import { Button, ButtonProps } from "@/components/ui/button";
 import { ActionColor } from "@/hooks/useActions";
 import { useAuth } from "@/contexts/AuthContext";
 
 export interface ThemedButtonProps extends ButtonProps {
-  variant?: ActionColor | "outline" | "ghost" | "link" | "destructive";
+  variant?: ActionColor | "outline" | "ghost" | "link" | "destructive" | "orange";
   useUserColor?: boolean;
 }
 
