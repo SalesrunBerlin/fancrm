@@ -4,6 +4,7 @@
 ## [Unreleased]
 
 ### Added
+- ✨ Field-level refinement for Impressum import
 - ✨ Add scrape_impressum Edge Function
 - 🎉 Add Impressum import UI
 - ✨ Consolidated buttons into shared component with unified props and functionality

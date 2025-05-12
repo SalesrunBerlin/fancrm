@@ -1,30 +1,18 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
-import { ImpressumData } from "@/hooks/useImpressumScrape";
+import { ImpressumData, ImpressumCandidate } from "@/hooks/useImpressumScrape";
+import { FieldCandidate } from "./FieldCandidate";
 
-interface ConfidenceBadgeProps {
-  level: "low" | "medium" | "high";
+export interface FieldState {
+  candidates: ImpressumCandidate[];
+  selected: string;
+  valid: boolean;
 }
-
-const ConfidenceBadge: React.FC<ConfidenceBadgeProps> = ({ level }) => {
-  const colors = {
-    low: "bg-red-100 text-red-800 border-red-200",
-    medium: "bg-yellow-100 text-yellow-800 border-yellow-200",
-    high: "bg-green-100 text-green-800 border-green-200",
-  };
-
-  return (
-    <span className={`text-xs px-2 py-0.5 rounded-full border ${colors[level]}`}>
-      {level.charAt(0).toUpperCase() + level.slice(1)}
-    </span>
-  );
-};
 
 export interface ImpressumMappingProps {
   data: ImpressumData;
@@ -44,22 +32,67 @@ export interface ImpressumMappingProps {
   isLoading?: boolean;
 }
 
+const getConfidenceLevel = (candidates: ImpressumCandidate[]): "low" | "medium" | "high" => {
+  if (!candidates || candidates.length === 0) return "low";
+  
+  const topCandidate = candidates[0];
+  if (topCandidate.conf >= 0.8) return "high";
+  if (topCandidate.conf >= 0.5) return "medium";
+  return "low";
+};
+
 export const ImpressumMapping: React.FC<ImpressumMappingProps> = ({
   data,
-  confidenceScores = {
-    company: "medium",
-    address: "medium",
-    phone: "medium",
-    email: "high",
-  },
   onSubmit,
   isLoading = false,
 }) => {
-  const [companyName, setCompanyName] = useState(data.company);
-  const [address, setAddress] = useState(data.address);
-  const [phone, setPhone] = useState(data.phone || "");
-  const [email, setEmail] = useState(data.email || "");
-  const [selectedCEOs, setSelectedCEOs] = useState<string[]>(data.ceos || []);
+  // Initialize field states from data
+  const [fieldStates, setFieldStates] = useState<{
+    company: FieldState;
+    address: FieldState;
+    phone: FieldState;
+    email: FieldState;
+  }>({
+    company: {
+      candidates: data.fields.company,
+      selected: data.fields.company[0]?.value || "",
+      valid: true
+    },
+    address: {
+      candidates: data.fields.address,
+      selected: data.fields.address[0]?.value || "",
+      valid: true
+    },
+    phone: {
+      candidates: data.fields.phone,
+      selected: data.fields.phone[0]?.value || "",
+      valid: true
+    },
+    email: {
+      candidates: data.fields.email,
+      selected: data.fields.email[0]?.value || "",
+      valid: true
+    }
+  });
+
+  const [selectedCEOs, setSelectedCEOs] = useState<string[]>(
+    data.fields.ceos.map(ceo => ceo.value)
+  );
+
+  const [formValid, setFormValid] = useState(true);
+
+  // Validate the entire form
+  useEffect(() => {
+    const isValid = 
+      fieldStates.company.valid && 
+      fieldStates.address.valid && 
+      fieldStates.phone.valid && 
+      fieldStates.email.valid &&
+      fieldStates.company.selected.trim() !== "" &&
+      fieldStates.address.selected.trim() !== "";
+      
+    setFormValid(isValid);
+  }, [fieldStates]);
 
   const handleCEOToggle = (ceo: string) => {
     if (selectedCEOs.includes(ceo)) {
@@ -69,25 +102,40 @@ export const ImpressumMapping: React.FC<ImpressumMappingProps> = ({
     }
   };
 
+  const updateFieldState = (field: keyof typeof fieldStates, updates: Partial<FieldState>) => {
+    setFieldStates(prevState => ({
+      ...prevState,
+      [field]: {
+        ...prevState[field],
+        ...updates
+      }
+    }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!companyName.trim()) {
+    if (!formValid) {
+      toast("Please fix all validation issues before submitting");
+      return;
+    }
+
+    if (!fieldStates.company.selected.trim()) {
       toast("Company name is required");
       return;
     }
 
-    if (!address.trim()) {
+    if (!fieldStates.address.selected.trim()) {
       toast("Address is required");
       return;
     }
 
     try {
       await onSubmit({
-        company: companyName,
-        address,
-        phone: phone ? phone : null,
-        email: email ? email : null,
+        company: fieldStates.company.selected,
+        address: fieldStates.address.selected,
+        phone: fieldStates.phone.selected ? fieldStates.phone.selected : null,
+        email: fieldStates.email.selected ? fieldStates.email.selected : null,
         ceos: selectedCEOs,
       });
     } catch (error) {
@@ -98,85 +146,63 @@ export const ImpressumMapping: React.FC<ImpressumMappingProps> = ({
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="space-y-4">
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <Label htmlFor="company-name" className="text-sm font-medium">
-              Company Name
-            </Label>
-            <ConfidenceBadge level={confidenceScores.company} />
-          </div>
-          <Input
-            id="company-name"
-            value={companyName}
-            onChange={(e) => setCompanyName(e.target.value)}
-            className="w-full"
-            required
-          />
-        </div>
+        <FieldCandidate
+          fieldName="Company Name"
+          candidates={fieldStates.company.candidates}
+          value={fieldStates.company.selected}
+          onChange={(value) => updateFieldState("company", { selected: value })}
+          onValidationChange={(valid) => updateFieldState("company", { valid })}
+          confidenceLevel={getConfidenceLevel(fieldStates.company.candidates)}
+          isRequired={true}
+        />
 
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <Label htmlFor="address" className="text-sm font-medium">
-              Address
-            </Label>
-            <ConfidenceBadge level={confidenceScores.address} />
-          </div>
-          <Input
-            id="address"
-            value={address}
-            onChange={(e) => setAddress(e.target.value)}
-            className="w-full"
-            required
-          />
-        </div>
+        <FieldCandidate
+          fieldName="Address"
+          candidates={fieldStates.address.candidates}
+          value={fieldStates.address.selected}
+          onChange={(value) => updateFieldState("address", { selected: value })}
+          onValidationChange={(valid) => updateFieldState("address", { valid })}
+          confidenceLevel={getConfidenceLevel(fieldStates.address.candidates)}
+          isRequired={true}
+        />
 
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <Label htmlFor="phone" className="text-sm font-medium">
-              Phone
-            </Label>
-            <ConfidenceBadge level={confidenceScores.phone} />
-          </div>
-          <Input
-            id="phone"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            className="w-full"
-          />
-        </div>
+        <FieldCandidate
+          fieldName="Phone"
+          candidates={fieldStates.phone.candidates}
+          value={fieldStates.phone.selected}
+          onChange={(value) => updateFieldState("phone", { selected: value })}
+          onValidationChange={(valid) => updateFieldState("phone", { valid })}
+          confidenceLevel={getConfidenceLevel(fieldStates.phone.candidates)}
+        />
 
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <Label htmlFor="email" className="text-sm font-medium">
-              Email
-            </Label>
-            <ConfidenceBadge level={confidenceScores.email} />
-          </div>
-          <Input
-            id="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            type="email"
-            className="w-full"
-          />
-        </div>
+        <FieldCandidate
+          fieldName="Email"
+          candidates={fieldStates.email.candidates}
+          value={fieldStates.email.selected}
+          onChange={(value) => updateFieldState("email", { selected: value })}
+          onValidationChange={(valid) => updateFieldState("email", { valid })}
+          confidenceLevel={getConfidenceLevel(fieldStates.email.candidates)}
+        />
 
-        {data.ceos && data.ceos.length > 0 && (
+        {data.fields.ceos && data.fields.ceos.length > 0 && (
           <div className="space-y-2">
             <Label className="text-sm font-medium">Managing Directors / CEOs</Label>
             <div className="space-y-2 bg-gray-50 p-3 rounded-md">
-              {data.ceos.map((ceo, index) => (
+              {data.fields.ceos.map((ceo, index) => (
                 <div key={index} className="flex items-center space-x-2">
                   <Checkbox
                     id={`ceo-${index}`}
-                    checked={selectedCEOs.includes(ceo)}
-                    onCheckedChange={() => handleCEOToggle(ceo)}
+                    checked={selectedCEOs.includes(ceo.value)}
+                    onCheckedChange={() => handleCEOToggle(ceo.value)}
                   />
                   <Label
                     htmlFor={`ceo-${index}`}
-                    className="text-sm cursor-pointer"
+                    className="text-sm cursor-pointer flex items-center gap-2"
                   >
-                    {ceo}
+                    {ceo.value}
+                    <span className="text-xs text-muted-foreground">
+                      ({ceo.method}, {Math.round(ceo.conf * 100)}%)
+                    </span>
                   </Label>
                 </div>
               ))}
@@ -187,7 +213,7 @@ export const ImpressumMapping: React.FC<ImpressumMappingProps> = ({
         <div className="pt-4">
           <Button 
             type="submit" 
-            disabled={isLoading || !companyName || !address}
+            disabled={isLoading || !formValid}
             className="w-full sm:w-auto"
           >
             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -198,4 +224,3 @@ export const ImpressumMapping: React.FC<ImpressumMappingProps> = ({
     </form>
   );
 };
-

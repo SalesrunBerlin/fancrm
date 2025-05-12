@@ -2,12 +2,20 @@
 import { useQuery, UseQueryOptions } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
+export interface ImpressumCandidate {
+  value: string;
+  method: string; // regex, microdata, mailto, etc.
+  conf: number;  // confidence 0.1-1.0
+}
+
 export interface ImpressumData {
-  company: string;
-  address: string;
-  phone: string | null;
-  email: string | null;
-  ceos: string[];
+  fields: {
+    company: ImpressumCandidate[];
+    address: ImpressumCandidate[];
+    phone: ImpressumCandidate[];
+    email: ImpressumCandidate[];
+    ceos: ImpressumCandidate[];
+  };
   source: string;
 }
 

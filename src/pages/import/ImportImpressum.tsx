@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ImpressumMapping } from "@/components/ImpressumMapping";
-import { useImpressumScrape, ImpressumData } from "@/hooks/useImpressumScrape";
+import { useImpressumScrape } from "@/hooks/useImpressumScrape";
 import { toast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 import { useCrudResource } from "@/hooks/useCrudResource";
@@ -83,16 +83,6 @@ export default function ImportImpressum() {
     }
   };
 
-  // Determine confidence levels based on data quality
-  const getConfidenceScores = (data: ImpressumData) => {
-    return {
-      company: data.company.length > 3 ? "high" : "low",
-      address: data.address.includes(" ") ? "high" : "medium",
-      phone: data.phone && /\+\d/.test(data.phone) ? "high" : "medium",
-      email: data.email && /@/.test(data.email) ? "high" : "low",
-    } as const;
-  };
-
   return (
     <div className="container mx-auto py-8">
       <h1 className="text-2xl font-bold mb-6">Impressum Import</h1>
@@ -139,13 +129,12 @@ export default function ImportImpressum() {
           <CardHeader>
             <CardTitle>Extracted Company Data</CardTitle>
             <CardDescription>
-              Verify and edit the extracted information before saving
+              Review and edit the extracted information before saving
             </CardDescription>
           </CardHeader>
           <CardContent>
             <ImpressumMapping
               data={data}
-              confidenceScores={getConfidenceScores(data)}
               onSubmit={handleCreateCompany}
               isLoading={isSaving}
             />

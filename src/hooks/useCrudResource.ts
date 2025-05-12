@@ -10,19 +10,40 @@ interface CreateResponse {
   [key: string]: any;
 }
 
-export function useCrudResource(resourceType: ResourceType) {
+type CompanyData = {
+  name: string;
+  address: string;
+  phone?: string | null;
+  email?: string | null;
+  source_url?: string | null;
+  website?: string | null;
+};
+
+type PersonData = {
+  full_name: string;
+  company_id?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  position?: string | null;
+};
+
+type ResourceData<T extends ResourceType> = 
+  T extends "companies" ? CompanyData : 
+  T extends "persons" ? PersonData : 
+  never;
+
+export function useCrudResource<T extends ResourceType>(resourceType: T) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
-  const create = async (data: Record<string, any>): Promise<CreateResponse> => {
+  const create = async (data: ResourceData<T>): Promise<CreateResponse> => {
     setIsLoading(true);
     setError(null);
     
     try {
-      // Explicitly cast to any to work around type issues
       const response = await supabase
         .from(resourceType)
-        .insert(data)
+        .insert(data as any)
         .select();
         
       if (response.error) throw new Error(response.error.message);
@@ -41,15 +62,14 @@ export function useCrudResource(resourceType: ResourceType) {
     }
   };
 
-  const update = async (id: string, data: Record<string, any>): Promise<void> => {
+  const update = async (id: string, data: Partial<ResourceData<T>>): Promise<void> => {
     setIsLoading(true);
     setError(null);
     
     try {
-      // Use any type assertion to fix type error with resourceType
       const { error } = await supabase
-        .from(resourceType as any)
-        .update(data)
+        .from(resourceType)
+        .update(data as any)
         .eq("id", id);
         
       if (error) throw new Error(error.message);
@@ -67,9 +87,8 @@ export function useCrudResource(resourceType: ResourceType) {
     setError(null);
     
     try {
-      // Use any type assertion to fix type error with resourceType
       const { error } = await supabase
-        .from(resourceType as any)
+        .from(resourceType)
         .delete()
         .eq("id", id);
         
@@ -88,9 +107,8 @@ export function useCrudResource(resourceType: ResourceType) {
     setError(null);
     
     try {
-      // Use any type assertion to fix type error with resourceType
       const { data, error } = await supabase
-        .from(resourceType as any)
+        .from(resourceType)
         .select()
         .eq("id", id)
         .single();
@@ -111,9 +129,8 @@ export function useCrudResource(resourceType: ResourceType) {
     setError(null);
     
     try {
-      // Use any type assertion to fix type error with resourceType
       const { data, error } = await supabase
-        .from(resourceType as any)
+        .from(resourceType)
         .select();
         
       if (error) throw new Error(error.message);
