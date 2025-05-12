@@ -9,10 +9,12 @@ interface DataPaginationProps {
   totalPages: number;
   pageSize: number;
   totalItems: number;
+  filteredItemsCount?: number;  // Added new prop for filtered count
   onPageChange: (page: number) => void;
   onPageSizeChange: (pageSize: number) => void;
   pageSizeOptions?: number[];
   className?: string;
+  showFilterStatus?: boolean;  // Show filter status indicator
 }
 
 export function DataPagination({
@@ -20,13 +22,17 @@ export function DataPagination({
   totalPages,
   pageSize,
   totalItems,
+  filteredItemsCount,  // New prop
   onPageChange,
   onPageSizeChange,
   pageSizeOptions = [10, 20, 50, 100],
-  className = ""
+  className = "",
+  showFilterStatus = false  // Default to false
 }: DataPaginationProps) {
-  const startItem = Math.min(totalItems, (currentPage - 1) * pageSize + 1);
-  const endItem = Math.min(totalItems, currentPage * pageSize);
+  // Use filteredItemsCount if provided, otherwise use totalItems
+  const displayCount = typeof filteredItemsCount === 'number' ? filteredItemsCount : totalItems;
+  const startItem = Math.min(displayCount, (currentPage - 1) * pageSize + 1);
+  const endItem = Math.min(displayCount, currentPage * pageSize);
   
   // Enhanced pagination with visible page numbers
   const getPageNumbers = () => {
@@ -65,7 +71,16 @@ export function DataPagination({
         </div>
         
         <div className="text-sm text-muted-foreground">
-          {totalItems > 0 ? `${startItem}-${endItem} of ${totalItems}` : "No items"}
+          {displayCount > 0 ? (
+            <>
+              {startItem}-{endItem} of {displayCount}
+              {showFilterStatus && filteredItemsCount !== undefined && filteredItemsCount !== totalItems && (
+                <span className="ml-1 text-xs">(filtered from {totalItems})</span>
+              )}
+            </>
+          ) : (
+            "No items"
+          )}
         </div>
       </div>
       

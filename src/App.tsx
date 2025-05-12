@@ -1,3 +1,4 @@
+
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { Toaster } from "sonner"; 
 import { Layout } from "@/components/layout/Layout";
@@ -77,7 +78,7 @@ function App() {
       <Router>
         <AuthProvider>
           <AppContent />
-          <Toaster richColors position="top-right" />
+          <Toaster richColors position="bottom-right" closeButton />
         </AuthProvider>
       </Router>
     </QueryClientProvider>

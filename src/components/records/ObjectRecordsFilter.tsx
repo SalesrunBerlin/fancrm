@@ -158,9 +158,13 @@ export function ObjectRecordsFilter({
     toast.success("Filter erfolgreich gespeichert");
   };
 
+  // Update to automatically apply filter and close panel
   const loadSavedFilter = (savedFilter: {id: string, name: string, conditions: FilterCondition[]}) => {
     console.log("Loading saved filter:", savedFilter);
     setFilters(savedFilter.conditions);
+    
+    // Automatically apply the filter and close the panel
+    debouncedApplyFilters(savedFilter.conditions);
   };
 
   const deleteSavedFilter = (filterId: string) => {
