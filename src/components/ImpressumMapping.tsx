@@ -74,7 +74,6 @@ export const ImpressumMapping: React.FC<ImpressumMappingProps> = ({
     
     if (!companyName.trim()) {
       toast({
-        title: "Validation Error",
         description: "Company name is required",
         variant: "destructive",
       });
@@ -83,7 +82,6 @@ export const ImpressumMapping: React.FC<ImpressumMappingProps> = ({
 
     if (!address.trim()) {
       toast({
-        title: "Validation Error",
         description: "Address is required",
         variant: "destructive",
       });
@@ -100,7 +98,6 @@ export const ImpressumMapping: React.FC<ImpressumMappingProps> = ({
       });
     } catch (error) {
       toast({
-        title: "Error",
         description: error instanceof Error ? error.message : "Failed to save company data",
         variant: "destructive",
       });

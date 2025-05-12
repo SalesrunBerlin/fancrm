@@ -19,8 +19,9 @@ export function useCrudResource(resourceType: ResourceType) {
     setError(null);
     
     try {
+      // Use any type assertion to fix type error with resourceType
       const { data: result, error } = await supabase
-        .from(resourceType)
+        .from(resourceType as any)
         .insert(data)
         .select()
         .single();
@@ -42,8 +43,9 @@ export function useCrudResource(resourceType: ResourceType) {
     setError(null);
     
     try {
+      // Use any type assertion to fix type error with resourceType
       const { error } = await supabase
-        .from(resourceType)
+        .from(resourceType as any)
         .update(data)
         .eq("id", id);
         
@@ -62,8 +64,9 @@ export function useCrudResource(resourceType: ResourceType) {
     setError(null);
     
     try {
+      // Use any type assertion to fix type error with resourceType
       const { error } = await supabase
-        .from(resourceType)
+        .from(resourceType as any)
         .delete()
         .eq("id", id);
         
@@ -82,8 +85,9 @@ export function useCrudResource(resourceType: ResourceType) {
     setError(null);
     
     try {
+      // Use any type assertion to fix type error with resourceType
       const { data, error } = await supabase
-        .from(resourceType)
+        .from(resourceType as any)
         .select()
         .eq("id", id)
         .single();
@@ -104,8 +108,9 @@ export function useCrudResource(resourceType: ResourceType) {
     setError(null);
     
     try {
+      // Use any type assertion to fix type error with resourceType
       const { data, error } = await supabase
-        .from(resourceType)
+        .from(resourceType as any)
         .select();
         
       if (error) throw new Error(error.message);

@@ -28,7 +28,6 @@ export default function ImportImpressum() {
       setTargetUrl(url);
     } catch (e) {
       toast({
-        title: "Invalid URL",
         description: "Please enter a valid website URL",
         variant: "destructive",
       });
@@ -75,7 +74,6 @@ export default function ImportImpressum() {
       }
       
       toast({
-        title: "Success",
         description: `Company "${mappedData.company}" created successfully`,
         variant: "success",
       });
@@ -86,7 +84,6 @@ export default function ImportImpressum() {
     } catch (error) {
       console.error("Error saving company data:", error);
       toast({
-        title: "Error",
         description: error instanceof Error ? error.message : "Failed to save company data",
         variant: "destructive",
       });
