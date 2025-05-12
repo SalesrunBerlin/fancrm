@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from '@/hooks/use-toast';
@@ -50,6 +51,7 @@ export function WorkspaceSettings({ workspaceId }: WorkspaceSettingsProps) {
     } catch (error) {
       console.error('Error fetching workspace data:', error);
       toast({
+        title: 'Error',
         description: 'Workspace-Daten konnten nicht geladen werden'
       });
     } finally {
@@ -81,11 +83,13 @@ export function WorkspaceSettings({ workspaceId }: WorkspaceSettingsProps) {
       if (error) throw error;
       
       toast({
+        title: 'Success',
         description: 'Workspace-Einstellungen wurden aktualisiert'
       });
     } catch (error) {
       console.error('Error updating workspace:', error);
       toast({
+        title: 'Error',
         description: 'Workspace-Einstellungen konnten nicht aktualisiert werden'
       });
     } finally {

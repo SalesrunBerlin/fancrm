@@ -116,17 +116,26 @@ export const ImpressumMapping: React.FC<ImpressumMappingProps> = ({
     e.preventDefault();
     
     if (!formValid) {
-      toast("Please fix all validation issues before submitting");
+      toast({
+        title: "Validation Error",
+        description: "Please fix all validation issues before submitting"
+      });
       return;
     }
 
     if (!fieldStates.company.selected.trim()) {
-      toast("Company name is required");
+      toast({
+        title: "Required Field",
+        description: "Company name is required"
+      });
       return;
     }
 
     if (!fieldStates.address.selected.trim()) {
-      toast("Address is required");
+      toast({
+        title: "Required Field",
+        description: "Address is required"
+      });
       return;
     }
 
@@ -139,7 +148,11 @@ export const ImpressumMapping: React.FC<ImpressumMappingProps> = ({
         ceos: selectedCEOs,
       });
     } catch (error) {
-      toast(error instanceof Error ? error.message : "Failed to save company data");
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to save company data",
+        variant: "destructive"
+      });
     }
   };
 
@@ -200,8 +213,8 @@ export const ImpressumMapping: React.FC<ImpressumMappingProps> = ({
                     className="text-sm cursor-pointer flex items-center gap-2"
                   >
                     {ceo.value}
-                    <span className="text-xs text-muted-foreground">
-                      ({ceo.method}, {Math.round(ceo.conf * 100)}%)
+                    <span className="inline-flex items-center px-2 py-1 text-xs font-normal rounded border bg-gray-50 text-gray-700 border-gray-200">
+                      {ceo.method} ({Math.round(ceo.conf * 100)}%)
                     </span>
                   </Label>
                 </div>
@@ -217,7 +230,7 @@ export const ImpressumMapping: React.FC<ImpressumMappingProps> = ({
             className="w-full sm:w-auto"
           >
             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Create Company
+            Continue
           </Button>
         </div>
       </div>

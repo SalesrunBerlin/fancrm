@@ -12,6 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ImpressumCandidate } from "@/hooks/useImpressumScrape";
+import { Badge } from "@/components/ui/badge";
 
 interface ConfidenceBadgeProps {
   level: "low" | "medium" | "high";
@@ -28,6 +29,41 @@ const ConfidenceBadge: React.FC<ConfidenceBadgeProps> = ({ level }) => {
     <span className={`text-xs px-2 py-0.5 rounded-full border ${colors[level]}`}>
       {level.charAt(0).toUpperCase() + level.slice(1)}
     </span>
+  );
+};
+
+interface MethodBadgeProps {
+  method: string;
+  confidence: number;
+}
+
+const MethodBadge: React.FC<MethodBadgeProps> = ({ method, confidence }) => {
+  // Choose color based on method type
+  const getMethodColor = (method: string) => {
+    switch (method.toLowerCase()) {
+      case 'regex':
+        return 'bg-blue-50 text-blue-700 border-blue-200';
+      case 'tel-link':
+      case 'mailto':
+        return 'bg-green-50 text-green-700 border-green-200';
+      case 'jsonld':
+      case 'microdata':
+        return 'bg-purple-50 text-purple-700 border-purple-200';
+      case 'heading':
+      case 'bold':
+        return 'bg-amber-50 text-amber-700 border-amber-200';
+      default:
+        return 'bg-gray-50 text-gray-700 border-gray-200';
+    }
+  };
+
+  const color = getMethodColor(method);
+  const confPercent = Math.round(confidence * 100);
+
+  return (
+    <Badge variant="outline" className={`text-xs px-2 py-1 rounded border ${color} ml-2 font-normal`}>
+      {method} ({confPercent}%)
+    </Badge>
   );
 };
 
@@ -52,6 +88,13 @@ export const FieldCandidate: React.FC<FieldCandidateProps> = ({
 }) => {
   const [isValid, setIsValid] = useState<boolean>(true);
   const [isManualEntry, setIsManualEntry] = useState<boolean>(false);
+  const [currentCandidate, setCurrentCandidate] = useState<ImpressumCandidate | null>(null);
+
+  // Find the current candidate based on selected value
+  useEffect(() => {
+    const found = candidates.find(c => c.value === value);
+    setCurrentCandidate(found || null);
+  }, [value, candidates]);
 
   // Set initial validity based on whether the field is required and has a value
   useEffect(() => {
@@ -79,6 +122,10 @@ export const FieldCandidate: React.FC<FieldCandidateProps> = ({
       onChange(newValue);
       setIsValid(true);
       onValidationChange(true);
+      
+      // Find and set the current candidate
+      const found = candidates.find(c => c.value === newValue);
+      setCurrentCandidate(found || null);
     }
   };
 
@@ -88,6 +135,7 @@ export const FieldCandidate: React.FC<FieldCandidateProps> = ({
     const newIsValid = !isRequired || (newValue.trim() !== "");
     setIsValid(newIsValid);
     onValidationChange(newIsValid);
+    setCurrentCandidate(null); // Clear current candidate as we're typing manually
   };
 
   return (
@@ -124,38 +172,50 @@ export const FieldCandidate: React.FC<FieldCandidateProps> = ({
       </div>
 
       {isManualEntry ? (
-        <Input
-          id={`field-${fieldName}-manual`}
-          value={value}
-          onChange={handleManualInput}
-          placeholder={`Enter ${fieldName} manually...`}
-          className="w-full"
-        />
+        <div className="space-y-2">
+          <Input
+            id={`field-${fieldName}-manual`}
+            value={value}
+            onChange={handleManualInput}
+            placeholder={`Enter ${fieldName} manually...`}
+            className="w-full"
+          />
+        </div>
       ) : (
-        <Select
-          onValueChange={handleCandidateChange}
-          value={value}
-          disabled={false} // Always enable selection
-        >
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder={`Select ${fieldName}...`} />
-          </SelectTrigger>
-          <SelectContent>
-            {candidates.map((candidate, index) => (
-              <SelectItem key={index} value={candidate.value}>
-                <div className="flex items-center justify-between w-full">
-                  <span>{candidate.value || "Empty"}</span>
-                  <span className="text-xs text-muted-foreground">
-                    {candidate.method} ({Math.round(candidate.conf * 100)}%)
-                  </span>
-                </div>
-              </SelectItem>
-            ))}
-            <SelectItem value="__manual__">
-              <span className="italic">✏️ Enter manually...</span>
-            </SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="space-y-2">
+          <div className="flex items-center">
+            <Select
+              onValueChange={handleCandidateChange}
+              value={value}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder={`Select ${fieldName}...`} />
+              </SelectTrigger>
+              <SelectContent>
+                {candidates.map((candidate, index) => (
+                  <SelectItem key={index} value={candidate.value}>
+                    <div className="flex items-center justify-between w-full">
+                      <span>{candidate.value || "Empty"}</span>
+                    </div>
+                  </SelectItem>
+                ))}
+                <SelectItem value="__manual__">
+                  <span className="italic">✏️ Enter manually...</span>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          
+          {/* Display method and confidence as a badge if a candidate is selected */}
+          {currentCandidate && (
+            <div className="mt-1">
+              <MethodBadge 
+                method={currentCandidate.method} 
+                confidence={currentCandidate.conf}
+              />
+            </div>
+          )}
+        </div>
       )}
 
       {!isValid && !isManualEntry && (
