@@ -56,7 +56,7 @@ interface MainNavigationProps {
 
 function MainNavigation({ className }: MainNavigationProps) {
   const location = useLocation();
-  const { user, logout } = useAuth();
+  const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
 
@@ -102,6 +102,11 @@ function MainNavigation({ className }: MainNavigationProps) {
           title: "AI Assistant",
           href: "/openai/assistant",
           icon: <Bot className="h-5 w-5" />,
+        },
+        {
+          title: "Connections",
+          href: "/connections",
+          icon: <Plug className="h-5 w-5" />,
         },
         {
           title: "AI Settings",
@@ -173,7 +178,7 @@ function MainNavigation({ className }: MainNavigationProps) {
               </div>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={logout}>Logout</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => signOut()}>Logout</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
@@ -188,7 +193,7 @@ interface MobileNavigationProps {
 
 export function MobileNavigation({ className }: MobileNavigationProps) {
   const location = useLocation();
-  const { user, logout } = useAuth();
+  const { user, signOut } = useAuth();
     const navigate = useNavigate();
     const { theme, setTheme } = useTheme();
 
@@ -229,6 +234,11 @@ export function MobileNavigation({ className }: MobileNavigationProps) {
           title: "AI Assistant",
           href: "/openai/assistant",
           icon: <Bot className="h-5 w-5" />,
+        },
+        {
+          title: "Connections",
+          href: "/connections",
+          icon: <Plug className="h-5 w-5" />,
         },
         {
           title: "AI Settings",
@@ -317,7 +327,7 @@ export function MobileNavigation({ className }: MobileNavigationProps) {
                       </Button>
                     </li>
                     <li>
-                      <Button variant="ghost" className="w-full justify-start" onClick={logout}>
+                      <Button variant="ghost" className="w-full justify-start" onClick={() => signOut()}>
                         Logout
                       </Button>
                     </li>
@@ -349,7 +359,7 @@ function NavigationLink({ item, location }: NavigationLinkProps) {
         }`
       }
     >
-      {item.icon && <item.icon className="mr-2 h-4 w-4" />}
+      {item.icon && <span className="mr-2 h-4 w-4">{item.icon}</span>}
       {item.title}
       {item.label && (
         <span className="ml-auto text-xs font-semibold px-2 py-1 bg-secondary text-foreground rounded-full">

@@ -49,7 +49,7 @@ export function useConnections(options: UseConnectionsOptions = {}) {
 
       if (error) throw error;
       
-      setConnections(data || []);
+      setConnections(data as Connection[] || []);
     } catch (error) {
       console.error('Failed to fetch connections:', error);
       toast.error('Failed to load connections');
@@ -70,7 +70,7 @@ export function useConnections(options: UseConnectionsOptions = {}) {
 
       if (error) throw error;
       
-      setConnectionTypes(data || []);
+      setConnectionTypes(data as ConnectionTypeInfo[] || []);
     } catch (error) {
       console.error('Failed to fetch connection types:', error);
     } finally {
