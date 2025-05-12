@@ -4,6 +4,7 @@
 ## [Unreleased]
 
 ### Added
+- 🎨 Per-profile Theme Studio with dedicated appearance settings page
 - ✨ Per-profile theme tokens with customizable colors, typography, UI density, and icon packs
 - ✨ Added ThemeProvider with profile-specific theme loading
 - ✨ Added Icon component that supports different icon packs
@@ -23,3 +24,4 @@
 ### Fixed
 - Fixed compatibility issues with asChild and children in Button component
 - Fixed size prop types to support existing code
+

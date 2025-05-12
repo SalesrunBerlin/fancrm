@@ -11,7 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/contexts/AuthContext";
-import { HelpCircle, LogOut, Settings, User, Shield } from "lucide-react";
+import { HelpCircle, LogOut, Settings, User, Shield, Palette } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { ThemedButton } from "@/components/ui/themed-button";
 
@@ -54,6 +54,10 @@ export function UserProfileMenu() {
           <DropdownMenuItem onClick={() => navigate("/profile")}>
             <User className="mr-2 h-4 w-4" />
             <span>Profile</span>
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => navigate("/profile/appearance")}>
+            <Palette className="mr-2 h-4 w-4" />
+            <span>Appearance</span>
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => navigate("/settings")}>
             <Settings className="mr-2 h-4 w-4" />

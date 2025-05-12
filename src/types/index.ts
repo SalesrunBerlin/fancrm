@@ -1,4 +1,3 @@
-
 // Public action token type
 export interface PublicActionToken {
   id: string;
@@ -115,3 +114,20 @@ export interface ReportField {
 
 // Export Object types
 export * from "./ObjectFieldTypes";
+
+// Theme types
+export interface ProfileTheme {
+  profile_id: string;
+  primary_color: string;
+  accent_color: string;
+  font_family: string;
+  font_weight: number;
+  font_width: number;
+  radius_scale: string;
+  shadow_level: string;
+  density: string;
+  icon_pack: string;
+  logo_url: string | null;
+}
+
+export type ThemeFormValues = Omit<ProfileTheme, 'profile_id'>;

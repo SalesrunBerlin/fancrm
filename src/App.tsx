@@ -1,3 +1,4 @@
+
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { Toaster } from "sonner"; 
 import { Layout } from "@/components/layout/Layout";
@@ -6,6 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import Auth from "@/pages/Auth";
 import Dashboard from "@/pages/Dashboard";
 import Settings from "@/pages/Settings";
+import AppearanceSettingsPage from "@/pages/AppearanceSettingsPage";
 import ObjectManager from "@/pages/ObjectManager";
 import Structures from "@/pages/Structures";
 import ObjectRecordsList from "@/pages/ObjectRecordsList";
@@ -140,6 +142,7 @@ function AppContent() {
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/profile/appearance" element={<AppearanceSettingsPage />} />
         <Route path="/help" element={<HelpPage />} />
         <Route path="/settings/object-manager" element={<ObjectManager />} />
         <Route path="/settings/object-manager/new" element={<CreateObjectPage />} />
