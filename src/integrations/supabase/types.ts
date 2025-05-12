@@ -1999,6 +1999,48 @@ export type Database = {
           },
         ]
       }
+      scraper_feedback: {
+        Row: {
+          confidence: number | null
+          correct_value: string | null
+          created_at: string | null
+          domain: string | null
+          extraction_method: string | null
+          field_type: string
+          html_snippet: string | null
+          id: string
+          initial_value: string | null
+          url: string
+          user_hash: string | null
+        }
+        Insert: {
+          confidence?: number | null
+          correct_value?: string | null
+          created_at?: string | null
+          domain?: string | null
+          extraction_method?: string | null
+          field_type: string
+          html_snippet?: string | null
+          id?: string
+          initial_value?: string | null
+          url: string
+          user_hash?: string | null
+        }
+        Update: {
+          confidence?: number | null
+          correct_value?: string | null
+          created_at?: string | null
+          domain?: string | null
+          extraction_method?: string | null
+          field_type?: string
+          html_snippet?: string | null
+          id?: string
+          initial_value?: string | null
+          url?: string
+          user_hash?: string | null
+        }
+        Relationships: []
+      }
       sharing_collections: {
         Row: {
           created_at: string
@@ -2778,6 +2820,10 @@ export type Database = {
           field_id: string
           action_id: string
         }
+        Returns: string
+      }
+      extract_domain: {
+        Args: { url: string }
         Returns: string
       }
       generate_auto_number: {

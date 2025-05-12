@@ -7,6 +7,7 @@ import { toast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 import { ImpressumData, ImpressumCandidate } from "@/hooks/useImpressumScrape";
 import { FieldCandidate } from "./FieldCandidate";
+import { supabase } from "@/integrations/supabase/client";
 
 export interface FieldState {
   candidates: ImpressumCandidate[];
@@ -80,6 +81,7 @@ export const ImpressumMapping: React.FC<ImpressumMappingProps> = ({
   );
 
   const [formValid, setFormValid] = useState(true);
+  const [isSendingFeedback, setIsSendingFeedback] = useState(false);
 
   // Validate the entire form
   useEffect(() => {
@@ -112,12 +114,102 @@ export const ImpressumMapping: React.FC<ImpressumMappingProps> = ({
     }));
   };
 
+  const collectFeedback = () => {
+    // Collect feedback for fields where the user selected a value different from the top candidate
+    const feedback: any[] = [];
+
+    // Helper function to prepare feedback item
+    const prepareFeedbackItem = (
+      fieldType: string, 
+      candidates: ImpressumCandidate[], 
+      selectedValue: string
+    ) => {
+      if (candidates.length === 0) return null;
+      
+      const initialCandidate = candidates[0]; // Top candidate from the extraction
+      if (!initialCandidate) return null;
+
+      // Only log feedback if the user chose a different value than the suggested one
+      if (initialCandidate.value === selectedValue) return null;
+
+      // Find which candidate was selected (if any)
+      const selectedCandidate = candidates.find(c => c.value === selectedValue);
+
+      return {
+        url: data.source,
+        field_type: fieldType,
+        initial_value: initialCandidate.value,
+        correct_value: selectedValue,
+        extraction_method: initialCandidate.method,
+        confidence: initialCandidate.conf,
+        html_snippet: initialCandidate.context || null
+      };
+    };
+
+    // Company feedback
+    const companyFeedback = prepareFeedbackItem('company', fieldStates.company.candidates, fieldStates.company.selected);
+    if (companyFeedback) feedback.push(companyFeedback);
+
+    // Address feedback
+    const addressFeedback = prepareFeedbackItem('address', fieldStates.address.candidates, fieldStates.address.selected);
+    if (addressFeedback) feedback.push(addressFeedback);
+
+    // Phone feedback
+    const phoneFeedback = prepareFeedbackItem('phone', fieldStates.phone.candidates, fieldStates.phone.selected);
+    if (phoneFeedback) feedback.push(phoneFeedback);
+
+    // Email feedback
+    const emailFeedback = prepareFeedbackItem('email', fieldStates.email.candidates, fieldStates.email.selected);
+    if (emailFeedback) feedback.push(emailFeedback);
+
+    // CEO feedback: for each CEO that was deselected
+    const initialCEOs = data.fields.ceos.map(ceo => ceo.value);
+    for (const ceo of initialCEOs) {
+      if (!selectedCEOs.includes(ceo)) {
+        const ceoCandidate = data.fields.ceos.find(c => c.value === ceo);
+        if (ceoCandidate) {
+          feedback.push({
+            url: data.source,
+            field_type: 'ceo',
+            initial_value: ceo,
+            correct_value: '', // User removed this CEO
+            extraction_method: ceoCandidate.method,
+            confidence: ceoCandidate.conf,
+            html_snippet: ceoCandidate.context || null
+          });
+        }
+      }
+    }
+
+    return feedback;
+  };
+
+  const sendFeedback = async (feedback: any[]) => {
+    if (!feedback.length) return;
+
+    setIsSendingFeedback(true);
+    try {
+      const { error } = await supabase.functions.invoke("log_feedback", {
+        body: feedback
+      });
+
+      if (error) {
+        console.error("Error logging feedback:", error);
+      } else {
+        console.log("Successfully logged extraction feedback");
+      }
+    } catch (err) {
+      console.error("Failed to send feedback:", err);
+    } finally {
+      setIsSendingFeedback(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!formValid) {
       toast({
-        title: "Validation Error",
         description: "Please fix all validation issues before submitting"
       });
       return;
@@ -125,7 +217,6 @@ export const ImpressumMapping: React.FC<ImpressumMappingProps> = ({
 
     if (!fieldStates.company.selected.trim()) {
       toast({
-        title: "Required Field",
         description: "Company name is required"
       });
       return;
@@ -133,12 +224,14 @@ export const ImpressumMapping: React.FC<ImpressumMappingProps> = ({
 
     if (!fieldStates.address.selected.trim()) {
       toast({
-        title: "Required Field",
         description: "Address is required"
       });
       return;
     }
 
+    // Collect feedback before submitting
+    const feedback = collectFeedback();
+    
     try {
       await onSubmit({
         company: fieldStates.company.selected,
@@ -147,11 +240,15 @@ export const ImpressumMapping: React.FC<ImpressumMappingProps> = ({
         email: fieldStates.email.selected ? fieldStates.email.selected : null,
         ceos: selectedCEOs,
       });
+      
+      // Send feedback in a non-blocking way
+      if (feedback.length > 0) {
+        sendFeedback(feedback).catch(console.error);
+      }
     } catch (error) {
       toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to save company data",
-        variant: "destructive"
+        variant: "destructive",
+        description: error instanceof Error ? error.message : "Failed to save company data"
       });
     }
   };
@@ -229,8 +326,14 @@ export const ImpressumMapping: React.FC<ImpressumMappingProps> = ({
             disabled={isLoading || !formValid}
             className="w-full sm:w-auto"
           >
-            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Continue
+            {isLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Continue
+              </>
+            ) : (
+              'Continue'
+            )}
           </Button>
         </div>
       </div>

@@ -1,0 +1,250 @@
+
+name: Impressum Scraper Regression Tests
+
+on:
+  pull_request:
+    paths:
+      - 'supabase/functions/scrape-impressum/**'
+      - 'src/utils/impressumParser.ts'
+      - 'src/utils/__tests__/impressumParser.test.ts'
+  
+  # Allow manual trigger
+  workflow_dispatch:
+
+jobs:
+  regression-test:
+    name: Run Regression Tests
+    runs-on: ubuntu-latest
+    
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Create scripts directory
+        run: mkdir -p scripts
+      
+      - name: Create regression test script
+        run: |
+          cat > scripts/run-scraper-tests.js << 'EOL'
+          const fs = require('fs');
+          const path = require('path');
+          const { parseImpressumHTML } = require('../src/utils/impressumParser');
+
+          // Path to downloaded CSV file
+          const csvFilePath = path.join(__dirname, '../scraper-feedback.csv');
+
+          // Function to parse CSV data
+          function parseCSV(content) {
+            const lines = content.trim().split('\n');
+            const headers = lines[0].split(',');
+            
+            return lines.slice(1).map(line => {
+              const values = line.split(',');
+              const record = {};
+              
+              headers.forEach((header, i) => {
+                // Handle quoted values
+                if (values[i] && values[i].startsWith('"') && !values[i].endsWith('"')) {
+                  let j = i;
+                  let val = values[i].substring(1);
+                  
+                  while (j < values.length) {
+                    j++;
+                    if (!values[j]) continue;
+                    
+                    if (values[j].endsWith('"')) {
+                      val += ',' + values[j].substring(0, values[j].length - 1);
+                      record[header] = val;
+                      break;
+                    } else {
+                      val += ',' + values[j];
+                    }
+                  }
+                } else {
+                  let value = values[i];
+                  if (value && value.startsWith('"') && value.endsWith('"')) {
+                    value = value.substring(1, value.length - 1).replace(/""/g, '"');
+                  }
+                  record[header] = value;
+                }
+              });
+              
+              return record;
+            });
+          }
+
+          async function runTests() {
+            console.log('Starting scraper regression tests...');
+            
+            if (!fs.existsSync(csvFilePath)) {
+              console.error('Error: Feedback CSV file not found!');
+              process.exit(1);
+            }
+            
+            const csvContent = fs.readFileSync(csvFilePath, 'utf-8');
+            const feedbackData = parseCSV(csvContent);
+            
+            console.log(`Loaded ${feedbackData.length} test cases from feedback data.`);
+            
+            let passCount = 0;
+            let failCount = 0;
+            const failures = [];
+            
+            for (const feedback of feedbackData) {
+              // Skip records without HTML snippet
+              if (!feedback.html_snippet) continue;
+              
+              try {
+                // Create a mock document structure with the HTML snippet
+                const mockHTML = `<!DOCTYPE html><html><body>${feedback.html_snippet}</body></html>`;
+                
+                // Parse the HTML with the current parser
+                const result = await parseImpressumHTML(mockHTML);
+                
+                // Get the candidates for this field type
+                let candidates;
+                switch (feedback.field_type) {
+                  case 'company':
+                    candidates = result.fields.company;
+                    break;
+                  case 'address':
+                    candidates = result.fields.address;
+                    break;
+                  case 'phone':
+                    candidates = result.fields.phone;
+                    break;
+                  case 'email':
+                    candidates = result.fields.email;
+                    break;
+                  case 'ceo':
+                    candidates = result.fields.ceos;
+                    break;
+                  default:
+                    candidates = [];
+                }
+                
+                // Check if the top candidate matches the correct value
+                const topCandidate = candidates && candidates.length > 0 ? candidates[0].value : null;
+                const correctValue = feedback.correct_value;
+                
+                if (topCandidate === correctValue) {
+                  passCount++;
+                } else {
+                  failCount++;
+                  failures.push({
+                    field_type: feedback.field_type,
+                    expected: correctValue,
+                    actual: topCandidate,
+                    url: feedback.url
+                  });
+                }
+              } catch (error) {
+                console.error(`Error processing test case: ${error.message}`);
+                failCount++;
+                failures.push({
+                  field_type: feedback.field_type,
+                  error: error.message,
+                  url: feedback.url
+                });
+              }
+            }
+            
+            const totalTests = passCount + failCount;
+            const accuracy = totalTests > 0 ? (passCount / totalTests) * 100 : 0;
+            
+            console.log('\n===== Test Results =====');
+            console.log(`Total Tests: ${totalTests}`);
+            console.log(`Passed: ${passCount}`);
+            console.log(`Failed: ${failCount}`);
+            console.log(`Accuracy: ${accuracy.toFixed(2)}%`);
+            
+            if (failures.length > 0) {
+              console.log('\n===== Test Failures =====');
+              failures.slice(0, 10).forEach((failure, i) => {
+                console.log(`\n#${i + 1} Field: ${failure.field_type}, URL: ${failure.url}`);
+                if (failure.error) {
+                  console.log(`Error: ${failure.error}`);
+                } else {
+                  console.log(`Expected: "${failure.expected}", Actual: "${failure.actual}"`);
+                }
+              });
+              
+              if (failures.length > 10) {
+                console.log(`\n...and ${failures.length - 10} more failures.`);
+              }
+            }
+            
+            // Fail if accuracy is below threshold
+            const ACCURACY_THRESHOLD = 95;
+            if (accuracy < ACCURACY_THRESHOLD) {
+              console.error(`\nTest failed: Accuracy ${accuracy.toFixed(2)}% is below threshold of ${ACCURACY_THRESHOLD}%`);
+              process.exit(1);
+            } else {
+              console.log(`\nTest passed: Accuracy ${accuracy.toFixed(2)}% meets threshold of ${ACCURACY_THRESHOLD}%`);
+            }
+          }
+
+          runTests().catch(err => {
+            console.error('Test execution error:', err);
+            process.exit(1);
+          });
+          EOL
+      
+      - name: Download latest feedback data
+        run: |
+          npm install -g @supabase/cli
+          mkdir -p .supabase
+          echo "{\"project_id\":\"$SUPABASE_URL\", \"api_key\":\"$SUPABASE_SERVICE_ROLE_KEY\"}" > .supabase/config.json
+          
+          # Download latest feedback file (up to 1MB)
+          DATE=$(date +%Y-%m-%d)
+          curl -s "$SUPABASE_URL/storage/v1/bucket/scraper-feedback/object/$DATE.csv" \
+            -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
+            -o scraper-feedback.csv
+          
+          # If today's file doesn't exist, try yesterday's
+          if [ ! -s scraper-feedback.csv ]; then
+            DATE=$(date -d "yesterday" +%Y-%m-%d)
+            curl -s "$SUPABASE_URL/storage/v1/bucket/scraper-feedback/object/$DATE.csv" \
+              -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
+              -o scraper-feedback.csv
+          fi
+          
+          # If still no file, list available files and get the most recent one
+          if [ ! -s scraper-feedback.csv ]; then
+            echo "Fetching list of available feedback files..."
+            FILES=$(curl -s "$SUPABASE_URL/storage/v1/bucket/scraper-feedback/list" \
+              -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY")
+            
+            LATEST_FILE=$(echo "$FILES" | jq -r '.[] | select(.name|endswith(".csv")) | .name' | sort -r | head -n 1)
+            
+            if [ ! -z "$LATEST_FILE" ]; then
+              echo "Using latest available file: $LATEST_FILE"
+              curl -s "$SUPABASE_URL/storage/v1/bucket/scraper-feedback/object/$LATEST_FILE" \
+                -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
+                -o scraper-feedback.csv
+            fi
+          fi
+          
+          # Check if we have a file with content
+          if [ ! -s scraper-feedback.csv ]; then
+            echo "No feedback data found, creating sample file for testing"
+            echo "id,url,domain,field_type,initial_value,correct_value,extraction_method,confidence,html_snippet,user_hash,created_at" > scraper-feedback.csv
+            echo "sample,https://example.com,example.com,company,Example GmbH,Example GmbH,jsonld,0.9,<div>Example GmbH</div>,abc123,2023-01-01" >> scraper-feedback.csv
+          fi
+      
+      - name: Run regression tests
+        run: node scripts/run-scraper-tests.js

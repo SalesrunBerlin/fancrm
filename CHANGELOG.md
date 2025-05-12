@@ -4,6 +4,7 @@
 ## [Unreleased]
 
 ### Added
+- ✨ Add feedback capture & nightly export for Impressum scraper
 - ✨ Field-level refinement for Impressum import
 - ✨ Add scrape_impressum Edge Function
 - 🎉 Add Impressum import UI
