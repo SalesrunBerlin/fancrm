@@ -1,10 +1,13 @@
 
-
 # Changelog
 
 ## [Unreleased]
 
 ### Added
+- ✨ Per-profile theme tokens with customizable colors, typography, UI density, and icon packs
+- ✨ Added ThemeProvider with profile-specific theme loading
+- ✨ Added Icon component that supports different icon packs
+- ✨ Profile page tabs for better organization of settings
 - ✨ Enhanced Impressum feedback system with mandatory field validation
 - ✨ Tracking of user validation decisions (correct/incorrect) for each field
 - ✨ Improved HTML context collection for corrected values
@@ -20,5 +23,3 @@
 ### Fixed
 - Fixed compatibility issues with asChild and children in Button component
 - Fixed size prop types to support existing code
-
-

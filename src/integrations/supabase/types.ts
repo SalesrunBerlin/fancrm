@@ -2068,6 +2068,56 @@ export type Database = {
         }
         Relationships: []
       }
+      ui_theme_profile: {
+        Row: {
+          accent_color: string | null
+          density: string | null
+          font_family: string | null
+          font_weight: number | null
+          font_width: number | null
+          icon_pack: string | null
+          logo_url: string | null
+          primary_color: string | null
+          profile_id: string
+          radius_scale: string | null
+          shadow_level: string | null
+        }
+        Insert: {
+          accent_color?: string | null
+          density?: string | null
+          font_family?: string | null
+          font_weight?: number | null
+          font_width?: number | null
+          icon_pack?: string | null
+          logo_url?: string | null
+          primary_color?: string | null
+          profile_id: string
+          radius_scale?: string | null
+          shadow_level?: string | null
+        }
+        Update: {
+          accent_color?: string | null
+          density?: string | null
+          font_family?: string | null
+          font_weight?: number | null
+          font_width?: number | null
+          icon_pack?: string | null
+          logo_url?: string | null
+          primary_color?: string | null
+          profile_id?: string
+          radius_scale?: string | null
+          shadow_level?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ui_theme_profile_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_activities: {
         Row: {
           action: string
