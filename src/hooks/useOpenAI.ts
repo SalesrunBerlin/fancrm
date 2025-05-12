@@ -115,17 +115,16 @@ export function useOpenAI(options: UseOpenAIOptions = {}) {
       setIsStreaming(true);
 
       // Add system message if not present
-      let newMessages = [...messages];
-      if (!newMessages.some(m => m.role === 'system') && options.defaultSystemMessage) {
-        newMessages = [
-          { role: 'system', content: options.defaultSystemMessage },
-          ...newMessages
-        ];
+      if (!messages.some(m => m.role === 'system') && options.defaultSystemMessage) {
+        setMessages(prev => [
+          { role: 'system', content: options.defaultSystemMessage! },
+          ...prev
+        ]);
       }
 
       // Add user message
-      newMessages = [
-        ...newMessages,
+      const newMessages = [
+        ...messages,
         { role: 'user', content: userMessage }
       ];
       setMessages(newMessages);
@@ -217,9 +216,16 @@ export function useOpenAI(options: UseOpenAIOptions = {}) {
     }
 
     try {
-      // Since we don't have an openai_usage_profile table yet, we'll just return a placeholder
-      // This should be implemented properly later when the table exists
-      return null;
+      const { data, error } = await supabase
+        .from('openai_usage_profile')
+        .select('prompt_tokens, completion_tokens')
+        .eq('profile_id', user.id)
+        .eq('day', new Date().toISOString().split('T')[0])
+        .single();
+
+      if (error) throw error;
+      
+      return data;
     } catch (error) {
       console.error('Error fetching usage stats:', error);
       return null;

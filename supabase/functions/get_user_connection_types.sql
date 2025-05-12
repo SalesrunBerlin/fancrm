@@ -21,9 +21,9 @@ BEGIN
   
   -- Include predefined connection types that don't exist yet for this user
   SELECT 
-    predefined.service_type,
+    service_type,
     false AS has_connection,
-    predefined.service_type AS display_name,
+    service_type AS display_name,
     NULL::uuid AS connection_id,
     false AS is_active
   FROM (
