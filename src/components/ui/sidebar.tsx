@@ -565,6 +565,7 @@ const SidebarMenuButton = React.forwardRef<
       size = "default",
       tooltip,
       className,
+      children,
       ...props
     },
     ref
@@ -580,7 +581,14 @@ const SidebarMenuButton = React.forwardRef<
         data-active={isActive}
         className={cn(sidebarMenuButtonVariants({ variant, size }), className)}
         {...props}
-      />
+      >
+        {asChild ? 
+          // When using asChild, make sure we only pass one child - this is critical for Slot to work
+          React.Children.only(children) 
+        : 
+          children
+        }
+      </Comp>
     )
 
     if (!tooltip) {
