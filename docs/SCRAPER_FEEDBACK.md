@@ -1,20 +1,22 @@
 
+
 # 🔄 Impressum Scraper Feedback Loop
 
 This document describes the feedback collection and improvement system for the Impressum scraper.
 
 ## Overview
 
-The system collects user corrections to the Impressum scraper's output, stores them in a database, and uses this data to test and improve future versions of the scraper. This creates a continuous feedback loop that helps the scraper get better over time.
+The system collects user corrections and validation decisions for the Impressum scraper's output, stores them in a database, and uses this data to test and improve future versions of the scraper. This creates a continuous feedback loop that helps the scraper get better over time.
 
 ## Components
 
 ### 1. Feedback Collection
 
-When users manually correct or validate data during the Impressum import process, the system captures:
+When users validate and correct data during the Impressum import process, the system captures:
 
 - Initial value (what the scraper extracted)
-- Correct value (what the user selected)
+- Correct value (what the user selected or entered)
+- Validation decision (user explicitly marked as valid/invalid)
 - Extraction method used
 - Confidence score
 - HTML snippet where the data was found
@@ -22,7 +24,22 @@ When users manually correct or validate data during the Impressum import process
 
 This feedback is sent to the `log_feedback` Edge Function and stored in the `scraper_feedback` table.
 
-### 2. Nightly Export
+### 2. Enhanced Context Collection
+
+When users enter a manually corrected value:
+- The system attempts to find where this value appears in the original HTML
+- It extracts the surrounding context to help improve future extraction patterns
+- This context is stored with the feedback for analysis
+
+### 3. Mandatory Validation
+
+Users must now explicitly validate each field by clicking:
+- ✓ (check) if the extracted value is correct
+- ✗ (cross) if the extracted value is incorrect
+
+This ensures we collect high-quality feedback for ALL fields, not just those that are corrected.
+
+### 4. Nightly Export
 
 A scheduled function runs daily at 02:00 UTC to:
 
@@ -30,7 +47,7 @@ A scheduled function runs daily at 02:00 UTC to:
 - Store the CSV file in the `scraper-feedback` storage bucket
 - Maintain data retention policy (24 months)
 
-### 3. Regression Testing
+### 5. Regression Testing
 
 When developers modify the scraper code, a GitHub Action automatically:
 
@@ -55,6 +72,8 @@ The `scraper_feedback` table stores:
 | confidence        | Confidence score (0-1)                   |
 | html_snippet      | Sanitized HTML context (max 10KB)        |
 | user_hash         | Anonymized user identifier               |
+| validated         | Whether field was explicitly validated   |
+| validation_result | Whether extraction was valid/invalid     |
 | created_at        | Timestamp                                |
 
 ## Privacy and Security
@@ -82,3 +101,4 @@ The feedback data is available to developers through:
    - Run automatically on PRs that change scraper code
    - Validate that changes don't break existing functionality
    - Ensure accuracy remains high for previously corrected cases
+

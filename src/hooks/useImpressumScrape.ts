@@ -1,11 +1,13 @@
-
-import { useQuery, UseQueryOptions } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
 export interface ImpressumCandidate {
   value: string;
-  method: string; // regex, microdata, mailto, etc.
-  conf: number;  // confidence 0.1-1.0
+  conf: number;
+  method: string;
+  context?: string; // HTML context where this value was found
+  isValidated?: boolean; // Whether this field has been explicitly validated
+  isValid?: boolean; // Whether the value was marked as valid or invalid
 }
 
 export interface ImpressumData {
@@ -19,34 +21,26 @@ export interface ImpressumData {
   source: string;
 }
 
-export interface ImpressumError {
-  error: string;
-}
-
-export async function scrapeImpressum(url: string): Promise<ImpressumData> {
-  const { data, error } = await supabase.functions.invoke("scrape-impressum", {
-    body: { url }
-  });
-
-  if (error) {
-    throw new Error(`Failed to scrape Impressum: ${error.message}`);
-  }
-
-  if ("error" in data) {
-    throw new Error((data as ImpressumError).error);
-  }
-
-  return data as ImpressumData;
-}
-
-export function useImpressumScrape(url: string | null, options?: Omit<UseQueryOptions<ImpressumData, Error>, "queryKey" | "queryFn">) {
-  return useQuery<ImpressumData, Error>({
+export function useImpressumScrape(url: string | null) {
+  return useQuery({
     queryKey: ["impressum", url],
-    queryFn: () => {
-      if (!url) throw new Error("URL is required");
-      return scrapeImpressum(url);
+    queryFn: async () => {
+      if (!url) {
+        return null;
+      }
+
+      const { data, error } = await supabase.functions.invoke("scrape-impressum", {
+        body: { url },
+      });
+
+      if (error) {
+        console.error("Error scraping impressum:", error);
+        throw new Error(error.message);
+      }
+
+      return data as ImpressumData;
     },
-    enabled: !!url,
-    ...options
+    enabled: !!url, // Only run the query if URL is set
+    retry: false, // Do not retry on error, as the content might not be there
   });
 }

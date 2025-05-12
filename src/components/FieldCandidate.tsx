@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Check, X } from "lucide-react";
+import { Check, X, AlertTriangle } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -72,9 +72,11 @@ export interface FieldCandidateProps {
   candidates: ImpressumCandidate[];
   value: string;
   onChange: (value: string) => void;
-  onValidationChange: (isValid: boolean) => void;
+  onValidationChange: (isValid: boolean, isExplicitlyValidated: boolean) => void;
   confidenceLevel: "low" | "medium" | "high";
   isRequired?: boolean;
+  isValidated: boolean;
+  setIsValidated: (validated: boolean) => void;
 }
 
 export const FieldCandidate: React.FC<FieldCandidateProps> = ({
@@ -85,6 +87,8 @@ export const FieldCandidate: React.FC<FieldCandidateProps> = ({
   onValidationChange,
   confidenceLevel,
   isRequired = false,
+  isValidated,
+  setIsValidated,
 }) => {
   const [isValid, setIsValid] = useState<boolean>(true);
   const [isManualEntry, setIsManualEntry] = useState<boolean>(false);
@@ -100,12 +104,14 @@ export const FieldCandidate: React.FC<FieldCandidateProps> = ({
   useEffect(() => {
     const valid = !isRequired || (!!value && value.trim() !== "");
     setIsValid(valid);
-    onValidationChange(valid);
-  }, [isRequired, value, onValidationChange]);
+    // We don't want to set isValidated to true automatically
+    onValidationChange(valid, isValidated);
+  }, [isRequired, value, onValidationChange, isValidated]);
 
   const handleValidationToggle = (newIsValid: boolean) => {
     setIsValid(newIsValid);
-    onValidationChange(newIsValid);
+    setIsValidated(true);
+    onValidationChange(newIsValid, true);
     
     // If marking as invalid, automatically open the dropdown
     if (!newIsValid) {
@@ -120,8 +126,7 @@ export const FieldCandidate: React.FC<FieldCandidateProps> = ({
     } else {
       setIsManualEntry(false);
       onChange(newValue);
-      setIsValid(true);
-      onValidationChange(true);
+      // Note: We don't set isValidated here as user still needs to explicitly validate
       
       // Find and set the current candidate
       const found = candidates.find(c => c.value === newValue);
@@ -134,24 +139,33 @@ export const FieldCandidate: React.FC<FieldCandidateProps> = ({
     onChange(newValue);
     const newIsValid = !isRequired || (newValue.trim() !== "");
     setIsValid(newIsValid);
-    onValidationChange(newIsValid);
+    // Don't update validation status yet - still requires explicit validation
     setCurrentCandidate(null); // Clear current candidate as we're typing manually
   };
 
   return (
-    <div className={`space-y-2 p-3 rounded-md ${isValid ? "bg-green-50" : "bg-red-50"}`}>
+    <div className={`space-y-2 p-3 rounded-md ${isValidated ? (isValid ? "bg-green-50" : "bg-red-50") : "bg-yellow-50 border border-yellow-300"}`}>
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Label htmlFor={`field-${fieldName}`} className="text-sm font-medium">
             {fieldName}
           </Label>
           <ConfidenceBadge level={confidenceLevel} />
+          
+          {!isValidated && (
+            <Badge variant="outline" className="bg-yellow-100 text-yellow-800 border-yellow-200 flex items-center gap-1">
+              <AlertTriangle className="h-3 w-3" /> 
+              Needs validation
+            </Badge>
+          )}
         </div>
         <div className="flex items-center gap-1">
           <Button
-            variant={isValid ? "default" : "ghost"}
+            variant={isValid && isValidated ? "default" : "ghost"}
             size="sm"
-            className={`h-6 w-6 p-0 rounded-full ${isValid ? "bg-green-500 hover:bg-green-600" : "text-green-600"}`}
+            className={`h-6 w-6 p-0 rounded-full ${
+              isValid && isValidated ? "bg-green-500 hover:bg-green-600" : "text-green-600"
+            }`}
             onClick={() => handleValidationToggle(true)}
             type="button"
           >
@@ -159,9 +173,11 @@ export const FieldCandidate: React.FC<FieldCandidateProps> = ({
             <span className="sr-only">Valid</span>
           </Button>
           <Button
-            variant={!isValid ? "destructive" : "ghost"}
+            variant={!isValid && isValidated ? "destructive" : "ghost"}
             size="sm"
-            className={`h-6 w-6 p-0 rounded-full ${!isValid ? "bg-red-500 hover:bg-red-600" : "text-red-600"}`}
+            className={`h-6 w-6 p-0 rounded-full ${
+              !isValid && isValidated ? "bg-red-500 hover:bg-red-600" : "text-red-600"
+            }`}
             onClick={() => handleValidationToggle(false)}
             type="button"
           >
@@ -206,7 +222,6 @@ export const FieldCandidate: React.FC<FieldCandidateProps> = ({
             </Select>
           </div>
           
-          {/* Display method and confidence as a badge if a candidate is selected */}
           {currentCandidate && (
             <div className="mt-1">
               <MethodBadge 
@@ -221,6 +236,12 @@ export const FieldCandidate: React.FC<FieldCandidateProps> = ({
       {!isValid && !isManualEntry && (
         <p className="text-xs text-red-600 italic">
           Please select a valid option or enter manually
+        </p>
+      )}
+      
+      {!isValidated && (
+        <p className="text-xs text-amber-600 italic">
+          Please validate this field by clicking ✓ if correct or X if incorrect
         </p>
       )}
     </div>

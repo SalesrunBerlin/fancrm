@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
-import { Loader2 } from "lucide-react";
+import { Loader2, AlertTriangle } from "lucide-react";
 import { ImpressumData, ImpressumCandidate } from "@/hooks/useImpressumScrape";
 import { FieldCandidate } from "./FieldCandidate";
 import { supabase } from "@/integrations/supabase/client";
@@ -13,6 +13,7 @@ export interface FieldState {
   candidates: ImpressumCandidate[];
   selected: string;
   valid: boolean;
+  isValidated: boolean;
 }
 
 export interface ImpressumMappingProps {
@@ -57,22 +58,26 @@ export const ImpressumMapping: React.FC<ImpressumMappingProps> = ({
     company: {
       candidates: data.fields.company,
       selected: data.fields.company[0]?.value || "",
-      valid: true
+      valid: true,
+      isValidated: false
     },
     address: {
       candidates: data.fields.address,
       selected: data.fields.address[0]?.value || "",
-      valid: true
+      valid: true,
+      isValidated: false
     },
     phone: {
       candidates: data.fields.phone,
       selected: data.fields.phone[0]?.value || "",
-      valid: true
+      valid: true,
+      isValidated: false
     },
     email: {
       candidates: data.fields.email,
       selected: data.fields.email[0]?.value || "",
-      valid: true
+      valid: true,
+      isValidated: false
     }
   });
 
@@ -80,8 +85,9 @@ export const ImpressumMapping: React.FC<ImpressumMappingProps> = ({
     data.fields.ceos.map(ceo => ceo.value)
   );
 
-  const [formValid, setFormValid] = useState(true);
+  const [formValid, setFormValid] = useState(false);
   const [isSendingFeedback, setIsSendingFeedback] = useState(false);
+  const [validatedCEOs, setValidatedCEOs] = useState<Record<string, boolean>>({});
 
   // Validate the entire form
   useEffect(() => {
@@ -93,14 +99,24 @@ export const ImpressumMapping: React.FC<ImpressumMappingProps> = ({
       fieldStates.company.selected.trim() !== "" &&
       fieldStates.address.selected.trim() !== "";
       
-    setFormValid(isValid);
+    const isFullyValidated = 
+      fieldStates.company.isValidated && 
+      fieldStates.address.isValidated && 
+      (fieldStates.phone.selected === "" || fieldStates.phone.isValidated) && 
+      (fieldStates.email.selected === "" || fieldStates.email.isValidated);
+
+    setFormValid(isValid && isFullyValidated);
   }, [fieldStates]);
 
   const handleCEOToggle = (ceo: string) => {
     if (selectedCEOs.includes(ceo)) {
       setSelectedCEOs(selectedCEOs.filter((name) => name !== ceo));
+      // Mark this CEO as validated (by removing)
+      setValidatedCEOs({...validatedCEOs, [ceo]: true});
     } else {
       setSelectedCEOs([...selectedCEOs, ceo]);
+      // Mark this CEO as validated (by adding)
+      setValidatedCEOs({...validatedCEOs, [ceo]: true});
     }
   };
 
@@ -114,26 +130,59 @@ export const ImpressumMapping: React.FC<ImpressumMappingProps> = ({
     }));
   };
 
-  const collectFeedback = () => {
+  const collectFeedback = async () => {
     // Collect feedback for fields where the user selected a value different from the top candidate
     const feedback: any[] = [];
 
     // Helper function to prepare feedback item
-    const prepareFeedbackItem = (
+    const prepareFeedbackItem = async (
       fieldType: string, 
       candidates: ImpressumCandidate[], 
-      selectedValue: string
+      selectedValue: string,
+      isValidField: boolean
     ) => {
       if (candidates.length === 0) return null;
       
       const initialCandidate = candidates[0]; // Top candidate from the extraction
       if (!initialCandidate) return null;
 
-      // Only log feedback if the user chose a different value than the suggested one
-      if (initialCandidate.value === selectedValue) return null;
+      // Only log feedback if the user's validation decision is available
+      if (fieldType === 'company' && !fieldStates.company.isValidated) return null;
+      if (fieldType === 'address' && !fieldStates.address.isValidated) return null;
+      if (fieldType === 'phone' && selectedValue && !fieldStates.phone.isValidated) return null;
+      if (fieldType === 'email' && selectedValue && !fieldStates.email.isValidated) return null;
 
-      // Find which candidate was selected (if any)
+      // Create a feedback item when:
+      // 1. Initial value was marked as invalid, OR
+      // 2. User chose a different value than the suggested one
+      const initialValueWasRejected = !isValidField;
+      const valueWasChanged = initialCandidate.value !== selectedValue;
+      
+      if (!initialValueWasRejected && !valueWasChanged) return null;
+
+      // Find which candidate was selected (if any) or get the HTML context
+      let contextHtml = initialCandidate.context || null;
       const selectedCandidate = candidates.find(c => c.value === selectedValue);
+      
+      // If the user entered a custom value and the initial value was rejected,
+      // try to find where this value appears in the original HTML
+      if (valueWasChanged && !selectedCandidate && selectedValue) {
+        try {
+          // Make a call to fetch the HTML and search for the corrected value
+          const { data } = await supabase.functions.invoke("scrape-impressum", {
+            body: { 
+              url: data.source,
+              searchValue: selectedValue
+            }
+          });
+          
+          if (data && data.htmlContext) {
+            contextHtml = data.htmlContext;
+          }
+        } catch (error) {
+          console.error("Failed to fetch HTML context for corrected value:", error);
+        }
+      }
 
       return {
         url: data.source,
@@ -142,40 +191,66 @@ export const ImpressumMapping: React.FC<ImpressumMappingProps> = ({
         correct_value: selectedValue,
         extraction_method: initialCandidate.method,
         confidence: initialCandidate.conf,
-        html_snippet: initialCandidate.context || null
+        html_snippet: contextHtml,
+        validated: true,
+        validation_result: isValidField ? "valid" : "invalid"
       };
     };
 
     // Company feedback
-    const companyFeedback = prepareFeedbackItem('company', fieldStates.company.candidates, fieldStates.company.selected);
+    const companyFeedback = await prepareFeedbackItem(
+      'company', 
+      fieldStates.company.candidates, 
+      fieldStates.company.selected,
+      fieldStates.company.valid
+    );
     if (companyFeedback) feedback.push(companyFeedback);
 
     // Address feedback
-    const addressFeedback = prepareFeedbackItem('address', fieldStates.address.candidates, fieldStates.address.selected);
+    const addressFeedback = await prepareFeedbackItem(
+      'address', 
+      fieldStates.address.candidates, 
+      fieldStates.address.selected,
+      fieldStates.address.valid
+    );
     if (addressFeedback) feedback.push(addressFeedback);
 
     // Phone feedback
-    const phoneFeedback = prepareFeedbackItem('phone', fieldStates.phone.candidates, fieldStates.phone.selected);
+    const phoneFeedback = await prepareFeedbackItem(
+      'phone', 
+      fieldStates.phone.candidates, 
+      fieldStates.phone.selected,
+      fieldStates.phone.valid
+    );
     if (phoneFeedback) feedback.push(phoneFeedback);
 
     // Email feedback
-    const emailFeedback = prepareFeedbackItem('email', fieldStates.email.candidates, fieldStates.email.selected);
+    const emailFeedback = await prepareFeedbackItem(
+      'email', 
+      fieldStates.email.candidates, 
+      fieldStates.email.selected,
+      fieldStates.email.valid
+    );
     if (emailFeedback) feedback.push(emailFeedback);
 
     // CEO feedback: for each CEO that was deselected
     const initialCEOs = data.fields.ceos.map(ceo => ceo.value);
     for (const ceo of initialCEOs) {
-      if (!selectedCEOs.includes(ceo)) {
+      // Only consider CEOs that have been explicitly validated (checked/unchecked)
+      if (validatedCEOs[ceo]) {
+        const isValidCEO = selectedCEOs.includes(ceo);
         const ceoCandidate = data.fields.ceos.find(c => c.value === ceo);
         if (ceoCandidate) {
           feedback.push({
             url: data.source,
             field_type: 'ceo',
             initial_value: ceo,
-            correct_value: '', // User removed this CEO
+            correct_value: isValidCEO ? ceo : '', // User removed this CEO
             extraction_method: ceoCandidate.method,
             confidence: ceoCandidate.conf,
-            html_snippet: ceoCandidate.context || null
+            html_snippet: ceoCandidate.context || null,
+            validated: true,
+            validation_result: isValidCEO ? "valid" : "invalid"
           });
         }
       }
@@ -208,6 +283,35 @@ export const ImpressumMapping: React.FC<ImpressumMappingProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Check if all required fields are validated
+    if (!fieldStates.company.isValidated) {
+      toast({
+        description: "Please validate the company name before continuing"
+      });
+      return;
+    }
+    
+    if (!fieldStates.address.isValidated) {
+      toast({
+        description: "Please validate the address before continuing"
+      });
+      return;
+    }
+    
+    if (fieldStates.phone.selected && !fieldStates.phone.isValidated) {
+      toast({
+        description: "Please validate the phone number before continuing"
+      });
+      return;
+    }
+    
+    if (fieldStates.email.selected && !fieldStates.email.isValidated) {
+      toast({
+        description: "Please validate the email address before continuing"
+      });
+      return;
+    }
+
     if (!formValid) {
       toast({
         description: "Please fix all validation issues before submitting"
@@ -230,7 +334,7 @@ export const ImpressumMapping: React.FC<ImpressumMappingProps> = ({
     }
 
     // Collect feedback before submitting
-    const feedback = collectFeedback();
+    const feedback = await collectFeedback();
     
     try {
       await onSubmit({
@@ -261,9 +365,13 @@ export const ImpressumMapping: React.FC<ImpressumMappingProps> = ({
           candidates={fieldStates.company.candidates}
           value={fieldStates.company.selected}
           onChange={(value) => updateFieldState("company", { selected: value })}
-          onValidationChange={(valid) => updateFieldState("company", { valid })}
+          onValidationChange={(valid, isExplicitlyValidated) => 
+            updateFieldState("company", { valid, isValidated: isExplicitlyValidated })
+          }
           confidenceLevel={getConfidenceLevel(fieldStates.company.candidates)}
           isRequired={true}
+          isValidated={fieldStates.company.isValidated}
+          setIsValidated={(validated) => updateFieldState("company", { isValidated: validated })}
         />
 
         <FieldCandidate
@@ -271,9 +379,13 @@ export const ImpressumMapping: React.FC<ImpressumMappingProps> = ({
           candidates={fieldStates.address.candidates}
           value={fieldStates.address.selected}
           onChange={(value) => updateFieldState("address", { selected: value })}
-          onValidationChange={(valid) => updateFieldState("address", { valid })}
+          onValidationChange={(valid, isExplicitlyValidated) => 
+            updateFieldState("address", { valid, isValidated: isExplicitlyValidated })
+          }
           confidenceLevel={getConfidenceLevel(fieldStates.address.candidates)}
           isRequired={true}
+          isValidated={fieldStates.address.isValidated}
+          setIsValidated={(validated) => updateFieldState("address", { isValidated: validated })}
         />
 
         <FieldCandidate
@@ -281,8 +393,12 @@ export const ImpressumMapping: React.FC<ImpressumMappingProps> = ({
           candidates={fieldStates.phone.candidates}
           value={fieldStates.phone.selected}
           onChange={(value) => updateFieldState("phone", { selected: value })}
-          onValidationChange={(valid) => updateFieldState("phone", { valid })}
+          onValidationChange={(valid, isExplicitlyValidated) => 
+            updateFieldState("phone", { valid, isValidated: isExplicitlyValidated })
+          }
           confidenceLevel={getConfidenceLevel(fieldStates.phone.candidates)}
+          isValidated={fieldStates.phone.isValidated}
+          setIsValidated={(validated) => updateFieldState("phone", { isValidated: validated })}
         />
 
         <FieldCandidate
@@ -290,8 +406,12 @@ export const ImpressumMapping: React.FC<ImpressumMappingProps> = ({
           candidates={fieldStates.email.candidates}
           value={fieldStates.email.selected}
           onChange={(value) => updateFieldState("email", { selected: value })}
-          onValidationChange={(valid) => updateFieldState("email", { valid })}
+          onValidationChange={(valid, isExplicitlyValidated) => 
+            updateFieldState("email", { valid, isValidated: isExplicitlyValidated })
+          }
           confidenceLevel={getConfidenceLevel(fieldStates.email.candidates)}
+          isValidated={fieldStates.email.isValidated}
+          setIsValidated={(validated) => updateFieldState("email", { isValidated: validated })}
         />
 
         {data.fields.ceos && data.fields.ceos.length > 0 && (
@@ -335,6 +455,13 @@ export const ImpressumMapping: React.FC<ImpressumMappingProps> = ({
               'Continue'
             )}
           </Button>
+          
+          {!formValid && !Object.values(fieldStates).every(state => state.isValidated) && (
+            <div className="mt-3 flex items-center gap-2 text-amber-600 text-sm">
+              <AlertTriangle className="h-4 w-4" />
+              <span>Please validate all fields before continuing</span>
+            </div>
+          )}
         </div>
       </div>
     </form>

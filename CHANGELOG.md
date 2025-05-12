@@ -1,9 +1,13 @@
 
+
 # Changelog
 
 ## [Unreleased]
 
 ### Added
+- ✨ Enhanced Impressum feedback system with mandatory field validation
+- ✨ Tracking of user validation decisions (correct/incorrect) for each field
+- ✨ Improved HTML context collection for corrected values
 - ✨ Add feedback capture & nightly export for Impressum scraper
 - ✨ Field-level refinement for Impressum import
 - ✨ Add scrape_impressum Edge Function
@@ -16,4 +20,5 @@
 ### Fixed
 - Fixed compatibility issues with asChild and children in Button component
 - Fixed size prop types to support existing code
+
 

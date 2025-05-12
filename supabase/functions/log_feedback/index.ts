@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { z } from "https://esm.sh/zod@3.21.4";
@@ -17,6 +18,8 @@ const FeedbackItemSchema = z.object({
   extraction_method: z.string().optional(),
   confidence: z.number().min(0).max(1).optional(),
   html_snippet: z.string().max(10240).optional(), // Max 10KB
+  validated: z.boolean().optional(),
+  validation_result: z.enum(["valid", "invalid"]).optional()
 });
 
 // Define the schema for the array of feedback items
@@ -75,14 +78,15 @@ serve(async (req: Request) => {
     // Generate a user hash (for privacy)
     const userHash = await generateUserHash(user.id);
 
-    // Filter out feedback items where initial_value === correct_value (no signal)
+    // We now track ALL validation decisions, even when initial_value === correct_value
+    // This helps us understand what the scraper is getting right
     const feedbackItems = result.data.filter(
-      (item) => item.initial_value !== item.correct_value && item.initial_value !== null && item.correct_value !== null
+      (item) => item.validated || item.initial_value !== item.correct_value
     );
 
     if (feedbackItems.length === 0) {
       return new Response(
-        JSON.stringify({ message: "No significant feedback to log" }),
+        JSON.stringify({ message: "No feedback to log" }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }

@@ -1,540 +1,435 @@
-import { serve } from "https://deno.land/std@0.186.0/http/server.ts";
-import { load } from "https://esm.sh/cheerio@1.0.0-rc.12";
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { load } from "https://esm.sh/cheerio@1.0.0";
 
-// Types for our Impressum data
-export interface ImpressumCandidate {
-  value: string;
-  method: string; // regex, microdata, mailto, etc.
-  conf: number;  // confidence 0.1-1.0
-}
-
-export interface ImpressumData {
-  fields: {
-    company: ImpressumCandidate[];
-    address: ImpressumCandidate[];
-    phone: ImpressumCandidate[];
-    email: ImpressumCandidate[];
-    ceos: ImpressumCandidate[];
-  };
-  source: string;
-}
-
-// Rate limiting implementation
-const ipThrottler = new Map<string, { count: number; resetTime: number }>();
-const RATE_LIMIT = 10; // requests per minute
-const RATE_WINDOW = 60 * 1000; // 1 minute in milliseconds
-
-// CORS headers for browser access
+// Define CORS headers
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Helper function to parse Impressum content
-export function parseImpressum(html: string): ImpressumData {
-  const $ = load(html);
-  const text = $('body').text();
-  const result: ImpressumData = {
-    fields: {
-      company: [],
-      address: [],
-      phone: [],
-      email: [],
-      ceos: []
-    },
-    source: ""
-  };
-
-  // Extract company name - using multiple methods
-  
-  // Method 1: Look for microdata or JSON-LD
+// Function to fetch HTML from a URL
+async function fetchHtml(url: string): Promise<string> {
   try {
-    // Try to find JSON-LD script
-    const jsonldScripts = $('script[type="application/ld+json"]');
-    jsonldScripts.each((_, script) => {
-      try {
-        const jsonData = JSON.parse($(script).html() || '{}');
-        // Look for organization data
-        if (jsonData['@type'] === 'Organization' && jsonData.name) {
-          result.fields.company.push({
-            value: jsonData.name,
-            method: 'jsonld',
-            conf: 1.0
-          });
-        }
-        // Look for LocalBusiness data
-        else if (jsonData['@type'] === 'LocalBusiness' && jsonData.name) {
-          result.fields.company.push({
-            value: jsonData.name,
-            method: 'jsonld',
-            conf: 1.0
-          });
-        }
-        // Handle nested structures
-        else if (jsonData['@graph']) {
-          const organizations = jsonData['@graph'].filter(
-            (item: any) => item['@type'] === 'Organization' || item['@type'] === 'LocalBusiness'
-          );
-          organizations.forEach((org: any) => {
-            if (org.name) {
-              result.fields.company.push({
-                value: org.name,
-                method: 'jsonld',
-                conf: 1.0
-              });
-              
-              // Also try to get address from this source if available
-              if (org.address) {
-                let addressStr = '';
-                if (typeof org.address === 'string') {
-                  addressStr = org.address;
-                } else if (org.address.streetAddress) {
-                  // Schema.org address format
-                  const addr = org.address;
-                  const parts = [
-                    addr.streetAddress,
-                    addr.postalCode,
-                    addr.addressLocality,
-                    addr.addressRegion,
-                    addr.addressCountry
-                  ].filter(Boolean);
-                  addressStr = parts.join(', ');
-                }
-                
-                if (addressStr) {
-                  result.fields.address.push({
-                    value: addressStr,
-                    method: 'jsonld',
-                    conf: 1.0
-                  });
-                }
-              }
-            }
-          });
-        }
-      } catch (e) {
-        console.error('Error parsing JSON-LD:', e);
-      }
-    });
-    
-    // Look for microdata
-    const itemProps = $('[itemprop="name"]');
-    itemProps.each((_, elem) => {
-      const scope = $(elem).closest('[itemscope]');
-      if (scope.attr('itemtype')?.includes('Organization') || 
-          scope.attr('itemtype')?.includes('LocalBusiness')) {
-        result.fields.company.push({
-          value: $(elem).text().trim(),
-          method: 'microdata',
-          conf: 0.9
-        });
-      }
-    });
-    
-    // Look for address in microdata
-    const addressProps = $('[itemprop="address"]');
-    addressProps.each((_, elem) => {
-      result.fields.address.push({
-        value: $(elem).text().trim(),
-        method: 'microdata',
-        conf: 0.9
-      });
-    });
-  } catch (e) {
-    console.error('Error extracting structured data:', e);
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch HTML: ${response.status} ${response.statusText}`);
+    }
+    return await response.text();
+  } catch (error) {
+    console.error("Error fetching HTML:", error);
+    throw error;
   }
+}
 
-  // Method 2: Look for common patterns in text
-  const companyRegex = /(?:firma|unternehmen|company|angaben gemäß § 5 tmg|gemäß § 5 tmg|§ 5 tmg|name):?\s*([^\n\r]+?)(?:\n|gmbh|ug|ag|ohg|kg|gbr|e\.v\.|e\. v\.|e\.k\.)/i;
-  const companyMatch = text.match(companyRegex);
-  if (companyMatch && companyMatch[1]) {
-    let companyName = companyMatch[1].trim();
-    // If company name doesn't include legal form, check for it
-    if (!/gmbh|ug|ag|ohg|kg|gbr|e\.v\.|e\. v\.|e\.k\./i.test(companyName)) {
-      const legalFormMatch = text.match(/(gmbh|ug|ag|ohg|kg|gbr|e\.v\.|e\. v\.|e\.k\.)/i);
-      if (legalFormMatch) {
-        companyName += ' ' + legalFormMatch[1];
+// Function to find the Impressum/Imprint page URL
+async function findImpressumPage(html: string, baseUrl: string): Promise<string> {
+  try {
+    const $ = load(html);
+    
+    // Look for common Impressum/Imprint links
+    const patterns = [
+      'a[href*="impressum"i]', 
+      'a[href*="imprint"i]',
+      'a[href*="legal"i]',
+      'a[href*="kontakt"i]',
+      'a[href*="contact"i]',
+      'a[href*="about"i]',
+      'a[href*="disclaimer"i]',
+      'a:contains("Impressum")', 
+      'a:contains("Imprint")',
+      'a:contains("Legal")',
+      'a:contains("Kontakt")',
+      'a:contains("Contact")',
+      'a:contains("About Us")'
+    ];
+    
+    for (const pattern of patterns) {
+      const links = $(pattern);
+      if (links.length > 0) {
+        const href = links.first().attr('href');
+        if (href) {
+          // Handle relative URLs
+          if (href.startsWith('http')) {
+            return href;
+          } else if (href.startsWith('/')) {
+            const url = new URL(baseUrl);
+            return `${url.protocol}//${url.host}${href}`;
+          } else {
+            return new URL(href, baseUrl).href;
+          }
+        }
       }
     }
-    result.fields.company.push({
-      value: companyName,
-      method: 'regex',
-      conf: 0.8
-    });
-  }
-
-  // Method 3: Look for h1/h2 that might contain company name
-  const heading = $('h1, h2').first().text().trim();
-  if (heading && !/(impressum|imprint|kontakt|contact)/i.test(heading)) {
-    result.fields.company.push({
-      value: heading,
-      method: 'heading',
-      conf: 0.5
-    });
-  }
-
-  // Method 4: Look for strong/b tags that might be company names
-  const boldElements = $('strong, b');
-  boldElements.each((i, elem) => {
-    const text = $(elem).text().trim();
-    if (text && text.length > 3 && text.length < 50) {
-      result.fields.company.push({
-        value: text,
-        method: 'bold',
-        conf: 0.3 + (i === 0 ? 0.1 : 0)  // Give slightly higher confidence to first bold element
-      });
-    }
-  });
-  
-  // Extract address - using multiple methods
-  
-  // Method 1: Look for common patterns with postal codes
-  const addressRegex = /(?:adresse|address|anschrift|sitz|straße|strasse)(?:[:\s]*)((?:(?:[^\n\r,]|,\s*(?!\d))+?)\s*,?\s*(?:\d{5}|\d{4})\s+[^\n\r,]+(?:,\s*[^\n\r]+)?)/i;
-  const addressMatch = text.match(addressRegex);
-  if (addressMatch && addressMatch[1]) {
-    result.fields.address.push({
-      value: addressMatch[1].trim(),
-      method: 'regex',
-      conf: 0.8
-    });
-  }
-
-  // Method 2: Look for postal code pattern and extract surrounding text
-  const postalMatches = text.match(/(\b\d{5}\b|\b\d{4}\b)\s+([A-Za-zäöüÄÖÜß\s\-]+)/g) || [];
-  postalMatches.forEach((match, index) => {
-    // Find context around postal code
-    const postalAndCity = match;
     
-    // Look for street address before postal code
-    const contextPosition = text.indexOf(postalAndCity);
-    if (contextPosition > 0) {
-      // Get a chunk of text before the postal code (up to 100 chars)
-      const precedingText = text.substring(Math.max(0, contextPosition - 100), contextPosition);
-      const streetLines = precedingText.split('\n').slice(-3);
+    // If no Impressum link found, use the current page
+    return baseUrl;
+  } catch (error) {
+    console.error("Error finding Impressum page:", error);
+    return baseUrl;
+  }
+}
+
+// Function to extract HTML context for a specific value
+function findHtmlContext(html: string, value: string): string | null {
+  try {
+    const $ = load(html);
+    let context = null;
+    
+    // Search the full HTML for the exact value
+    $('*:contains("' + value + '")').each((_, el) => {
+      const $el = $(el);
       
-      for (const line of streetLines) {
-        if (/straße|strasse|weg|allee|gasse|platz|straße|str\./i.test(line)) {
-          const fullAddress = (line.trim() + ' ' + postalAndCity).replace(/\s+/g, ' ');
-          result.fields.address.push({
-            value: fullAddress,
-            method: 'postal-context',
-            conf: 0.7 - (index * 0.1)  // Decrease confidence for later matches
-          });
-          break;
+      // Skip if it's just a container with many children
+      if ($el.children().length > 5) return;
+      
+      // Check if this element contains the exact text
+      const text = $el.text().trim();
+      if (text.includes(value)) {
+        // Get the parent element for better context
+        const $parent = $el.parent();
+        context = $parent.length ? $parent.html() : $el.html();
+        return false; // Break the each loop
+      }
+    });
+    
+    return context;
+  } catch (error) {
+    console.error("Error finding HTML context:", error);
+    return null;
+  }
+}
+
+// Function to extract company information from an Impressum page
+function parseImpressumPage(html: string, url: string): any {
+  try {
+    const $ = load(html);
+    const text = $('body').text();
+    
+    // Extract company name
+    const companyRegex = /(?:firma|unternehmen|company|angaben gemäß § 5 tmg|gemäß § 5 tmg|§ 5 tmg|name):?\s*([^\n\r]+?)(?:\n|gmbh|ug|ag|ohg|kg|gbr|e\.v\.|e\. v\.|e\.k\.)/i;
+    const companyMatch = text.match(companyRegex);
+    let companyName = null;
+    let companyConfidence = 0;
+    let companyMethod = "";
+    let companyContext = null;
+    
+    if (companyMatch && companyMatch[1]) {
+      companyName = companyMatch[1].trim();
+      companyConfidence = 0.8;
+      companyMethod = "regex";
+      
+      // Get HTML context
+      const companyEl = $('*:contains("' + companyName + '")').first();
+      if (companyEl.length) {
+        companyContext = companyEl.parent().html();
+      }
+      
+      // If company name doesn't include legal form, check for it
+      if (!/gmbh|ug|ag|ohg|kg|gbr|e\.v\.|e\. v\.|e\.k\./i.test(companyName)) {
+        const legalFormMatch = text.match(/(gmbh|ug|ag|ohg|kg|gbr|e\.v\.|e\. v\.|e\.k\.)/i);
+        if (legalFormMatch) {
+          companyName += ' ' + legalFormMatch[1];
         }
       }
-    }
-    
-    // Add the postal code and city as a lower-confidence fallback
-    result.fields.address.push({
-      value: postalAndCity.trim(),
-      method: 'postal-only',
-      conf: 0.5 - (index * 0.1)
-    });
-  });
-  
-  // Method 3: Look for address in <address> tags
-  $('address').each((index, elem) => {
-    const addressText = $(elem).text().trim();
-    if (addressText && addressText.length > 10) {
-      result.fields.address.push({
-        value: addressText,
-        method: 'address-tag',
-        conf: 0.8 - (index * 0.1)
-      });
-    }
-  });
-
-  // Extract phone number - using multiple methods
-  
-  // Method 1: Look for tel: links
-  $('a[href^="tel:"]').each((index, elem) => {
-    const href = $(elem).attr('href');
-    if (href) {
-      const phoneNumber = href.replace('tel:', '').trim();
-      result.fields.phone.push({
-        value: phoneNumber,
-        method: 'tel-link',
-        conf: 1.0 - (index * 0.1)
-      });
-    }
-  });
-  
-  // Method 2: Look for phone patterns in text
-  const phoneRegexes = [
-    /(?:(?:tel(?:efon)?|phone|fon)(?:[.:]\s*|\s*[:]\s*|\s*[\/]?\s*|\s+))([+\d\s\/\(\)-]{7,})/i,
-    /(?:(?:tel(?:efon)?|phone|fon)[.:]\s*)([+\d\s\/\(\)-]{7,})/i,
-    /\b((?:\+\d{1,3}[\s\/-]?)(?:\(\d+\)[\s\/-]?)?(?:\d+[\s\/-]?){6,})\b/
-  ];
-  
-  phoneRegexes.forEach((regex, regexIndex) => {
-    const phoneMatches = text.match(new RegExp(regex, 'g')) || [];
-    phoneMatches.forEach((matchStr, matchIndex) => {
-      const match = matchStr.match(regex);
-      if (match && match[1]) {
-        result.fields.phone.push({
-          value: match[1].trim().replace(/\s+/g, ' '),
-          method: `regex-${regexIndex + 1}`,
-          conf: 0.7 - (regexIndex * 0.1) - (matchIndex * 0.05)
-        });
-      }
-    });
-  });
-
-  // Extract email address - using multiple methods
-  
-  // Method 1: Look for mailto links (highest confidence)
-  $('a[href^="mailto:"]').each((index, elem) => {
-    const href = $(elem).attr('href');
-    if (href) {
-      const email = href.replace('mailto:', '').split('?')[0].trim();
-      result.fields.email.push({
-        value: email,
-        method: 'mailto',
-        conf: 1.0 - (index * 0.05)
-      });
-    }
-  });
-  
-  // Method 2: Look for email patterns in text
-  const emailRegexes = [
-    /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/,
-    /(?:e-?mail|email|mail|e-mail-adresse)(?:\s*:|:\s*|\s+)([\w.-]+@[\w.-]+\.\w{2,})/i
-  ];
-  
-  emailRegexes.forEach((regex, regexIndex) => {
-    const emailMatches = text.match(new RegExp(regex, 'g')) || [];
-    emailMatches.forEach((matchStr, matchIndex) => {
-      let email;
-      if (regexIndex === 0) {
-        // First regex - full match is the email
-        email = matchStr;
+    } else {
+      // Fallback: look for h1/h2 that might contain company name
+      const heading = $('h1, h2').first().text().trim();
+      if (heading && !/(impressum|imprint|kontakt|contact)/i.test(heading)) {
+        companyName = heading;
+        companyConfidence = 0.6;
+        companyMethod = "heading";
+        companyContext = $('h1, h2').first().parent().html();
       } else {
-        // Second regex - group 1 is the email
-        const match = matchStr.match(regex);
-        email = match ? match[1] : null;
+        // Last resort: look for strong/b tags that might be company names
+        const bold = $('strong, b').first().text().trim();
+        if (bold && bold.length > 3 && bold.length < 50) {
+          companyName = bold;
+          companyConfidence = 0.4;
+          companyMethod = "bold";
+          companyContext = $('strong, b').first().parent().html();
+        }
       }
+    }
+    
+    // Extract address
+    const addressRegex = /(?:adresse|address|anschrift|sitz|straße|strasse)(?:[:\s]*)((?:(?:[^\n\r,]|,\s*(?!\d))+?)\s*,?\s*(?:\d{5}|\d{4})\s+[^\n\r,]+(?:,\s*[^\n\r]+)?)/i;
+    const addressMatch = text.match(addressRegex);
+    let address = null;
+    let addressConfidence = 0;
+    let addressMethod = "";
+    let addressContext = null;
+    
+    if (addressMatch && addressMatch[1]) {
+      address = addressMatch[1].trim();
+      addressConfidence = 0.8;
+      addressMethod = "regex";
       
-      if (email) {
-        result.fields.email.push({
-          value: email.trim(),
-          method: `regex-${regexIndex + 1}`,
-          conf: 0.7 - (regexIndex * 0.1) - (matchIndex * 0.05)
-        });
+      // Get HTML context
+      const addressEl = $('*:contains("' + address + '")').first();
+      if (addressEl.length) {
+        addressContext = addressEl.parent().html();
       }
-    });
-  });
-
-  // Extract CEOs/managing directors - using multiple methods
-  
-  // Method 1: Look for specific patterns
-  const ceosRegexes = [
-    /(?:geschäftsführ(?:er|ung)|ceo|managing director|vertretungsberechtigte[r]?|vertreten durch|direktor)(?:[:\s]*)((?:[^\n\r]+?)(?:$|\n))/i,
-    /(?:vertretungsberechtigte[r]? (?:ist|sind)|vertreten durch|leitung)(?:[:\s]*)((?:[^\n\r]+?)(?:$|\n))/i
-  ];
-  
-  ceosRegexes.forEach((regex, regexIndex) => {
-    const ceosMatch = text.match(regex);
+    } else {
+      // Fallback: look for postal code pattern and extract surrounding text
+      const postalMatch = text.match(/(\b\d{5}\b|\b\d{4}\b)\s+([A-Za-zäöüÄÖÜß\s\-]+)/);
+      if (postalMatch) {
+        const postalAndCity = postalMatch[0];
+        // Look for street address before postal code
+        const fullTextParts = text.split(postalAndCity);
+        if (fullTextParts[0]) {
+          const streetLines = fullTextParts[0].split('\n').slice(-3);
+          for (const line of streetLines) {
+            if (/straße|strasse|weg|allee|gasse|platz/i.test(line)) {
+              address = (line.trim() + ' ' + postalAndCity).replace(/\s+/g, ' ');
+              addressConfidence = 0.7;
+              addressMethod = "postal-pattern";
+              break;
+            }
+          }
+        }
+        
+        if (!address) {
+          address = postalAndCity.trim();
+          addressConfidence = 0.5;
+          addressMethod = "postal-only";
+        }
+        
+        // Get HTML context
+        const addressEl = $('*:contains("' + address + '")').first();
+        if (addressEl.length) {
+          addressContext = addressEl.parent().html();
+        }
+      }
+    }
+    
+    // Extract phone number
+    const phoneRegex = /(?:(?:tel(?:efon)?|phone|fon)(?:[.:]\s*|\s*[:]\s*|\s*[\/]?\s*|\s+))([+\d\s\/\(\)-]{7,})/i;
+    const phoneMatch = text.match(phoneRegex);
+    let phone = null;
+    let phoneConfidence = 0;
+    let phoneMethod = "";
+    let phoneContext = null;
+    
+    if (phoneMatch && phoneMatch[1]) {
+      phone = phoneMatch[1].trim().replace(/\s+/g, ' ');
+      phoneConfidence = 0.8;
+      phoneMethod = "regex";
+      
+      // Get HTML context
+      const phoneEl = $('*:contains("' + phone + '")').first();
+      if (phoneEl.length) {
+        phoneContext = phoneEl.parent().html();
+      }
+    } else {
+      // Look for tel: links
+      const telLinks = $('a[href^="tel:"]');
+      if (telLinks.length > 0) {
+        const href = telLinks.first().attr('href');
+        if (href) {
+          phone = href.replace('tel:', '');
+          phoneConfidence = 0.9;
+          phoneMethod = "tel-link";
+          phoneContext = telLinks.first().parent().html();
+        }
+      }
+    }
+    
+    // Extract email address
+    const emailRegex = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/;
+    const emailMatch = text.match(emailRegex);
+    let email = null;
+    let emailConfidence = 0;
+    let emailMethod = "";
+    let emailContext = null;
+    
+    if (emailMatch) {
+      email = emailMatch[0];
+      emailConfidence = 0.8;
+      emailMethod = "regex";
+      
+      // Get HTML context
+      const emailEl = $('*:contains("' + email + '")').first();
+      if (emailEl.length) {
+        emailContext = emailEl.parent().html();
+      }
+    } else {
+      // Look for mailto: links
+      const mailtoLinks = $('a[href^="mailto:"]');
+      if (mailtoLinks.length > 0) {
+        const href = mailtoLinks.first().attr('href');
+        if (href) {
+          email = href.replace('mailto:', '');
+          emailConfidence = 0.9;
+          emailMethod = "mailto";
+          emailContext = mailtoLinks.first().parent().html();
+        }
+      }
+    }
+    
+    // Extract CEOs/managing directors
+    const ceosRegex = /(?:geschäftsführ(?:er|ung)|ceo|managing director|vertretungsberechtigte[r]?|vertreten durch|direktor)(?:[:\s]*)((?:[^\n\r]+?)(?:$|\n))/i;
+    const ceosMatch = text.match(ceosRegex);
+    let ceos: { value: string, conf: number, method: string, context?: string }[] = [];
+    
     if (ceosMatch && ceosMatch[1]) {
       // Split by common separators
       const ceosStr = ceosMatch[1].replace(/\([^)]*\)/g, '').trim();
-      const ceosList = ceosStr
+      const ceosArray = ceosStr
         .split(/(?:,|&|und|and|\||\n)/i)
         .map(name => name.trim())
         .filter(name => name.length > 2 && !/(?:ist|is|are|gmbh|ag|ug)/i.test(name));
       
-      ceosList.forEach((name, nameIndex) => {
-        result.fields.ceos.push({
-          value: name,
-          method: `regex-${regexIndex + 1}`,
-          conf: 0.8 - (regexIndex * 0.1) - (nameIndex * 0.05)
-        });
+      ceos = ceosArray.map(ceo => {
+        // Get HTML context for each CEO
+        const ceoEl = $('*:contains("' + ceo + '")').first();
+        const context = ceoEl.length ? ceoEl.parent().html() : null;
+        
+        return {
+          value: ceo,
+          conf: 0.7,
+          method: "regex",
+          context
+        };
       });
     }
-  });
-  
-  // Method 2: Look for itemprop="name" within director context
-  $('[itemprop="name"]').each((index, elem) => {
-    const scope = $(elem).closest('[itemscope]');
-    if (scope.attr('itemtype')?.includes('Person')) {
-      // Check if within a context that suggests director/CEO
-      const contextText = scope.text().toLowerCase();
-      if (/geschäftsführ|ceo|director|vertretung|leitung/i.test(contextText)) {
-        result.fields.ceos.push({
-          value: $(elem).text().trim(),
-          method: 'microdata',
-          conf: 0.9 - (index * 0.05)
-        });
-      }
-    }
-  });
-  
-  // Remove duplicates while keeping the highest confidence for each unique value
-  ['company', 'address', 'phone', 'email', 'ceos'].forEach(field => {
-    const uniqueMap = new Map<string, ImpressumCandidate>();
     
-    (result.fields as any)[field].forEach((candidate: ImpressumCandidate) => {
-      const normalizedValue = candidate.value.toLowerCase().trim();
-      
-      // Skip empty values
-      if (!normalizedValue) return;
-      
-      const existing = uniqueMap.get(normalizedValue);
-      if (!existing || existing.conf < candidate.conf) {
-        uniqueMap.set(normalizedValue, candidate);
-      }
-    });
-    
-    // Sort by confidence (highest first)
-    (result.fields as any)[field] = Array.from(uniqueMap.values())
-      .sort((a, b) => b.conf - a.conf);
-      
-    // Ensure at least one empty candidate if none found
-    if ((result.fields as any)[field].length === 0) {
-      (result.fields as any)[field].push({
-        value: "",
-        method: "none",
-        conf: 0.1
+    // Check for structured data (JSON-LD)
+    const jsonLdScripts = $('script[type="application/ld+json"]');
+    if (jsonLdScripts.length > 0) {
+      jsonLdScripts.each((_, script) => {
+        try {
+          const jsonLd = JSON.parse($(script).html() || '{}');
+          
+          // Check for Organization data
+          if (jsonLd['@type'] === 'Organization' || jsonLd['@type'] === 'LocalBusiness') {
+            if (jsonLd.name && !companyName) {
+              companyName = jsonLd.name;
+              companyConfidence = 0.9;
+              companyMethod = "jsonld";
+              companyContext = $(script).html();
+            }
+            
+            if (jsonLd.address) {
+              let jsonAddress = '';
+              if (typeof jsonLd.address === 'string') {
+                jsonAddress = jsonLd.address;
+              } else if (jsonLd.address.streetAddress) {
+                jsonAddress = [
+                  jsonLd.address.streetAddress,
+                  jsonLd.address.postalCode,
+                  jsonLd.address.addressLocality,
+                  jsonLd.address.addressCountry
+                ].filter(Boolean).join(', ');
+              }
+              
+              if (jsonAddress && (!address || addressConfidence < 0.9)) {
+                address = jsonAddress;
+                addressConfidence = 0.9;
+                addressMethod = "jsonld";
+                addressContext = $(script).html();
+              }
+            }
+            
+            if (jsonLd.telephone && (!phone || phoneConfidence < 0.9)) {
+              phone = jsonLd.telephone;
+              phoneConfidence = 0.9;
+              phoneMethod = "jsonld";
+              phoneContext = $(script).html();
+            }
+            
+            if (jsonLd.email && (!email || emailConfidence < 0.9)) {
+              email = jsonLd.email;
+              emailConfidence = 0.9;
+              emailMethod = "jsonld";
+              emailContext = $(script).html();
+            }
+          }
+        } catch (e) {
+          console.error("Error parsing JSON-LD:", e);
+        }
       });
     }
-  });
-
-  return result;
+    
+    // Prepare the result
+    const result = {
+      fields: {
+        company: companyName ? [{ value: companyName, conf: companyConfidence, method: companyMethod, context: companyContext }] : [],
+        address: address ? [{ value: address, conf: addressConfidence, method: addressMethod, context: addressContext }] : [],
+        phone: phone ? [{ value: phone, conf: phoneConfidence, method: phoneMethod, context: phoneContext }] : [],
+        email: email ? [{ value: email, conf: emailConfidence, method: emailMethod, context: emailContext }] : [],
+        ceos: ceos
+      }
+    };
+    
+    return result;
+  } catch (error) {
+    console.error("Error parsing Impressum page:", error);
+    return {
+      fields: {
+        company: [],
+        address: [],
+        phone: [],
+        email: [],
+        ceos: []
+      }
+    };
+  }
 }
 
-// Main handler function
-serve(async (req) => {
+serve(async (req: Request) => {
   // Handle CORS preflight requests
-  if (req.method === 'OPTIONS') {
+  if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    // Get client IP for rate limiting
-    const clientIP = req.headers.get('x-forwarded-for') || 'unknown';
+    const { url, searchValue } = await req.json();
     
-    // Check rate limit
-    const now = Date.now();
-    const clientThrottle = ipThrottler.get(clientIP) || { count: 0, resetTime: now + RATE_WINDOW };
-    
-    // Reset count if time window passed
-    if (now > clientThrottle.resetTime) {
-      clientThrottle.count = 0;
-      clientThrottle.resetTime = now + RATE_WINDOW;
-    }
-    
-    // Check if rate limit exceeded
-    if (clientThrottle.count >= RATE_LIMIT) {
+    if (!url) {
       return new Response(
-        JSON.stringify({ error: 'Rate limit exceeded. Try again later.' }),
-        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Increment rate limit counter
-    clientThrottle.count++;
-    ipThrottler.set(clientIP, clientThrottle);
-
-    // Parse request body
-    const { url } = await req.json();
-    
-    if (!url || typeof url !== 'string') {
-      return new Response(
-        JSON.stringify({ error: 'URL parameter is required' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    let baseUrl: URL;
-    try {
-      baseUrl = new URL(url);
-    } catch (error) {
-      return new Response(
-        JSON.stringify({ error: 'Invalid URL format' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    console.log(`Fetching root URL: ${url}`);
-    
-    // Fetch the main page
-    const response = await fetch(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; ImpressumBot/1.0; +https://example.com)'
-      }
-    });
-    
-    if (!response.ok) {
-      return new Response(
-        JSON.stringify({ error: `Failed to fetch URL: HTTP ${response.status}` }),
-        { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: "URL is required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
     
-    const html = await response.text();
-    const $ = load(html);
+    // Fetch HTML from URL
+    const html = await fetchHtml(url);
     
-    // Find Impressum/Imprint link
-    const impressumLinks = $('a').filter((_, el) => {
-      const text = $(el).text().toLowerCase();
-      const href = $(el).attr('href')?.toLowerCase() || '';
-      return text.includes('impressum') || text.includes('imprint') || 
-             href.includes('impressum') || href.includes('imprint');
-    });
-    
-    if (impressumLinks.length === 0) {
+    // If searchValue is provided, find HTML context for that specific value
+    if (searchValue) {
+      const htmlContext = findHtmlContext(html, searchValue);
       return new Response(
-        JSON.stringify({ error: 'Could not find Impressum/Imprint link' }),
-        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ 
+          htmlContext,
+          source: url
+        }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    } 
+    // Otherwise process as a normal impressum scrape
+    else {
+      // Find Impressum page URL
+      const impressumUrl = await findImpressumPage(html, url);
+      
+      // If different from original URL, fetch the Impressum page HTML
+      const impressumHtml = impressumUrl !== url ? await fetchHtml(impressumUrl) : html;
+      
+      // Parse the Impressum page
+      const result = parseImpressumPage(impressumHtml, impressumUrl);
+      
+      return new Response(
+        JSON.stringify({ 
+          ...result,
+          source: impressumUrl
+        }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
-    
-    // Get the first Impressum link href
-    const impressumHref = $(impressumLinks[0]).attr('href');
-    if (!impressumHref) {
-      return new Response(
-        JSON.stringify({ error: 'Found Impressum link but href is empty' }),
-        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-    
-    // Resolve absolute URL
-    const impressumUrl = new URL(impressumHref, baseUrl).toString();
-    console.log(`Found Impressum URL: ${impressumUrl}`);
-    
-    // Fetch the Impressum page
-    const impressumResponse = await fetch(impressumUrl, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; ImpressumBot/1.0; +https://example.com)'
-      }
-    });
-    
-    if (!impressumResponse.ok) {
-      return new Response(
-        JSON.stringify({ error: `Failed to fetch Impressum: HTTP ${impressumResponse.status}` }),
-        { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-    
-    const impressumHtml = await impressumResponse.text();
-    
-    // Parse the Impressum content
-    const result = parseImpressum(impressumHtml);
-    
-    // Add source URL to the result
-    result.source = impressumUrl;
-    
-    // Return the structured data
-    return new Response(
-      JSON.stringify(result),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-    
   } catch (error) {
-    console.error('Error in scrape-impressum function:', error);
+    console.error("Error processing request:", error);
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      JSON.stringify({ error: error.message }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });
