@@ -2855,6 +2855,12 @@ export type Database = {
         }
         Returns: string
       }
+      decrypt_api_key: {
+        Args: { p_encrypted_key: string; p_secret: string }
+        Returns: {
+          decrypted_key: string
+        }[]
+      }
       delete_published_objects: {
         Args: Record<PropertyKey, never>
         Returns: undefined
@@ -2862,6 +2868,12 @@ export type Database = {
       delete_system_objects: {
         Args: Record<PropertyKey, never>
         Returns: undefined
+      }
+      encrypt_api_key: {
+        Args: { p_key: string; p_secret: string }
+        Returns: {
+          encrypted_key: string
+        }[]
       }
       evaluate_action_formula: {
         Args: {
@@ -2960,6 +2972,14 @@ export type Database = {
       }
       sync_user_emails_to_profiles: {
         Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      update_openai_usage: {
+        Args: {
+          p_profile_id: string
+          p_prompt_tokens: number
+          p_completion_tokens: number
+        }
         Returns: undefined
       }
       user_is_admin_or_superadmin: {

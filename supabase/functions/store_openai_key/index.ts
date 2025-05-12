@@ -14,6 +14,16 @@ serve(async (req: Request) => {
   }
 
   try {
+    // Get the request body
+    const { api_key } = await req.json()
+    
+    if (!api_key || !api_key.startsWith('sk-')) {
+      return new Response(JSON.stringify({ error: 'Invalid API key format' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
     // Get the authorization header from the request
     const authHeader = req.headers.get('Authorization')
     if (!authHeader) {
@@ -40,15 +50,6 @@ serve(async (req: Request) => {
       })
     }
 
-    // Parse the request body
-    const { api_key } = await req.json()
-    if (!api_key) {
-      return new Response(JSON.stringify({ error: 'API key is required' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
-    }
-
     // Get encryption key from environment variables
     const encryptionKey = Deno.env.get('AI_KEY_CRYPT')
     if (!encryptionKey) {
@@ -58,13 +59,15 @@ serve(async (req: Request) => {
       })
     }
 
-    // Encrypt API key using pgcrypto
-    const { data, error: encryptError } = await supabase.rpc('encrypt_api_key', {
-      p_key: api_key,
-      p_secret: encryptionKey
-    })
+    // Encrypt the API key using the database function
+    const { data: encryptResult, error: encryptError } = await supabase
+      .rpc('encrypt_api_key', {
+        p_key: api_key,
+        p_secret: encryptionKey
+      })
+      .single()
 
-    if (encryptError) {
+    if (encryptError || !encryptResult) {
       console.error('Encryption error:', encryptError)
       return new Response(JSON.stringify({ error: 'Failed to encrypt API key' }), {
         status: 500,
@@ -72,12 +75,12 @@ serve(async (req: Request) => {
       })
     }
 
-    // Store encrypted API key in the database
+    // Store the encrypted API key in the database
     const { error: insertError } = await supabase
       .from('openai_key_profile')
-      .upsert({ 
-        profile_id: user.id, 
-        api_key_enc: data.encrypted_key 
+      .upsert({
+        profile_id: user.id,
+        api_key_enc: encryptResult.encrypted_key
       })
 
     if (insertError) {

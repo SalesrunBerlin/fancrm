@@ -61,3 +61,4 @@ verify_jwt = true
 verify_jwt = true
 [functions.generate_embedding]
 verify_jwt = true
+
