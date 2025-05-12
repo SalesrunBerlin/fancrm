@@ -1,4 +1,7 @@
 
+/**
+ * @jest-environment jsdom
+ */
 import { parseImpressum } from '../impressumParser';
 
 const minimalImpressumHtml = `

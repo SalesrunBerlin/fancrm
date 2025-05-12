@@ -1,4 +1,3 @@
-
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { Toaster } from "sonner"; 
 import { Layout } from "@/components/layout/Layout";
@@ -61,6 +60,8 @@ import TicketAnalysisPage from "./pages/TicketAnalysisPage";
 import LandingPage from "./pages/LandingPage";
 import Index from "./pages/Index";
 import OptimizedRecordsList from "./pages/OptimizedRecordsList";
+import ImportImpressum from "./pages/import/ImportImpressum";
+import { ImpressumScraper } from "@/components/ImpressumScraper";
 
 // Create a client
 const queryClient = new QueryClient({
@@ -194,6 +195,10 @@ function AppContent() {
         <Route path="/admin/users/:userId" element={<SuperAdminRoute><UserDetailPage /></SuperAdminRoute>} />
         <Route path="/admin/workspace" element={<SuperAdminRoute><AdminWorkspacePage /></SuperAdminRoute>} />
         <Route path="/admin/workspace/:workspaceId" element={<SuperAdminRoute><AdminWorkspacePage /></SuperAdminRoute>} />
+        
+        {/* Import routes */}
+        <Route path="/import/impressum" element={<ImportImpressum />} />
+        <Route path="/impressum-scraper" element={<ImpressumScraper />} />
       </Route>
       
       {/* Catch-all route for non-existent pages */}
