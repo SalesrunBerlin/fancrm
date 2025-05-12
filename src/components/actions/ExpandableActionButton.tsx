@@ -17,7 +17,8 @@ interface ExpandableActionButtonProps {
   onExecute: () => void;
   compact?: boolean; // Add compact mode for table cells
   dropdown?: boolean; // Add dropdown mode for table rows
-  actions?: Array<{ name: string; color: ActionColor; onClick: () => void }>; // Multiple actions for dropdown
+  actions?: Array<{ name: string; color: ActionColor; onClick: () => void }>;
+  dashboard?: boolean; // New prop for dashboard display with text
 }
 
 export function ExpandableActionButton({ 
@@ -26,7 +27,8 @@ export function ExpandableActionButton({
   onExecute,
   compact = false,
   dropdown = false,
-  actions = []
+  actions = [],
+  dashboard = false
 }: ExpandableActionButtonProps) {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -67,6 +69,23 @@ export function ExpandableActionButton({
           ))}
         </DropdownMenuContent>
       </DropdownMenu>
+    );
+  }
+  
+  // New dashboard mode with icon and text
+  if (dashboard) {
+    return (
+      <ThemedButton 
+        variant={color}
+        size="sm"
+        className="h-8 text-left flex items-center justify-start"
+        onClick={onExecute}
+        title={actionName}
+        useUserColor={false}
+      >
+        <Play className="h-3.5 w-3.5 mr-1 flex-shrink-0" />
+        <span className="truncate">{actionName}</span>
+      </ThemedButton>
     );
   }
 

@@ -26,6 +26,7 @@ export function SavedFiltersButtons({ objectTypeId, maxToShow = 3 }: SavedFilter
   const userId = user?.id || 'anonymous';
   const navigate = useNavigate();
   const [filters, setFilters] = useState<SavedFilter[]>([]);
+  const [isNavigating, setIsNavigating] = useState(false);
   
   // Use the user filter settings hook to get filters from database
   const { settings, isLoading: isLoadingSettings } = useUserFilterSettings(objectTypeId);
@@ -46,35 +47,43 @@ export function SavedFiltersButtons({ objectTypeId, maxToShow = 3 }: SavedFilter
 
   const handleFilterClick = (filter: SavedFilter) => {
     try {
-      if (!filter.conditions || filter.conditions.length === 0) {
+      // Prevent multiple clicks
+      if (isNavigating) {
+        return;
+      }
+      
+      setIsNavigating(true);
+      
+      // Validate filter conditions
+      if (!filter.conditions || !Array.isArray(filter.conditions) || filter.conditions.length === 0) {
         toast.error("Dieser Filter ist leer oder ungültig");
+        setIsNavigating(false);
         return;
       }
 
       // Ensure each filter condition has proper structure
-      const validatedConditions = filter.conditions.map(condition => {
-        // Ensure ID is present
-        if (!condition.id) {
-          condition.id = crypto.randomUUID();
-        }
-        
-        // Ensure required fields exist
-        if (!condition.fieldApiName || !condition.operator) {
-          throw new Error("Ungültige Filterbedingung erkannt");
-        }
-        
-        return condition;
+      const validatedConditions = filter.conditions.filter(condition => {
+        // Check if condition has the minimum required fields
+        return condition && condition.fieldApiName && condition.operator;
       });
+
+      if (validatedConditions.length === 0) {
+        toast.error("Ungültige Filterbedingungen erkannt");
+        setIsNavigating(false);
+        return;
+      }
       
-      // Add a small toast notification before navigating
+      // Add a success toast notification before navigating
       toast.success(`Navigiere zu "${filter.name}" Filter`);
       
       // Navigate to the optimized object list page with this filter ID in the URL
-      // The filter ID will be used to load the filter from settings
+      console.log(`Navigating to /objects/${objectTypeId}/optimized/${filter.id}`);
       navigate(`/objects/${objectTypeId}/optimized/${filter.id}`);
+      
     } catch (error) {
       console.error("Fehler beim Anwenden des gespeicherten Filters:", error);
       toast.error("Filter konnte nicht angewendet werden. Bitte versuchen Sie es erneut.");
+      setIsNavigating(false);
     }
   };
 
@@ -87,6 +96,7 @@ export function SavedFiltersButtons({ objectTypeId, maxToShow = 3 }: SavedFilter
           filter={filter} 
           objectTypeId={objectTypeId}
           onClick={() => handleFilterClick(filter)}
+          isNavigating={isNavigating}
         />
       ))}
     </div>
@@ -97,11 +107,13 @@ export function SavedFiltersButtons({ objectTypeId, maxToShow = 3 }: SavedFilter
 function FilterBadgeWithCount({ 
   filter, 
   objectTypeId, 
-  onClick 
+  onClick,
+  isNavigating
 }: { 
   filter: SavedFilter; 
   objectTypeId: string;
   onClick: () => void;
+  isNavigating?: boolean;
 }) {
   const { records, isLoading } = useObjectRecords(objectTypeId, filter.conditions);
   const recordCount = records?.length || 0;
@@ -109,7 +121,7 @@ function FilterBadgeWithCount({
   return (
     <Badge
       variant="outline"
-      className="cursor-pointer hover:bg-accent/20 py-3 px-4 text-wrap whitespace-normal text-base leading-normal relative"
+      className={`cursor-pointer hover:bg-accent/20 py-3 px-4 text-wrap whitespace-normal text-base leading-normal relative ${isNavigating ? 'opacity-50 pointer-events-none' : ''}`}
       onClick={onClick}
     >
       {filter.name}

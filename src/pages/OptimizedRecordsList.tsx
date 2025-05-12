@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
@@ -43,6 +42,7 @@ export default function OptimizedRecordsList() {
     updateFilters: setActiveFilters, 
     settings,
     savedFilters,
+    getFilterById,
     isLoading: isLoadingFilterSettings 
   } = useUserFilterSettings(objectTypeId);
   
@@ -80,15 +80,15 @@ export default function OptimizedRecordsList() {
   // This will run only after the page has loaded and filter settings are available
   useEffect(() => {
     const applyFilterFromUrl = async () => {
-      if (filterId && savedFilters && !isApplyingFilterFromUrl && !isFilterLoading) {
+      if (filterId && !isApplyingFilterFromUrl && !isFilterLoading && !isLoadingFilterSettings) {
         try {
           console.log("Attempting to apply filter from URL with ID:", filterId);
           setIsApplyingFilterFromUrl(true);
           
           // Find the filter with matching ID
-          const filterToApply = savedFilters.find(filter => filter.id === filterId);
+          const filterToApply = getFilterById(filterId);
           
-          if (filterToApply) {
+          if (filterToApply && filterToApply.conditions && Array.isArray(filterToApply.conditions)) {
             console.log("Found filter to apply:", filterToApply);
             
             // Show toast notification
@@ -121,11 +121,11 @@ export default function OptimizedRecordsList() {
       }
     };
     
-    // Only try to apply the filter if we have savedFilters loaded and we're not already applying a filter
+    // Try to apply the filter if we have filters loaded and we're not already applying one
     if (!isLoadingFilterSettings && savedFilters && filterId) {
       applyFilterFromUrl();
     }
-  }, [filterId, savedFilters, objectTypeId, navigate, setActiveFilters, isLoadingFilterSettings, isFilterLoading]);
+  }, [filterId, savedFilters, objectTypeId, navigate, setActiveFilters, isLoadingFilterSettings, isFilterLoading, getFilterById]);
   
   const [selectedRecords, setSelectedRecords] = useState<string[]>([]);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);

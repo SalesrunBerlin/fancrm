@@ -128,7 +128,7 @@ function ObjectRecordCount({ objectTypeId }: { objectTypeId: string }) {
   return <>{records?.length || 0}</>;
 }
 
-// Component to display action buttons for an object type
+// Updated component to display action buttons for an object type
 function DashboardObjectActions({ objectTypeId }: { objectTypeId: string }) {
   const { getActionsByObjectId } = useActions();
   const [actions, setActions] = useState<any[]>([]);
@@ -153,15 +153,15 @@ function DashboardObjectActions({ objectTypeId }: { objectTypeId: string }) {
     return null;
   }
   
-  // Display actions in a single horizontal row, spread across the full width
+  // Display actions with text in a grid layout
   return (
-    <div className="flex flex-row justify-between w-full gap-2">
+    <div className="grid grid-cols-2 w-full gap-2 mb-3">
       {actions.map((action) => (
         <ExpandableActionButton
           key={action.id}
           actionName={action.name}
           color={action.color}
-          compact={true}
+          dashboard={true}
           onExecute={() => {
             window.location.href = `/actions/execute/${action.id}`;
           }}
