@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { 
@@ -8,7 +7,7 @@ import {
   Boxes,
   Users,
   Link as LinkIcon,
-  LayoutKanban,
+  LayoutDashboard,
   UserCog,
   Palette,
   Star,
@@ -57,7 +56,7 @@ const LandingPage = () => {
 
   const features = [
     {
-      icon: <LayoutKanban />,
+      icon: <LayoutDashboard />,
       title: "Kanban-Board",
       description: "Verschiebe Aufgaben per Drag & Drop von 'Offen' zu 'Erledigt'."
     },
