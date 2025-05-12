@@ -18,7 +18,7 @@ serve(async (req: Request) => {
     const { connection_id } = await req.json()
     
     if (!connection_id) {
-      return new Response(JSON.stringify({ error: 'Missing connection ID' }), {
+      return new Response(JSON.stringify({ error: 'Connection ID is required' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
@@ -49,7 +49,7 @@ serve(async (req: Request) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
-
+    
     // Delete the connection
     const { error: deleteError } = await supabase
       .from('user_connections')

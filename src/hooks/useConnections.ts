@@ -47,7 +47,10 @@ export function useConnections(options: UseConnectionsOptions = {}) {
         .select('*')
         .order('service_type', { ascending: true });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Failed to fetch connections:', error);
+        throw error;
+      }
       
       setConnections(data as Connection[] || []);
     } catch (error) {
@@ -68,11 +71,15 @@ export function useConnections(options: UseConnectionsOptions = {}) {
       const { data, error } = await supabase
         .rpc('get_user_connection_types');
 
-      if (error) throw error;
+      if (error) {
+        console.error('Failed to fetch connection types:', error);
+        throw error;
+      }
       
       setConnectionTypes(data as ConnectionTypeInfo[] || []);
     } catch (error) {
       console.error('Failed to fetch connection types:', error);
+      toast.error('Failed to fetch connection types');
     } finally {
       setIsLoading(false);
     }
@@ -111,7 +118,7 @@ export function useConnections(options: UseConnectionsOptions = {}) {
       await fetchConnectionTypes();
       
       return true;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to store connection:', error);
       toast.error('Failed to store connection');
       return false;
@@ -143,7 +150,7 @@ export function useConnections(options: UseConnectionsOptions = {}) {
       await fetchConnectionTypes();
       
       return true;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to delete connection:', error);
       toast.error('Failed to delete connection');
       return false;
@@ -176,7 +183,7 @@ export function useConnections(options: UseConnectionsOptions = {}) {
       await fetchConnectionTypes();
       
       return true;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to update connection status:', error);
       toast.error('Failed to update connection status');
       return false;
@@ -216,7 +223,7 @@ export function useConnections(options: UseConnectionsOptions = {}) {
       if (response.error) throw response.error;
       
       return response;
-    } catch (error) {
+    } catch (error: any) {
       console.error('API request failed:', error);
       toast.error('API request failed');
       return null;

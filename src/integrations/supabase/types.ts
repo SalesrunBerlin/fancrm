@@ -2207,6 +2207,50 @@ export type Database = {
           },
         ]
       }
+      user_connections: {
+        Row: {
+          config: Json
+          created_at: string
+          display_name: string
+          encrypted_key: string | null
+          id: string
+          is_active: boolean
+          profile_id: string
+          service_type: string
+          updated_at: string
+        }
+        Insert: {
+          config?: Json
+          created_at?: string
+          display_name: string
+          encrypted_key?: string | null
+          id?: string
+          is_active?: boolean
+          profile_id: string
+          service_type: string
+          updated_at?: string
+        }
+        Update: {
+          config?: Json
+          created_at?: string
+          display_name?: string
+          encrypted_key?: string | null
+          id?: string
+          is_active?: boolean
+          profile_id?: string
+          service_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_connections_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_custom_icons: {
         Row: {
           color: string | null
@@ -2861,6 +2905,13 @@ export type Database = {
           decrypted_key: string
         }[]
       }
+      decrypt_connection: {
+        Args: { p_connection_id: string; p_secret: string }
+        Returns: {
+          service_type: string
+          decrypted_key: string
+        }[]
+      }
       delete_published_objects: {
         Args: Record<PropertyKey, never>
         Returns: undefined
@@ -2970,6 +3021,16 @@ export type Database = {
       refresh_published_objects_view: {
         Args: Record<PropertyKey, never>
         Returns: undefined
+      }
+      store_encrypted_connection: {
+        Args: {
+          p_service_type: string
+          p_display_name: string
+          p_api_key: string
+          p_config: Json
+          p_secret: string
+        }
+        Returns: boolean
       }
       swap_tab_order: {
         Args: {
