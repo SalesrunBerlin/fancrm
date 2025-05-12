@@ -11,6 +11,7 @@ interface AuthContextType {
   isSuperAdmin: boolean;
   isAdmin: boolean;
   favoriteColor: string | null;
+  setFavoriteColor: (color: string) => Promise<boolean>;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, firstName: string, lastName: string) => Promise<void>;
   signOut: () => Promise<void>;
@@ -24,6 +25,7 @@ const AuthContext = createContext<AuthContextType>({
   isSuperAdmin: false,
   isAdmin: false,
   favoriteColor: null,
+  setFavoriteColor: async () => false,
   signIn: async () => {},
   signUp: async () => {},
   signOut: async () => {},
@@ -84,6 +86,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, []);
 
+  const updateFavoriteColor = async (color: string): Promise<boolean> => {
+    try {
+      if (!user) return false;
+      
+      const { error } = await supabase
+        .from('profiles')
+        .update({ favorite_color: color })
+        .eq('id', user.id);
+        
+      if (error) {
+        console.error('Error updating favorite color:', error);
+        return false;
+      }
+      
+      setFavoriteColor(color);
+      return true;
+    } catch (error) {
+      console.error('Error updating favorite color:', error);
+      return false;
+    }
+  };
+
   const signIn = async (email: string, password: string) => {
     try {
       const { error } = await supabase.auth.signInWithPassword({
@@ -137,6 +161,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       isSuperAdmin,
       isAdmin,
       favoriteColor,
+      setFavoriteColor: updateFavoriteColor,
       signIn,
       signUp,
       signOut,

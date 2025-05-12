@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/hooks/useTheme';
 
@@ -9,16 +9,13 @@ export const useColorPreference = () => {
   const [loading, setLoading] = useState(false);
   
   // Log when color preference changes for debugging
-  useEffect(() => {
-    console.log("useColorPreference hook - current color:", favoriteColor);
-  }, [favoriteColor]);
+  console.log("useColorPreference hook - current color:", favoriteColor);
   
   const saveUserColorPreference = async (color: string): Promise<boolean> => {
     try {
       setLoading(true);
       if (setFavoriteColor) {
-        await setFavoriteColor(color);
-        return true;
+        return await setFavoriteColor(color);
       }
       return false;
     } catch (error) {

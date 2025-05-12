@@ -2934,6 +2934,16 @@ export type Database = {
         Args: { user_uuid: string; collection_uuid: string }
         Returns: boolean
       }
+      get_user_connection_types: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          service_type: string
+          has_connection: boolean
+          display_name: string
+          connection_id: string
+          is_active: boolean
+        }[]
+      }
       get_user_emails: {
         Args: Record<PropertyKey, never>
         Returns: {

@@ -1,4 +1,3 @@
-
 import React from "react";
 import {
   Sheet,
@@ -96,7 +95,7 @@ function MainNavigation({ className }: MainNavigationProps) {
       ],
     },
     {
-      title: "AI",
+      title: "Integrations",
       items: [
         {
           title: "AI Assistant",
@@ -228,7 +227,7 @@ export function MobileNavigation({ className }: MobileNavigationProps) {
       ],
     },
     {
-      title: "AI",
+      title: "Integrations",
       items: [
         {
           title: "AI Assistant",

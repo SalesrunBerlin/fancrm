@@ -59,7 +59,7 @@ export function AddConnectionDialog({
     }
   };
 
-  const getServiceTitle = (type: ConnectionType) => {
+  const getServiceTitle = (type: string) => {
     switch (type) {
       case 'openai':
         return 'OpenAI API';
@@ -76,7 +76,7 @@ export function AddConnectionDialog({
     }
   };
 
-  const getServiceDescription = (type: ConnectionType) => {
+  const getServiceDescription = (type: string) => {
     switch (type) {
       case 'openai':
         return 'Connect to OpenAI API for services like ChatGPT and DALL-E';
@@ -120,9 +120,9 @@ export function AddConnectionDialog({
               <TabsContent key={type.service_type} value={type.service_type}>
                 <ConnectionManager
                   serviceType={type.service_type as ConnectionType}
-                  title={getServiceTitle(type.service_type as ConnectionType)}
-                  description={getServiceDescription(type.service_type as ConnectionType)}
-                  defaultDisplayName={getServiceTitle(type.service_type as ConnectionType)}
+                  title={getServiceTitle(type.service_type)}
+                  description={getServiceDescription(type.service_type)}
+                  defaultDisplayName={getServiceTitle(type.service_type)}
                   configFields={getConfigFields(type.service_type as ConnectionType)}
                 />
               </TabsContent>
