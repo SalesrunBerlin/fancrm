@@ -1,3 +1,4 @@
+
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -29,6 +30,8 @@ export function useImpressumScrape(url: string | null) {
         return null;
       }
 
+      console.log("Scraping impressum for URL:", url);
+
       const { data, error } = await supabase.functions.invoke("scrape-impressum", {
         body: { url },
       });
@@ -36,6 +39,17 @@ export function useImpressumScrape(url: string | null) {
       if (error) {
         console.error("Error scraping impressum:", error);
         throw new Error(error.message);
+      }
+
+      console.log("Scraped impressum data:", data);
+      
+      // Ensure all candidates have context field initialized
+      if (data && data.fields) {
+        Object.entries(data.fields).forEach(([fieldType, candidates]) => {
+          (candidates as ImpressumCandidate[]).forEach(candidate => {
+            if (!candidate.context) candidate.context = undefined;
+          });
+        });
       }
 
       return data as ImpressumData;

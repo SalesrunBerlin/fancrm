@@ -13,6 +13,11 @@ import { FieldMappingConfirmation, FieldMappingItem, CustomField } from "@/compo
 // Define the workflow steps
 type WorkflowStep = "input" | "validation" | "mapping";
 
+// Define company data type to match CRUD resource expectations
+interface CompanyData {
+  [key: string]: any;
+}
+
 export default function ImportImpressum() {
   const [url, setUrl] = useState<string>("");
   const [targetUrl, setTargetUrl] = useState<string | null>(null);
@@ -42,7 +47,6 @@ export default function ImportImpressum() {
       setCurrentStep("validation");
     } catch (e) {
       toast({
-        title: "Error",
         description: "Please enter a valid website URL"
       });
     }
@@ -91,7 +95,7 @@ export default function ImportImpressum() {
       
       if (companyMappings.length > 0 || companyCustomFields.length > 0) {
         // Build company data object
-        const companyData: Record<string, any> = {};
+        const companyData: CompanyData = {};
         
         companyMappings.forEach(mapping => {
           companyData[mapping.targetField] = mapping.sourceValue;
@@ -140,7 +144,6 @@ export default function ImportImpressum() {
       }
       
       toast({
-        title: "Success",
         description: `Created ${companyMappings.length > 0 ? "1 company" : "0 companies"} and ${personMappings.length} person records`
       });
       
@@ -152,7 +155,6 @@ export default function ImportImpressum() {
     } catch (error) {
       console.error("Error saving data:", error);
       toast({
-        title: "Error",
         description: error instanceof Error ? error.message : "Failed to save data",
         variant: "destructive"
       });

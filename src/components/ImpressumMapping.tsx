@@ -169,15 +169,15 @@ export const ImpressumMapping: React.FC<ImpressumMappingProps> = ({
       if (valueWasChanged && !selectedCandidate && selectedValue) {
         try {
           // Make a call to fetch the HTML and search for the corrected value
-          const { data } = await supabase.functions.invoke("scrape-impressum", {
+          const { data: htmlData } = await supabase.functions.invoke("scrape-impressum", {
             body: { 
               url: data.source,
               searchValue: selectedValue
             }
           });
           
-          if (data && data.htmlContext) {
-            contextHtml = data.htmlContext;
+          if (htmlData && htmlData.htmlContext) {
+            contextHtml = htmlData.htmlContext;
           }
         } catch (error) {
           console.error("Failed to fetch HTML context for corrected value:", error);
@@ -350,8 +350,8 @@ export const ImpressumMapping: React.FC<ImpressumMappingProps> = ({
         sendFeedback(feedback).catch(console.error);
       }
     } catch (error) {
+      console.error("Error in onSubmit:", error);
       toast({
-        variant: "destructive",
         description: error instanceof Error ? error.message : "Failed to save company data"
       });
     }
