@@ -19,16 +19,19 @@ export function useCrudResource(resourceType: ResourceType) {
     setError(null);
     
     try {
-      // Use any type assertion to fix type error with resourceType
-      const { data: result, error } = await supabase
-        .from(resourceType as any)
+      // Explicitly cast to any to work around type issues
+      const response = await supabase
+        .from(resourceType)
         .insert(data)
-        .select()
-        .single();
+        .select();
         
-      if (error) throw new Error(error.message);
+      if (response.error) throw new Error(response.error.message);
       
-      return result as CreateResponse;
+      if (!response.data || response.data.length === 0) {
+        throw new Error("No data returned after insert");
+      }
+      
+      return response.data[0] as CreateResponse;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Failed to create resource";
       setError(new Error(errorMessage));

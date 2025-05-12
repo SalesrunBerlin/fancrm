@@ -1,10 +1,10 @@
 
 import React from 'react';
-import { Meta, StoryObj } from '@storybook/react';
+import type { Meta, StoryObj } from '@storybook/react';
 import { ImpressumMapping } from '@/components/ImpressumMapping';
-import { action } from '@storybook/addon-actions';
+import type { ImpressumData } from '@/hooks/useImpressumScrape';
 
-const meta: Meta<typeof ImpressumMapping> = {
+const meta = {
   title: 'Components/ImpressumMapping',
   component: ImpressumMapping,
   parameters: {
@@ -13,7 +13,7 @@ const meta: Meta<typeof ImpressumMapping> = {
   argTypes: {
     onSubmit: { action: 'submitted' },
   },
-};
+} satisfies Meta<typeof ImpressumMapping>;
 
 export default meta;
 type Story = StoryObj<typeof ImpressumMapping>;
@@ -35,7 +35,7 @@ export const Default: Story = {
       email: 'high',
     },
     onSubmit: async (data) => {
-      action('submitted')(data);
+      console.log('Submitted:', data);
       return Promise.resolve();
     },
     isLoading: false,
@@ -59,7 +59,7 @@ export const WithoutCEOs: Story = {
       email: 'high',
     },
     onSubmit: async (data) => {
-      action('submitted')(data);
+      console.log('Submitted:', data);
       return Promise.resolve();
     },
     isLoading: false,
@@ -83,7 +83,7 @@ export const Loading: Story = {
       email: 'high',
     },
     onSubmit: async (data) => {
-      action('submitted')(data);
+      console.log('Submitted:', data);
       return new Promise(resolve => setTimeout(resolve, 2000));
     },
     isLoading: true,
@@ -107,7 +107,7 @@ export const LowConfidence: Story = {
       email: 'low',
     },
     onSubmit: async (data) => {
-      action('submitted')(data);
+      console.log('Submitted:', data);
       return Promise.resolve();
     },
     isLoading: false,

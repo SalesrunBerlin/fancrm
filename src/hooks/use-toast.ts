@@ -12,11 +12,7 @@ export type ToastProps = {
 // Create a useToast hook that returns the toast function
 export const useToast = () => {
   return {
-    toast: (props: ToastProps) => {
-      return toast(props.description, {
-        ...props,
-      });
-    }
+    toast
   };
 };
 

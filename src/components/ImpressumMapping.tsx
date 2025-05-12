@@ -73,18 +73,12 @@ export const ImpressumMapping: React.FC<ImpressumMappingProps> = ({
     e.preventDefault();
     
     if (!companyName.trim()) {
-      toast({
-        description: "Company name is required",
-        variant: "destructive",
-      });
+      toast("Company name is required");
       return;
     }
 
     if (!address.trim()) {
-      toast({
-        description: "Address is required",
-        variant: "destructive",
-      });
+      toast("Address is required");
       return;
     }
 
@@ -97,10 +91,7 @@ export const ImpressumMapping: React.FC<ImpressumMappingProps> = ({
         ceos: selectedCEOs,
       });
     } catch (error) {
-      toast({
-        description: error instanceof Error ? error.message : "Failed to save company data",
-        variant: "destructive",
-      });
+      toast(error instanceof Error ? error.message : "Failed to save company data");
     }
   };
 
@@ -207,3 +198,4 @@ export const ImpressumMapping: React.FC<ImpressumMappingProps> = ({
     </form>
   );
 };
+

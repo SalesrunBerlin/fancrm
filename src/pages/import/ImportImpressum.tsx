@@ -27,10 +27,7 @@ export default function ImportImpressum() {
       new URL(url); // Will throw if invalid URL
       setTargetUrl(url);
     } catch (e) {
-      toast({
-        description: "Please enter a valid website URL",
-        variant: "destructive",
-      });
+      toast("Please enter a valid website URL");
     }
   };
 
@@ -73,20 +70,14 @@ export default function ImportImpressum() {
         );
       }
       
-      toast({
-        description: `Company "${mappedData.company}" created successfully`,
-        variant: "success",
-      });
+      toast(`Company "${mappedData.company}" created successfully`);
       
       // Reset the form
       setUrl("");
       setTargetUrl(null);
     } catch (error) {
       console.error("Error saving company data:", error);
-      toast({
-        description: error instanceof Error ? error.message : "Failed to save company data",
-        variant: "destructive",
-      });
+      toast(error instanceof Error ? error.message : "Failed to save company data");
     } finally {
       setIsSaving(false);
     }
