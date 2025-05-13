@@ -51,7 +51,7 @@ export function SelectMultiple({
             variant="outline"
             role="combobox"
             aria-expanded={open}
-            className="w-full justify-between h-auto min-h-10 border border-input"
+            className="w-full justify-between h-auto min-h-10 border border-input bg-background"
           >
             <div className="flex flex-1 flex-wrap gap-1 items-center">
               {selectedOptions.length > 0 ? (
@@ -93,13 +93,20 @@ export function SelectMultiple({
             </div>
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-full p-0 border border-input bg-popover" align="start">
+        <PopoverContent 
+          className="w-full p-0 border border-input bg-popover" 
+          align="start"
+          style={{
+            backgroundColor: 'var(--color-popover)',
+            borderColor: 'var(--color-border)',
+          }}
+        >
           <ScrollArea className="h-[300px]">
-            <div className="p-2 space-y-1">
+            <div className="p-2 space-y-1 bg-popover">
               {options.map(option => (
                 <div
                   key={option.value}
-                  className="flex items-center space-x-2 p-2 rounded-md hover:bg-muted cursor-pointer"
+                  className="flex items-center space-x-2 p-2 rounded-md hover:bg-muted cursor-pointer bg-popover"
                   onClick={() => handleToggleOption(option.value)}
                 >
                   <Checkbox

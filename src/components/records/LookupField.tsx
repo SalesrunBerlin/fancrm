@@ -54,12 +54,12 @@ export function LookupField({
         onValueChange={handleChange}
         disabled={disabled}
       >
-        <SelectTrigger>
+        <SelectTrigger className="bg-background">
           <SelectValue placeholder="Select..." />
         </SelectTrigger>
-        <SelectContent>
+        <SelectContent className="bg-popover border border-border shadow-md">
           {records?.map((record) => (
-            <SelectItem key={record.id} value={record.id}>
+            <SelectItem key={record.id} value={record.id} className="bg-popover">
               {record.display_value}
             </SelectItem>
           ))}

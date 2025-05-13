@@ -100,12 +100,28 @@
   z-index: 50 !important; /* Ensure dropdowns appear above other content */
 }
 
+/* Crucial fix for dropdown background opacity issues */
+div[role="listbox"],
+div[data-radix-select-viewport],
+div[data-radix-popper-content-wrapper] > div {
+  background-color: hsl(var(--popover)) !important;
+  border: 1px solid hsl(var(--border)) !important;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* This ensures all select content has a proper solid background */
 .radix-select-content,
 [data-radix-select-content],
 [data-state="open"] {
   background-color: hsl(var(--popover)) !important;
   border: 1px solid hsl(var(--border)) !important;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15) !important;
+  opacity: 1 !important;
+}
+
+/* Apply solid backgrounds to dropdown items */
+[role="option"] {
+  background-color: hsl(var(--popover)) !important;
 }
 
 /* Style dropdown content for better visibility */
@@ -113,6 +129,7 @@
 .select-content {
   background-color: hsl(var(--popover)) !important;
   border: 1px solid hsl(var(--border)) !important;
+  opacity: 1 !important;
 }
 
 /* Mobile scrolling fixes */
