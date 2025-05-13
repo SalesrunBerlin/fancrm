@@ -6,7 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 export function useRecordDetail(objectTypeId?: string, recordId?: string) {
   const { user } = useAuth();
 
-  const { data: record, isLoading } = useQuery({
+  const { data: record, isLoading, refetch } = useQuery({
     queryKey: ["record-detail", objectTypeId, recordId],
     queryFn: async () => {
       if (!objectTypeId || !recordId) {
@@ -72,6 +72,7 @@ export function useRecordDetail(objectTypeId?: string, recordId?: string) {
 
   return {
     record,
-    isLoading
+    isLoading,
+    refetch
   };
 }

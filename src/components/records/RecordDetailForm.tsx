@@ -134,8 +134,16 @@ export function RecordDetailForm({
       
       console.log("Submitting record data:", dataToSubmit);
       
+      // Get form values from react-hook-form
+      const formData = methods.getValues();
+      console.log("Form data from react-hook-form:", formData);
+      
+      // Merge form data with our manually tracked values to ensure we have everything
+      const mergedData = { ...formData, ...dataToSubmit };
+      
       // Filter out undefined values
-      const cleanedData = Object.entries(dataToSubmit).reduce((acc, [key, value]) => {
+      const cleanedData = Object.entries(mergedData).reduce((acc, [key, value]) => {
+        // Only exclude undefined, keep null, empty string, false, 0, etc.
         if (value !== undefined) {
           acc[key] = value;
         }

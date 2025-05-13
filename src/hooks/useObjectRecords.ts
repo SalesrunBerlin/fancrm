@@ -276,66 +276,71 @@ export function useObjectRecords(
       
       console.log("Updating record:", id, "with data:", field_values);
 
-      // Update the record's timestamp and ensure owner_id is set
-      const { error: recordError } = await supabase
-        .from("object_records")
-        .update({ 
-          updated_at: new Date().toISOString(),
-          owner_id: user.id, // Set owner_id to current user to comply with RLS policies
-          last_modified_by: user.id
-        })
-        .eq("id", id);
+      try {
+        // Update the record's timestamp and ensure owner_id is set
+        const { error: recordError } = await supabase
+          .from("object_records")
+          .update({ 
+            updated_at: new Date().toISOString(),
+            owner_id: user.id, // Set owner_id to current user to comply with RLS policies
+            last_modified_by: user.id
+          })
+          .eq("id", id);
 
-      if (recordError) {
-        console.error("Error updating record:", recordError);
-        throw recordError;
-      }
-
-      // Process field values - handle different data types correctly
-      const processFieldValue = (key: string, value: any) => {
-        if (value === undefined) return null;
-        if (value === null) return null;
-        
-        // Handle different data types
-        if (typeof value === 'boolean') {
-          return String(value); // Convert boolean to "true" or "false"
-        } else if (value instanceof Date) {
-          return value.toISOString();
-        } else if (typeof value === 'number') {
-          return String(value); // Convert number to string
-        } else if (typeof value === 'object') {
-          return JSON.stringify(value);
+        if (recordError) {
+          console.error("Error updating record timestamp:", recordError);
+          throw recordError;
         }
-        
-        // Return string values as is
-        return value;
-      };
 
-      // For each field value, upsert (update or insert)
-      for (const [key, value] of Object.entries(field_values)) {
-        console.log(`Upserting field ${key} with value:`, value);
-        
-        const processedValue = processFieldValue(key, value);
-        
-        console.log(`Processed value for ${key}:`, processedValue);
-        
-        const { error } = await supabase
-          .from("object_field_values")
-          .upsert({
-            record_id: id,
-            field_api_name: key,
-            value: processedValue
-          }, {
-            onConflict: 'record_id,field_api_name'
-          });
+        // Process field values - handle different data types correctly
+        const processFieldValue = (key: string, value: any) => {
+          if (value === undefined) return null;
+          
+          // Handle different data types
+          if (typeof value === 'boolean') {
+            return String(value); // Convert boolean to "true" or "false"
+          } else if (value instanceof Date) {
+            return value.toISOString();
+          } else if (typeof value === 'number') {
+            return String(value); // Convert number to string
+          } else if (typeof value === 'object' && value !== null) {
+            return JSON.stringify(value);
+          }
+          
+          // Return string values as is, or convert null to empty string
+          return value === null ? null : String(value);
+        };
 
-        if (error) {
-          console.error(`Error updating field ${key}:`, error);
-          throw error;
+        // For each field value, upsert (update or insert)
+        for (const [key, value] of Object.entries(field_values)) {
+          console.log(`Processing field ${key} with value:`, value);
+          
+          const processedValue = processFieldValue(key, value);
+          
+          console.log(`Processed value for ${key}:`, processedValue);
+          
+          // Using explicit table aliasing to avoid ambiguous column references
+          const { error } = await supabase
+            .from("object_field_values")
+            .upsert({
+              record_id: id,
+              field_api_name: key,
+              value: processedValue
+            }, {
+              onConflict: 'record_id,field_api_name'
+            });
+
+          if (error) {
+            console.error(`Error updating field ${key}:`, error);
+            throw error;
+          }
         }
-      }
 
-      return { id, field_values };
+        return { id, field_values };
+      } catch (error) {
+        console.error("Update record error:", error);
+        throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["object-records", objectTypeId] });
