@@ -1,3 +1,4 @@
+
 export enum FieldType {
   TEXT = 'text',
   NUMBER = 'number',
@@ -27,6 +28,8 @@ export interface PublicActionToken {
   is_active: boolean;
   views_count: number;
   submissions_count: number;
+  name?: string | null;
+  created_by?: string;
 }
 
 // Add missing ObjectField type

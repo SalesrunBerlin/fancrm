@@ -1,46 +1,42 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ContactType } from "@/types";
-import { Link } from "react-router-dom";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { useDashboard } from "@/hooks/useDashboard";
+import { Loader2 } from "lucide-react";
 
-interface RecentContactsProps {
-  contacts: ContactType[];
-}
+export function RecentContacts() {
+  const { contacts, loading } = useDashboard();
 
-export function RecentContacts({ contacts }: RecentContactsProps) {
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0">
+      <CardHeader>
         <CardTitle>Recent Contacts</CardTitle>
-        <Link to="/contacts" className="text-sm text-muted-foreground hover:text-primary">
-          View all
-        </Link>
       </CardHeader>
       <CardContent>
-        <div className="space-y-4">
-          {contacts && contacts.length > 0 ? (
-            contacts.slice(0, 3).map((contact) => (
-              <Link key={contact.id} to={`/contacts/${contact.id}`}>
-                <div className="flex items-center hover:bg-muted/50 p-2 rounded-lg transition-colors">
-                  <div className="h-10 w-10 rounded-full bg-beauty-light flex items-center justify-center text-beauty-dark font-medium mr-3">
-                    {contact.firstName?.[0] || contact.name?.[0] || ''}
-                    {contact.lastName?.[0] || ''}
-                  </div>
-                  <div>
-                    <p className="font-medium">
-                      {contact.firstName && contact.lastName 
-                        ? `${contact.firstName} ${contact.lastName}` 
-                        : contact.name}
-                    </p>
-                    <p className="text-sm text-muted-foreground">{contact.email}</p>
-                  </div>
+        {loading ? (
+          <div className="flex justify-center p-4">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
+        ) : contacts.length === 0 ? (
+          <p className="text-muted-foreground text-center py-4">No recent contacts</p>
+        ) : (
+          <div className="space-y-4">
+            {contacts.map((contact) => (
+              <div key={contact.id} className="flex items-center space-x-3">
+                <Avatar className="h-10 w-10 bg-primary/10">
+                  <AvatarFallback className="text-primary">
+                    {contact.first_name?.[0]}{contact.last_name?.[0]}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <p className="font-medium leading-none">
+                    {contact.first_name} {contact.last_name}
+                  </p>
+                  <p className="text-sm text-muted-foreground">{contact.email}</p>
                 </div>
-              </Link>
-            ))
-          ) : (
-            <p className="text-muted-foreground">No contacts found</p>
-          )}
-        </div>
+              </div>
+            ))}
+          </div>
+        )}
       </CardContent>
     </Card>
   );

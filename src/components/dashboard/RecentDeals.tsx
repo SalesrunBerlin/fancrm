@@ -1,43 +1,66 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { DealType } from "@/types";
-import { formatCurrency } from "@/lib/utils";
-import { Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Loader2 } from "lucide-react";
 
-interface RecentDealsProps {
-  deals: DealType[];
+interface Deal {
+  id: string;
+  name: string;
+  amount: number;
+  stage: string;
 }
 
-export function RecentDeals({ deals }: RecentDealsProps) {
+export function RecentDeals() {
+  const { data: deals, isLoading: loading } = useQuery({
+    queryKey: ["deals"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("deals")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(5);
+
+      if (error) {
+        console.error("Error fetching deals:", error);
+        return [];
+      }
+
+      return data as Deal[];
+    },
+  });
+
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0">
+      <CardHeader>
         <CardTitle>Recent Deals</CardTitle>
-        <Link to="/deals" className="text-sm text-muted-foreground hover:text-primary">
-          View all
-        </Link>
       </CardHeader>
       <CardContent>
-        <div className="space-y-4">
-          {deals && deals.length > 0 ? (
-            deals.slice(0, 3).map((deal) => (
-              <Link key={deal.id} to={`/deals/${deal.id}`}>
-                <div className="flex items-center justify-between hover:bg-muted/50 p-2 rounded-lg transition-colors">
-                  <div>
-                    <p className="font-medium">{deal.name}</p>
-                    <p className="text-sm text-muted-foreground">{deal.accountName || deal.account}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-medium">{formatCurrency(deal.amount || deal.value)}</p>
-                    <p className="text-sm text-muted-foreground">{deal.status || deal.stage}</p>
-                  </div>
+        {loading ? (
+          <div className="flex justify-center p-4">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
+        ) : deals.length === 0 ? (
+          <p className="text-muted-foreground text-center py-4">No recent deals</p>
+        ) : (
+          <div className="space-y-4">
+            {deals.map((deal) => (
+              <div key={deal.id} className="flex justify-between items-center">
+                <div className="flex flex-col">
+                  <span className="font-medium">{deal.name}</span>
+                  <span className="text-sm text-muted-foreground">{deal.stage}</span>
                 </div>
-              </Link>
-            ))
-          ) : (
-            <p className="text-muted-foreground">No deals found</p>
-          )}
-        </div>
+                <div className="font-medium">
+                  {new Intl.NumberFormat('en-US', {
+                    style: 'currency',
+                    currency: 'USD',
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 0
+                  }).format(deal.amount)}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </CardContent>
     </Card>
   );
