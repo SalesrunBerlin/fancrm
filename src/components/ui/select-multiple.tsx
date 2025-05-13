@@ -51,7 +51,7 @@ export function SelectMultiple({
             variant="outline"
             role="combobox"
             aria-expanded={open}
-            className="w-full justify-between h-auto min-h-10"
+            className="w-full justify-between h-auto min-h-10 border border-input"
           >
             <div className="flex flex-1 flex-wrap gap-1 items-center">
               {selectedOptions.length > 0 ? (
@@ -93,7 +93,7 @@ export function SelectMultiple({
             </div>
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-full p-0" align="start">
+        <PopoverContent className="w-full p-0 border border-input bg-popover" align="start">
           <ScrollArea className="h-[300px]">
             <div className="p-2 space-y-1">
               {options.map(option => (

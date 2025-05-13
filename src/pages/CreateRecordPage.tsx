@@ -12,7 +12,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Loader2, ArrowLeft } from "lucide-react";
 import { generateAutoNumber } from "@/hooks/useAutoNumberFields";
 import { toast } from "sonner";
-import type { RecordFormData } from "@/lib/types/records";
+import { RecordFormData } from "@/types"; // Fixed import path
 import { ThemedButton } from "@/components/ui/themed-button";
 import { useAuth } from "@/contexts/AuthContext";
 import { ActionColor } from "@/hooks/useActions";
