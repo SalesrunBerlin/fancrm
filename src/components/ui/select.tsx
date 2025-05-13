@@ -81,8 +81,9 @@ const SelectContent = React.forwardRef<
       )}
       position={position}
       style={{
-        backgroundColor: 'var(--color-popover)',
-        borderColor: 'var(--color-border)',
+        backgroundColor: 'hsl(var(--popover))',
+        borderColor: 'hsl(var(--border))',
+        opacity: 1
       }}
       {...props}
     >
@@ -94,7 +95,8 @@ const SelectContent = React.forwardRef<
             "h-[var(--radix-select-trigger-height)] w-full min-w-[var(--radix-select-trigger-width)]"
         )}
         style={{
-          backgroundColor: 'var(--color-popover)',
+          backgroundColor: 'hsl(var(--popover))',
+          opacity: 1
         }}
       >
         {children}
@@ -127,6 +129,10 @@ const SelectItem = React.forwardRef<
       "relative flex w-full cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
       className
     )}
+    style={{
+      backgroundColor: 'hsl(var(--popover))',
+      opacity: 1
+    }}
     {...props}
   >
     <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">

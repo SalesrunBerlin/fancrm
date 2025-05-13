@@ -28,9 +28,15 @@ export function LookupField({
   const { records, isLoading } = useObjectLookup(targetObjectTypeId);
   
   useEffect(() => {
-    console.log("Available lookup records:", records);
-    console.log("Currently selected value:", value);
-  }, [records, value]);
+    console.log("LookupField - targetObjectTypeId:", targetObjectTypeId);
+    console.log("LookupField - Available lookup records:", records);
+    console.log("LookupField - Currently selected value:", value);
+  }, [records, value, targetObjectTypeId]);
+
+  if (!targetObjectTypeId) {
+    console.error("LookupField: No targetObjectTypeId provided");
+    return <div className="text-red-500">Error: Missing target object configuration</div>;
+  }
 
   if (isLoading) {
     return <Skeleton className="h-10 w-full" />;
@@ -54,15 +60,21 @@ export function LookupField({
         onValueChange={handleChange}
         disabled={disabled}
       >
-        <SelectTrigger className="bg-background">
+        <SelectTrigger className="bg-background w-full">
           <SelectValue placeholder="Select..." />
         </SelectTrigger>
-        <SelectContent className="bg-popover border border-border shadow-md">
-          {records?.map((record) => (
-            <SelectItem key={record.id} value={record.id} className="bg-popover">
-              {record.display_value}
-            </SelectItem>
-          ))}
+        <SelectContent className="bg-popover border border-border shadow-md min-w-[200px]">
+          {records?.length ? (
+            records.map((record) => (
+              <SelectItem key={record.id} value={record.id} className="bg-popover">
+                {record.display_value || record.id}
+              </SelectItem>
+            ))
+          ) : (
+            <div className="px-2 py-4 text-center text-muted-foreground">
+              No records available
+            </div>
+          )}
         </SelectContent>
       </Select>
       

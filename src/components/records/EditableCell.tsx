@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { TableCell } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
@@ -107,7 +108,7 @@ export function EditableCell({
           <Textarea 
             value={editValue || ""}
             onChange={(e) => handleChange(e.target.value)}
-            className={error ? "border-red-500" : ""}
+            className={`bg-background ${error ? "border-red-500" : ""}`}
           />
         );
       case "rich_text":
@@ -139,12 +140,12 @@ export function EditableCell({
                 if (open) console.log("Opening picklist select")
               }}
             >
-              <SelectTrigger className={error ? "border-red-500" : ""}>
+              <SelectTrigger className={`bg-background ${error ? "border-red-500" : ""}`}>
                 <SelectValue placeholder="Select..." />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-popover border border-border shadow-md">
                 {picklistValues?.map((option) => (
-                  <SelectItem key={option.id} value={option.value}>
+                  <SelectItem key={option.id} value={option.value} className="bg-popover">
                     {option.label}
                   </SelectItem>
                 ))}
@@ -171,12 +172,12 @@ export function EditableCell({
             value={String(!!editValue)} 
             onValueChange={(val) => handleChange(val === "true")}
           >
-            <SelectTrigger className={error ? "border-red-500" : ""}>
+            <SelectTrigger className={`bg-background ${error ? "border-red-500" : ""}`}>
               <SelectValue placeholder="Select..." />
             </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="true">Yes</SelectItem>
-              <SelectItem value="false">No</SelectItem>
+            <SelectContent className="bg-popover border border-border shadow-md">
+              <SelectItem value="true" className="bg-popover">Yes</SelectItem>
+              <SelectItem value="false" className="bg-popover">No</SelectItem>
             </SelectContent>
           </Select>
         );
@@ -205,7 +206,7 @@ export function EditableCell({
             type="number"
             value={editValue || ""}
             onChange={(e) => handleChange(e.target.value ? Number(e.target.value) : null)}
-            className={error ? "border-red-500" : ""}
+            className={`bg-background ${error ? "border-red-500" : ""}`}
             step={fieldType === "currency" ? "0.01" : "1"}
           />
         );
@@ -215,7 +216,7 @@ export function EditableCell({
             type="email"
             value={editValue || ""}
             onChange={(e) => handleChange(e.target.value)}
-            className={error ? "border-red-500" : ""}
+            className={`bg-background ${error ? "border-red-500" : ""}`}
           />
         );
       case "url":
@@ -224,17 +225,21 @@ export function EditableCell({
             type="url"
             value={editValue || ""}
             onChange={(e) => handleChange(e.target.value)}
-            className={error ? "border-red-500" : ""}
+            className={`bg-background ${error ? "border-red-500" : ""}`}
           />
         );
       case "text":
       case "lookup":
-        if (fieldType === "lookup" && !fieldOptions?.target_object_type_id) return null;
+        if (fieldType === "lookup" && !fieldOptions?.target_object_type_id) {
+          console.error("Lookup field missing target object type ID:", fieldOptions);
+          return <div className="text-red-500">Missing configuration</div>;
+        }
         
         if (fieldType === "lookup") {
+          console.log("Rendering lookup field in EditableCell with targetObjectTypeId:", fieldOptions?.target_object_type_id);
           return (
             <LookupField
-              value={value}
+              value={editValue}
               onChange={handleChange}
               targetObjectTypeId={fieldOptions.target_object_type_id}
               disabled={false}
@@ -247,7 +252,7 @@ export function EditableCell({
             type="text"
             value={editValue || ""}
             onChange={(e) => handleChange(e.target.value)}
-            className={error ? "border-red-500" : ""}
+            className={`bg-background ${error ? "border-red-500" : ""}`}
           />
         );
       case "auto_number":
@@ -267,7 +272,7 @@ export function EditableCell({
             type="text"
             value={editValue || ""}
             onChange={(e) => handleChange(e.target.value)}
-            className={error ? "border-red-500" : ""}
+            className={`bg-background ${error ? "border-red-500" : ""}`}
           />
         );
     }

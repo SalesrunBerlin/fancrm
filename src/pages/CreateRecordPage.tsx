@@ -12,7 +12,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Loader2, ArrowLeft } from "lucide-react";
 import { generateAutoNumber } from "@/hooks/useAutoNumberFields";
 import { toast } from "sonner";
-import { RecordFormData } from "@/types"; // Fixed import path
+import { RecordFormData } from "@/types"; 
 import { ThemedButton } from "@/components/ui/themed-button";
 import { useAuth } from "@/contexts/AuthContext";
 import { ActionColor } from "@/hooks/useActions";
@@ -35,7 +35,9 @@ export default function CreateRecordPage() {
   const fields = applyLayout(unsortedFields || []);
   
   const objectType = objectTypes?.find(type => type.id === objectTypeId);
-  const form = useForm<RecordFormData>();
+  const form = useForm<RecordFormData>({
+    mode: "onChange",
+  });
   
   if (!objectTypeId) {
     navigate("/dashboard");
@@ -45,6 +47,8 @@ export default function CreateRecordPage() {
   const onSubmit = async (data: RecordFormData) => {
     try {
       setIsSubmitting(true);
+      
+      console.log("Form data before submission:", data);
       
       // Process auto-number fields
       const autoNumberFields = fields.filter(f => f.data_type === 'auto_number');
@@ -80,6 +84,12 @@ export default function CreateRecordPage() {
     }
   };
 
+  // Field change handler to debug issues
+  const handleFieldChange = (fieldName: string, value: any) => {
+    console.log(`CreateRecordPage - Field changed: ${fieldName} => `, value);
+    form.setValue(fieldName, value, { shouldValidate: true, shouldDirty: true });
+  };
+
   return (
     <div className="space-y-6">
       <PageHeader 
@@ -112,6 +122,7 @@ export default function CreateRecordPage() {
                       key={field.id}
                       field={field}
                       form={form}
+                      onCustomChange={(value) => handleFieldChange(field.api_name, value)}
                     />
                   ))}
                   

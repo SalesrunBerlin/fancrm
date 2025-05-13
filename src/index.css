@@ -95,41 +95,50 @@
   }
 }
 
-/* Dropdown styling improvements */
+/* Critical dropdown styling fixes */
 [data-radix-popper-content-wrapper] {
-  z-index: 50 !important; /* Ensure dropdowns appear above other content */
+  z-index: 50 !important;
 }
 
-/* Crucial fix for dropdown background opacity issues */
-div[role="listbox"],
-div[data-radix-select-viewport],
-div[data-radix-popper-content-wrapper] > div {
-  background-color: hsl(var(--popover)) !important;
-  border: 1px solid hsl(var(--border)) !important;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15) !important;
-}
-
-/* This ensures all select content has a proper solid background */
+/* Fix for dropdown transparencies */
 .radix-select-content,
 [data-radix-select-content],
-[data-state="open"] {
+[data-radix-select-viewport],
+[data-radix-popper-content-wrapper] > div,
+div[data-radix-select-content],
+div[data-radix-select-viewport],
+div[role="listbox"] {
   background-color: hsl(var(--popover)) !important;
   border: 1px solid hsl(var(--border)) !important;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15) !important;
   opacity: 1 !important;
 }
 
-/* Apply solid backgrounds to dropdown items */
-[role="option"] {
+/* Force solid background on select dropdown items */
+[role="option"],
+[data-radix-select-item],
+[data-state="checked"],
+[data-state="unchecked"],
+[data-highlighted] {
   background-color: hsl(var(--popover)) !important;
+  opacity: 1 !important;
 }
 
-/* Style dropdown content for better visibility */
-[role="listbox"],
-.select-content {
+/* Fix Radix SelectContent background */
+[data-radix-select-content][data-state="open"],
+[data-radix-select-viewport] {
   background-color: hsl(var(--popover)) !important;
   border: 1px solid hsl(var(--border)) !important;
   opacity: 1 !important;
+}
+
+/* Force dropdown to be visible */
+[data-side="bottom"],
+[data-side="top"],
+[data-side="right"],
+[data-side="left"] {
+  opacity: 1 !important;
+  background-color: hsl(var(--popover)) !important;
 }
 
 /* Mobile scrolling fixes */
@@ -181,6 +190,18 @@ html, body {
 
 .animate-fade-in {
   animation: fade-in 0.3s ease-out;
+}
+
+/* Critical fix for Select and Dropdown menus */
+.select-content,
+.dropdown-content,
+.radix-dropdown-content,
+.popover-content {
+  background-color: hsl(var(--popover)) !important;
+  border: 1px solid hsl(var(--border)) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+  z-index: 100 !important;
+  opacity: 1 !important;
 }
 
 /* Tabs responsive styles */
