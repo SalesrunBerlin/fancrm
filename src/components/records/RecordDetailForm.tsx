@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { Button } from '@/components/ui/button';
@@ -115,7 +116,13 @@ export function RecordDetailForm({
         console.log("Updated form values:", newValues);
         return newValues;
       });
-      methods.setValue(fieldName, value);
+      
+      // Also update the form values through react-hook-form
+      methods.setValue(fieldName, value, {
+        shouldValidate: true, 
+        shouldDirty: true,
+        shouldTouch: true
+      });
     }
   };
 
@@ -128,10 +135,20 @@ export function RecordDetailForm({
       
       console.log("Submitting record data:", dataToSubmit);
       
+      // Filter out undefined values
+      const cleanedData = Object.entries(dataToSubmit).reduce((acc, [key, value]) => {
+        if (value !== undefined) {
+          acc[key] = value;
+        }
+        return acc;
+      }, {} as Record<string, any>);
+      
+      console.log("Cleaned data for submission:", cleanedData);
+      
       // Update the record using the useObjectRecords hook
       await updateRecord.mutateAsync({
         id: recordId,
-        field_values: dataToSubmit
+        field_values: cleanedData
       });
       
       toast.success("Record updated successfully");
@@ -139,7 +156,7 @@ export function RecordDetailForm({
       if (onSave && record) {
         onSave({
           ...record,
-          field_values: { ...record.field_values, ...dataToSubmit }
+          field_values: { ...record.field_values, ...cleanedData }
         });
       }
     } catch (error) {

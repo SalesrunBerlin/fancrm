@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -150,12 +151,22 @@ export function useObjectRecords(
         throw recordError;
       }
 
-      // Then, create the field values
-      const fieldValues = Object.entries(formData).map(([key, value]) => ({
-        record_id: newRecord.id,
-        field_api_name: key,
-        value: value === null ? null : String(value)
-      }));
+      console.log("Created record:", newRecord);
+
+      // Process field values - filter out undefined and null values
+      const fieldValues = Object.entries(formData)
+        .filter(([_, value]) => value !== undefined && value !== null && value !== '')
+        .map(([key, value]) => {
+          // Only convert to string if it's not already a string
+          // Some field types (like numbers, booleans) need their original type preserved
+          return {
+            record_id: newRecord.id,
+            field_api_name: key,
+            value: value === null ? null : String(value)
+          };
+        });
+      
+      console.log("Field values to insert:", fieldValues);
 
       if (fieldValues.length > 0) {
         const { error: fieldValuesError } = await supabase
@@ -280,8 +291,20 @@ export function useObjectRecords(
         throw recordError;
       }
 
+      // Process field values - only include defined values
+      const processedFieldValues = Object.entries(field_values)
+        .filter(([_, value]) => value !== undefined)
+        .reduce((acc, [key, value]) => {
+          acc[key] = value;
+          return acc;
+        }, {} as Record<string, any>);
+
+      console.log("Processed field values for update:", processedFieldValues);
+
       // For each field value, upsert (update or insert)
-      for (const [key, value] of Object.entries(field_values)) {
+      for (const [key, value] of Object.entries(processedFieldValues)) {
+        console.log(`Upserting field ${key} with value:`, value);
+        
         const { error } = await supabase
           .from("object_field_values")
           .upsert({

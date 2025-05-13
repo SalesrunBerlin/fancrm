@@ -27,23 +27,16 @@ export default function EditRecordPage() {
   const objectType = objectTypes?.find(type => type.id === objectTypeId);
   const form = useForm<RecordFormData>();
 
+  // Initialize form with record data when it's loaded
   useEffect(() => {
     if (record && !isLoadingRecord) {
       console.log("Setting form values from record:", record);
-      // Populate form with existing record data
       const defaultValues: RecordFormData = {};
       
-      // Make sure we're using the correct property - fieldValues instead of field_values
-      if (record.fieldValues) {
-        Object.entries(record.fieldValues).forEach(([key, value]) => {
-          defaultValues[key] = value;
-          console.log(`Setting field ${key} to value: ${value}`);
-        });
-      } else if (record.field_values) {
-        // Fallback to field_values if fieldValues isn't available
+      if (record.field_values) {
         Object.entries(record.field_values).forEach(([key, value]) => {
+          console.log(`Setting field ${key} to value:`, value);
           defaultValues[key] = value;
-          console.log(`Setting field ${key} to value: ${value}`);
         });
       }
       
@@ -72,11 +65,22 @@ export default function EditRecordPage() {
         }
       }
       
+      // Filter out any undefined values
+      const cleanedData = Object.entries(data).reduce((acc, [key, value]) => {
+        if (value !== undefined) {
+          acc[key] = value;
+        }
+        return acc;
+      }, {} as RecordFormData);
+      
+      console.log("Cleaned data for submission:", cleanedData);
+      
       await updateRecord.mutateAsync({
         id: recordId,
-        field_values: data
+        field_values: cleanedData
       });
-      toast("Record updated successfully");
+      
+      toast.success("Record updated successfully");
       navigate(`/objects/${objectTypeId}/${recordId}`);
     } catch (error) {
       console.error("Error updating record:", error);

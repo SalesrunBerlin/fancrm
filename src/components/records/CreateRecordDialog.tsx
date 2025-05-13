@@ -41,6 +41,8 @@ export function CreateRecordDialog({ objectTypeId, open, onOpenChange }: CreateR
     try {
       setIsSubmitting(true);
       
+      console.log("Form data being submitted:", data);
+      
       // Process auto-number fields
       const autoNumberFields = fields.filter(f => f.data_type === 'auto_number');
       
@@ -55,9 +57,19 @@ export function CreateRecordDialog({ objectTypeId, open, onOpenChange }: CreateR
         }
       }
       
+      // Filter out any undefined values
+      const cleanedData = Object.entries(data).reduce((acc, [key, value]) => {
+        if (value !== undefined) {
+          acc[key] = value;
+        }
+        return acc;
+      }, {} as RecordFormData);
+      
+      console.log("Cleaned data for submission:", cleanedData);
+      
       // Create the record with field values
       await createRecord.mutateAsync({
-        field_values: data
+        ...cleanedData
       });
       
       form.reset();

@@ -40,6 +40,8 @@ export function RecordField({
   
   // Determine which onChange handler to use
   const handleFieldChange = (newValue: any) => {
+    console.log(`RecordField handleFieldChange - ${field.name}: `, newValue);
+    
     // First priority: custom onChange handler provided by parent
     if (onCustomChange) {
       onCustomChange(newValue);
@@ -54,7 +56,11 @@ export function RecordField({
     
     // Third priority: if form is provided, set the value in the form
     if (form) {
-      form.setValue(field.api_name, newValue);
+      form.setValue(field.api_name, newValue, { 
+        shouldValidate: true,
+        shouldDirty: true,
+        shouldTouch: true 
+      });
     }
   };
 
@@ -98,8 +104,8 @@ export function RecordField({
   
   // Debug logging to help track value updates
   useEffect(() => {
-    console.log(`RecordField ${field.name} (${field.api_name}) value:`, value);
-  }, [value, field.name, field.api_name]);
+    console.log(`RecordField ${field.name} (${field.api_name}) initial value:`, value);
+  }, [field.name, field.api_name]);
 
   // Register the field with react-hook-form if register is provided and form is not
   const registerField = register && !form ? register(field.api_name) : {};
@@ -122,9 +128,9 @@ export function RecordField({
               control={form.control}
               render={({ field: controllerField }) => (
                 <Input
-                  {...controllerField}
-                  id={field.api_name}
                   type={field.data_type === 'email' ? 'email' : 'text'}
+                  value={controllerField.value || ''}
+                  onChange={(e) => controllerField.onChange(e.target.value)}
                   readOnly={readOnly}
                   disabled={readOnly}
                 />
@@ -136,7 +142,7 @@ export function RecordField({
           <Input
             type={field.data_type === 'email' ? 'email' : 'text'}
             id={field.api_name}
-            defaultValue={currentValue || ''}
+            value={currentValue || ''}
             onChange={handleInputChange}
             readOnly={readOnly}
             disabled={readOnly}
@@ -151,8 +157,8 @@ export function RecordField({
               control={form.control}
               render={({ field: controllerField }) => (
                 <Textarea
-                  {...controllerField}
-                  id={field.api_name}
+                  value={controllerField.value || ''}
+                  onChange={(e) => controllerField.onChange(e.target.value)}
                   className="min-h-[100px]"
                   readOnly={readOnly}
                   disabled={readOnly}
@@ -164,7 +170,7 @@ export function RecordField({
         return (
           <Textarea
             id={field.api_name}
-            defaultValue={currentValue || ''}
+            value={currentValue || ''}
             onChange={handleInputChange}
             readOnly={readOnly}
             disabled={readOnly}
@@ -214,9 +220,12 @@ export function RecordField({
               control={form.control}
               render={({ field: controllerField }) => (
                 <Input
-                  {...controllerField}
-                  id={field.api_name}
                   type="number"
+                  value={controllerField.value || ''}
+                  onChange={(e) => {
+                    const numValue = e.target.value ? Number(e.target.value) : null;
+                    controllerField.onChange(numValue);
+                  }}
                   readOnly={readOnly}
                   disabled={readOnly}
                 />
@@ -228,8 +237,11 @@ export function RecordField({
           <Input
             type="number"
             id={field.api_name}
-            defaultValue={currentValue || ''}
-            onChange={handleInputChange}
+            value={currentValue || ''}
+            onChange={(e) => {
+              const numValue = e.target.value ? Number(e.target.value) : null;
+              handleFieldChange(numValue);
+            }}
             readOnly={readOnly}
             disabled={readOnly}
             {...registerField}
@@ -258,7 +270,10 @@ export function RecordField({
                   <>
                     <Select 
                       value={controllerField.value || ""}
-                      onValueChange={controllerField.onChange}
+                      onValueChange={(val) => {
+                        console.log(`Picklist changed to: ${val}`);
+                        controllerField.onChange(val);
+                      }}
                       disabled={readOnly}
                     >
                       <SelectTrigger className="bg-white dark:bg-slate-900">
@@ -460,9 +475,9 @@ export function RecordField({
               control={form.control}
               render={({ field: controllerField }) => (
                 <Input
-                  {...controllerField}
-                  id={field.api_name}
                   type="text"
+                  value={controllerField.value || ''}
+                  onChange={(e) => controllerField.onChange(e.target.value)}
                   readOnly={readOnly}
                   disabled={readOnly}
                 />
@@ -474,7 +489,7 @@ export function RecordField({
           <Input
             type="text"
             id={field.api_name}
-            defaultValue={currentValue || ''}
+            value={currentValue || ''}
             onChange={handleInputChange}
             readOnly={readOnly}
             disabled={readOnly}

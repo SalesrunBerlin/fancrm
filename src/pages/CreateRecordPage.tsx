@@ -1,6 +1,6 @@
 
 import { useParams, useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { Form } from "@/components/ui/form";
 import { PageHeader } from "@/components/ui/page-header";
@@ -46,6 +46,8 @@ export default function CreateRecordPage() {
     try {
       setIsSubmitting(true);
       
+      console.log("Form data being submitted:", data);
+      
       // Process auto-number fields
       const autoNumberFields = fields.filter(f => f.data_type === 'auto_number');
       
@@ -62,10 +64,11 @@ export default function CreateRecordPage() {
       
       // Create the record
       const result = await createRecord.mutateAsync({
-        field_values: data
+        ...data
       });
       
       toast.success(`${objectType?.name || 'Record'} created successfully`);
+      form.reset();
       
       if (result?.id) {
         navigate(`/objects/${objectTypeId}/${result.id}`);
