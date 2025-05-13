@@ -52,6 +52,7 @@ export interface ObjectRecord {
   object_type_id?: string;
   owner_id?: string;
   record_id?: string | null;
+  kanbanCategoryField?: string; // Added field to track Kanban category field
 }
 
 // Helper function to convert ObjectFieldWithJson to ObjectField
