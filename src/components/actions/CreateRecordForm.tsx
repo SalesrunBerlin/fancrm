@@ -315,6 +315,8 @@ export function CreateRecordForm({
     setError(null);
     
     try {
+      console.log("Form data being submitted:", data);
+      
       // Clean the data before submission
       const cleanedData = Object.entries(data).reduce((acc, [key, value]) => {
         // Handle undefined, "undefined", null, "null" values
@@ -335,6 +337,8 @@ export function CreateRecordForm({
         return acc;
       }, {} as Record<string, any>);
       
+      console.log("Cleaned data for submission:", cleanedData);
+      
       // Create the record
       const { data: record, error: recordError } = await supabase
         .from("object_records")
@@ -345,20 +349,34 @@ export function CreateRecordForm({
         .select()
         .single();
       
-      if (recordError) throw recordError;
+      if (recordError) {
+        console.error("Error creating record:", recordError);
+        throw recordError;
+      }
+      
+      console.log("Created record:", record);
       
       // Create the field values with cleaned data
-      const fieldValues = Object.entries(cleanedData).map(([api_name, value]) => ({
-        record_id: record.id,
-        field_api_name: api_name,
-        value: value === undefined ? null : String(value),
-      }));
+      const fieldValues = Object.entries(cleanedData)
+        .filter(([_, value]) => value !== undefined && value !== null)
+        .map(([api_name, value]) => ({
+          record_id: record.id,
+          field_api_name: api_name,
+          value: String(value),
+        }));
       
-      const { error: valuesError } = await supabase
-        .from("object_field_values")
-        .insert(fieldValues);
+      console.log("Inserting field values:", fieldValues);
       
-      if (valuesError) throw valuesError;
+      if (fieldValues.length > 0) {
+        const { error: valuesError } = await supabase
+          .from("object_field_values")
+          .insert(fieldValues);
+        
+        if (valuesError) {
+          console.error("Error creating field values:", valuesError);
+          throw valuesError;
+        }
+      }
       
       toast.success("Record created successfully");
       onSuccess();
