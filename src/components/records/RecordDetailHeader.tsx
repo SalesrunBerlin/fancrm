@@ -2,7 +2,7 @@
 import React from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
-import { FileAnalysis } from "lucide-react";
+import { FileText } from "lucide-react";
 
 interface RecordDetailHeaderProps {
   displayName: string | null;
@@ -35,7 +35,7 @@ export function RecordDetailHeader({ displayName, objectName, isLoading }: Recor
           variant="outline"
           className="flex items-center gap-2"
         >
-          <FileAnalysis size={16} />
+          <FileText size={16} />
           Analyze Sprint Tickets
         </Button>
       )}

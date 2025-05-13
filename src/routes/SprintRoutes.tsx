@@ -2,18 +2,10 @@
 import React from "react";
 import { Route } from "react-router-dom";
 import SprintAnalysisPage from "@/pages/SprintAnalysisPage";
-import { ObjectRecordDetail } from "@/pages/ObjectRecordDetail";
 
-export const SprintRoutes = (
+const SprintRoutes = (
   <>
-    <Route 
-      path="/objects/:objectTypeId/:recordId" 
-      element={<ObjectRecordDetail />} 
-    />
-    <Route 
-      path="/objects/:objectTypeId/:recordId/analysis" 
-      element={<SprintAnalysisPage />} 
-    />
+    <Route path="/objects/:objectTypeId/:recordId/analysis" element={<SprintAnalysisPage />} />
   </>
 );
 
