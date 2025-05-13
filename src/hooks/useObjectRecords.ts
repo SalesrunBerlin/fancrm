@@ -291,26 +291,40 @@ export function useObjectRecords(
         throw recordError;
       }
 
-      // Process field values - only include defined values
-      const processedFieldValues = Object.entries(field_values)
-        .filter(([_, value]) => value !== undefined)
-        .reduce((acc, [key, value]) => {
-          acc[key] = value;
-          return acc;
-        }, {} as Record<string, any>);
-
-      console.log("Processed field values for update:", processedFieldValues);
+      // Process field values - handle different data types correctly
+      const processFieldValue = (key: string, value: any) => {
+        if (value === undefined) return null;
+        if (value === null) return null;
+        
+        // Handle different data types
+        if (typeof value === 'boolean') {
+          return String(value); // Convert boolean to "true" or "false"
+        } else if (value instanceof Date) {
+          return value.toISOString();
+        } else if (typeof value === 'number') {
+          return String(value); // Convert number to string
+        } else if (typeof value === 'object') {
+          return JSON.stringify(value);
+        }
+        
+        // Return string values as is
+        return value;
+      };
 
       // For each field value, upsert (update or insert)
-      for (const [key, value] of Object.entries(processedFieldValues)) {
+      for (const [key, value] of Object.entries(field_values)) {
         console.log(`Upserting field ${key} with value:`, value);
+        
+        const processedValue = processFieldValue(key, value);
+        
+        console.log(`Processed value for ${key}:`, processedValue);
         
         const { error } = await supabase
           .from("object_field_values")
           .upsert({
             record_id: id,
             field_api_name: key,
-            value: value === null ? null : String(value)
+            value: processedValue
           }, {
             onConflict: 'record_id,field_api_name'
           });

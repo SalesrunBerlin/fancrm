@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { TableCell } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
@@ -35,6 +36,7 @@ export function EditableCell({
   const [error, setError] = useState<string | null>(null);
   const { picklistValues, isLoading: loadingPicklist } = useFieldPicklistValues(fieldId || fieldOptions?.field_id || '');
 
+  // Update internal state when the external value changes
   useEffect(() => {
     setEditValue(value);
   }, [value]);
@@ -47,6 +49,7 @@ export function EditableCell({
       setError("This field is required");
     } else {
       setError(null);
+      // Ensure we always call the onChange handler to update the parent component
       onChange(newValue);
     }
   };
@@ -203,7 +206,7 @@ export function EditableCell({
         return (
           <Input 
             type="number"
-            value={editValue || ""}
+            value={editValue ?? ""}
             onChange={(e) => handleChange(e.target.value ? Number(e.target.value) : null)}
             className={error ? "border-red-500" : ""}
             step={fieldType === "currency" ? "0.01" : "1"}

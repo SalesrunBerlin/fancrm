@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { Button } from '@/components/ui/button';
@@ -126,7 +125,7 @@ export function RecordDetailForm({
     }
   };
 
-  const onSubmit = async (data: any) => {
+  const onSubmit = async () => {
     try {
       setIsSaving(true);
       
@@ -146,14 +145,14 @@ export function RecordDetailForm({
       console.log("Cleaned data for submission:", cleanedData);
       
       // Update the record using the useObjectRecords hook
-      await updateRecord.mutateAsync({
+      const result = await updateRecord.mutateAsync({
         id: recordId,
         field_values: cleanedData
       });
       
       toast.success("Record updated successfully");
       
-      if (onSave && record) {
+      if (onSave) {
         onSave({
           ...record,
           field_values: { ...record.field_values, ...cleanedData }
@@ -177,7 +176,7 @@ export function RecordDetailForm({
   }
 
   return (
-    <form onSubmit={methods.handleSubmit(onSubmit)} className="space-y-4 p-4">
+    <div className="space-y-4 p-4">
       {displayFields && displayFields.map((field) => (
         <RecordField
           key={field.id}
@@ -198,12 +197,12 @@ export function RecordDetailForm({
               Cancel
             </Button>
           )}
-          <Button type="submit" disabled={isSaving}>
+          <Button type="button" onClick={onSubmit} disabled={isSaving}>
             {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Save Changes
           </Button>
         </div>
       )}
-    </form>
+    </div>
   );
 }

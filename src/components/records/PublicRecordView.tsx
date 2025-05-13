@@ -25,6 +25,7 @@ export function PublicRecordView({ token, recordId }: PublicRecordViewProps) {
   const [editedValues, setEditedValues] = useState<Record<string, any>>({});
   const [error, setError] = useState<string | null>(null);
   const [visibleFields, setVisibleFields] = useState<string[]>([]);
+  const form = useForm();
 
   useEffect(() => {
     fetchPublicRecord();
@@ -96,6 +97,13 @@ export function PublicRecordView({ token, recordId }: PublicRecordViewProps) {
       setObjectType(objectTypeData);
       setFields(filteredFields);
       setRecord(formattedRecord);
+      setEditedValues({}); // Reset edited values when loading new record
+
+      // Set form default values
+      if (formattedRecord.field_values) {
+        const defaultValues = { ...formattedRecord.field_values };
+        form.reset(defaultValues);
+      }
 
     } catch (error: any) {
       console.error('Error fetching public record:', error);
@@ -106,10 +114,18 @@ export function PublicRecordView({ token, recordId }: PublicRecordViewProps) {
   };
 
   const handleFieldChange = (fieldName: string, value: any) => {
+    console.log(`Field changed: ${fieldName} => `, value);
     setEditedValues((prev) => ({
       ...prev,
       [fieldName]: value,
     }));
+    
+    // Update the form control value
+    form.setValue(fieldName, value, {
+      shouldTouch: true,
+      shouldDirty: true,
+      shouldValidate: true
+    });
   };
 
   const handleSave = async () => {
@@ -138,8 +154,20 @@ export function PublicRecordView({ token, recordId }: PublicRecordViewProps) {
         return;
       }
 
+      // Get all changed values
+      const changedValues = Object.keys(editedValues).length > 0 
+        ? editedValues 
+        : form.getValues();
+      
+      console.log("Saving changes:", changedValues);
+
       // For each edited field, update the corresponding field value
-      const updates = Object.entries(editedValues).map(async ([field_api_name, value]) => {
+      const updates = Object.entries(changedValues).map(async ([field_api_name, value]) => {
+        // Process the value based on type
+        const processedValue = value === null ? null : String(value);
+        
+        console.log(`Processing update for ${field_api_name}:`, processedValue);
+        
         // Check if field value exists
         const { data, error: checkError } = await supabase
           .from('object_field_values')
@@ -153,14 +181,14 @@ export function PublicRecordView({ token, recordId }: PublicRecordViewProps) {
           // Update existing field value
           return supabase
             .from('object_field_values')
-            .update({ value })
+            .update({ value: processedValue })
             .eq('record_id', record.id)
             .eq('field_api_name', field_api_name);
         } else {
           // Insert new field value
           return supabase
             .from('object_field_values')
-            .insert([{ record_id: record.id, field_api_name, value }]);
+            .insert([{ record_id: record.id, field_api_name, value: processedValue }]);
         }
       });
 
@@ -240,6 +268,10 @@ export function PublicRecordView({ token, recordId }: PublicRecordViewProps) {
               onClick={() => {
                 setIsEditing(false);
                 setEditedValues({});
+                // Reset form to original values
+                if (record.field_values) {
+                  form.reset(record.field_values);
+                }
               }}
             >
               <X className="mr-2 h-4 w-4" />
@@ -270,6 +302,7 @@ export function PublicRecordView({ token, recordId }: PublicRecordViewProps) {
                   value={currentValue}
                   onChange={(value) => handleFieldChange(field.api_name, value)}
                   readOnly={!isEditing}
+                  form={form}
                 />
               </div>
             );

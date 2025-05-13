@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent } from "@/components/ui/card";
@@ -23,11 +24,11 @@ export default function ObjectRecordDetail() {
   const [activeTab, setActiveTab] = useState('details');
   const [isEditing, setIsEditing] = useState(false);
   const { objectType, isLoading: isLoadingObjectType } = useObjectType(objectTypeId || "");
-  const { record, isLoading: isLoadingRecord } = useRecordDetail(objectTypeId || "", recordId || "");
+  const { record, isLoading: isLoadingRecord, refetch } = useRecordDetail(objectTypeId || "", recordId || "");
   const [isTicket, setIsTicket] = useState(false);
   const [aiStatus, setAiStatus] = useState<string | null>(null);
   const [selectedLayoutId, setSelectedLayoutId] = useState<string | undefined>(undefined);
-  const { cloneRecord } = useObjectRecords(objectTypeId);
+  const { cloneRecord, updateRecord } = useObjectRecords(objectTypeId);
 
   useEffect(() => {
     if (!objectTypeId || !recordId) {
@@ -49,10 +50,25 @@ export default function ObjectRecordDetail() {
     }
   }, [objectType, record]);
 
-  const handleSaveRecord = (updatedRecord: any) => {
-    setIsEditing(false);
-    toast.success("Record updated successfully!");
-    // Optionally, refresh the record data here
+  const handleSaveRecord = async (updatedRecord: any) => {
+    console.log("Saving record updates:", updatedRecord);
+    try {
+      if (!recordId) return;
+      
+      await updateRecord.mutateAsync({
+        id: recordId,
+        field_values: updatedRecord.field_values || updatedRecord
+      });
+      
+      toast.success("Record updated successfully!");
+      setIsEditing(false);
+      
+      // Refresh the record data
+      refetch();
+    } catch (error) {
+      console.error("Error saving record:", error);
+      toast.error("Failed to save changes. Please try again.");
+    }
   };
 
   const handleStatusChange = (newStatus: string) => {
