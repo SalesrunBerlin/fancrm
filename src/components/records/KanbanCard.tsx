@@ -43,7 +43,7 @@ export function KanbanCard({
     if (record.field_values) {
       // Try common name fields
       for (const field of commonNameFields) {
-        if (record.field_values[field]) {
+        if (record.field_values[field] !== undefined && record.field_values[field] !== null) {
           return record.field_values[field];
         }
       }
@@ -109,8 +109,10 @@ export function KanbanCard({
     }
   };
 
-  // Format record name for display with line break if it's too long
+  // Save the record name to ensure it doesn't change during drag operations
   const recordName = getRecordName();
+  
+  // Format record name for display with line break if it's too long
   const formatDisplayName = (name: string | any) => {
     if (typeof name !== 'string') {
       return String(name);
@@ -157,6 +159,12 @@ export function KanbanCard({
           <div className="mt-2 pt-2 border-t border-gray-100 text-xs">
             <div className="flex flex-wrap gap-x-3 gap-y-1">
               {safeVisibleFields.map((fieldApiName) => {
+                // Skip displaying the field if it's the same as the Kanban category field
+                // to avoid redundant information
+                if (fieldApiName === record.kanbanCategoryField) {
+                  return null;
+                }
+                
                 const formattedValue = formatFieldValue(fieldApiName, record.field_values?.[fieldApiName]);
                 
                 // Special handling for lookup fields
