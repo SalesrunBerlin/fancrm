@@ -7,7 +7,7 @@ import { RecordField } from "./RecordField";
 import { useEnhancedFields } from "@/hooks/useEnhancedFields";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
 import { useObjectRecords } from "@/hooks/useObjectRecords";
-import type { RecordFormData } from "@/lib/types/records"; 
+import { RecordFormData } from "@/types"; // Import from @/types instead of @/lib/types/records
 import { Loader2 } from "lucide-react";
 import { generateAutoNumber } from "@/hooks/useAutoNumberFields";
 import { toast } from "sonner";

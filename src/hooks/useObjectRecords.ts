@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import type { RecordFormData } from "@/types";
+import { RecordFormData } from "@/types";
 import { PostgrestFilterBuilder } from '@supabase/postgrest-js';
 
 export interface FilterCondition {
@@ -71,7 +71,7 @@ export function applyFilterOperator(operator: string, fieldValue: any, filterVal
 }
 
 // Export this function to be used in usePaginatedObjectRecords.ts
-export function generateFilterQuery<T>(query: PostgrestFilterBuilder<T>, filters: FilterCondition[]): PostgrestFilterBuilder<T> {
+export function generateFilterQuery<T>(query: PostgrestFilterBuilder<T, any, any>, filters: FilterCondition[]): PostgrestFilterBuilder<T, any, any> {
   let filteredQuery = query;
 
   filters.forEach(filter => {
