@@ -1,5 +1,5 @@
 
 // This file re-exports the hooks from the proper location
-import { toast, useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
-export { toast, useToast };
+export { toast };

@@ -1,8 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { RecordFormData } from "@/types";
-import { PostgrestFilterBuilder } from '@supabase/postgrest-js';
+import type { RecordFormData } from "@/types";
 
 export interface FilterCondition {
   id: string;
@@ -22,99 +21,6 @@ export interface ObjectRecord {
   last_modified_by: string | null;
   field_values?: { [key: string]: any };
   displayName?: string;
-}
-
-// Helper function to apply filter operators
-export function applyFilterOperator(operator: string, fieldValue: any, filterValue: any): boolean {
-  if (fieldValue === undefined || fieldValue === null) {
-    // If searching for empty values
-    if (filterValue === "" || filterValue === null) {
-      return ["equals", "is"].includes(operator);
-    }
-    return false;
-  }
-
-  // Convert both values to strings for text comparisons
-  const fieldStr = String(fieldValue).toLowerCase();
-  const filterStr = String(filterValue).toLowerCase();
-
-  switch (operator) {
-    case "equals":
-    case "is":
-      return fieldStr === filterStr;
-    
-    case "notEqual":
-    case "isNot":
-      return fieldStr !== filterStr;
-      
-    case "contains":
-      return fieldStr.includes(filterStr);
-      
-    case "startsWith":
-      return fieldStr.startsWith(filterStr);
-      
-    case "greaterThan":
-      return Number(fieldValue) > Number(filterValue);
-      
-    case "lessThan":
-      return Number(fieldValue) < Number(filterValue);
-      
-    case "before":
-      return new Date(fieldValue) < new Date(filterValue);
-      
-    case "after":
-      return new Date(fieldValue) > new Date(filterValue);
-      
-    default:
-      return false;
-  }
-}
-
-// Export this function to be used in usePaginatedObjectRecords.ts
-export function generateFilterQuery<T>(query: PostgrestFilterBuilder<T, any, any>, filters: FilterCondition[]): PostgrestFilterBuilder<T, any, any> {
-  let filteredQuery = query;
-
-  filters.forEach(filter => {
-    if (!filter.value && filter.value !== false) {
-      return;
-    }
-
-    // Handle system fields directly in the query
-    if (filter.fieldApiName === 'created_at' || filter.fieldApiName === 'updated_at' || filter.fieldApiName === 'record_id') {
-      switch (filter.operator) {
-        case "equals":
-        case "is":
-          filteredQuery = filteredQuery.eq(filter.fieldApiName, filter.value);
-          break;
-        case "notEqual":
-        case "isNot":
-          filteredQuery = filteredQuery.neq(filter.fieldApiName, filter.value);
-          break;
-        case "contains":
-          filteredQuery = filteredQuery.ilike(filter.fieldApiName, `%${filter.value}%`);
-          break;
-        case "startsWith":
-          filteredQuery = filteredQuery.ilike(filter.fieldApiName, `${filter.value}%`);
-          break;
-        case "before":
-          filteredQuery = filteredQuery.lt(filter.fieldApiName, filter.value);
-          break;
-        case "after":
-          filteredQuery = filteredQuery.gt(filter.fieldApiName, filter.value);
-          break;
-        case "greaterThan":
-          filteredQuery = filteredQuery.gt(filter.fieldApiName, filter.value);
-          break;
-        case "lessThan":
-          filteredQuery = filteredQuery.lt(filter.fieldApiName, filter.value);
-          break;
-      }
-    }
-    // For non-system fields, we can't directly filter in the query
-    // We'll need to do client-side filtering after getting the results
-  });
-
-  return filteredQuery;
 }
 
 export function useObjectRecords(
@@ -447,4 +353,50 @@ export function useObjectRecords(
     deleteRecord,
     cloneRecord
   };
+}
+
+// Helper function to apply filter operators
+function applyFilterOperator(operator: string, fieldValue: any, filterValue: any): boolean {
+  if (fieldValue === undefined || fieldValue === null) {
+    // If searching for empty values
+    if (filterValue === "" || filterValue === null) {
+      return ["equals", "is"].includes(operator);
+    }
+    return false;
+  }
+
+  // Convert both values to strings for text comparisons
+  const fieldStr = String(fieldValue).toLowerCase();
+  const filterStr = String(filterValue).toLowerCase();
+
+  switch (operator) {
+    case "equals":
+    case "is":
+      return fieldStr === filterStr;
+    
+    case "notEqual":
+    case "isNot":
+      return fieldStr !== filterStr;
+      
+    case "contains":
+      return fieldStr.includes(filterStr);
+      
+    case "startsWith":
+      return fieldStr.startsWith(filterStr);
+      
+    case "greaterThan":
+      return Number(fieldValue) > Number(filterValue);
+      
+    case "lessThan":
+      return Number(fieldValue) < Number(filterValue);
+      
+    case "before":
+      return new Date(fieldValue) < new Date(filterValue);
+      
+    case "after":
+      return new Date(fieldValue) > new Date(filterValue);
+      
+    default:
+      return false;
+  }
 }

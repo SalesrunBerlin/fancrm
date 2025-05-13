@@ -108,17 +108,11 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
     
     // Put records in their respective columns
     records.forEach(record => {
-      // Add the category field name to each record for reference
-      const recordWithCategory = {
-        ...record,
-        kanbanCategoryField: statusField.api_name
-      };
-      
       const status = record.field_values?.[statusField.api_name];
       if (status && kanbanColumns[status]) {
-        kanbanColumns[status].push(recordWithCategory);
+        kanbanColumns[status].push(record);
       } else {
-        kanbanColumns["uncategorized"].push(recordWithCategory);
+        kanbanColumns["uncategorized"].push(record);
       }
     });
     
@@ -164,33 +158,22 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
       [statusField.api_name]: newStatus
     };
     
-    // Create a deep copy of the columns to avoid direct state mutation
-    const newColumns = {...columns};
-    
-    // Create copies of the source and destination columns
-    const sourceColumn = [...(newColumns[source.droppableId] || [])];
-    const destColumn = [...(newColumns[destination.droppableId] || [])];
+    // Update the Kanban view immediately for a responsive feel
+    const sourceColumn = [...(columns[source.droppableId] || [])];
+    const destColumn = [...(columns[destination.droppableId] || [])];
     
     // Remove from source column
     const [movedRecord] = sourceColumn.splice(source.index, 1);
     
-    // Create a copy of the moved record with updated field values
-    // but PRESERVE the original display name and other properties
-    const updatedRecord = {
-      ...movedRecord,
-      field_values: {
-        ...movedRecord.field_values,
-        [statusField.api_name]: newStatus
-      }
-    };
-    
     // Add to destination column
-    destColumn.splice(destination.index, 0, updatedRecord);
+    destColumn.splice(destination.index, 0, movedRecord);
     
-    // Update columns in state
-    newColumns[source.droppableId] = sourceColumn;
-    newColumns[destination.droppableId] = destColumn;
-    setColumns(newColumns);
+    // Update UI
+    setColumns({
+      ...columns,
+      [source.droppableId]: sourceColumn,
+      [destination.droppableId]: destColumn
+    });
     
     try {
       // Update the record in the database
@@ -204,8 +187,6 @@ export function KanbanView({ records, fields, objectTypeId, onUpdateRecord }: Ka
         [source.droppableId]: columns[source.droppableId] || [],
         [destination.droppableId]: columns[destination.droppableId] || []
       });
-      
-      toast.error("Failed to update record status");
     }
   };
 

@@ -40,8 +40,6 @@ export function RecordField({
   
   // Determine which onChange handler to use
   const handleFieldChange = (newValue: any) => {
-    console.log(`Field changed: ${field.name} (${field.api_name}) => `, newValue);
-    
     // First priority: custom onChange handler provided by parent
     if (onCustomChange) {
       onCustomChange(newValue);
@@ -56,13 +54,12 @@ export function RecordField({
     
     // Third priority: if form is provided, set the value in the form
     if (form) {
-      form.setValue(field.api_name, newValue, { shouldValidate: true, shouldDirty: true, shouldTouch: true });
+      form.setValue(field.api_name, newValue);
     }
   };
 
   // Handle input field changes (text, number, email, etc.)
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    console.log(`Input changed: ${field.name} => `, e.target.value);
     handleFieldChange(e.target.value);
   };
 
@@ -114,12 +111,10 @@ export function RecordField({
           <Input
             type={field.data_type === 'email' ? 'email' : 'text'}
             id={field.api_name}
-            name={field.api_name}
             value={currentValue || ''}
             onChange={handleInputChange}
             readOnly={readOnly}
             disabled={readOnly}
-            className="bg-background"
             {...registerField}
           />
         );
@@ -127,12 +122,11 @@ export function RecordField({
         return (
           <Textarea
             id={field.api_name}
-            name={field.api_name}
             value={currentValue || ''}
             onChange={handleInputChange}
             readOnly={readOnly}
             disabled={readOnly}
-            className="min-h-[100px] bg-background"
+            className="min-h-[100px]"
             {...registerField}
           />
         );
@@ -155,12 +149,10 @@ export function RecordField({
           <Input
             type="number"
             id={field.api_name}
-            name={field.api_name}
             value={currentValue || ''}
             onChange={handleInputChange}
             readOnly={readOnly}
             disabled={readOnly}
-            className="bg-background"
             {...registerField}
           />
         );
@@ -184,7 +176,7 @@ export function RecordField({
               onValueChange={handleSelectChange}
               disabled={readOnly}
             >
-              <SelectTrigger className="bg-background">
+              <SelectTrigger>
                 <SelectValue placeholder="Select..." />
               </SelectTrigger>
               <SelectContent>
@@ -214,7 +206,6 @@ export function RecordField({
           <div className="flex items-center space-x-2">
             <Checkbox
               id={field.api_name}
-              name={field.api_name}
               checked={currentValue === true}
               onCheckedChange={handleCheckboxChange}
               disabled={readOnly}
@@ -264,29 +255,11 @@ export function RecordField({
           );
         }
         
-        // Parse field options if they're a string
-        let targetObjectTypeId = '';
-        
-        if (field.options) {
-          if (typeof field.options === 'string') {
-            try {
-              const parsedOptions = JSON.parse(field.options);
-              targetObjectTypeId = parsedOptions.target_object_type_id || '';
-            } catch (e) {
-              console.error(`Failed to parse options for lookup field ${field.name}:`, e);
-            }
-          } else if (typeof field.options === 'object') {
-            targetObjectTypeId = (field.options as any).target_object_type_id || '';
-          }
-        }
-        
-        console.log(`Rendering lookup field ${field.name} with targetObjectTypeId:`, targetObjectTypeId);
-        
         return (
           <LookupField
             value={currentValue}
             onChange={handleFieldChange}
-            targetObjectTypeId={targetObjectTypeId}
+            targetObjectTypeId={field.options?.target_object_type_id || ''}
             disabled={readOnly}
           />
         );
@@ -295,12 +268,10 @@ export function RecordField({
           <Input
             type="text"
             id={field.api_name}
-            name={field.api_name}
             value={currentValue || ''}
             onChange={handleInputChange}
             readOnly={readOnly}
             disabled={readOnly}
-            className="bg-background"
             {...registerField}
           />
         );

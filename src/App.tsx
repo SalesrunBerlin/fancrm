@@ -1,3 +1,4 @@
+
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { Toaster } from "sonner"; 
 import { Layout } from "@/components/layout/Layout";
@@ -6,7 +7,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import Auth from "@/pages/Auth";
 import Dashboard from "@/pages/Dashboard";
 import Settings from "@/pages/Settings";
-import AppearanceSettingsPage from "@/pages/AppearanceSettingsPage";
 import ObjectManager from "@/pages/ObjectManager";
 import Structures from "@/pages/Structures";
 import ObjectRecordsList from "@/pages/ObjectRecordsList";
@@ -61,13 +61,6 @@ import TicketAnalysisPage from "./pages/TicketAnalysisPage";
 import LandingPage from "./pages/LandingPage";
 import Index from "./pages/Index";
 import OptimizedRecordsList from "./pages/OptimizedRecordsList";
-import ImportImpressum from "./pages/import/ImportImpressum";
-import { ImpressumScraper } from "@/components/ImpressumScraper";
-// Import OpenAI pages
-import OpenAISettings from "./pages/OpenAISettings";
-import OpenAIAssistant from "./pages/OpenAIAssistant";
-// Import new ConnectionsPage
-import ConnectionsPage from "./pages/ConnectionsPage";
 
 // Create a client
 const queryClient = new QueryClient({
@@ -146,7 +139,6 @@ function AppContent() {
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/profile" element={<ProfilePage />} />
-        <Route path="/profile/appearance" element={<AppearanceSettingsPage />} />
         <Route path="/help" element={<HelpPage />} />
         <Route path="/settings/object-manager" element={<ObjectManager />} />
         <Route path="/settings/object-manager/new" element={<CreateObjectPage />} />
@@ -173,13 +165,6 @@ function AppContent() {
         <Route path="/objects/:objectTypeId/new" element={<CreateRecordPage />} />
         <Route path="/objects/:objectTypeId/:recordId" element={<ObjectRecordDetail />} />
         <Route path="/objects/:objectTypeId/:recordId/edit" element={<EditRecordPage />} />
-        
-        {/* OpenAI routes */}
-        <Route path="/openai/settings" element={<OpenAISettings />} />
-        <Route path="/openai/assistant" element={<OpenAIAssistant />} />
-        
-        {/* Connections route */}
-        <Route path="/connections" element={<ConnectionsPage />} />
         
         {/* Ticket Queue routes */}
         <Route path="/ticket-queue" element={<TicketQueuePage />} />
@@ -209,10 +194,6 @@ function AppContent() {
         <Route path="/admin/users/:userId" element={<SuperAdminRoute><UserDetailPage /></SuperAdminRoute>} />
         <Route path="/admin/workspace" element={<SuperAdminRoute><AdminWorkspacePage /></SuperAdminRoute>} />
         <Route path="/admin/workspace/:workspaceId" element={<SuperAdminRoute><AdminWorkspacePage /></SuperAdminRoute>} />
-        
-        {/* Import routes */}
-        <Route path="/import/impressum" element={<ImportImpressum />} />
-        <Route path="/impressum-scraper" element={<ImpressumScraper />} />
       </Route>
       
       {/* Catch-all route for non-existent pages */}

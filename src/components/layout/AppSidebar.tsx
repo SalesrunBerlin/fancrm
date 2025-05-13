@@ -1,4 +1,3 @@
-
 import {
   Sidebar,
   SidebarContent,
@@ -10,7 +9,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { LayoutDashboard, Box, BarChart3, Settings, Archive, Users, HelpCircle, Shield, Plug } from "lucide-react";
+import { LayoutDashboard, Box, BarChart3, Settings, Archive, Users, HelpCircle, Shield } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useObjectTypes } from "@/hooks/useObjectTypes";
 import { useApplications } from "@/hooks/useApplications";
@@ -103,19 +102,6 @@ export function AppSidebar() {
                   <Link to="/reports" onClick={handleNavClick}>
                     <BarChart3 className="h-4 w-4" />
                     <span>Reports</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  asChild
-                  isActive={pathname === "/connections"}
-                  tooltip="Connections"
-                >
-                  <Link to="/connections" onClick={handleNavClick}>
-                    <Plug className="h-4 w-4" />
-                    <span>Connections</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>

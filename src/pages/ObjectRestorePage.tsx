@@ -38,13 +38,9 @@ export default function ObjectRestorePage() {
   if (!objectType) {
     return (
       <div className="max-w-3xl mx-auto p-6">
-        <Button 
-          variant="outline" 
-          asChild 
-          className="mb-6"
-        >
+        <Button variant="outline" asChild className="mb-6">
           <Link to="/settings/object-manager">
-            <ArrowLeft className="h-4 w-4 mr-2" />
+            <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Object Manager
           </Link>
         </Button>
@@ -61,13 +57,9 @@ export default function ObjectRestorePage() {
   
   return (
     <div className="max-w-3xl mx-auto p-6">
-      <Button 
-        variant="outline" 
-        asChild 
-        className="mb-6"
-      >
+      <Button variant="outline" asChild className="mb-6">
         <Link to={`/settings/objects/${objectTypeId}`}>
-          <ArrowLeft className="h-4 w-4 mr-2" />
+          <ArrowLeft className="mr-2 h-4 w-4" />
           Back to {objectType.name}
         </Link>
       </Button>
@@ -96,10 +88,7 @@ export default function ObjectRestorePage() {
         </CardContent>
         
         <CardFooter className="flex justify-end space-x-4">
-          <Button 
-            variant="outline" 
-            onClick={() => navigate(`/settings/objects/${objectTypeId}`)}
-          >
+          <Button variant="outline" onClick={() => navigate(`/settings/objects/${objectTypeId}`)}>
             Cancel
           </Button>
           <Button 
@@ -107,8 +96,14 @@ export default function ObjectRestorePage() {
             onClick={handleRestore}
             disabled={isRestoring}
           >
-            {isRestoring && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Restore Object
+            {isRestoring ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Restoring...
+              </>
+            ) : (
+              'Restore Object'
+            )}
           </Button>
         </CardFooter>
       </Card>

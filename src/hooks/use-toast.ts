@@ -1,32 +1,24 @@
 
-import { toast as sonnerToast, ToastT, type ToastOptions } from "sonner";
+// Re-export the toast from sonner for consistent usage across the app
+import { toast } from "sonner";
 
-// Custom toast function that wraps sonner's toast
-export const toast = (message: string, options?: ToastOptions) => {
-  return sonnerToast(message, {
-    ...options,
-    style: {
-      background: 'var(--color-popover)',
-      color: 'var(--color-popover-foreground)',
-      border: '1px solid var(--color-border)',
-      ...options?.style,
-    },
-  });
+export type ToastProps = {
+  title?: string;
+  description: React.ReactNode;
+  action?: React.ReactNode;
+  variant?: "default" | "destructive" | "success";
 };
 
-// Re-export toast variants and hooks from sonner
-toast.success = (message: string, options?: ToastOptions) => sonnerToast.success(message, options);
-toast.error = (message: string, options?: ToastOptions) => sonnerToast.error(message, options);
-toast.warning = (message: string, options?: ToastOptions) => sonnerToast.warning(message, options);
-toast.info = (message: string, options?: ToastOptions) => sonnerToast.info(message, options);
-toast.loading = (message: string, options?: ToastOptions) => sonnerToast.loading(message, options);
-toast.dismiss = sonnerToast.dismiss;
-toast.promise = sonnerToast.promise;
-
-// Compatibility with shadcn/ui toast component
-export function useToast() {
+// Create a useToast hook that returns the toast function
+export const useToast = () => {
   return {
-    toast,
-    dismiss: sonnerToast.dismiss
+    toast: (props: ToastProps) => {
+      return toast(props.description, {
+        ...props,
+      });
+    }
   };
-}
+};
+
+// Export the toast function directly
+export { toast };

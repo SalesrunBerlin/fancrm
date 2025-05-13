@@ -463,53 +463,6 @@ export type Database = {
           },
         ]
       }
-      companies: {
-        Row: {
-          address: string
-          created_at: string
-          email: string | null
-          id: string
-          name: string
-          owner_id: string | null
-          phone: string | null
-          source_url: string | null
-          updated_at: string
-          website: string | null
-        }
-        Insert: {
-          address: string
-          created_at?: string
-          email?: string | null
-          id?: string
-          name: string
-          owner_id?: string | null
-          phone?: string | null
-          source_url?: string | null
-          updated_at?: string
-          website?: string | null
-        }
-        Update: {
-          address?: string
-          created_at?: string
-          email?: string | null
-          id?: string
-          name?: string
-          owner_id?: string | null
-          phone?: string | null
-          source_url?: string | null
-          updated_at?: string
-          website?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "companies_owner_id_fkey"
-            columns: ["owner_id"]
-            isOneToOne: false
-            referencedRelation: "auth_users_view"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       contacts: {
         Row: {
           account_id: string | null
@@ -1291,57 +1244,6 @@ export type Database = {
           },
         ]
       }
-      persons: {
-        Row: {
-          company_id: string | null
-          created_at: string
-          email: string | null
-          full_name: string
-          id: string
-          owner_id: string | null
-          phone: string | null
-          position: string | null
-          updated_at: string
-        }
-        Insert: {
-          company_id?: string | null
-          created_at?: string
-          email?: string | null
-          full_name: string
-          id?: string
-          owner_id?: string | null
-          phone?: string | null
-          position?: string | null
-          updated_at?: string
-        }
-        Update: {
-          company_id?: string | null
-          created_at?: string
-          email?: string | null
-          full_name?: string
-          id?: string
-          owner_id?: string | null
-          phone?: string | null
-          position?: string | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "persons_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "companies"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "persons_owner_id_fkey"
-            columns: ["owner_id"]
-            isOneToOne: false
-            referencedRelation: "auth_users_view"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       profiles: {
         Row: {
           access_level: string | null
@@ -1999,48 +1901,6 @@ export type Database = {
           },
         ]
       }
-      scraper_feedback: {
-        Row: {
-          confidence: number | null
-          correct_value: string | null
-          created_at: string | null
-          domain: string | null
-          extraction_method: string | null
-          field_type: string
-          html_snippet: string | null
-          id: string
-          initial_value: string | null
-          url: string
-          user_hash: string | null
-        }
-        Insert: {
-          confidence?: number | null
-          correct_value?: string | null
-          created_at?: string | null
-          domain?: string | null
-          extraction_method?: string | null
-          field_type: string
-          html_snippet?: string | null
-          id?: string
-          initial_value?: string | null
-          url: string
-          user_hash?: string | null
-        }
-        Update: {
-          confidence?: number | null
-          correct_value?: string | null
-          created_at?: string | null
-          domain?: string | null
-          extraction_method?: string | null
-          field_type?: string
-          html_snippet?: string | null
-          id?: string
-          initial_value?: string | null
-          url?: string
-          user_hash?: string | null
-        }
-        Relationships: []
-      }
       sharing_collections: {
         Row: {
           created_at: string
@@ -2067,56 +1927,6 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
-      }
-      ui_theme_profile: {
-        Row: {
-          accent_color: string | null
-          density: string | null
-          font_family: string | null
-          font_weight: number | null
-          font_width: number | null
-          icon_pack: string | null
-          logo_url: string | null
-          primary_color: string | null
-          profile_id: string
-          radius_scale: string | null
-          shadow_level: string | null
-        }
-        Insert: {
-          accent_color?: string | null
-          density?: string | null
-          font_family?: string | null
-          font_weight?: number | null
-          font_width?: number | null
-          icon_pack?: string | null
-          logo_url?: string | null
-          primary_color?: string | null
-          profile_id: string
-          radius_scale?: string | null
-          shadow_level?: string | null
-        }
-        Update: {
-          accent_color?: string | null
-          density?: string | null
-          font_family?: string | null
-          font_weight?: number | null
-          font_width?: number | null
-          icon_pack?: string | null
-          logo_url?: string | null
-          primary_color?: string | null
-          profile_id?: string
-          radius_scale?: string | null
-          shadow_level?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "ui_theme_profile_profile_id_fkey"
-            columns: ["profile_id"]
-            isOneToOne: true
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       user_activities: {
         Row: {
@@ -2203,50 +2013,6 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "auth_users_view"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      user_connections: {
-        Row: {
-          config: Json
-          created_at: string
-          display_name: string
-          encrypted_key: string | null
-          id: string
-          is_active: boolean
-          profile_id: string
-          service_type: string
-          updated_at: string
-        }
-        Insert: {
-          config?: Json
-          created_at?: string
-          display_name: string
-          encrypted_key?: string | null
-          id?: string
-          is_active?: boolean
-          profile_id: string
-          service_type: string
-          updated_at?: string
-        }
-        Update: {
-          config?: Json
-          created_at?: string
-          display_name?: string
-          encrypted_key?: string | null
-          id?: string
-          is_active?: boolean
-          profile_id?: string
-          service_type?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "user_connections_profile_id_fkey"
-            columns: ["profile_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -2899,19 +2665,6 @@ export type Database = {
         }
         Returns: string
       }
-      decrypt_api_key: {
-        Args: { p_encrypted_key: string; p_secret: string }
-        Returns: {
-          decrypted_key: string
-        }[]
-      }
-      decrypt_connection: {
-        Args: { p_connection_id: string; p_secret: string }
-        Returns: {
-          service_type: string
-          decrypted_key: string
-        }[]
-      }
       delete_published_objects: {
         Args: Record<PropertyKey, never>
         Returns: undefined
@@ -2920,12 +2673,6 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
-      encrypt_api_key: {
-        Args: { p_key: string; p_secret: string }
-        Returns: {
-          encrypted_key: string
-        }[]
-      }
       evaluate_action_formula: {
         Args: {
           formula_expression: string
@@ -2933,10 +2680,6 @@ export type Database = {
           field_id: string
           action_id: string
         }
-        Returns: string
-      }
-      extract_domain: {
-        Args: { url: string }
         Returns: string
       }
       generate_auto_number: {
@@ -2985,16 +2728,6 @@ export type Database = {
         Args: { user_uuid: string; collection_uuid: string }
         Returns: boolean
       }
-      get_user_connection_types: {
-        Args: Record<PropertyKey, never>
-        Returns: {
-          service_type: string
-          has_connection: boolean
-          display_name: string
-          connection_id: string
-          is_active: boolean
-        }[]
-      }
       get_user_emails: {
         Args: Record<PropertyKey, never>
         Returns: {
@@ -3022,16 +2755,6 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
-      store_encrypted_connection: {
-        Args: {
-          p_service_type: string
-          p_display_name: string
-          p_api_key: string
-          p_config: Json
-          p_secret: string
-        }
-        Returns: boolean
-      }
       swap_tab_order: {
         Args: {
           tab_id_1: string
@@ -3043,14 +2766,6 @@ export type Database = {
       }
       sync_user_emails_to_profiles: {
         Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
-      update_openai_usage: {
-        Args: {
-          p_profile_id: string
-          p_prompt_tokens: number
-          p_completion_tokens: number
-        }
         Returns: undefined
       }
       user_is_admin_or_superadmin: {

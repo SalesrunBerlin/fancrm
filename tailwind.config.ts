@@ -26,43 +26,43 @@ export default {
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
         beauty: {
-          DEFAULT: 'var(--color-beauty)',
-          light: 'var(--color-beauty-light)',
-          dark: 'var(--color-beauty-dark)'
+          DEFAULT: '#6B8AFE',
+          light: '#E5EDFF',
+          dark: '#4B6FE6'
         },
         primary: {
-          DEFAULT: 'var(--color-primary)',
-          foreground: 'var(--color-primary-foreground)',
+          DEFAULT: 'hsl(var(--primary))',
+          foreground: 'hsl(var(--primary-foreground))',
         },
         secondary: {
-          DEFAULT: 'var(--color-secondary)',
-          foreground: 'var(--color-secondary-foreground)',
+          DEFAULT: 'hsl(var(--secondary))',
+          foreground: 'hsl(var(--secondary-foreground))',
         },
         destructive: {
-          DEFAULT: 'var(--color-destructive)',
-          foreground: 'var(--color-destructive-foreground)',
+          DEFAULT: 'hsl(var(--destructive))',
+          foreground: 'hsl(var(--destructive-foreground))',
         },
         muted: {
-          DEFAULT: 'var(--color-muted)',
-          foreground: 'var(--color-muted-foreground)',
+          DEFAULT: 'hsl(var(--muted))',
+          foreground: 'hsl(var(--muted-foreground))',
         },
         accent: {
-          DEFAULT: 'var(--color-accent)',
-          foreground: 'var(--color-accent-foreground)',
+          DEFAULT: 'hsl(var(--accent))',
+          foreground: 'hsl(var(--accent-foreground))',
         },
         popover: {
-          DEFAULT: "var(--color-popover)",
-          foreground: "var(--color-popover-foreground)",
+          DEFAULT: "hsl(var(--popover))",
+          foreground: "hsl(var(--popover-foreground))",
         },
         card: {
-          DEFAULT: "var(--color-card)",
-          foreground: "var(--color-card-foreground)",
+          DEFAULT: "hsl(var(--card))",
+          foreground: "hsl(var(--card-foreground))",
         },
       },
       borderRadius: {
-        lg: 'var(--radius-lg)',
-        md: 'var(--radius-md)',
-        sm: 'var(--radius-sm)'
+        lg: 'var(--radius)',
+        md: 'calc(var(--radius) - 2px)',
+        sm: 'calc(var(--radius) - 4px)'
       },
       keyframes: {
         'accordion-down': {
@@ -93,20 +93,5 @@ export default {
       }
     }
   },
-  plugins: [
-    require("tailwindcss-animate"),
-    function({ addBase }) {
-      addBase({
-        // Add custom CSS to support opacity modifiers with CSS variables
-        ':root': {
-          '--color-muted-opacity-50': 'rgba(var(--color-muted-rgb), 0.5)',
-        }
-      });
-    }
-  ],
-  // Add this to enable arbitrary values
-  safelist: [
-    'hover:bg-muted/50',
-    'data-[state=selected]:bg-muted'
-  ]
+  plugins: [require("tailwindcss-animate")],
 } satisfies Config;

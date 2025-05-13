@@ -43,25 +43,22 @@ export function KanbanCard({
     if (record.field_values) {
       // Try common name fields
       for (const field of commonNameFields) {
-        if (record.field_values[field] !== undefined && record.field_values[field] !== null && record.field_values[field] !== '') {
+        if (record.field_values[field]) {
           return record.field_values[field];
         }
       }
       
       // If no common field found, use the first non-empty field
-      // but skip the kanban category field to avoid displaying it as the record name
       const firstNonEmptyField = Object.entries(record.field_values)
-        .find(([key, value]) => {
-          return key !== record.kanbanCategoryField && value !== null && value !== undefined && value !== '';
-        });
+        .find(([_, value]) => value !== null && value !== undefined && value !== '');
       
       if (firstNonEmptyField) {
         return firstNonEmptyField[1];
       }
     }
     
-    // Fallback to record ID with shorter display
-    return `Record ${record.id.slice(0, 6)}`;
+    // Fallback to record ID
+    return `Record ${record.id.slice(0, 8)}`;
   };
 
   // Format field value based on field type
@@ -112,11 +109,8 @@ export function KanbanCard({
     }
   };
 
-  // Save the record name to ensure it doesn't change during drag operations
-  // IMPORTANT: We need to calculate and store this before any rendering happens
-  const recordName = getRecordName();
-  
   // Format record name for display with line break if it's too long
+  const recordName = getRecordName();
   const formatDisplayName = (name: string | any) => {
     if (typeof name !== 'string') {
       return String(name);
@@ -163,12 +157,6 @@ export function KanbanCard({
           <div className="mt-2 pt-2 border-t border-gray-100 text-xs">
             <div className="flex flex-wrap gap-x-3 gap-y-1">
               {safeVisibleFields.map((fieldApiName) => {
-                // Skip displaying the field if it's the same as the Kanban category field
-                // to avoid redundant information
-                if (fieldApiName === record.kanbanCategoryField) {
-                  return null;
-                }
-                
                 const formattedValue = formatFieldValue(fieldApiName, record.field_values?.[fieldApiName]);
                 
                 // Special handling for lookup fields

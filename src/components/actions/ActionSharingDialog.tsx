@@ -1,288 +1,237 @@
+
 import { useState, useEffect } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
-import { Copy, Check, Loader2, XCircle } from "lucide-react";
-import { useActions } from "@/hooks/useActions";
+import { Card, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
-import { FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { CalendarIcon, Copy, Link, Share2, Trash } from "lucide-react";
+import { toast } from "sonner";
+import { useActions } from "@/hooks/useActions";
+import { useAuth } from "@/contexts/AuthContext";
 import { PublicActionToken } from "@/types";
+import { Badge } from "@/components/ui/badge";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { format } from "date-fns";
 
 interface ActionSharingDialogProps {
   actionId: string;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+  actionName: string;
+  isPublic: boolean;
+  onPublicToggle: (isPublic: boolean) => void;
 }
 
-const tokenFormSchema = z.object({
-  tokenName: z.string().min(1, "Token name is required"),
-  expiration: z.enum(["1", "7", "30", "never"]).default("never"),
-});
-
-export function ActionSharingDialog({ actionId, open, onOpenChange }: ActionSharingDialogProps) {
-  const { createPublicToken, getActionTokens, deactivateToken } = useActions();
-  const [selectedToken, setSelectedToken] = useState<PublicActionToken | null>(null);
+export function ActionSharingDialog({ 
+  actionId, 
+  actionName, 
+  isPublic, 
+  onPublicToggle 
+}: ActionSharingDialogProps) {
+  const [open, setOpen] = useState(false);
   const [tokens, setTokens] = useState<PublicActionToken[]>([]);
+  const [tokenName, setTokenName] = useState("");
+  const [date, setDate] = useState<Date | undefined>(undefined);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [step, setStep] = useState<'initial' | 'create' | 'success'>('initial');
-  const [copied, setCopied] = useState(false);
-
-  const form = useForm<z.infer<typeof tokenFormSchema>>({
-    resolver: zodResolver(tokenFormSchema),
-    defaultValues: {
-      tokenName: 'Public Link',
-      expiration: 'never',
-    },
-  });
   
-  const { control, handleSubmit, setValue, watch } = form;
-  const tokenName = watch("tokenName");
-  const expiration = watch("expiration");
+  const { user } = useAuth();
+  const { createPublicToken, getActionTokens, deactivateToken } = useActions();
 
-  useEffect(() => {
-    if (open) {
-      loadTokens();
-      setStep('initial');
-      setSelectedToken(null);
-      form.reset();
-    }
-  }, [open, actionId, form]);
-
-  const loadTokens = async () => {
-    try {
-      setIsLoading(true);
-      const tokensData = await getActionTokens(actionId);
-      setTokens(tokensData);
-    } catch (err: any) {
-      setError("Failed to load tokens");
-      console.error(err);
-    } finally {
-      setIsLoading(false);
+  const fetchTokens = async () => {
+    if (actionId && isPublic) {
+      const fetchedTokens = await getActionTokens(actionId);
+      setTokens(fetchedTokens);
     }
   };
 
-  const createNewToken = async () => {
+  useEffect(() => {
+    if (open) {
+      fetchTokens();
+    }
+  }, [open, actionId, isPublic]);
+
+  const handleCreateToken = async () => {
+    if (!user || !actionId) return;
+    
     try {
       setIsLoading(true);
-      setError(null);
-      
-      let expiryDate: Date | undefined = undefined;
-      if (expiration !== 'never') {
-        expiryDate = new Date();
-        expiryDate.setDate(expiryDate.getDate() + parseInt(expiration));
-      }
-      
-      const token = await createPublicToken.mutateAsync({
+      await createPublicToken.mutateAsync({
         actionId,
-        name: tokenName || 'Public Link',
-        expiresAt: expiryDate
+        name: tokenName || undefined,
+        expiresAt: date
       });
       
-      setTokens(prev => [...prev, token]);
-      setSelectedToken(token);
-      setStep('success');
-    } catch (err: any) {
-      console.error("Error creating token:", err);
-      setError(err.message || "Failed to create token");
+      setTokenName("");
+      setDate(undefined);
+      fetchTokens();
+    } catch (error) {
+      console.error("Error creating token:", error);
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleDeactivateToken = async (tokenId: string) => {
+    if (!user) return;
+    
     try {
       await deactivateToken.mutateAsync(tokenId);
-      setSelectedToken(null);
-      // Refresh tokens list
-      loadTokens();
-    } catch (err: any) {
-      console.error("Error deactivating token:", err);
-      setError(err.message || "Failed to deactivate token");
+      fetchTokens();
+    } catch (error) {
+      console.error("Error deactivating token:", error);
     }
   };
 
-  const handleCopyClick = () => {
-    if (selectedToken) {
-      const baseUrl = window.location.origin;
-      const publicLink = `${baseUrl}/public/action/${selectedToken.token}`;
-      navigator.clipboard.writeText(publicLink)
-        .then(() => {
-          setCopied(true);
-          setTimeout(() => setCopied(false), 2000);
-        })
-        .catch(err => {
-          console.error("Failed to copy link:", err);
-          toast.error("Failed to copy link to clipboard.");
-        });
-    }
+  const copyToClipboard = (token: string) => {
+    const baseUrl = window.location.origin;
+    const url = `${baseUrl}/public-action/${token}`;
+    
+    navigator.clipboard.writeText(url)
+      .then(() => toast.success("Link copied to clipboard"))
+      .catch(err => {
+        console.error("Failed to copy link:", err);
+        toast.error("Failed to copy link");
+      });
+  };
+
+  // Fixed toggle handler to prevent event propagation issues
+  const handleToggleChange = (checked: boolean) => {
+    onPublicToggle(checked);
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline" size="sm" className="ml-2">
+          <Share2 className="h-4 w-4 mr-2" />
+          Share
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
-          <DialogTitle>Share Action</DialogTitle>
+          <DialogTitle>Share Action: {actionName}</DialogTitle>
           <DialogDescription>
-            Create a public link for this action to share with others.
+            Create a public link to allow anyone to submit data using this action.
           </DialogDescription>
         </DialogHeader>
-
-        {error && (
-          <div className="rounded-md bg-red-100 p-3 mb-4">
-            <div className="flex">
-              <div className="flex-shrink-0">
-                <XCircle className="h-5 w-5 text-red-400" />
+        
+        {/* Fixed switch implementation with better accessibility */}
+        <div className="flex items-center space-x-2 py-4">
+          <div className="flex items-center space-x-2">
+            <Switch 
+              id="public-action-toggle" 
+              checked={isPublic}
+              onCheckedChange={handleToggleChange}
+            />
+            <Label 
+              htmlFor="public-action-toggle" 
+              className="cursor-pointer"
+            >
+              Make this action publicly available
+            </Label>
+          </div>
+        </div>
+        
+        {isPublic && (
+          <>
+            <div className="grid gap-4">
+              <div>
+                <h3 className="text-lg font-medium">Public links</h3>
+                <p className="text-sm text-muted-foreground">
+                  Create and manage shareable links for this action.
+                </p>
               </div>
-              <div className="ml-3">
-                <h3 className="text-sm font-medium text-red-800">
-                  Error
-                </h3>
-                <div className="mt-2 text-sm text-red-700">
-                  <p>{error}</p>
+              
+              <div className="grid gap-2">
+                <div className="grid grid-cols-3 gap-2">
+                  <Input
+                    placeholder="Link name (optional)"
+                    value={tokenName}
+                    onChange={(e) => setTokenName(e.target.value)}
+                    className="col-span-2"
+                  />
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant={"outline"}
+                        className="justify-start text-left font-normal"
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {date ? format(date, "PPP") : <span>Expires on...</span>}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                      <Calendar
+                        mode="single"
+                        selected={date}
+                        onSelect={setDate}
+                        initialFocus
+                        disabled={(date) =>
+                          date < new Date(new Date().setHours(0, 0, 0, 0))
+                        }
+                      />
+                    </PopoverContent>
+                  </Popover>
                 </div>
+                <Button onClick={handleCreateToken} disabled={isLoading}>
+                  Create Public Link
+                </Button>
+              </div>
+              
+              <div className="space-y-2 mt-4">
+                {tokens.length > 0 ? (
+                  tokens.map(token => (
+                    <Card key={token.id}>
+                      <CardContent className="p-4 flex items-center justify-between">
+                        <div className="flex flex-col">
+                          <div className="font-medium flex items-center">
+                            <Link className="h-4 w-4 mr-2" />
+                            {token.name || 'Unnamed link'}
+                            {!token.is_active && (
+                              <Badge variant="outline" className="ml-2">Inactive</Badge>
+                            )}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            Created: {new Date(token.created_at).toLocaleString()}
+                          </div>
+                          {token.expires_at && (
+                            <div className="text-sm text-muted-foreground">
+                              Expires: {new Date(token.expires_at).toLocaleString()}
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex gap-2">
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            onClick={() => copyToClipboard(token.token)}
+                            disabled={!token.is_active}
+                          >
+                            <Copy className="h-4 w-4" />
+                          </Button>
+                          {token.is_active && (
+                            <Button 
+                              variant="ghost" 
+                              size="icon"
+                              onClick={() => handleDeactivateToken(token.id)}
+                            >
+                              <Trash className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))
+                ) : (
+                  <p className="text-center py-4 text-muted-foreground">
+                    No public links created yet
+                  </p>
+                )}
               </div>
             </div>
-          </div>
-        )}
-
-        {isLoading ? (
-          <div className="flex justify-center py-4">
-            <Loader2 className="h-6 w-6 animate-spin" />
-          </div>
-        ) : (
-          <>
-            {step === 'initial' && (
-              <div className="grid gap-4 py-4">
-                {tokens.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">
-                    No public links have been created for this action yet.
-                  </p>
-                ) : (
-                  <div className="space-y-2">
-                    <Label htmlFor="tokens">Existing Links</Label>
-                    <ul className="list-none pl-0 space-y-1">
-                      {tokens.map(token => (
-                        <li key={token.id} className="flex items-center justify-between p-2 rounded-md bg-muted hover:bg-muted/80 transition-colors cursor-pointer" onClick={() => setSelectedToken(token)}>
-                          <span>{token.name || 'Public Link'}</span>
-                          <span className="text-xs text-muted-foreground">Created: {new Date(token.created_at).toLocaleDateString()}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-                <Button onClick={() => setStep('create')}>Create New Link</Button>
-              </div>
-            )}
-
-            {step === 'create' && (
-              <div className="grid gap-4 py-4">
-                <FormField
-                  control={control}
-                  name="tokenName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Link Name</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Public Link" {...field} />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={control}
-                  name="expiration"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Expiration</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select expiration" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="1">1 Day</SelectItem>
-                          <SelectItem value="7">7 Days</SelectItem>
-                          <SelectItem value="30">30 Days</SelectItem>
-                          <SelectItem value="never">Never</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </FormItem>
-                  )}
-                />
-              </div>
-            )}
-
-            {step === 'success' && selectedToken && (
-              <div className="grid gap-4 py-4">
-                <div className="space-y-2">
-                  <Label htmlFor="public-link">Public Link</Label>
-                  <div className="flex items-center">
-                    <Input
-                      id="public-link"
-                      className="cursor-not-allowed"
-                      value={`${window.location.origin}/public/action/${selectedToken.token}`}
-                      disabled
-                    />
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="ml-2"
-                      onClick={handleCopyClick}
-                      disabled={copied}
-                    >
-                      {copied ? (
-                        <Check className="h-4 w-4 mr-2" />
-                      ) : (
-                        <Copy className="h-4 w-4 mr-2" />
-                      )}
-                      {copied ? "Copied!" : "Copy"}
-                    </Button>
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    Share this link with anyone to allow them to use this action.
-                  </p>
-                </div>
-              </div>
-            )}
           </>
         )}
-
-        <DialogFooter>
-          {step === 'initial' && tokens.length > 0 && selectedToken ? (
-            <>
-              <Button variant="destructive" disabled={isLoading} onClick={() => handleDeactivateToken(selectedToken.id)}>
-                Deactivate Link
-              </Button>
-              <Button type="button" onClick={() => onOpenChange(false)}>Close</Button>
-            </>
-          ) : step === 'create' ? (
-            <>
-              <Button type="button" variant="outline" onClick={() => setStep('initial')}>
-                Cancel
-              </Button>
-              <Button type="submit" disabled={isLoading} onClick={handleSubmit(createNewToken)}>
-                Create Link
-              </Button>
-            </>
-          ) : (
-            <Button type="button" onClick={() => onOpenChange(false)}>Close</Button>
-          )}
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

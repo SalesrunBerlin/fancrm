@@ -1,129 +1,213 @@
-import { useState } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
-import { useWorkspaces } from "@/hooks/useWorkspaces";
-import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useToast } from '@/hooks/use-toast';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { ThemedButton } from '@/components/ui/themed-button';
+import { supabase } from '@/integrations/supabase/client';
+import { Loader2, CopyIcon, CheckIcon } from 'lucide-react';
 
 interface WorkspaceSettingsProps {
   workspaceId: string;
-  workspaceName: string;
 }
 
-export function WorkspaceSettings({ workspaceId, workspaceName }: WorkspaceSettingsProps) {
-  const [open, setOpen] = useState(false);
-  const [name, setName] = useState(workspaceName);
-  const [deleteOpen, setDeleteOpen] = useState(false);
-  const { updateWorkspace, deleteWorkspace } = useWorkspaces();
-  const [isUpdating, setIsUpdating] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
+export function WorkspaceSettings({ workspaceId }: WorkspaceSettingsProps) {
+  const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [workspace, setWorkspace] = useState<any>(null);
+  const [copied, setCopied] = useState(false);
+  
+  const [formData, setFormData] = useState({
+    name: '',
+    description: '',
+    welcome_message: '',
+    primary_color: '#3b82f6',
+  });
 
-  const handleUpdate = async () => {
-    setIsUpdating(true);
+  useEffect(() => {
+    fetchWorkspaceData();
+  }, [workspaceId]);
+
+  const fetchWorkspaceData = async () => {
     try {
-      await updateWorkspace.mutateAsync({ id: workspaceId, name });
-      toast.success("Workspace updated successfully");
-      setOpen(false);
+      setIsLoading(true);
+      const { data, error } = await supabase
+        .from('workspaces')
+        .select('*')
+        .eq('id', workspaceId)
+        .single();
+
+      if (error) throw error;
+      
+      setWorkspace(data);
+      setFormData({
+        name: data.name || '',
+        description: data.description || '',
+        welcome_message: data.welcome_message || 'Willkommen! Bitte geben Sie Ihre Zugangsdaten ein, um auf den Workspace zuzugreifen.',
+        primary_color: data.primary_color || '#3b82f6',
+      });
     } catch (error) {
-      toast.error("Failed to update workspace");
+      console.error('Error fetching workspace data:', error);
+      toast({
+        description: 'Workspace-Daten konnten nicht geladen werden'
+      });
     } finally {
-      setIsUpdating(false);
+      setIsLoading(false);
     }
   };
 
-  const handleDelete = async () => {
-    setIsDeleting(true);
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     try {
-      await deleteWorkspace.mutateAsync(workspaceId);
-      toast.success("Workspace deleted successfully");
-      setDeleteOpen(false);
+      setIsSaving(true);
+      
+      const { error } = await supabase
+        .from('workspaces')
+        .update({
+          name: formData.name,
+          description: formData.description,
+          welcome_message: formData.welcome_message,
+          primary_color: formData.primary_color,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', workspaceId);
+
+      if (error) throw error;
+      
+      toast({
+        description: 'Workspace-Einstellungen wurden aktualisiert'
+      });
     } catch (error) {
-      toast.error("Failed to delete workspace");
+      console.error('Error updating workspace:', error);
+      toast({
+        description: 'Workspace-Einstellungen konnten nicht aktualisiert werden'
+      });
     } finally {
-      setIsDeleting(false);
+      setIsSaving(false);
     }
   };
+
+  const getLoginUrl = () => {
+    const origin = window.location.origin;
+    return `${origin}/auth/${workspaceId}`;
+  };
+
+  const copyLoginUrl = () => {
+    navigator.clipboard.writeText(getLoginUrl());
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
-    <>
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogTrigger asChild>
-          <Button variant="outline">Edit Workspace</Button>
-        </DialogTrigger>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>
-              Edit Workspace Settings
-            </DialogTitle>
-            <DialogDescription>
-              Make changes to your workspace here. Click save when you're done.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="name" className="text-right">
-                Name
-              </Label>
+    <Card>
+      <CardHeader>
+        <CardTitle>Workspace-Einstellungen</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="space-y-2">
+            <Label htmlFor="name">Workspace-Name</Label>
+            <Input
+              id="name"
+              name="name"
+              value={formData.name}
+              onChange={handleChange}
+              required
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="description">Beschreibung</Label>
+            <Input
+              id="description"
+              name="description"
+              value={formData.description}
+              onChange={handleChange}
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="welcome_message">Willkommensnachricht</Label>
+            <Input
+              id="welcome_message"
+              name="welcome_message"
+              value={formData.welcome_message}
+              onChange={handleChange}
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="primary_color">Primärfarbe</Label>
+            <div className="flex gap-2">
               <Input
-                id="name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="col-span-3"
+                id="primary_color"
+                name="primary_color"
+                type="color"
+                value={formData.primary_color}
+                onChange={handleChange}
+                className="w-12 h-10 p-1"
+              />
+              <Input
+                value={formData.primary_color}
+                onChange={handleChange}
+                name="primary_color"
+                className="flex-1"
               />
             </div>
           </div>
-          <DialogFooter>
-            <Button type="button" variant="secondary" onClick={() => setOpen(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" onClick={handleUpdate} disabled={isUpdating}>
-              {isUpdating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Save changes
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
-      <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
-        <DialogTrigger asChild>
-          <Button variant="destructive">Delete Workspace</Button>
-        </DialogTrigger>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>
-              Delete Workspace
-            </DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete this workspace? All data will be permanently
-              removed.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button type="button" variant="secondary" onClick={() => setDeleteOpen(false)}>
-              Cancel
-            </Button>
-            <Dialog
-              open={deleteOpen}
-              onOpenChange={setDeleteOpen}
-            >
-              <Button type="submit" variant="destructive" onClick={handleDelete} disabled={isDeleting}>
-                {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Confirm Deletion
+          <div className="space-y-2">
+            <Label htmlFor="loginUrl">Login-URL</Label>
+            <div className="flex items-center gap-2">
+              <Input
+                id="loginUrl"
+                value={getLoginUrl()}
+                readOnly
+                className="flex-1"
+              />
+              <Button 
+                type="button" 
+                variant="outline" 
+                size="icon"
+                onClick={copyLoginUrl}
+                className="h-10 w-10"
+              >
+                {copied ? <CheckIcon className="h-4 w-4" /> : <CopyIcon className="h-4 w-4" />}
               </Button>
-            </Dialog>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Diese URL können Sie an Ihre Benutzer weitergeben, damit sie sich direkt in Ihrem Workspace anmelden können.
+            </p>
+          </div>
+          
+          <ThemedButton type="submit" disabled={isSaving} useUserColor={false}>
+            {isSaving ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Speichern...
+              </>
+            ) : (
+              'Speichern'
+            )}
+          </ThemedButton>
+        </form>
+      </CardContent>
+    </Card>
   );
 }

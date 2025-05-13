@@ -8,11 +8,13 @@ interface DataPaginationProps {
   currentPage: number;
   totalPages: number;
   pageSize: number;
-  totalItems?: number;
-  filteredItemsCount?: number;
+  totalItems: number;
+  filteredItemsCount?: number;  // Added new prop for filtered count
   onPageChange: (page: number) => void;
-  onPageSizeChange: (size: number) => void;
-  showFilterStatus?: boolean;
+  onPageSizeChange: (pageSize: number) => void;
+  pageSizeOptions?: number[];
+  className?: string;
+  showFilterStatus?: boolean;  // Show filter status indicator
 }
 
 export function DataPagination({
@@ -20,115 +22,75 @@ export function DataPagination({
   totalPages,
   pageSize,
   totalItems,
-  filteredItemsCount,
+  filteredItemsCount,  // New prop
   onPageChange,
   onPageSizeChange,
-  showFilterStatus = false
+  pageSizeOptions = [10, 20, 50, 100],
+  className = "",
+  showFilterStatus = false  // Default to false
 }: DataPaginationProps) {
-  const pageSizeOptions = [5, 10, 25, 50, 100];
-
-  // Calculate the range of items we're showing
-  const startItem = totalPages > 0 ? (currentPage - 1) * pageSize + 1 : 0;
-  const endItem = Math.min(startItem + pageSize - 1, filteredItemsCount ?? totalItems ?? 0);
-
-  // Function to generate page numbers to display
+  // Use filteredItemsCount if provided, otherwise use totalItems
+  const displayCount = typeof filteredItemsCount === 'number' ? filteredItemsCount : totalItems;
+  const startItem = Math.min(displayCount, (currentPage - 1) * pageSize + 1);
+  const endItem = Math.min(displayCount, currentPage * pageSize);
+  
+  // Enhanced pagination with visible page numbers
   const getPageNumbers = () => {
-    const maxPageButtons = 5;
-    const pages: (number | string)[] = [];
+    const visiblePages = 5; // Show 5 pages at a time
+    let startPage = Math.max(1, currentPage - Math.floor(visiblePages / 2));
+    let endPage = startPage + visiblePages - 1;
     
-    if (totalPages <= maxPageButtons) {
-      // If we have fewer pages than buttons, show all pages
-      for (let i = 1; i <= totalPages; i++) {
-        pages.push(i);
-      }
-    } else {
-      // Always show first page
-      pages.push(1);
-      
-      // Calculate start and end of page range around current page
-      const leftSide = Math.floor(maxPageButtons / 2);
-      const rightSide = Math.ceil(maxPageButtons / 2) - 1;
-      
-      if (currentPage > leftSide + 1) {
-        pages.push('...');
-      }
-      
-      // Calculate page range
-      let start = Math.max(2, currentPage - leftSide);
-      let end = Math.min(totalPages - 1, currentPage + rightSide);
-      
-      // Adjust if range is too small from either end
-      if (start <= 3) {
-        end = Math.min(start + maxPageButtons - 3, totalPages - 1);
-        start = 2;
-      }
-      
-      if (end >= totalPages - 2) {
-        start = Math.max(end - maxPageButtons + 3, 2);
-      }
-      
-      // Add pages in range
-      for (let i = start; i <= end; i++) {
-        pages.push(i);
-      }
-      
-      // Add ellipsis if needed
-      if (end < totalPages - 1) {
-        pages.push('...');
-      }
-      
-      // Always show last page if we have multiple pages
-      if (totalPages > 1) {
-        pages.push(totalPages);
-      }
+    if (endPage > totalPages) {
+      endPage = totalPages;
+      startPage = Math.max(1, endPage - visiblePages + 1);
     }
     
-    return pages;
+    return Array.from({ length: endPage - startPage + 1 }, (_, i) => startPage + i);
   };
-
+  
   return (
-    <div className="flex flex-col md:flex-row gap-4 items-center justify-between px-2 py-1">
-      <div className="flex items-center gap-2 text-sm text-muted-foreground order-2 md:order-1">
-        <div>
-          {showFilterStatus && filteredItemsCount !== undefined && totalItems !== undefined && filteredItemsCount < totalItems ? (
-            <span>
-              Showing {filteredItemsCount} filtered results of {totalItems} total records 
-              ({startItem}-{endItem} of {filteredItemsCount})
-            </span>
-          ) : (
-            <span>
-              Showing {startItem}-{endItem} of {totalItems ?? filteredItemsCount ?? 0}
-            </span>
-          )}
-        </div>
-        
-        <div className="flex items-center gap-1.5">
-          <span className="text-xs">Items per page:</span>
+    <div className={`flex flex-col sm:flex-row sm:items-center sm:justify-between px-2 ${className}`}>
+      <div className="flex items-center space-x-6 mb-2 sm:mb-0">
+        <div className="flex items-center space-x-2">
+          <span className="text-sm text-muted-foreground">Rows per page</span>
           <Select
             value={pageSize.toString()}
-            onValueChange={(value) => onPageSizeChange(Number(value))}
+            onValueChange={(val) => onPageSizeChange(parseInt(val))}
           >
             <SelectTrigger className="h-8 w-[70px]">
-              <SelectValue placeholder={pageSize} />
+              <SelectValue placeholder={pageSize.toString()} />
             </SelectTrigger>
-            <SelectContent>
-              {pageSizeOptions.map((size) => (
-                <SelectItem key={size} value={size.toString()}>
-                  {size}
+            <SelectContent side="top">
+              {pageSizeOptions.map((option) => (
+                <SelectItem key={option} value={option.toString()}>
+                  {option}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
+        
+        <div className="text-sm text-muted-foreground">
+          {displayCount > 0 ? (
+            <>
+              {startItem}-{endItem} of {displayCount}
+              {showFilterStatus && filteredItemsCount !== undefined && filteredItemsCount !== totalItems && (
+                <span className="ml-1 text-xs">(filtered from {totalItems})</span>
+              )}
+            </>
+          ) : (
+            "No items"
+          )}
+        </div>
       </div>
-
-      <div className="flex items-center gap-1 md:justify-end order-1 md:order-2">
+      
+      <div className="flex items-center space-x-1 sm:space-x-2">
         <Button
           variant="outline"
           size="icon"
           className="h-8 w-8"
           onClick={() => onPageChange(1)}
-          disabled={currentPage === 1}
+          disabled={currentPage <= 1}
         >
           <ChevronsLeft className="h-4 w-4" />
           <span className="sr-only">First page</span>
@@ -138,42 +100,38 @@ export function DataPagination({
           size="icon"
           className="h-8 w-8"
           onClick={() => onPageChange(currentPage - 1)}
-          disabled={currentPage === 1}
+          disabled={currentPage <= 1}
         >
           <ChevronLeft className="h-4 w-4" />
           <span className="sr-only">Previous page</span>
         </Button>
         
-        <div className="hidden sm:flex gap-1">
-          {getPageNumbers().map((page, index) => (
-            typeof page === 'number' ? (
-              <Button
-                key={index}
-                variant={currentPage === page ? "default" : "outline"}
-                size="icon"
-                className="h-8 w-8"
-                onClick={() => onPageChange(page)}
-              >
-                {page}
-              </Button>
-            ) : (
-              <span key={index} className="flex items-center justify-center w-8">
-                {page}
-              </span>
-            )
+        {/* Visible page numbers */}
+        <div className="hidden sm:flex items-center space-x-1">
+          {getPageNumbers().map((pageNum) => (
+            <Button
+              key={pageNum}
+              variant={pageNum === currentPage ? "default" : "outline"}
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => onPageChange(pageNum)}
+            >
+              {pageNum}
+            </Button>
           ))}
         </div>
-
-        <span className="sm:hidden text-sm mx-2">
-          Page {currentPage} of {totalPages}
-        </span>
+        
+        {/* For mobile, just show current/total */}
+        <div className="sm:hidden text-sm font-medium px-2">
+          Page {currentPage} of {Math.max(1, totalPages)}
+        </div>
         
         <Button
           variant="outline"
           size="icon"
           className="h-8 w-8"
           onClick={() => onPageChange(currentPage + 1)}
-          disabled={currentPage === totalPages}
+          disabled={currentPage >= totalPages}
         >
           <ChevronRight className="h-4 w-4" />
           <span className="sr-only">Next page</span>
@@ -183,7 +141,7 @@ export function DataPagination({
           size="icon"
           className="h-8 w-8"
           onClick={() => onPageChange(totalPages)}
-          disabled={currentPage === totalPages}
+          disabled={currentPage >= totalPages}
         >
           <ChevronsRight className="h-4 w-4" />
           <span className="sr-only">Last page</span>

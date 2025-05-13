@@ -11,8 +11,6 @@ const Auth = () => {
   const { user, isLoading, signIn, signUp } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [isSigningUp, setIsSigningUp] = useState(false);
@@ -60,8 +58,13 @@ const Auth = () => {
     setIsSigningIn(true);
 
     try {
-      await signIn(email, password);
-      navigate('/dashboard');
+      const { error } = await signIn({ email, password });
+      if (error) {
+        setError(`Anmeldung fehlgeschlagen: ${error.message}`);
+        console.error('Error signing in:', error);
+      } else {
+        navigate('/dashboard');
+      }
     } catch (error: any) {
       console.error('Error signing in:', error);
       setError('Anmeldung fehlgeschlagen. Bitte überprüfen Sie Ihre Zugangsdaten.');
@@ -76,9 +79,14 @@ const Auth = () => {
     setIsSigningUp(true);
 
     try {
-      await signUp(email, password, firstName, lastName);
-      setActiveTab('signin');
-      setError('Bitte bestätigen Sie Ihre E-Mail-Adresse. Anschließend können Sie sich anmelden.');
+      const { error, data } = await signUp({ email, password });
+      if (error) {
+        setError(`Registrierung fehlgeschlagen: ${error.message}`);
+        console.error('Error signing up:', error);
+      } else if (data) {
+        setActiveTab('signin');
+        setError('Bitte bestätigen Sie Ihre E-Mail-Adresse. Anschließend können Sie sich anmelden.');
+      }
     } catch (error: any) {
       console.error('Error signing up:', error);
       setError('Registrierung fehlgeschlagen. Bitte versuchen Sie es erneut.');
@@ -188,34 +196,6 @@ const Auth = () => {
               </form>
             ) : (
               <form onSubmit={handleSignUp} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label htmlFor="firstName" className="block text-sm font-medium mb-1">
-                      Vorname
-                    </label>
-                    <Input
-                      id="firstName"
-                      type="text"
-                      value={firstName}
-                      onChange={(e) => setFirstName(e.target.value)}
-                      placeholder="Max"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="lastName" className="block text-sm font-medium mb-1">
-                      Nachname
-                    </label>
-                    <Input
-                      id="lastName"
-                      type="text"
-                      value={lastName}
-                      onChange={(e) => setLastName(e.target.value)}
-                      placeholder="Mustermann"
-                      required
-                    />
-                  </div>
-                </div>
                 <div>
                   <label htmlFor="email-signup" className="block text-sm font-medium mb-1">
                     E-Mail
