@@ -2943,6 +2943,13 @@ export type Database = {
         Args: { field_id: string; prefix?: string; format_pattern?: string }
         Returns: string
       }
+      get_all_picklist_values: {
+        Args: { object_type_id: string }
+        Returns: {
+          field_id: string
+          picklist_values: Json
+        }[]
+      }
       get_auth_logs: {
         Args: { target_user_id: string }
         Returns: {
