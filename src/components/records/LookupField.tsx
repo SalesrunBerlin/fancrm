@@ -50,14 +50,14 @@ export function LookupField({
   return (
     <div className="relative">
       <Select
-        value={value}
+        value={value || ""}
         onValueChange={handleChange}
         disabled={disabled}
       >
-        <SelectTrigger>
+        <SelectTrigger className="bg-white dark:bg-slate-900">
           <SelectValue placeholder="Select..." />
         </SelectTrigger>
-        <SelectContent>
+        <SelectContent className="bg-white dark:bg-slate-900 z-50">
           {records?.map((record) => (
             <SelectItem key={record.id} value={record.id}>
               {record.display_value}

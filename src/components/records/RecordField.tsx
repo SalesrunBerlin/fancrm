@@ -4,7 +4,7 @@ import { ObjectField } from '@/types/ObjectFieldTypes';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useFieldPicklistValues } from '@/hooks/useFieldPicklistValues';
 import { Loader2, X } from 'lucide-react';
@@ -58,6 +58,14 @@ export function RecordField({
     }
   };
 
+  // Debug output to monitor form values
+  useEffect(() => {
+    if (form) {
+      const watchedValue = form.watch(field.api_name);
+      console.log(`Field ${field.name} (${field.api_name}): watched value =`, watchedValue);
+    }
+  }, [form, field.api_name, field.name]);
+
   // Handle input field changes (text, number, email, etc.)
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     handleFieldChange(e.target.value);
@@ -107,11 +115,28 @@ export function RecordField({
       case 'email':
       case 'phone':
       case 'url':
+        if (form) {
+          return (
+            <Controller
+              name={field.api_name}
+              control={form.control}
+              render={({ field: controllerField }) => (
+                <Input
+                  {...controllerField}
+                  id={field.api_name}
+                  type={field.data_type === 'email' ? 'email' : 'text'}
+                  readOnly={readOnly}
+                  disabled={readOnly}
+                />
+              )}
+            />
+          );
+        }
         return (
           <Input
             type={field.data_type === 'email' ? 'email' : 'text'}
             id={field.api_name}
-            value={currentValue || ''}
+            defaultValue={currentValue || ''}
             onChange={handleInputChange}
             readOnly={readOnly}
             disabled={readOnly}
@@ -119,10 +144,27 @@ export function RecordField({
           />
         );
       case 'textarea':
+        if (form) {
+          return (
+            <Controller
+              name={field.api_name}
+              control={form.control}
+              render={({ field: controllerField }) => (
+                <Textarea
+                  {...controllerField}
+                  id={field.api_name}
+                  className="min-h-[100px]"
+                  readOnly={readOnly}
+                  disabled={readOnly}
+                />
+              )}
+            />
+          );
+        }
         return (
           <Textarea
             id={field.api_name}
-            value={currentValue || ''}
+            defaultValue={currentValue || ''}
             onChange={handleInputChange}
             readOnly={readOnly}
             disabled={readOnly}
@@ -132,12 +174,32 @@ export function RecordField({
         );
       case 'rich_text':
       case 'long_text':
-        return readOnly ? (
-          <div 
-            className="p-3 border rounded-md bg-background text-black dark:text-white" 
-            dangerouslySetInnerHTML={{ __html: currentValue || '' }}
-          />
-        ) : (
+        if (readOnly) {
+          return (
+            <div 
+              className="p-3 border rounded-md bg-background text-black dark:text-white" 
+              dangerouslySetInnerHTML={{ __html: currentValue || '' }}
+            />
+          );
+        }
+        if (form) {
+          return (
+            <Controller
+              name={field.api_name}
+              control={form.control}
+              render={({ field: controllerField }) => (
+                <RichTextEditor
+                  value={controllerField.value || ''}
+                  onChange={(content) => {
+                    controllerField.onChange(content);
+                  }}
+                  placeholder={`Enter ${field.name}...`}
+                />
+              )}
+            />
+          );
+        }
+        return (
           <RichTextEditor
             value={currentValue || ''}
             onChange={handleRichTextChange}
@@ -145,11 +207,28 @@ export function RecordField({
           />
         );
       case 'number':
+        if (form) {
+          return (
+            <Controller
+              name={field.api_name}
+              control={form.control}
+              render={({ field: controllerField }) => (
+                <Input
+                  {...controllerField}
+                  id={field.api_name}
+                  type="number"
+                  readOnly={readOnly}
+                  disabled={readOnly}
+                />
+              )}
+            />
+          );
+        }
         return (
           <Input
             type="number"
             id={field.api_name}
-            value={currentValue || ''}
+            defaultValue={currentValue || ''}
             onChange={handleInputChange}
             readOnly={readOnly}
             disabled={readOnly}
@@ -169,6 +248,49 @@ export function RecordField({
           </div>;
         }
         
+        if (form) {
+          return (
+            <div className="relative">
+              <Controller
+                name={field.api_name}
+                control={form.control}
+                render={({ field: controllerField }) => (
+                  <>
+                    <Select 
+                      value={controllerField.value || ""}
+                      onValueChange={controllerField.onChange}
+                      disabled={readOnly}
+                    >
+                      <SelectTrigger className="bg-white dark:bg-slate-900">
+                        <SelectValue placeholder="Select..." />
+                      </SelectTrigger>
+                      <SelectContent className="bg-white dark:bg-slate-900">
+                        {picklistValues?.map(option => (
+                          <SelectItem key={option.id} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {controllerField.value && !readOnly && (
+                      <Button 
+                        type="button"
+                        variant="ghost" 
+                        size="icon" 
+                        className="absolute right-0 top-0 h-full"
+                        onClick={() => controllerField.onChange(null)}
+                      >
+                        <X className="h-4 w-4" />
+                        <span className="sr-only">Clear selection</span>
+                      </Button>
+                    )}
+                  </>
+                )}
+              />
+            </div>
+          );
+        }
+        
         return (
           <div className="relative">
             <Select 
@@ -176,10 +298,10 @@ export function RecordField({
               onValueChange={handleSelectChange}
               disabled={readOnly}
             >
-              <SelectTrigger>
+              <SelectTrigger className="bg-white dark:bg-slate-900">
                 <SelectValue placeholder="Select..." />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-white dark:bg-slate-900">
                 {picklistValues?.map(option => (
                   <SelectItem key={option.id} value={option.value}>
                     {option.label}
@@ -202,6 +324,24 @@ export function RecordField({
           </div>
         );
       case 'checkbox':
+        if (form) {
+          return (
+            <div className="flex items-center space-x-2">
+              <Controller
+                name={field.api_name}
+                control={form.control}
+                render={({ field: controllerField }) => (
+                  <Checkbox
+                    id={field.api_name}
+                    checked={controllerField.value === true}
+                    onCheckedChange={controllerField.onChange}
+                    disabled={readOnly}
+                  />
+                )}
+              />
+            </div>
+          );
+        }
         return (
           <div className="flex items-center space-x-2">
             <Checkbox
@@ -217,6 +357,22 @@ export function RecordField({
         if (readOnly) {
           return <div className="py-2 text-black dark:text-white">{currentValue ? new Date(currentValue).toLocaleDateString() : "-"}</div>;
         }
+        if (form) {
+          return (
+            <Controller
+              name={field.api_name}
+              control={form.control}
+              render={({ field: controllerField }) => (
+                <DatePickerField
+                  value={controllerField.value}
+                  onChange={(date) => controllerField.onChange(date)}
+                  disabled={readOnly}
+                  isDateTime={false}
+                />
+              )}
+            />
+          );
+        }
         return (
           <DatePickerField
             value={currentValue}
@@ -230,6 +386,22 @@ export function RecordField({
           return <div className="py-2 text-black dark:text-white">
             {currentValue ? new Date(currentValue).toLocaleString() : "-"}
           </div>;
+        }
+        if (form) {
+          return (
+            <Controller
+              name={field.api_name}
+              control={form.control}
+              render={({ field: controllerField }) => (
+                <DatePickerField
+                  value={controllerField.value}
+                  onChange={(date) => controllerField.onChange(date)}
+                  disabled={readOnly}
+                  isDateTime={true}
+                />
+              )}
+            />
+          );
         }
         return (
           <DatePickerField
@@ -255,6 +427,23 @@ export function RecordField({
           );
         }
         
+        if (form) {
+          return (
+            <Controller
+              name={field.api_name}
+              control={form.control}
+              render={({ field: controllerField }) => (
+                <LookupField
+                  value={controllerField.value}
+                  onChange={controllerField.onChange}
+                  targetObjectTypeId={field.options?.target_object_type_id || ''}
+                  disabled={readOnly}
+                />
+              )}
+            />
+          );
+        }
+        
         return (
           <LookupField
             value={currentValue}
@@ -264,11 +453,28 @@ export function RecordField({
           />
         );
       default:
+        if (form) {
+          return (
+            <Controller
+              name={field.api_name}
+              control={form.control}
+              render={({ field: controllerField }) => (
+                <Input
+                  {...controllerField}
+                  id={field.api_name}
+                  type="text"
+                  readOnly={readOnly}
+                  disabled={readOnly}
+                />
+              )}
+            />
+          );
+        }
         return (
           <Input
             type="text"
             id={field.api_name}
-            value={currentValue || ''}
+            defaultValue={currentValue || ''}
             onChange={handleInputChange}
             readOnly={readOnly}
             disabled={readOnly}
