@@ -39,7 +39,6 @@ export function ObjectRecordDetail() {
             <RecordDetailForm 
               objectTypeId={objectTypeId!} 
               recordId={recordId!} 
-              initialData={record?.fieldValues}
               onSuccess={() => refetch()}
             />
           </TabsContent>
